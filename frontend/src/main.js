@@ -18,6 +18,7 @@ class DT3DCard extends HTMLElement {
   connectedCallback() {
     const width = this.config?.width || 200;
     const height = this.config?.height || 200;
+    const port = this.config?.port || 8080;
 
     const container = document.createElement('div');
     container.style.width = `${width}px`;
@@ -55,6 +56,27 @@ class DT3DCard extends HTMLElement {
       renderer.render(scene, camera);
     };
     animate();
+
+    fetch(`http://localhost:${port}/api/hello`)
+      .then((r) => r.text())
+      .then((text) => {
+        const msg = document.createElement('p');
+        msg.textContent = text;
+        container.appendChild(msg);
+      })
+      .catch(() => {
+        const err = document.createElement('p');
+        err.textContent = `Failed to reach backend on port ${port}`;
+        container.appendChild(err);
+      });
+  }
+
+  static getConfigElement() {
+    return document.createElement('dt3d-card-editor');
+  }
+
+  static getStubConfig() {
+    return { port: 8080, width: 200, height: 200 };
   }
 
   static getConfigElement() {
@@ -62,4 +84,32 @@ class DT3DCard extends HTMLElement {
   }
 }
 
+class DT3DCardEditor extends HTMLElement {
+  setConfig(config) {
+    this.config = config;
+    this.render();
+  }
+
+  render() {
+    if (!this.shadowRoot) {
+      this.attachShadow({ mode: 'open' });
+    }
+    const port = this.config?.port || 8080;
+    this.shadowRoot.innerHTML = `
+      <label>Port: <input type="number" value="${port}" /></label>
+    `;
+    this.shadowRoot
+      .querySelector('input')
+      .addEventListener('change', (e) => {
+        this.config.port = parseInt(e.target.value, 10);
+        this.dispatchEvent(
+          new CustomEvent('config-changed', {
+            detail: { config: this.config },
+          })
+        );
+      });
+  }
+}
+
+customElements.define('dt3d-card-editor', DT3DCardEditor);
 customElements.define('dt3d-card', DT3DCard);
