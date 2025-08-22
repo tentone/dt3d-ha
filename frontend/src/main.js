@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import './editor.js';
 
 class DT3DCard extends HTMLElement {
   constructor() {
@@ -36,6 +37,16 @@ class DT3DCard extends HTMLElement {
     const cube = new THREE.Mesh(geometry, material);
     scene.add(cube);
 
+    if (Array.isArray(this.config?.entities)) {
+      this.config.entities.forEach((item) => {
+        const sphereGeom = new THREE.SphereGeometry(0.1, 16, 16);
+        const sphereMat = new THREE.MeshNormalMaterial();
+        const sphere = new THREE.Mesh(sphereGeom, sphereMat);
+        sphere.position.set(item.x || 0, item.y || 0, item.z || 0);
+        scene.add(sphere);
+      });
+    }
+
     camera.position.z = 3;
 
     const animate = () => {
@@ -66,6 +77,10 @@ class DT3DCard extends HTMLElement {
 
   static getStubConfig() {
     return { port: 8080, width: 200, height: 200 };
+  }
+
+  static getConfigElement() {
+    return document.createElement('dt3d-card-editor');
   }
 }
 
