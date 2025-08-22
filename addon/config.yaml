@@ -1,0 +1,14 @@
+name: DT3D Backend
+version: "0.1.0"
+slug: dt3d_backend
+description: Backend for DT3D card using Go and SQLite
+arch:
+  - amd64
+  - aarch64
+  - armv7
+startup: services
+boot: auto
+ports:
+  8080/tcp: 8080
+options: {}
+schema: {}
