@@ -18948,16 +18948,47 @@ class Wu extends HTMLElement {
     this.hassInstance = e;
   }
   connectedCallback() {
-    const e = this.config?.width || 200, t = this.config?.height || 200, n = document.createElement("div");
-    n.style.width = `${e}px`, n.style.height = `${t}px`, this.shadowRoot.appendChild(n);
-    const r = new Js(), s = new wt(75, e / t, 0.1, 1e3), a = new ku({ alpha: !0 });
-    a.setSize(e, t), n.appendChild(a.domElement);
-    const o = new In(), c = new ta(), l = new Nt(o, c);
-    r.add(l), s.position.z = 3;
-    const h = () => {
-      requestAnimationFrame(h), l.rotation.x += 0.01, l.rotation.y += 0.01, a.render(r, s);
+    const e = this.config?.width || 200, t = this.config?.height || 200, n = this.config?.port || 8080, r = document.createElement("div");
+    r.style.width = `${e}px`, r.style.height = `${t}px`, this.shadowRoot.appendChild(r);
+    const s = new Js(), a = new wt(75, e / t, 0.1, 1e3), o = new ku({ alpha: !0 });
+    o.setSize(e, t), r.appendChild(o.domElement);
+    const c = new In(), l = new ta(), h = new Nt(c, l);
+    s.add(h), a.position.z = 3;
+    const d = () => {
+      requestAnimationFrame(d), h.rotation.x += 0.01, h.rotation.y += 0.01, o.render(s, a);
     };
-    h();
+    d(), fetch(`http://localhost:${n}/api/hello`).then((f) => f.text()).then((f) => {
+      const m = document.createElement("p");
+      m.textContent = f, r.appendChild(m);
+    }).catch(() => {
+      const f = document.createElement("p");
+      f.textContent = `Failed to reach backend on port ${n}`, r.appendChild(f);
+    });
+  }
+  static getConfigElement() {
+    return document.createElement("dt3d-card-editor");
+  }
+  static getStubConfig() {
+    return { port: 8080, width: 200, height: 200 };
   }
 }
+class Xu extends HTMLElement {
+  setConfig(e) {
+    this.config = e, this.render();
+  }
+  render() {
+    this.shadowRoot || this.attachShadow({ mode: "open" });
+    const e = this.config?.port || 8080;
+    this.shadowRoot.innerHTML = `
+      <label>Port: <input type="number" value="${e}" /></label>
+    `, this.shadowRoot.querySelector("input").addEventListener("change", (t) => {
+      this.config.port = parseInt(t.target.value, 10), this.dispatchEvent(
+        new CustomEvent("config-changed", {
+          detail: { config: this.config }
+        })
+      );
+    });
+  }
+}
+customElements.define("dt3d-card-editor", Xu);
 customElements.define("dt3d-card", Wu);
