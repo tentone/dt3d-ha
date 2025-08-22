@@ -10,5 +10,7 @@ startup: services
 boot: auto
 ports:
   8080/tcp: 8080
-options: {}
-schema: {}
+options:
+  port: 8080
+schema:
+  port: int?
