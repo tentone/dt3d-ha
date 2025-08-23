@@ -1,18 +1,23 @@
 package main
 
 import (
-	"database/sql"
 	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
 
-	_ "modernc.org/sqlite"
+	"gorm.io/driver/sqlite"
+	"gorm.io/gorm"
 )
 
 type options struct {
 	Port int `json:"port"`
+}
+
+type User struct {
+	ID   uint   `gorm:"primaryKey"`
+	Name string `gorm:"size:255"`
 }
 
 func loadPort() int {
@@ -21,6 +26,7 @@ func loadPort() int {
 	if err != nil {
 		return port
 	}
+
 	var opt options
 	if err := json.Unmarshal(data, &opt); err != nil {
 		return port
@@ -33,11 +39,17 @@ func loadPort() int {
 
 func main() {
 	port := loadPort()
-	db, err := sql.Open("sqlite", "data.db")
+
+	// Initialize GORM with SQLite
+	db, err := gorm.Open(sqlite.Open("data.db"), &gorm.Config{})
 	if err != nil {
-		log.Fatalf("failed to open database: %v", err)
+		log.Fatalf("failed to connect database: %v", err)
 	}
-	defer db.Close()
+
+	// Auto-migrate the schema
+	if err := db.AutoMigrate(&User{}); err != nil {
+		log.Fatalf("failed to migrate database: %v", err)
+	}
 
 	http.HandleFunc("/api/hello", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("Hello from DT3D backend"))

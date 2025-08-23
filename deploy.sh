@@ -23,8 +23,7 @@ fi
 echo "Copying frontend files to ${SSH_TARGET}:${REMOTE_DIR}" 
 scp -r "$DIST_DIR"/* "${SSH_TARGET}:${REMOTE_DIR}/"
 
-# Reload frontend by restarting Home Assistant core
-# Requires 'ha' CLI to be available on the remote host
+# Reload frontend by restarting ha core
 echo "Reloading Home Assistant frontend" 
 ssh "$SSH_TARGET" "ha core restart" >/dev/null
 

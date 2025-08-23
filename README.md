@@ -1,4 +1,4 @@
-# dt3d-ha
+# Digital Twin 3D Home Assistant (DT3DHA)
 
 This repository provides a minimal Home Assistant integration composed of:
 
@@ -29,28 +29,6 @@ The Go server listens on port `8080` and uses a local SQLite database (`data.db`
 ```
 frontend/   - Vite project for the custom card
 addon/      - Go backend and Home Assistant add-on files
-```
-
-## Testing
-
-### Frontend
-
-The project does not currently include unit tests, but you can verify the
-frontend builds successfully:
-
-```bash
-cd frontend
-npm install
-npm run build
-```
-
-### Backend
-
-Run the Go tests to ensure the backend compiles and its tests (if any) pass:
-
-```bash
-cd addon/backend
-go test ./...
 ```
 
 ## Home Assistant installation
