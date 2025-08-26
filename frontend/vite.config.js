@@ -9,8 +9,7 @@ export default defineConfig({
 			formats: ['es']
 		},
 		rollupOptions: {
-      treeshake: 'recommended',
-			external: ['lit']
+      treeshake: 'recommended'
     }
 	}
 });
