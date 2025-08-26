@@ -32,15 +32,12 @@ class DT3DCard extends LitElement  {
 	// Get the hass instance
 	set hass(hass) {
 		this.hassInstance = hass;
-
+		
 		// const entityId = 'derp.entity'
 		// const state = hass.states[entityId];
 		// const stateStr = state ? state.state : "unavailable";
 	}
 
-	createContainer() {
-
-	}
 
 	connectedCallback() {
 		if (this.container) {
@@ -140,5 +137,52 @@ class DT3DCardEditor extends LitElement {
   };
 
 
+	setConfig(config) {
+		his._config = {
+			port: 8080,
+			...config,
+		};
+	}
+
+	_updateConfig(patch) {
+		this._config = { ...this._config, ...patch };
+		this.dispatchEvent(
+		new CustomEvent("config-changed", {
+			detail: { config: this._config },
+			bubbles: true,
+			composed: true,
+		})
+		);
+	}
+
+	_onTextChanged(e) {
+		const key = e.target.dataset.key;
+		const value = e.target.value;
+		this._updateConfig({ [key]: value });
+	}
+
+
+	render() {
+		if (!this._config) {
+			return html``;
+		}
+
+		const { port } = this._config;
+
+		return html`
+			<div>
+				<div>
+					<label>Header</label>
+					<input
+					type="number"
+					data-key="port"
+					.value=${port ?? ""}
+					@input=${this._onTextChanged}
+					placeholder="8080"
+					/>
+				</div>
+			</div>
+		`;
+	}
 }
 customElements.define("dt3d-card-editor", DT3DCardEditor);
