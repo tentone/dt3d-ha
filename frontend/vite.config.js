@@ -1,12 +1,16 @@
 import { defineConfig } from 'vite';
 
 export default defineConfig({
-  build: {
-    lib: {
-      entry: 'src/main.js',
-      name: 'DT3DCard',
-      fileName: 'dt3d-card',
-      formats: ['es']
+	build: {
+		lib: {
+			entry: 'src/main.js',
+			name: 'DT3DCard',
+			fileName: 'dt3d-card',
+			formats: ['es']
+		},
+		rollupOptions: {
+      treeshake: 'recommended',
+			external: ['lit']
     }
-  }
+	}
 });

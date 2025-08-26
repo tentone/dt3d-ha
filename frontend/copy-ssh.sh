@@ -8,20 +8,20 @@ set -euo pipefail
 # SSH_TARGET defaults to 'root@homeassistant.local'.
 # REMOTE_DIR defaults to '/config/www'.
 
-SSH_TARGET="${1:-root@homeassistant.local}"
-REMOTE_DIR="${2:-/config/www}" 
+SSH_ADDRESS="${1:-homeassistant.local}"
+SSH_USER="${2:-root}"
+
+REMOTE_DIR="${3:-/config/www}" 
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 DIST_DIR="$SCRIPT_DIR/frontend/dist"
 
-if [[ ! -d "$DIST_DIR" ]]; then
-  echo "Build directory '$DIST_DIR' not found. Run 'npm run build' in frontend/." >&2
-  exit 1
-fi
+# Build code
+cd frontend && npm run build
 
 # Copy files
-echo "Copying frontend files to ${SSH_TARGET}:${REMOTE_DIR}" 
-scp -r "$DIST_DIR"/* "${SSH_TARGET}:${REMOTE_DIR}/"
+echo "Copying frontend files to ${SSH_USER}@${SSH_ADDRESS}:${REMOTE_DIR}" 
+scp -r "$DIST_DIR"/* "${SSH_USER}@${SSH_ADDRESS}:${REMOTE_DIR}/"
 
 # Reload frontend by restarting ha core
 echo "Reloading Home Assistant frontend" 
