@@ -1,4 +1,5 @@
 # Build the code using npm
+Write-Host "Building code"
 npm run build
 
 # Check if the build was successful

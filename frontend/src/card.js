@@ -1,6 +1,6 @@
 import {Mesh, MeshNormalMaterial, BoxGeometry, SphereGeometry, PerspectiveCamera, Scene, WebGLRenderer, MeshBasicMaterial} from 'three';
-import { LitElement, css} from "lit";
-
+import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
+import { LitElement, css } from "lit";
 
 export class DT3DCard extends LitElement  {
 	constructor() {
@@ -12,15 +12,15 @@ export class DT3DCard extends LitElement  {
 	static styles = css`
 		:host {
 			display: block;
-			height: 100%;     /* stretch to grid cell height */
+			height: 100%;
 		}
 
 		dt3d-card {
-			height: 100%;     /* let the card fill the host */
+			height: 100%;
 			display: flex;
 			flex-direction: column;
-			justify-content: center; /* center vertically */
-			align-items: center;     /* center horizontally */
+			justify-content: center;
+			align-items: center;
 		}
 		`;
 
@@ -29,9 +29,6 @@ export class DT3DCard extends LitElement  {
 		_config: { state: true },
 	};
 
-	// The user supplied configuration.
-	// 
-	// Throw an exception and Home Assistant will render an error card.
 	setConfig(config) {
 		if (!config) {
 			throw new Error("Invalid configuration");
@@ -45,7 +42,6 @@ export class DT3DCard extends LitElement  {
 		console.log('DT3DCard config set:', this.config);
 	}
  
-	// Get the hass instance
 	set hass(hass) {
 		this.hassInstance = hass;
 		
@@ -53,7 +49,6 @@ export class DT3DCard extends LitElement  {
 		const state = hass.states[entityId];
 		console.log('Entity state:', state);
 	}
-
 
 	connectedCallback() {
 		if (this.container) {
@@ -71,35 +66,50 @@ export class DT3DCard extends LitElement  {
 
 		const scene = new Scene();
 		
-		this.camera = new PerspectiveCamera(75, width/height, 0.1, 1000);
+		this.camera = new PerspectiveCamera(75, width / height, 0.1, 1000);
 		this.camera.position.z = 3;
 
 		this.renderer = new WebGLRenderer({ alpha: true });
 		this.renderer.setSize(width, height, false);
+		this.renderer.setClearColor(0x444444, 1);
 		this.container.appendChild(this.renderer.domElement);
 
+		// Add OrbitControls
+		this.controls = new OrbitControls(this.camera, this.renderer.domElement);
+		this.controls.enableDamping = true; // Enable damping for smoother controls
+		this.controls.dampingFactor = 0.05;
+
 		const geometry = new BoxGeometry();
-		const material = new MeshBasicMaterial({color: 0x00ff00, wireframe: true});
+		const material = new MeshBasicMaterial({ color: 0xffff00, wireframe: true });
+	
 
 		const cube = new Mesh(geometry, material);
 		scene.add(cube);
 
+		const planeGeometry = new BoxGeometry(5, 5, 0.1);
+		const planeMaterial = new MeshBasicMaterial({ color: 0x00ff00 });
+		const plane = new Mesh(planeGeometry, planeMaterial);
+		plane.rotation.x = -Math.PI / 2; // Rotate to make it horizontal
+		plane.position.y = -1; // Position it below the cube
+		scene.add(plane);
 
 		const animate = () => {
 			requestAnimationFrame(animate);
 			cube.rotation.x += 0.01;
 			cube.rotation.y += 0.01;
+
+			// Update controls
+			this.controls.update();
+
 			this.renderer.render(scene, this.camera);
 		};
 		animate();
 
-		// Resize detector to make the canvas fill the card
 		const resizeDetector = new ResizeObserver((event) => {
 			console.log('Resizing card', event, this);
 			const width = 300;
 			const height = 300;
 
-			
 			if (this.container) {
 				this.container.style.width = `${width}px`;
 				this.container.style.height = `${height}px`;
@@ -112,7 +122,6 @@ export class DT3DCard extends LitElement  {
 		});
 		resizeDetector.observe(this);
 
-		// Attempt to fetch from the backend to demonstrate connectivity
 		fetch(`http://localhost:${port}/api/hello`)
 			.then((r) => r.text())
 			.then((text) => {
@@ -127,8 +136,6 @@ export class DT3DCard extends LitElement  {
 			});
 	}
 
-
-	// The rules for sizing your card in the grid in sections view
 	getGridOptions() {
 		return {
 			rows: 3,
@@ -138,16 +145,10 @@ export class DT3DCard extends LitElement  {
 		};
 	}
 
-	/**
-	 * Get the element to be used in the card configuration editor.
-	 */
 	static getConfigElement() {
 		return document.createElement('dt3d-card-editor');
 	}
 
-	/**
-	 * Get the stub configuration for the card.
-	 */
 	static getStubConfig() {
 		return {
 			port: 8080

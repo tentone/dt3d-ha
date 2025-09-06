@@ -7,7 +7,7 @@ export class DT3DCardEditor extends LitElement {
 	};
 
 	setConfig(config) {
-		his._config = {
+		this._config = {
 			port: 8080,
 			...config,
 		};
@@ -48,7 +48,7 @@ export class DT3DCardEditor extends LitElement {
 
 		const { port } = this._config;
 
-		return html`
+		const content= html`
 			<div>
 				<div>
 					<label>Header</label>
@@ -62,5 +62,8 @@ export class DT3DCardEditor extends LitElement {
 				</div>
 			</div>
 		`;
+
+		console.log(content);
+		return content;
 	}
 }
