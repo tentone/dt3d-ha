@@ -17,6 +17,7 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 DIST_DIR="$SCRIPT_DIR/frontend/dist"
 
 # Build code
+echo "Building frontend code"
 cd frontend && npm run build
 
 # Copy files

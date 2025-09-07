@@ -1,4 +1,3 @@
-import {Mesh, MeshNormalMaterial, BoxGeometry, SphereGeometry, PerspectiveCamera, Scene, WebGLRenderer} from 'three';
 import { LitElement, html} from "lit";
 
 export class DT3DCardEditor extends LitElement {

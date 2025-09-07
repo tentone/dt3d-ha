@@ -1,4 +1,4 @@
-import {Mesh, MeshNormalMaterial, BoxGeometry, SphereGeometry, PerspectiveCamera, Scene, WebGLRenderer, MeshBasicMaterial} from 'three';
+import {Mesh, BoxGeometry, PerspectiveCamera, Scene, WebGLRenderer, MeshBasicMaterial} from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 import { LitElement, css } from "lit";
 
