@@ -11,16 +11,9 @@ export class DT3DCard extends LitElement  {
 
 	static styles = css`
 		:host {
-			display: block;
 			height: 100%;
-		}
-
-		dt3d-card {
-			height: 100%;
-			display: flex;
-			flex-direction: column;
-			justify-content: center;
-			align-items: center;
+			width: 100%;
+			background-color: #FF0000;
 		}
 		`;
 
@@ -45,9 +38,9 @@ export class DT3DCard extends LitElement  {
 	set hass(hass) {
 		this.hassInstance = hass;
 		
-		const entityId = 'light.garage_light_switch_1'
-		const state = hass.states[entityId];
-		console.log('Entity state:', state);
+		console.log('Entity states', this, DT3DCard.styles, hass.states);
+
+
 	}
 
 	connectedCallback() {
@@ -81,13 +74,13 @@ export class DT3DCard extends LitElement  {
 
 		const geometry = new BoxGeometry();
 		const material = new MeshBasicMaterial({ color: 0xffff00, wireframe: true });
-	
 
 		const cube = new Mesh(geometry, material);
 		scene.add(cube);
 
 		const planeGeometry = new BoxGeometry(5, 5, 0.1);
 		const planeMaterial = new MeshBasicMaterial({ color: 0x00ff00 });
+
 		const plane = new Mesh(planeGeometry, planeMaterial);
 		plane.rotation.x = -Math.PI / 2; // Rotate to make it horizontal
 		plane.position.y = -1; // Position it below the cube

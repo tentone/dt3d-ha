@@ -1,5 +1,6 @@
 import { LitElement, html} from "lit";
 
+
 export class DT3DCardEditor extends LitElement {
 	static properties = {
 		_config: { state: true },
