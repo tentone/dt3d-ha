@@ -5,8 +5,9 @@ export class DT3DCardEditor extends LitElement {
 	static properties = {
 		_config: { state: true },
 	};
+	private _config: any;
 
-	setConfig(config) {
+	setConfig(config: any) {
 		this._config = {
 			port: 8080,
 			...config,
@@ -20,7 +21,7 @@ export class DT3DCardEditor extends LitElement {
 	 * 
 	 * @param {*} patch 
 	 */
-	updateConfig(patch) {
+	updateConfig(patch: any) {
 		this._config = { ...this._config, ...patch };
 		this.dispatchEvent(
 			new CustomEvent("config-changed", {
@@ -31,7 +32,7 @@ export class DT3DCardEditor extends LitElement {
 		);
 	}
 
-	onValueChanged(e) {
+	onValueChanged(e: any) {
 		const key = e.target.dataset.key;
 		const value = e.target.value;
 		this.updateConfig({ [key]: value });

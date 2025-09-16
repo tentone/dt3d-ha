@@ -3,6 +3,18 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 import { LitElement, css } from "lit";
 
 export class DT3DCard extends LitElement  {
+	private config: any;
+
+	public hassInstance: any;
+	
+	private container: HTMLElement | null = null;
+
+	private camera: PerspectiveCamera;
+
+	private renderer: WebGLRenderer;
+
+	private controls: OrbitControls;
+
 	constructor() {
 		super();
 
@@ -22,7 +34,7 @@ export class DT3DCard extends LitElement  {
 		_config: { state: true },
 	};
 
-	setConfig(config) {
+	setConfig(config: any) {
 		if (!config) {
 			throw new Error("Invalid configuration");
 		}
@@ -35,7 +47,7 @@ export class DT3DCard extends LitElement  {
 		console.log('DT3DCard config set:', this.config);
 	}
  
-	set hass(hass) {
+	set hass(hass: any) {
 		this.hassInstance = hass;
 		
 		console.log('Entity states', this, DT3DCard.styles, hass.states);
@@ -55,6 +67,7 @@ export class DT3DCard extends LitElement  {
 		this.container = document.createElement('div');
 		this.container.style.width = `${width}px`;
 		this.container.style.height = `${height}px`;
+		// @ts-ignore
 		this.shadowRoot.appendChild(this.container);
 
 		const scene = new Scene();
