@@ -1,6 +1,7 @@
 import { LitElement, html} from "lit";
+import { customElement } from "lit/decorators.js";
 
-
+@customElement('dt3d-card-editor')
 export class DT3DCardEditor extends LitElement {
 	static properties = {
 		_config: { state: true },

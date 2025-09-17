@@ -1,7 +1,9 @@
 import {Mesh, BoxGeometry, PerspectiveCamera, Scene, WebGLRenderer, MeshBasicMaterial} from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 import { LitElement, css } from "lit";
+import { customElement } from 'lit/decorators.js';
 
+@customElement('dt3d-card')
 export class DT3DCard extends LitElement  {
 	private config: any;
 
@@ -17,17 +19,16 @@ export class DT3DCard extends LitElement  {
 
 	constructor() {
 		super();
-
-		this.attachShadow({ mode: 'open' });
 	}
 
 	static styles = css`
-		:host {
+		dt3d-card {
+			display: block;
 			height: 100%;
 			width: 100%;
 			background-color: #FF0000;
 		}
-		`;
+	`;
 
 	static properties = {
 		hass: { attribute: false },
@@ -51,8 +52,6 @@ export class DT3DCard extends LitElement  {
 		this.hassInstance = hass;
 		
 		console.log('Entity states', this, DT3DCard.styles, hass.states);
-
-
 	}
 
 	connectedCallback() {
@@ -67,8 +66,7 @@ export class DT3DCard extends LitElement  {
 		this.container = document.createElement('div');
 		this.container.style.width = `${width}px`;
 		this.container.style.height = `${height}px`;
-		// @ts-ignore
-		this.shadowRoot.appendChild(this.container);
+		this.appendChild(this.container);
 
 		const scene = new Scene();
 		
@@ -77,7 +75,7 @@ export class DT3DCard extends LitElement  {
 
 		this.renderer = new WebGLRenderer({ alpha: true });
 		this.renderer.setSize(width, height, false);
-		this.renderer.setClearColor(0x444444, 1);
+		this.renderer.setClearColor(0x446644, 1);
 		this.container.appendChild(this.renderer.domElement);
 
 		// Add OrbitControls
