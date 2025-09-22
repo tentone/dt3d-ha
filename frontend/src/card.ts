@@ -11,24 +11,23 @@ export class DT3DCard extends LitElement  {
 	
 	private container: HTMLElement | null = null;
 
-	private camera: PerspectiveCamera;
+	private canvas: HTMLCanvasElement | null = null;
 
-	private renderer: WebGLRenderer;
+	private camera: PerspectiveCamera | null = null;
+
+	private renderer: WebGLRenderer | null = null;
 
 	private controls: OrbitControls;
+
+	static styles = css`
+		:host {
+			background-color: green;
+		}
+	`;
 
 	constructor() {
 		super();
 	}
-
-	static styles = css`
-		dt3d-card {
-			display: block;
-			height: 100%;
-			width: 100%;
-			background-color: #FF0000;
-		}
-	`;
 
 	static properties = {
 		hass: { attribute: false },
@@ -64,16 +63,28 @@ export class DT3DCard extends LitElement  {
 		const height = 200;
 		
 		this.container = document.createElement('div');
-		this.container.style.width = `${width}px`;
-		this.container.style.height = `${height}px`;
+		this.container.style.cssText = `
+			width: 100%;
+			height: 100%;
+			background-color: #222;
+			border-radius: 10px;
+		`;
 		this.appendChild(this.container);
+
+		this.canvas = document.createElement('canvas');
+		this.canvas.style.cssText = `
+			width: ${width}px;
+			height: ${height}px;
+		`;
+		this.container.appendChild(this.canvas);
+
 
 		const scene = new Scene();
 		
 		this.camera = new PerspectiveCamera(75, width / height, 0.1, 1000);
 		this.camera.position.z = 3;
 
-		this.renderer = new WebGLRenderer({ alpha: true });
+		this.renderer = new WebGLRenderer({ alpha: true, canvas: this.canvas });
 		this.renderer.setSize(width, height, false);
 		this.renderer.setClearColor(0x446644, 1);
 		this.container.appendChild(this.renderer.domElement);
@@ -111,12 +122,10 @@ export class DT3DCard extends LitElement  {
 
 		const resizeDetector = new ResizeObserver((event) => {
 			console.log('Resizing card', event, this);
-			const width = 300;
-			const height = 300;
 
-			if (this.container) {
-				this.container.style.width = `${width}px`;
-				this.container.style.height = `${height}px`;
+			if (this.canvas) {
+				this.canvas.style.width = `${width}px`;
+				this.canvas.style.height = `${height}px`;
 			}
 
 			this.camera.aspect = width / height;

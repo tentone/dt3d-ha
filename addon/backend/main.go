@@ -1,6 +1,7 @@
 package main
 
 import (
+	"dt3d-ha/backend/models"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -13,11 +14,6 @@ import (
 
 type options struct {
 	Port int `json:"port"`
-}
-
-type User struct {
-	ID   uint   `gorm:"primaryKey"`
-	Name string `gorm:"size:255"`
 }
 
 func loadPort() int {
@@ -47,7 +43,7 @@ func main() {
 	}
 
 	// Auto-migrate the schema
-	if err := db.AutoMigrate(&User{}); err != nil {
+	if err := db.AutoMigrate(&models.User{}); err != nil {
 		log.Fatalf("failed to migrate database: %v", err)
 	}
 
