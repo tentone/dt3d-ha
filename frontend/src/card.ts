@@ -48,9 +48,12 @@ export class DT3DCard extends LitElement  {
 	}
  
 	set hass(hass: any) {
+		if (!this.hassInstance) {
+			console.log('Entity states', this, DT3DCard.styles, hass.states);
+		}
+
 		this.hassInstance = hass;
-		
-		console.log('Entity states', this, DT3DCard.styles, hass.states);
+	
 	}
 
 	connectedCallback() {
@@ -60,7 +63,7 @@ export class DT3DCard extends LitElement  {
 
 		const port = this.config?.port || 8080;
 		const width = 300;
-		const height = 200;
+		const height = 300;
 		
 		this.container = document.createElement('div');
 		this.container.style.cssText = `
@@ -75,6 +78,7 @@ export class DT3DCard extends LitElement  {
 		this.canvas.style.cssText = `
 			width: ${width}px;
 			height: ${height}px;
+			border-radius: 10px;
 		`;
 		this.container.appendChild(this.canvas);
 
@@ -122,10 +126,11 @@ export class DT3DCard extends LitElement  {
 
 		const resizeDetector = new ResizeObserver((event) => {
 			console.log('Resizing card', event, this);
+			const width = event[0].contentRect.width;
+			const height = 300;
 
 			if (this.canvas) {
 				this.canvas.style.width = `${width}px`;
-				this.canvas.style.height = `${height}px`;
 			}
 
 			this.camera.aspect = width / height;
@@ -133,7 +138,7 @@ export class DT3DCard extends LitElement  {
 
 			this.renderer.setSize(width, height, false);
 		});
-		resizeDetector.observe(this);
+		resizeDetector.observe(this.container, { box: 'border-box' });
 
 		fetch(`http://localhost:${port}/api/hello`)
 			.then((r) => r.text())
