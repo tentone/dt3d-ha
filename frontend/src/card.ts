@@ -1,5 +1,6 @@
 import {Mesh, BoxGeometry, PerspectiveCamera, Scene, WebGLRenderer, MeshBasicMaterial} from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
+import {TransformControls }from 'three/examples/jsm/controls/TransformControls';
 import { LitElement, css } from "lit";
 import { customElement } from 'lit/decorators.js';
 
@@ -19,11 +20,14 @@ export class DT3DCard extends LitElement  {
 
 	private controls: OrbitControls;
 
+	private transform: TransformControls | null = null;
+
 	static styles = css`
 		:host {
 			background-color: green;
 		}
 	`;
+
 
 	constructor() {
 		super();
@@ -98,10 +102,17 @@ export class DT3DCard extends LitElement  {
 		this.controls.enableDamping = true; // Enable damping for smoother controls
 		this.controls.dampingFactor = 0.05;
 
+		this.transform = new TransformControls( this.camera, this.renderer.domElement );
+		this.transform.addEventListener( 'dragging-changed', ( event: any) => {
+			this.controls.enabled = ! event.value;
+		} );
+		scene.add( this.transform );
+
+		// Add a cube
 		const geometry = new BoxGeometry();
 		const material = new MeshBasicMaterial({ color: 0xffff00, wireframe: true });
-
 		const cube = new Mesh(geometry, material);
+		this.transform.attach(cube);
 		scene.add(cube);
 
 		const planeGeometry = new BoxGeometry(5, 5, 0.1);
