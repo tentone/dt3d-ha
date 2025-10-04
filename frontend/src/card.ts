@@ -1,8 +1,9 @@
-import {Mesh, BoxGeometry, PerspectiveCamera, Scene, WebGLRenderer, MeshBasicMaterial, Raycaster, Vector2} from 'three';
+import {Mesh, BoxGeometry, PerspectiveCamera, Scene, WebGLRenderer, MeshBasicMaterial, Raycaster, Vector2, PlaneGeometry, SphereGeometry} from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 import {TransformControls }from 'three/examples/jsm/controls/TransformControls';
 import { LitElement, css } from "lit";
 import { customElement } from 'lit/decorators.js';
+import { DT3DSidebar } from "./side-bar.js";
 
 @customElement('dt3d-card')
 export class DT3DCard extends LitElement  {
@@ -28,6 +29,7 @@ export class DT3DCard extends LitElement  {
 		hass: { attribute: false },
 		_config: { state: true },
 	};
+	scene: Scene;
  
 	set hass(hass: any) {
 		if (!this.hassInstance) {
@@ -108,7 +110,52 @@ export class DT3DCard extends LitElement  {
 		`;
 		this.content.appendChild(this.canvas);
 
-		const scene = new Scene();
+		const sidebar = document.createElement('dt3d-sidebar') as DT3DSidebar;
+		sidebar.style.cssText = `
+			position: absolute;
+			top: 0;
+			right: 0;
+			height: 100%;
+			width: 220px;
+		`;
+		this.content.appendChild(sidebar);
+
+		sidebar.addEventListener('transform-tool-selected', (e: any) => {
+			const tool = e.detail.tool;
+			this.transform.setMode(tool);
+		});
+		sidebar.addEventListener('add-object', (e: any) => {
+			const type = e.detail.type;
+			console.log('Add object of type', type);
+
+			let newObject: Mesh;
+			if (type === 'cube') {
+				const geometry = new BoxGeometry();
+				const material = new MeshBasicMaterial({ color: 0x00ffff, wireframe: true });
+				newObject = new Mesh(geometry, material);
+				this.transform.attach(newObject);
+			}
+			else if (type === 'plane') {
+				const geometry = new PlaneGeometry(1,1,1);
+				const material = new MeshBasicMaterial({ color: 0xff00ff });
+				newObject = new Mesh(geometry, material);
+				newObject.rotation.x = -Math.PI / 2;
+				newObject.position.y = -1;
+			} else if (type === 'sphere') {
+				const geometry = new SphereGeometry();
+				const material = new MeshBasicMaterial({ color: 0xffff00, wireframe: true });
+				newObject = new Mesh(geometry, material);
+			}
+
+			if (newObject) {
+				this.transform.attach(newObject);
+				this.scene.add(newObject);
+			}
+		});
+
+
+
+		this.scene = new Scene();
 		
 		this.camera = new PerspectiveCamera(75, width / height, 0.1, 1000);
 		this.camera.position.z = 3;
@@ -127,14 +174,14 @@ export class DT3DCard extends LitElement  {
 		this.transform.addEventListener( 'dragging-changed', ( event: any) => {
 			this.controls.enabled = ! event.value;
 		} );
-		scene.add( this.transform.getHelper() );
+		this.scene.add( this.transform.getHelper() );
 
 		// Add a cube
 		const geometry = new BoxGeometry();
 		const material = new MeshBasicMaterial({ color: 0xffff00, wireframe: true });
 		const cube = new Mesh(geometry, material);
 		this.transform.attach(cube);
-		scene.add(cube);
+		this.scene.add(cube);
 
 		const planeGeometry = new BoxGeometry(5, 5, 0.1);
 		const planeMaterial = new MeshBasicMaterial({ color: 0x00ff00 });
@@ -142,7 +189,7 @@ export class DT3DCard extends LitElement  {
 		const plane = new Mesh(planeGeometry, planeMaterial);
 		plane.rotation.x = -Math.PI / 2; // Rotate to make it horizontal
 		plane.position.y = -1; // Position it below the cube
-		scene.add(plane);
+		this.scene.add(plane);
 
 		// Raycaster for object picking
 		const raycaster = new Raycaster();
@@ -170,7 +217,7 @@ export class DT3DCard extends LitElement  {
 			// Update controls
 			this.controls.update();
 
-			this.renderer.render(scene, this.camera);
+			this.renderer.render(this.scene, this.camera);
 		};
 		animate();
 
