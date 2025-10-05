@@ -53,7 +53,7 @@ export class DT3DCardEditor extends LitElement {
 		const content= html`
 			<div>
 				<div>
-					<label>Header</label>
+					<label>Configuration</label>
 					<input
 						type="number"
 						data-key="port"

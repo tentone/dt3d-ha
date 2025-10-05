@@ -7,19 +7,20 @@ export class DT3DSidebar extends LitElement {
 		:host {
 			display: block;
 			width: 220px;
-			background: #23272f;
+			background: #23272f55;
 			color: #fff;
 			height: 100%;
-			box-shadow: 2px 0 8px rgba(0,0,0,0.1);
 			padding: 16px 0;
-			z-index: 5;
+			z-index: 1;
 			transition: width 0.2s;
 			overflow: hidden;
 		}
+
 		:host([collapsed]) {
 			width: 40px;
 			padding: 16px 0 16px 0;
 		}
+
 		.collapse-btn {
 			position: absolute;
 			top: 12px;
@@ -34,11 +35,13 @@ export class DT3DSidebar extends LitElement {
 			padding: 0;
 			z-index: 10;
 		}
+
 		.sidebar-section {
 			margin-bottom: 24px;
 			padding: 0 16px;
 			transition: opacity 0.2s;
 		}
+
 		:host([collapsed]) .sidebar-section {
 			opacity: 0;
 			pointer-events: none;
@@ -46,12 +49,14 @@ export class DT3DSidebar extends LitElement {
 			padding: 0;
 			margin: 0;
 		}
+
 		.sidebar-title {
 			font-size: 1.1em;
 			margin-bottom: 8px;
 			font-weight: bold;
 			letter-spacing: 1px;
 		}
+
 		button {
 			display: block;
 			width: 100%;
@@ -65,6 +70,7 @@ export class DT3DSidebar extends LitElement {
 			font-size: 1em;
 			transition: background 0.2s;
 		}
+
 		button:hover {
 			background: #3a4050;
 		}
@@ -74,7 +80,7 @@ export class DT3DSidebar extends LitElement {
 		collapsed: { type: Boolean, reflect: true }
 	};
 
-	public collapsed = false;
+	public collapsed = true;
 
 	private toggleCollapse() {
 		this.collapsed = !this.collapsed;
@@ -105,16 +111,16 @@ export class DT3DSidebar extends LitElement {
 				${this.collapsed ? '⮞' : '⮜'}
 			</button>
 			<div class="sidebar-section">
-				<div class="sidebar-title">Transform Controls</div>
+				<div class="sidebar-title">Controls</div>
 				<button @click=${() => this.handleTransformSelect('translate')}>Translate</button>
 				<button @click=${() => this.handleTransformSelect('rotate')}>Rotate</button>
 				<button @click=${() => this.handleTransformSelect('scale')}>Scale</button>
 			</div>
 			<div class="sidebar-section">
 				<div class="sidebar-title">Add Object</div>
-				<button @click=${() => this.handleAddObject('cube')}>Add Cube</button>
-				<button @click=${() => this.handleAddObject('sphere')}>Add Sphere</button>
-				<button @click=${() => this.handleAddObject('plane')}>Add Plane</button>
+				<button @click=${() => this.handleAddObject('cube')}>Cube</button>
+				<button @click=${() => this.handleAddObject('sphere')}>Sphere</button>
+				<button @click=${() => this.handleAddObject('plane')}>Plane</button>
 			</div>
 		`;
 	}

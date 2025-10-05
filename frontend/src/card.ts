@@ -1,9 +1,11 @@
-import {Mesh, BoxGeometry, PerspectiveCamera, Scene, WebGLRenderer, MeshBasicMaterial, Raycaster, Vector2, PlaneGeometry, SphereGeometry} from 'three';
+import {Mesh, BoxGeometry, PerspectiveCamera, Scene, WebGLRenderer, MeshBasicMaterial, Raycaster, Vector2, PlaneGeometry, SphereGeometry, Group, MathUtils, Vector3} from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 import {TransformControls }from 'three/examples/jsm/controls/TransformControls';
+import { Sky } from 'three/examples/jsm/Addons.js';
 import { LitElement, css } from "lit";
 import { customElement } from 'lit/decorators.js';
 import { DT3DSidebar } from "./side-bar.js";
+import { DT3DTree } from "./object-tree.js";
 
 @customElement('dt3d-card')
 export class DT3DCard extends LitElement  {
@@ -25,11 +27,23 @@ export class DT3DCard extends LitElement  {
 
 	private transform: TransformControls = null;
 
+	/**
+	 * The scene where all 3D objects are placed.
+	 */
+	private scene: Scene;
+
+	/**
+	 * The home group that contains all main objects in the scene.	
+	 * 
+	 * This allows for easy manipulation of the entire scene (e.g., moving, scaling, rotating the whole scene). 
+	 */
+	private home: Group;
+
 	static properties = {
 		hass: { attribute: false },
 		_config: { state: true },
 	};
-	scene: Scene;
+	
  
 	set hass(hass: any) {
 		if (!this.hassInstance) {
@@ -114,42 +128,50 @@ export class DT3DCard extends LitElement  {
 		sidebar.style.cssText = `
 			position: absolute;
 			top: 0;
-			right: 0;
+			left: 0;
 			height: 100%;
-			width: 220px;
 		`;
 		this.content.appendChild(sidebar);
+		
+		const tree = document.createElement('dt3d-tree') as DT3DTree;
+		tree.style.cssText = `
+			position: absolute;
+			top: 0;	
+			right: 0;
+			height: 100%;
+		`;
+		this.content.appendChild(tree);
 
 		sidebar.addEventListener('transform-tool-selected', (e: any) => {
 			const tool = e.detail.tool;
 			this.transform.setMode(tool);
 		});
+
 		sidebar.addEventListener('add-object', (e: any) => {
 			const type = e.detail.type;
 			console.log('Add object of type', type);
 
-			let newObject: Mesh;
+			let object: Mesh;
+			const material = new MeshBasicMaterial({ color: 0x00ffff, wireframe: true });
+
 			if (type === 'cube') {
 				const geometry = new BoxGeometry();
-				const material = new MeshBasicMaterial({ color: 0x00ffff, wireframe: true });
-				newObject = new Mesh(geometry, material);
-				this.transform.attach(newObject);
+				object = new Mesh(geometry, material);
+				this.transform.attach(object);
 			}
 			else if (type === 'plane') {
 				const geometry = new PlaneGeometry(1,1,1);
-				const material = new MeshBasicMaterial({ color: 0xff00ff });
-				newObject = new Mesh(geometry, material);
-				newObject.rotation.x = -Math.PI / 2;
-				newObject.position.y = -1;
+				object = new Mesh(geometry, material);
+				object.rotation.x = -Math.PI / 2;
+				object.position.y = -1;
 			} else if (type === 'sphere') {
 				const geometry = new SphereGeometry();
-				const material = new MeshBasicMaterial({ color: 0xffff00, wireframe: true });
-				newObject = new Mesh(geometry, material);
+				object = new Mesh(geometry, material);
 			}
 
-			if (newObject) {
-				this.transform.attach(newObject);
-				this.scene.add(newObject);
+			if (object) {
+				this.transform.attach(object);
+				this.home.add(object);
 			}
 		});
 
@@ -157,13 +179,28 @@ export class DT3DCard extends LitElement  {
 
 		this.scene = new Scene();
 		
-		this.camera = new PerspectiveCamera(75, width / height, 0.1, 1000);
+		this.home = new Group();
+		this.scene.add(this.home);
+
+		this.camera = new PerspectiveCamera(75, width / height, 0.1, 10000);
 		this.camera.position.z = 3;
 
 		this.renderer = new WebGLRenderer({ alpha: true, canvas: this.canvas });
 		this.renderer.setSize(width, height, false);
 		this.renderer.setClearColor(0x446644, 1);
 		this.container.appendChild(this.renderer.domElement);
+
+		// Sky
+		const sky = new Sky();
+		sky.scale.setScalar(1e4);
+
+
+		const phi = MathUtils.degToRad( 90 );
+		const theta = MathUtils.degToRad( 180 );
+		const sunPosition = new Vector3().setFromSphericalCoords( 1, phi, theta );
+
+		sky.material.uniforms.sunPosition.value = sunPosition;
+		this.scene.add(sky);
 
 		// Add OrbitControls
 		this.controls = new OrbitControls(this.camera, this.renderer.domElement);
@@ -181,7 +218,7 @@ export class DT3DCard extends LitElement  {
 		const material = new MeshBasicMaterial({ color: 0xffff00, wireframe: true });
 		const cube = new Mesh(geometry, material);
 		this.transform.attach(cube);
-		this.scene.add(cube);
+		this.home.add(cube);
 
 		const planeGeometry = new BoxGeometry(5, 5, 0.1);
 		const planeMaterial = new MeshBasicMaterial({ color: 0x00ff00 });
@@ -189,12 +226,11 @@ export class DT3DCard extends LitElement  {
 		const plane = new Mesh(planeGeometry, planeMaterial);
 		plane.rotation.x = -Math.PI / 2; // Rotate to make it horizontal
 		plane.position.y = -1; // Position it below the cube
-		this.scene.add(plane);
+		this.home.add(plane);
 
 		// Raycaster for object picking
 		const raycaster = new Raycaster();
 		const pointer = new Vector2();
-		const objects: Mesh[] = [cube, plane];
 
 		this.canvas.addEventListener('dblclick', (event: MouseEvent) => {
 			const rect = this.canvas.getBoundingClientRect();
@@ -202,7 +238,7 @@ export class DT3DCard extends LitElement  {
 			pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
 			raycaster.setFromCamera(pointer, this.camera);
 
-			const intersects = raycaster.intersectObjects(objects, false);
+			const intersects = raycaster.intersectObjects(this.home.children, false);
 			if (intersects.length > 0) {
 				const picked = intersects[0].object as Mesh;
 				this.transform.attach(picked);
@@ -222,7 +258,6 @@ export class DT3DCard extends LitElement  {
 		animate();
 
 		const resizeDetector = new ResizeObserver((event) => {
-			console.log('Resizing card', event, this);
 			const width = event[0].contentRect.width;
 			const height = event[0].contentRect.height - 100;
 
@@ -249,7 +284,7 @@ export class DT3DCard extends LitElement  {
 					z-index: 10;
 					position: absolute;
 					top: 10px;
-					left: 10px;
+					right: 10px;
 					background: rgba(0,0,0,0.5);
 					padding: 5px;
 					border-radius: 5px;
@@ -265,7 +300,7 @@ export class DT3DCard extends LitElement  {
 					z-index: 10;
 					position: absolute;
 					top: 10px;
-					left: 10px;
+					right: 10px;
 					background: rgba(0,0,0,0.5);
 					padding: 5px;
 					border-radius: 5px;
