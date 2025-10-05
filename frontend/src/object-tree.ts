@@ -1,8 +1,11 @@
 import { LitElement, html, css } from "lit";
 import { customElement, property, state } from 'lit/decorators.js';
+import type { Object3D, Scene } from "three";
+
+type UUID = string;
 
 interface TreeNode {
-    id: string;
+    id: UUID;
     name: string;
     children?: TreeNode[];
 }
@@ -34,41 +37,87 @@ export class DT3DTree extends LitElement {
             margin-right: 4px;
         }
     `;
-
+    
+    /**
+     * The 3D scene to visualize.
+     */
     @property({ type: Array })
-    tree: TreeNode[] = [
-        {
-            id: '1',
-            name: 'Scene',
-            children: [
-                { id: '2', name: 'Cube' },
-                { id: '3', name: 'Sphere' },
-                {
-                    id: '4',
-                    name: 'Group',
-                    children: [
-                        { id: '5', name: 'Plane' }
-                    ]
-                }
-            ]
+    public scene: Scene = null;
+
+    /**
+     * Set of expanded node IDs.
+     */
+    @state()
+    private expanded: Set<UUID> = new Set([]);
+
+    /**
+     * Currently selected node ID.
+     */
+    @state()
+    private selectedId: UUID = null;
+
+    /**
+     * Tree data structure representing the 3D scene graph.
+     */
+    public tree: TreeNode[] = [];
+
+
+    /**
+     * React to property changes.
+     * 
+     * @param changedProps - Changed properties map.
+     */
+    public updated(changedProps: Map<string, any>) {
+        super.updated(changedProps);
+
+        if (changedProps.has('scene') && this.scene) {
+            this.updateTreeFromScene(this.scene);
         }
-    ];
+    }
 
-    @state()
-    private expanded: Set<string> = new Set(['1']);
 
-    @state()
-    private selectedId: string | null = null;
-
-    private toggleNode(id: string) {
+    /**
+     * Toggle the expanded/collapsed state of a node.
+     * 
+     * @param id - The ID of the node to toggle.
+     */
+    private toggleNode(id: UUID) {
         const expanded = new Set(this.expanded);
         if (expanded.has(id)) expanded.delete(id);
         else expanded.add(id);
+        
         this.expanded = expanded;
     }
 
-    private selectNode(id: string) {
+    /**
+     * Convert a Three.js scene into a tree structure.
+     * 
+     * @param scene - The Three.js scene to convert into a tree structure.
+     */
+    public updateTreeFromScene(scene: Scene, reset: boolean = false) {
+        const toTreeNode = (obj: Object3D): TreeNode => ({
+            id: obj.uuid,
+            name: obj.name || obj.type,
+            children: obj.children.length > 0 ? obj.children.map(toTreeNode) : undefined
+        });
+
+        this.tree = [toTreeNode(scene)];
+
+        // Reset expanded/selected state
+        if (reset) {
+            this.expanded = new Set([scene.uuid]);
+            this.selectedId = null;
+        }
+    }
+
+    /**
+     * Select a node by its ID, dispatching an event.
+     * 
+     * @param id - The ID of the node to select. 
+     */
+    private selectNode(id: UUID) {
         this.selectedId = id;
+
         this.dispatchEvent(new CustomEvent('object-selected', {
             detail: { id },
             bubbles: true,
@@ -76,6 +125,12 @@ export class DT3DTree extends LitElement {
         }));
     }
 
+    /**
+     * Render the tree recursively.
+     * 
+     * @param nodes - The tree nodes to render.
+     * @returns Rendered HTML template.
+     */
     private renderTree(nodes: TreeNode[]): any {
         return html`
             <ul style="list-style: none; margin: 0; padding: 0;">
@@ -104,7 +159,7 @@ export class DT3DTree extends LitElement {
         `;
     }
 
-    render() {
+    public render() {
         return html`
             <div>
                 ${this.renderTree(this.tree)}

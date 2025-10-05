@@ -8,7 +8,7 @@ export class DT3DCardEditor extends LitElement {
 	};
 	private _config: any;
 
-	setConfig(config: any) {
+	public setConfig(config: any) {
 		this._config = {
 			port: 8080,
 			...config,
@@ -22,7 +22,7 @@ export class DT3DCardEditor extends LitElement {
 	 * 
 	 * @param {*} patch 
 	 */
-	updateConfig(patch: any) {
+	public updateConfig(patch: any) {
 		this._config = { ...this._config, ...patch };
 		this.dispatchEvent(
 			new CustomEvent("config-changed", {
@@ -33,7 +33,7 @@ export class DT3DCardEditor extends LitElement {
 		);
 	}
 
-	onValueChanged(e: any) {
+	public onValueChanged(e: any) {
 		const key = e.target.dataset.key;
 		const value = e.target.value;
 		this.updateConfig({ [key]: value });
@@ -43,7 +43,7 @@ export class DT3DCardEditor extends LitElement {
 	/**
 	 * Presented to the user to configure the card.
 	 */
-	render() {
+	public render() {
 		if (!this._config) {
 			return html``;
 		}
