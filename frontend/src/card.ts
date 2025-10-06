@@ -149,7 +149,6 @@ export class DT3DCard extends LitElement  {
 
 		sidebar.addEventListener('add-object', (e: any) => {
 			const type = e.detail.type;
-			console.log('Add object of type', type);
 
 			let object: Mesh;
 			const material = new MeshBasicMaterial({ color: 0x00ffff, wireframe: true });
@@ -193,7 +192,6 @@ export class DT3DCard extends LitElement  {
 		// Sky
 		const sky = new Sky();
 		sky.scale.setScalar(1e4);
-
 
 		const phi = MathUtils.degToRad( 90 );
 		const theta = MathUtils.degToRad( 180 );
