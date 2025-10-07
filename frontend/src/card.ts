@@ -42,6 +42,35 @@ export class DT3DCard extends LitElement  {
 	 */
 	private home: Group;
 
+	/**
+	 * Sidebar element for tools and options.
+	 */
+	public sidebar: DT3DSidebar;
+
+	/**
+	 * Tree element for displaying the 3D object hierarchy.
+	 */
+	public tree: DT3DTree;
+
+	static properties = {
+		hass: { attribute: false },
+		_config: { state: true },
+	};
+ 
+	set hass(hass: any) {
+		if (!this.hassInstance) {
+			console.log('Entity states', this, DT3DCard.styles, hass.states);
+		}
+
+		this.hassInstance = hass;
+	
+	}
+
+	/**
+	 * Select a 3D model file to upload.
+	 * 
+	 * Presents a file picker dialog to the user and loads the selected model into the scene.
+	 */
 	private selectFile() {
 		if (!this.home) {
 			return;
@@ -65,6 +94,11 @@ export class DT3DCard extends LitElement  {
 		input.click();
 	}
 
+	/**
+	 * Loads a 3D model from a file.
+	 * 
+	 * @param file - The model file to load. 
+	 */
 	private loadModelFromFile(file: File) {
 		if (!this.home) {
 			return;
@@ -83,16 +117,6 @@ export class DT3DCard extends LitElement  {
 			URL.revokeObjectURL(url);
 		};
 
-		const addToScene = (object: Object3D | null | undefined) => {
-			if (!object) {
-				return;
-			}
-
-			object.name = file.name;
-			this.home.add(object);
-			this.transform?.attach(object);
-		};
-
 		const onError = (error: any) => {
 			console.error(`Failed to load ${extension} model`, error);
 			cleanup();
@@ -102,7 +126,7 @@ export class DT3DCard extends LitElement  {
 			const loader = new GLTFLoader();
 			loader.load(url, (gltf: any) => {
 				cleanup();
-				addToScene(gltf.scene ?? gltf.scenes?.[0]);
+				this.addToScene(gltf.scene ?? gltf.scenes?.[0], file.name);
 			}, undefined, onError);
 			return;
 		}
@@ -110,7 +134,7 @@ export class DT3DCard extends LitElement  {
 			const loader = new OBJLoader();
 			loader.load(url, (obj: any) => {
 				cleanup();
-				addToScene(obj);
+				this.addToScene(obj, file.name);
 			}, undefined, onError);
 			return;
 		}
@@ -118,7 +142,7 @@ export class DT3DCard extends LitElement  {
 			const loader = new FBXLoader();
 			loader.load(url, (fbx: any) => {
 				cleanup();
-				addToScene(fbx);
+				this.addToScene(fbx, file.name);
 			}, undefined, onError);
 			return;
 		}
@@ -127,20 +151,6 @@ export class DT3DCard extends LitElement  {
 		cleanup();
 	}
 
-	static properties = {
-		hass: { attribute: false },
-		_config: { state: true },
-	};
-	
- 
-	set hass(hass: any) {
-		if (!this.hassInstance) {
-			console.log('Entity states', this, DT3DCard.styles, hass.states);
-		}
-
-		this.hassInstance = hass;
-	
-	}
 
 	/**
 	 * Set the configuration for the card.
@@ -160,6 +170,25 @@ export class DT3DCard extends LitElement  {
 
 		console.log('DT3DCard config set:', this.config);
 	}
+
+	/**
+	 * Adds a 3D object to the scene.
+	 * 
+	 * @param object - The 3D object to add to the scene.
+	 */
+	public addToScene(object: Object3D | null | undefined, name?: string): void {
+		if (!object) {
+			return;
+		}
+
+		if (name) {
+			object.name = name;
+		}
+
+		this.home.add(object);
+		this.transform?.attach(object);
+	};
+
 
 	/**
 	 * Method called when the element is added to the DOM.
@@ -217,30 +246,30 @@ export class DT3DCard extends LitElement  {
 		this.home = new Group();
 		this.scene.add(this.home);
 
-		const sidebar = document.createElement('dt3d-sidebar') as DT3DSidebar;
-		sidebar.style.cssText = `
+		this.sidebar = document.createElement('dt3d-sidebar') as DT3DSidebar;
+		this.sidebar.style.cssText = `
 			position: absolute;
 			top: 0;
 			left: 0;
 			height: 100%;
 		`;
-		this.content.appendChild(sidebar);
+		this.content.appendChild(this.sidebar);
 		
-		const tree = document.createElement('dt3d-tree') as DT3DTree;
-		tree.style.cssText = `
+		this.tree = document.createElement('dt3d-tree') as DT3DTree;
+		this.tree.style.cssText = `
 			position: absolute;
 			top: 0;	
 			right: 0;
 			height: 100%;
 		`;
-		this.content.appendChild(tree);
+		this.content.appendChild(this.tree);
 
-		sidebar.addEventListener('transform-tool-selected', (e: any) => {
+		this.sidebar.addEventListener('transform-tool-selected', (e: any) => {
 			const tool = e.detail.tool;
 			this.transform.setMode(tool);
 		});
 
-		sidebar.addEventListener('add-object', (e: any) => {
+		this.sidebar.addEventListener('add-object', (e: any) => {
 			const type = e.detail.type;
 
 			let object: Mesh;
@@ -267,7 +296,7 @@ export class DT3DCard extends LitElement  {
 			}
 		});
 
-		sidebar.addEventListener('upload-model', () => {
+		this.sidebar.addEventListener('upload-model', () => {
 			this.selectFile();
 		});
 

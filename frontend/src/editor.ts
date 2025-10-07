@@ -36,6 +36,9 @@ export class DT3DCardEditor extends LitElement {
 	public onValueChanged(e: any) {
 		const key = e.target.dataset.key;
 		const value = e.target.value;
+
+		console.log('DT3d: Updating config', key, value);
+
 		this.updateConfig({ [key]: value });
 	}
 
@@ -65,7 +68,6 @@ export class DT3DCardEditor extends LitElement {
 			</div>
 		`;
 
-		console.log(content);
 		return content;
 	}
 }
