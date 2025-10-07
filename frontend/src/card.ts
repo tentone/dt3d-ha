@@ -185,8 +185,12 @@ export class DT3DCard extends LitElement  {
 			object.name = name;
 		}
 
+		console.log('DT3d: Adding object to scene', object, name);
+
 		this.home.add(object);
 		this.transform?.attach(object);
+
+		this.tree.updateTreeFromScene();
 	};
 
 
@@ -263,7 +267,7 @@ export class DT3DCard extends LitElement  {
 			height: 100%;
 		`;
 		this.content.appendChild(this.tree);
-
+		
 		this.sidebar.addEventListener('transform-tool-selected', (e: any) => {
 			const tool = e.detail.tool;
 			this.transform.setMode(tool);
@@ -291,8 +295,7 @@ export class DT3DCard extends LitElement  {
 			}
 
 			if (object) {
-				this.transform.attach(object);
-				this.home.add(object);
+				this.addToScene(object);
 			}
 		});
 
@@ -344,6 +347,18 @@ export class DT3DCard extends LitElement  {
 		plane.rotation.x = -Math.PI / 2; // Rotate to make it horizontal
 		plane.position.y = -1; // Position it below the cube
 		this.home.add(plane);
+
+		this.tree.scene = this.home;
+		this.tree.updateTreeFromScene();
+
+		// Listen for selection events from the tree
+		this.tree.addEventListener('object-selected', (e: any) => {
+			const id = e.detail.id;
+			const object = this.home.getObjectByProperty('uuid', id);
+			if (object) {
+				this.transform.attach(object);
+			}
+		});
 
 		// Raycaster for object picking
 		const raycaster = new Raycaster();

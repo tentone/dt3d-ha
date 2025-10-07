@@ -61,7 +61,6 @@ export class DT3DTree extends LitElement {
      */
     public tree: TreeNode[] = [];
 
-
     /**
      * React to property changes.
      * 
@@ -71,7 +70,7 @@ export class DT3DTree extends LitElement {
         super.updated(changedProps);
 
         if (changedProps.has('scene') && this.scene) {
-            this.updateTreeFromScene(this.scene);
+            this.updateTreeFromScene();
         }
     }
 
@@ -94,7 +93,11 @@ export class DT3DTree extends LitElement {
      * 
      * @param scene - The Three.js scene to convert into a tree structure.
      */
-    public updateTreeFromScene(scene: Scene, reset: boolean = false) {
+    public updateTreeFromScene(scene?: Scene, reset: boolean = false) {
+        scene = scene || this.scene;
+
+        console.log('DT3d: Updating tree from scene', scene, reset);
+
         const toTreeNode = (obj: Object3D): TreeNode => ({
             id: obj.uuid,
             name: obj.name || obj.type,
