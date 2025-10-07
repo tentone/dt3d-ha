@@ -42,7 +42,7 @@ export class DT3DCard extends LitElement  {
 	 */
 	private home: Group;
 
-	private promptModelUpload() {
+	private selectFile() {
 		if (!this.home) {
 			return;
 		}
@@ -100,25 +100,23 @@ export class DT3DCard extends LitElement  {
 
 		if (extension === 'gltf' || extension === 'glb') {
 			const loader = new GLTFLoader();
-			loader.load(url, (gltf) => {
+			loader.load(url, (gltf: any) => {
 				cleanup();
 				addToScene(gltf.scene ?? gltf.scenes?.[0]);
 			}, undefined, onError);
 			return;
 		}
-
-		if (extension === 'obj') {
+		else if (extension === 'obj') {
 			const loader = new OBJLoader();
-			loader.load(url, (obj) => {
+			loader.load(url, (obj: any) => {
 				cleanup();
 				addToScene(obj);
 			}, undefined, onError);
 			return;
 		}
-
-		if (extension === 'fbx') {
+		else if (extension === 'fbx') {
 			const loader = new FBXLoader();
-			loader.load(url, (fbx) => {
+			loader.load(url, (fbx: any) => {
 				cleanup();
 				addToScene(fbx);
 			}, undefined, onError);
@@ -270,7 +268,7 @@ export class DT3DCard extends LitElement  {
 		});
 
 		sidebar.addEventListener('upload-model', () => {
-			this.promptModelUpload();
+			this.selectFile();
 		});
 
 		this.camera = new PerspectiveCamera(75, width / height, 0.1, 10000);
