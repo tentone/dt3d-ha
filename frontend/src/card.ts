@@ -28,106 +28,106 @@ export class DT3DCard extends LitElement  {
 
 	private controls: OrbitControls;
 
-        private transform: TransformControls = null;
+	private transform: TransformControls = null;
 
-        /**
-         * The scene where all 3D objects are placed.
-         */
-        private scene: Scene;
+	/**
+	 * The scene where all 3D objects are placed.
+	 */
+	private scene: Scene;
 
-        /**
-         * The home group that contains all main objects in the scene.
-         *
-         * This allows for easy manipulation of the entire scene (e.g., moving, scaling, rotating the whole scene).
-         */
-        private home: Group;
+	/**
+	 * The home group that contains all main objects in the scene.
+	 *
+	 * This allows for easy manipulation of the entire scene (e.g., moving, scaling, rotating the whole scene).
+	 */
+	private home: Group;
 
-        private promptModelUpload() {
-                if (!this.home) {
-                        return;
-                }
+	private promptModelUpload() {
+		if (!this.home) {
+			return;
+		}
 
-                const input = document.createElement('input');
-                input.type = 'file';
-                input.accept = '.gltf,.glb,.obj,.fbx';
-                input.style.display = 'none';
+		const input = document.createElement('input');
+		input.type = 'file';
+		input.accept = '.gltf,.glb,.obj,.fbx';
+		input.style.display = 'none';
 
-                input.addEventListener('change', () => {
-                        const file = input.files?.[0];
-                        if (file) {
-                                this.loadModelFromFile(file);
-                        }
-                        input.remove();
-                });
+		input.addEventListener('change', () => {
+			const file = input.files?.[0];
+			if (file) {
+				this.loadModelFromFile(file);
+			}
+			input.remove();
+		});
 
-                const host = this.content ?? this;
-                host.appendChild(input);
-                input.click();
-        }
+		const host = this.content ?? this;
+		host.appendChild(input);
+		input.click();
+	}
 
-        private loadModelFromFile(file: File) {
-                if (!this.home) {
-                        return;
-                }
+	private loadModelFromFile(file: File) {
+		if (!this.home) {
+			return;
+		}
 
-                const extension = file.name.split('.').pop()?.toLowerCase();
+		const extension = file.name.split('.').pop()?.toLowerCase();
 
-                if (!extension) {
-                        console.warn('Unable to detect model file extension:', file.name);
-                        return;
-                }
+		if (!extension) {
+			console.warn('Unable to detect model file extension:', file.name);
+			return;
+		}
 
-                const url = URL.createObjectURL(file);
+		const url = URL.createObjectURL(file);
 
-                const cleanup = () => {
-                        URL.revokeObjectURL(url);
-                };
+		const cleanup = () => {
+			URL.revokeObjectURL(url);
+		};
 
-                const addToScene = (object: Object3D | null | undefined) => {
-                        if (!object) {
-                                return;
-                        }
+		const addToScene = (object: Object3D | null | undefined) => {
+			if (!object) {
+				return;
+			}
 
-                        object.name = file.name;
-                        this.home.add(object);
-                        this.transform?.attach(object);
-                };
+			object.name = file.name;
+			this.home.add(object);
+			this.transform?.attach(object);
+		};
 
-                const onError = (error: any) => {
-                        console.error(`Failed to load ${extension} model`, error);
-                        cleanup();
-                };
+		const onError = (error: any) => {
+			console.error(`Failed to load ${extension} model`, error);
+			cleanup();
+		};
 
-                if (extension === 'gltf' || extension === 'glb') {
-                        const loader = new GLTFLoader();
-                        loader.load(url, (gltf) => {
-                                cleanup();
-                                addToScene(gltf.scene ?? gltf.scenes?.[0]);
-                        }, undefined, onError);
-                        return;
-                }
+		if (extension === 'gltf' || extension === 'glb') {
+			const loader = new GLTFLoader();
+			loader.load(url, (gltf) => {
+				cleanup();
+				addToScene(gltf.scene ?? gltf.scenes?.[0]);
+			}, undefined, onError);
+			return;
+		}
 
-                if (extension === 'obj') {
-                        const loader = new OBJLoader();
-                        loader.load(url, (obj) => {
-                                cleanup();
-                                addToScene(obj);
-                        }, undefined, onError);
-                        return;
-                }
+		if (extension === 'obj') {
+			const loader = new OBJLoader();
+			loader.load(url, (obj) => {
+				cleanup();
+				addToScene(obj);
+			}, undefined, onError);
+			return;
+		}
 
-                if (extension === 'fbx') {
-                        const loader = new FBXLoader();
-                        loader.load(url, (fbx) => {
-                                cleanup();
-                                addToScene(fbx);
-                        }, undefined, onError);
-                        return;
-                }
+		if (extension === 'fbx') {
+			const loader = new FBXLoader();
+			loader.load(url, (fbx) => {
+				cleanup();
+				addToScene(fbx);
+			}, undefined, onError);
+			return;
+		}
 
-                console.warn('Unsupported model format:', extension);
-                cleanup();
-        }
+		console.warn('Unsupported model format:', extension);
+		cleanup();
+	}
 
 	static properties = {
 		hass: { attribute: false },
@@ -214,17 +214,17 @@ export class DT3DCard extends LitElement  {
 		`;
 		this.content.appendChild(this.canvas);
 
-                this.scene = new Scene();
+		this.scene = new Scene();
 
-                this.home = new Group();
-                this.scene.add(this.home);
+		this.home = new Group();
+		this.scene.add(this.home);
 
-                const sidebar = document.createElement('dt3d-sidebar') as DT3DSidebar;
-                sidebar.style.cssText = `
-                        position: absolute;
-                        top: 0;
-                        left: 0;
-                        height: 100%;
+		const sidebar = document.createElement('dt3d-sidebar') as DT3DSidebar;
+		sidebar.style.cssText = `
+			position: absolute;
+			top: 0;
+			left: 0;
+			height: 100%;
 		`;
 		this.content.appendChild(sidebar);
 		
@@ -242,11 +242,11 @@ export class DT3DCard extends LitElement  {
 			this.transform.setMode(tool);
 		});
 
-                sidebar.addEventListener('add-object', (e: any) => {
-                        const type = e.detail.type;
+		sidebar.addEventListener('add-object', (e: any) => {
+			const type = e.detail.type;
 
-                        let object: Mesh;
-                        const material = new MeshBasicMaterial({ color: 0x00ffff, wireframe: true });
+			let object: Mesh;
+			const material = new MeshBasicMaterial({ color: 0x00ffff, wireframe: true });
 
 			if (type === 'cube') {
 				const geometry = new BoxGeometry();
@@ -263,19 +263,17 @@ export class DT3DCard extends LitElement  {
 				object = new Mesh(geometry, material);
 			}
 
-                        if (object) {
-                                this.transform.attach(object);
-                                this.home.add(object);
-                        }
-                });
+			if (object) {
+				this.transform.attach(object);
+				this.home.add(object);
+			}
+		});
 
-                sidebar.addEventListener('upload-model', () => {
-                        this.promptModelUpload();
-                });
+		sidebar.addEventListener('upload-model', () => {
+			this.promptModelUpload();
+		});
 
-
-
-                this.camera = new PerspectiveCamera(75, width / height, 0.1, 10000);
+		this.camera = new PerspectiveCamera(75, width / height, 0.1, 10000);
 		this.camera.position.z = 3;
 
 		this.renderer = new WebGLRenderer({ alpha: true, canvas: this.canvas });

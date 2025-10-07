@@ -7,7 +7,7 @@ export class DT3DSidebar extends LitElement {
 		:host {
 			display: block;
 			width: 220px;
-			background: #23272f55;
+			background: #363a4255;
 			color: #fff;
 			height: 100%;
 			padding: 16px 0;
@@ -71,10 +71,10 @@ export class DT3DSidebar extends LitElement {
 			transition: background 0.2s;
 		}
 
-                button:hover {
-                        background: #3a4050;
-                }
-        `;
+		button:hover {
+			background: #3a4050;
+		}
+	`;
 
 	static properties = {
 		collapsed: { type: Boolean, reflect: true }
@@ -97,25 +97,25 @@ export class DT3DSidebar extends LitElement {
 		}));
 	}
 
-        private handleAddObject(type: string) {
-                this.dispatchEvent(new CustomEvent('add-object', {
-                        detail: { type },
-                        bubbles: true,
-                        composed: true
-                }));
-        }
+	private handleAddObject(type: string) {
+		this.dispatchEvent(new CustomEvent('add-object', {
+			detail: { type },
+			bubbles: true,
+			composed: true
+		}));
+	}
 
-        private requestModelUpload() {
-                this.dispatchEvent(new CustomEvent('upload-model', {
-                        bubbles: true,
-                        composed: true,
-                }));
-        }
+	private requestModelUpload() {
+		this.dispatchEvent(new CustomEvent('upload-model', {
+			bubbles: true,
+			composed: true,
+		}));
+	}
 
-        render() {
-                return html`
-                        <button class="collapse-btn" @click=${this.toggleCollapse} title="Collapse sidebar">
-                                ${this.collapsed ? '⮞' : '⮜'}
+	render() {
+		return html`
+			<button class="collapse-btn" @click=${this.toggleCollapse} title="Collapse sidebar">
+				${this.collapsed ? '⮞' : '⮜'}
 			</button>
 			<div class="sidebar-section">
 				<div class="sidebar-title">Controls</div>
@@ -123,16 +123,13 @@ export class DT3DSidebar extends LitElement {
 				<button @click=${() => this.handleTransformSelect('rotate')}>Rotate</button>
 				<button @click=${() => this.handleTransformSelect('scale')}>Scale</button>
 			</div>
-                        <div class="sidebar-section">
-                                <div class="sidebar-title">Add Object</div>
-                                <button @click=${() => this.handleAddObject('cube')}>Cube</button>
-                                <button @click=${() => this.handleAddObject('sphere')}>Sphere</button>
-                                <button @click=${() => this.handleAddObject('plane')}>Plane</button>
-                        </div>
-                        <div class="sidebar-section">
-                                <div class="sidebar-title">Upload Model</div>
-                                <button @click=${this.requestModelUpload}>Upload…</button>
-                        </div>
-                `;
-        }
+			<div class="sidebar-section">
+				<div class="sidebar-title">Add Object</div>
+				<button @click=${() => this.handleAddObject('cube')}>Cube</button>
+				<button @click=${() => this.handleAddObject('sphere')}>Sphere</button>
+				<button @click=${() => this.handleAddObject('plane')}>Plane</button>
+				<button @click=${this.requestModelUpload}>Upload</button>
+			</div>
+		`;
+	}
 }
