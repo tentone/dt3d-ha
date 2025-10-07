@@ -105,13 +105,6 @@ export class DT3DSidebar extends LitElement {
 		}));
 	}
 
-	private requestModelUpload() {
-		this.dispatchEvent(new CustomEvent('upload-model', {
-			bubbles: true,
-			composed: true,
-		}));
-	}
-
 	render() {
 		return html`
 			<button class="collapse-btn" @click=${this.toggleCollapse} title="Collapse sidebar">
@@ -128,7 +121,8 @@ export class DT3DSidebar extends LitElement {
 				<button @click=${() => this.handleAddObject('cube')}>Cube</button>
 				<button @click=${() => this.handleAddObject('sphere')}>Sphere</button>
 				<button @click=${() => this.handleAddObject('plane')}>Plane</button>
-				<button @click=${this.requestModelUpload}>Upload</button>
+				<button @click=${() => this.handleAddObject('upload')}>Upload</button>
+				<button @click=${() => this.handleAddObject('entity')}>Entity</button>
 			</div>
 		`;
 	}
