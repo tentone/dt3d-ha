@@ -282,16 +282,18 @@ export class DT3DCard extends LitElement  {
 			if (type === 'cube') {
 				const geometry = new BoxGeometry();
 				object = new Mesh(geometry, material);
-				this.transform.attach(object);
+				object.name = 'Cube';
 			}
 			else if (type === 'plane') {
 				const geometry = new PlaneGeometry(1,1,1);
 				object = new Mesh(geometry, material);
 				object.rotation.x = -Math.PI / 2;
 				object.position.y = -1;
+				object.name = 'Plane';
 			} else if (type === 'sphere') {
 				const geometry = new SphereGeometry();
 				object = new Mesh(geometry, material);
+				object.name = 'Sphere';
 			}
 
 			if (object) {
