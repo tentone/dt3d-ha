@@ -639,7 +639,7 @@ export class DT3DCard extends LitElement  {
 	 * @returns - configuration element
 	 */
 	static getConfigElement(): HTMLElement {
-		return document.createElement('dt3d-card-editor');
+		return document.createElement('dt3d-config-editor');
 	}
 
 	/**
