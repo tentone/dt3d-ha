@@ -5,8 +5,11 @@ import type { Object3D, Scene } from "three";
 type UUID = string;
 
 interface TreeNode {
+    // Unique identifier of the node
     id: UUID;
+    // Display name of the node
     name: string;
+    // Children nodes
     children?: TreeNode[];
 }
 
@@ -14,6 +17,7 @@ type DropPosition = 'before' | 'after' | 'inside';
 
 @customElement('dt3d-tree')
 export class DT3DTree extends LitElement {
+
     static styles = css`
         :host {
             display: block;
@@ -82,7 +86,7 @@ export class DT3DTree extends LitElement {
     public tree: TreeNode[] = [];
 
     /**
-     * Currently dragged node ID.
+     * ID of the node being dragged.
      */
     @state()
     private draggedId: UUID = null;
@@ -145,6 +149,7 @@ export class DT3DTree extends LitElement {
         }
     }
 
+    // Find the parent ID of a given child ID in the tree.
     private findParentId(nodes: TreeNode[], childId: UUID, parentId: UUID = null): UUID | null {
         for (const node of nodes) {
             if (node.id === childId) {
@@ -162,6 +167,7 @@ export class DT3DTree extends LitElement {
         return null;
     }
 
+    // Check if ancestorId is an ancestor of nodeId in the tree.
     private isAncestor(ancestorId: UUID, nodeId: UUID): boolean {
         if (!ancestorId || !nodeId || ancestorId === nodeId) {
             return false;
@@ -179,6 +185,7 @@ export class DT3DTree extends LitElement {
         return this.isAncestor(ancestorId, parentId);
     }
 
+    // Check if a node can be dropped onto a target node.
     private canDrop(targetId: UUID, position: DropPosition): boolean {
         if (!this.draggedId || this.draggedId === targetId) {
             return false;
@@ -200,7 +207,9 @@ export class DT3DTree extends LitElement {
         return true;
     }
 
+    // Handle the start of a drag operation.
     private handleDragStart(event: DragEvent, id: UUID) {
+        // Set drag data
         event.dataTransfer?.setData('text/plain', id);
         if (event.dataTransfer) {
             event.dataTransfer.effectAllowed = 'move';
