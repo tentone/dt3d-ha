@@ -7,6 +7,7 @@ import (
 
 	"dt3d-ha/backend/models"
 	"dt3d-ha/backend/repository"
+
 	"gorm.io/datatypes"
 )
 
@@ -44,6 +45,7 @@ var allowedInstanceTypes = map[string]struct{}{
 func (s *SceneService) CreateObjectInstance(sceneID string, instance *models.ObjectInstance) error {
 	instance.SceneID = sceneID
 	instance.Type = strings.TrimSpace(instance.Type)
+
 	if instance.Type == "" {
 		return errors.New("object type is required")
 	}
