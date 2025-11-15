@@ -508,7 +508,7 @@ export class DT3DCard extends LitElement  {
 					color: red;
 					z-index: 10;
 					position: absolute;
-					top: 10px;
+					bottom: 10px;
 					right: 10px;
 					background: rgba(0,0,0,0.5);
 					padding: 5px;

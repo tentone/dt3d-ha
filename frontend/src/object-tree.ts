@@ -34,6 +34,9 @@ export class DT3DTree extends LitElement {
             padding-left: 16px;
             cursor: pointer;
             user-select: none;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            width: 100%;
         }
         .tree-node.selected {
             background: #3a4050;
