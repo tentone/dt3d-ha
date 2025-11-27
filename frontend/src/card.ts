@@ -188,10 +188,10 @@ export class DT3DCard extends LitElement  {
 	 * 
 	 * @param object - The 3D object to add to the scene.
 	 */
-        public addToScene(object: Object3D | null | undefined, name?: string): void {
-                if (!object) {
-                        return;
-                }
+	public addToScene(object: Object3D | null | undefined, name?: string): void {
+		if (!object) {
+				return;
+		}
 
 		if (name) {
 			object.name = name;
@@ -199,78 +199,78 @@ export class DT3DCard extends LitElement  {
 
 		console.log('DT3d: Adding object to scene', object, name);
 
-                this.home.add(object);
-                this.transform?.attach(object);
+		this.home.add(object);
+		this.transform?.attach(object);
 
-                this.tree.updateTreeFromScene();
-        };
+		this.tree.updateTreeFromScene(this.home, true);
+	};
 
-        private isDescendant(object: Object3D, potentialAncestor: Object3D): boolean {
-                let current = object.parent;
-                while (current) {
-                        if (current === potentialAncestor) {
-                                return true;
-                        }
-                        current = current.parent;
-                }
+		private isDescendant(object: Object3D, potentialAncestor: Object3D): boolean {
+				let current = object.parent;
+				while (current) {
+						if (current === potentialAncestor) {
+								return true;
+						}
+						current = current.parent;
+				}
 
-                return false;
-        }
+				return false;
+		}
 
-        private handleTreeDrop(sourceId: string, targetId: string, position: 'before' | 'after' | 'inside'): void {
-                if (!this.home) {
-                        return;
-                }
+		private handleTreeDrop(sourceId: string, targetId: string, position: 'before' | 'after' | 'inside'): void {
+				if (!this.home) {
+						return;
+				}
 
-                const source = this.home.getObjectByProperty('uuid', sourceId) as Object3D | null;
-                const target = this.home.getObjectByProperty('uuid', targetId) as Object3D | null;
+				const source = this.home.getObjectByProperty('uuid', sourceId) as Object3D | null;
+				const target = this.home.getObjectByProperty('uuid', targetId) as Object3D | null;
 
-                if (!source || !target || source === target) {
-                        return;
-                }
+				if (!source || !target || source === target) {
+						return;
+				}
 
-                if (this.isDescendant(target, source)) {
-                        return;
-                }
+				if (this.isDescendant(target, source)) {
+						return;
+				}
 
-                if (position === 'inside') {
-                        if (source.parent !== target) {
-                                target.attach(source);
-                        } else {
-                                const index = target.children.indexOf(source);
-                                if (index > -1) {
-                                        target.children.splice(index, 1);
-                                        target.children.push(source);
-                                }
-                        }
-                } else {
-                        const parent = target.parent;
-                        if (!parent || parent === source) {
-                                return;
-                        }
+				if (position === 'inside') {
+						if (source.parent !== target) {
+								target.attach(source);
+						} else {
+								const index = target.children.indexOf(source);
+								if (index > -1) {
+										target.children.splice(index, 1);
+										target.children.push(source);
+								}
+						}
+				} else {
+						const parent = target.parent;
+						if (!parent || parent === source) {
+								return;
+						}
 
-                        if (source.parent !== parent) {
-                                parent.attach(source);
-                        }
+						if (source.parent !== parent) {
+								parent.attach(source);
+						}
 
-                        const currentIndex = parent.children.indexOf(source);
-                        if (currentIndex === -1) {
-                                return;
-                        }
+						const currentIndex = parent.children.indexOf(source);
+						if (currentIndex === -1) {
+								return;
+						}
 
-                        parent.children.splice(currentIndex, 1);
+						parent.children.splice(currentIndex, 1);
 
-                        const targetIndex = parent.children.indexOf(target);
-                        let newIndex = position === 'before' ? targetIndex : targetIndex + 1;
-                        if (newIndex > parent.children.length) {
-                                newIndex = parent.children.length;
-                        }
+						const targetIndex = parent.children.indexOf(target);
+						let newIndex = position === 'before' ? targetIndex : targetIndex + 1;
+						if (newIndex > parent.children.length) {
+								newIndex = parent.children.length;
+						}
 
-                        parent.children.splice(newIndex, 0, source);
-                }
+						parent.children.splice(newIndex, 0, source);
+				}
 
-                this.tree.updateTreeFromScene();
-        }
+				this.tree.updateTreeFromScene();
+		}
 
 
 	/**
@@ -393,7 +393,7 @@ export class DT3DCard extends LitElement  {
 
 		this.renderer = new WebGLRenderer({ alpha: true, canvas: this.canvas });
 		this.renderer.setSize(width, height, false);
-		// this.renderer.setClearColor(0x446644, 1);
+		this.renderer.setClearColor(0x446644, 1);
 		this.container.appendChild(this.renderer.domElement);
 
 		// Sky
@@ -405,7 +405,7 @@ export class DT3DCard extends LitElement  {
 		const sunPosition = new Vector3().setFromSphericalCoords( 1, phi, theta );
 
 		sky.material.uniforms.sunPosition.value = sunPosition;
-		// this.scene.add(sky);
+		this.scene.add(sky);
 
 		// Add OrbitControls
 		this.controls = new OrbitControls(this.camera, this.renderer.domElement);
@@ -434,21 +434,21 @@ export class DT3DCard extends LitElement  {
 		this.home.add(plane);
 
 		this.tree.scene = this.home;
-		this.tree.updateTreeFromScene();
+		this.tree.updateTreeFromScene(this.home, true);
 
 		// Listen for selection events from the tree
-                this.tree.addEventListener('object-selected', (e: any) => {
-                        const id = e.detail.id;
-                        const object = this.home.getObjectByProperty('uuid', id);
-                        if (object) {
-                                this.transform.attach(object);
-                        }
-                });
+				this.tree.addEventListener('object-selected', (e: any) => {
+						const id = e.detail.id;
+						const object = this.home.getObjectByProperty('uuid', id);
+						if (object) {
+								this.transform.attach(object);
+						}
+				});
 
-                this.tree.addEventListener('object-dropped', (e: any) => {
-                        const { sourceId, targetId, position } = e.detail as { sourceId: string; targetId: string; position: 'before' | 'after' | 'inside' };
-                        this.handleTreeDrop(sourceId, targetId, position);
-                });
+				this.tree.addEventListener('object-dropped', (e: any) => {
+						const { sourceId, targetId, position } = e.detail as { sourceId: string; targetId: string; position: 'before' | 'after' | 'inside' };
+						this.handleTreeDrop(sourceId, targetId, position);
+				});
 
 		// Raycaster for object picking
 		const raycaster = new Raycaster();

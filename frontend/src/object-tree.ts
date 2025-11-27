@@ -69,7 +69,7 @@ export class DT3DTree extends LitElement {
      * The 3D scene to visualize.
      */
     @property({ type: Array })
-    public scene: Scene = null;
+    public scene: Object3D = null;
 
     /**
      * Set of expanded node IDs.
@@ -132,8 +132,8 @@ export class DT3DTree extends LitElement {
      * 
      * @param scene - The Three.js scene to convert into a tree structure.
      */
-    public updateTreeFromScene(scene?: Scene, reset: boolean = false) {
-        scene = scene || this.scene;
+    public updateTreeFromScene(scene?: Object3D, reset: boolean = false) {
+        this.scene = scene || this.scene;
 
         console.log('DT3d: Updating tree from scene', scene, reset);
 
