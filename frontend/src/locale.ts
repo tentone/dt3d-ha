@@ -36,14 +36,25 @@ export class Locale {
     }
 
     /**
+     * Load translation from file.
      * 
      * @param locale - Locale code
      * @param file - File name to load translations from
      */
-    public async loadTranslations(locale: string, file: string) {
+    public async loadFile(locale: string, file: string) {
         const response = await fetch(file);
         const data = await response.text();
-        this.translations[locale] = JSON.parse(data);
+        this.load(locale, data);
+    }
+
+    /**
+     * Load translation from JSON object.
+     * 
+     * @param locale - Locale code
+     * @param data - Translation data
+     */
+    public load(locale: string, data: any) {
+        this.translations[locale] = data;
 
         if (!this.current) {
             this.current = locale;

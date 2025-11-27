@@ -1,3 +1,5 @@
+import style from "./style.css?inline";
+import en from "./locale/en.json";
 import {Mesh, BoxGeometry, PerspectiveCamera, Scene, WebGLRenderer, MeshBasicMaterial, Raycaster, Vector2, PlaneGeometry, SphereGeometry, Group, MathUtils, Vector3, Object3D} from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 import {TransformControls }from 'three/examples/jsm/controls/TransformControls';
@@ -5,13 +7,16 @@ import { Sky } from 'three/examples/jsm/Addons.js';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader.js';
 import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader.js';
-import { LitElement, css } from "lit";
+import { LitElement, unsafeCSS } from "lit";
 import { customElement } from 'lit/decorators.js';
 import { DT3DSidebar } from "./side-bar.js";
 import { DT3DTree } from "./object-tree.js";
+import { Locale } from "./locale.js";
 
 @customElement('dt3d-card')
 export class DT3DCard extends LitElement  {
+	public static styles = unsafeCSS(style);
+
 	private config: any;
 
 	public hassInstance: any;
@@ -56,11 +61,19 @@ export class DT3DCard extends LitElement  {
 		hass: { attribute: false },
 		_config: { state: true },
 	};
+	public locale: Locale;
  
 	set hass(hass: any) {
 		if (!this.hassInstance) {
 			console.log('DT3D: Entity states', this, DT3DCard.styles, hass.states);
 		}
+
+		console.log('DT3D: Styles loaded from file', style);
+
+		this.locale = new Locale();
+		this.locale.load('en', en);
+
+		console.log('DT3D: Translation data loaded ', this.locale);
 
 		this.hassInstance = hass;
 	}
@@ -287,7 +300,7 @@ export class DT3DCard extends LitElement  {
 		this.container.style.cssText = `
 			width: 100%;
 			height: 100%;
-			background-color: #222;
+			background-color: var(--ha-primary);
 			overflow: hidden;
 		`;
 		this.appendChild(this.container);
@@ -380,7 +393,7 @@ export class DT3DCard extends LitElement  {
 
 		this.renderer = new WebGLRenderer({ alpha: true, canvas: this.canvas });
 		this.renderer.setSize(width, height, false);
-		this.renderer.setClearColor(0x446644, 1);
+		// this.renderer.setClearColor(0x446644, 1);
 		this.container.appendChild(this.renderer.domElement);
 
 		// Sky
@@ -392,7 +405,7 @@ export class DT3DCard extends LitElement  {
 		const sunPosition = new Vector3().setFromSphericalCoords( 1, phi, theta );
 
 		sky.material.uniforms.sunPosition.value = sunPosition;
-		this.scene.add(sky);
+		// this.scene.add(sky);
 
 		// Add OrbitControls
 		this.controls = new OrbitControls(this.camera, this.renderer.domElement);
@@ -581,7 +594,7 @@ export class DT3DCard extends LitElement  {
 		cancelButton.style.cssText = `
 			margin-top: 10px;
 			padding: 5px 10px;
-			background: #f44336;
+			background: var(--error);
 			color: white;
 			border: none;
 			border-radius: 5px;
