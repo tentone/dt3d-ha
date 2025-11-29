@@ -1,42 +1,42 @@
 :root {
     /* Home Assistant Brand Colors */
-    --ha-primary: #41bdf5;     /* Main Home Assistant blue */
-    --ha-primary-dark: #0093d5;
-    --ha-primary-light: #a2e6ff;
+    --dt3d-primary: #41bdf5;     /* Main Home Assistant blue */
+    --dt3d-primary-dark: #0093d5;
+    --dt3d-primary-light: #a2e6ff;
 
     /* Accent (Optional) */
-    --ha-accent: #00a1de;
+    --dt3d-accent: #00a1de;
 
     /* Grayscale */
-    --gray-000: #ffffff;
-    --gray-050: #f8f9fa;
-    --gray-100: #f1f3f5;
-    --gray-200: #e9ecef;
-    --gray-300: #dee2e6;
-    --gray-400: #ced4da;
-    --gray-500: #adb5bd;
-    --gray-600: #868e96;
-    --gray-700: #495057;
-    --gray-800: #343a40;
-    --gray-900: #212529;
-    --gray-999: #000000;
+    --dt3d-gray-000: #ffffff;
+    --dt3d-gray-050: #f8f9fa;
+    --dt3d-gray-100: #f1f3f5;
+    --dt3d-gray-200: #e9ecef;
+    --dt3d-gray-300: #dee2e6;
+    --dt3d-gray-400: #ced4da;
+    --dt3d-gray-500: #adb5bd;
+    --dt3d-gray-600: #868e96;
+    --dt3d-gray-700: #495057;
+    --dt3d-gray-800: #343a40;
+    --dt3d-gray-900: #212529;
+    --dt3d-gray-999: #000000;
 
     /* Semantic States (Home Assistant-like) */
-    --state-info: #41bdf5;       /* matches the primary blue */
-    --state-success: #4caf50;
-    --state-warning: #ff9800;
-    --state-error: #f44336;
+    --dt3d-info: #41bdf5;       /* matches the primary blue */
+    --dt3d-success: #4caf50;
+    --dt3d-warning: #ff9800;
+    --dt3d-error: #f44336;
 
     /* Card Backgrounds */
-    --card-bg: var(--gray-050);
-    --card-bg-dark: var(--gray-800);
+    --dt3d-card-bg: var(--dt3d-gray-050);
+    --dt3d-card-bg-dark: var(--dt3d-gray-800);
 
     /* Card Borders */
-    --card-border: var(--gray-200);
-    --card-border-dark: var(--gray-700);
+    --dt3d-card-border: var(--dt3d-gray-200);
+    --dt3d-card-border-dark: var(--dt3d-gray-700);
 
     /* Text Colors */
-    --text-primary: var(--gray-900);
-    --text-secondary: var(--gray-600);
-    --text-inverted: var(--gray-000);
+    --dt3d-text-primary: var(--dt3d-gray-900);
+    --dt3d-text-secondary: var(--dt3d-gray-600);
+    --dt3d-text-inverted: var(--dt3d-gray-000);
 }
