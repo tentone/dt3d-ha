@@ -1,11 +1,48 @@
-import { LitElement, html} from "lit";
+import { LitElement, html, css, unsafeCSS} from "lit";
 import { customElement } from "lit/decorators.js";
+import style from './style.css?inline';
 
 @customElement('dt3d-config-editor')
 export class DT3DConfigEditor extends LitElement {
-	static properties = {
-		_config: { state: true },
-	};
+        static styles = [unsafeCSS(style), css`
+                :host {
+                        display: block;
+                        color: var(--dt3d-text-primary);
+                        background: var(--dt3d-card-bg);
+                        padding: 8px;
+                        border: 1px solid var(--dt3d-card-border);
+                        border-radius: 8px;
+                        box-shadow: 0 2px 4px color-mix(in srgb, var(--dt3d-gray-999) 10%, transparent);
+                        font-family: "Roboto", "Noto", sans-serif;
+                }
+
+                label {
+                        display: block;
+                        margin-bottom: 6px;
+                        font-weight: 600;
+                        color: var(--dt3d-text-secondary);
+                }
+
+                input {
+                        width: 100%;
+                        padding: 8px;
+                        border-radius: 6px;
+                        border: 1px solid var(--dt3d-card-border);
+                        background: var(--dt3d-gray-000);
+                        color: var(--dt3d-text-primary);
+                        box-sizing: border-box;
+                        font-size: 1em;
+                }
+
+                input:focus {
+                        border-color: var(--dt3d-primary);
+                        outline: none;
+                        box-shadow: 0 0 0 2px color-mix(in srgb, var(--dt3d-primary-light) 50%, transparent);
+                }
+        `];
+        static properties = {
+                _config: { state: true },
+        };
 	private _config: any;
 
 	public setConfig(config: any) {
