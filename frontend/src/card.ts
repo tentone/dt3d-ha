@@ -1,6 +1,26 @@
 import style from "./style.css?inline";
 import en from "./locale/en.json";
-import {Mesh, BoxGeometry, PerspectiveCamera, Scene, WebGLRenderer, MeshBasicMaterial, Raycaster, Vector2, PlaneGeometry, SphereGeometry, Group, MathUtils, Vector3, Object3D} from 'three';
+import {
+        Mesh,
+        BoxGeometry,
+        PerspectiveCamera,
+        Scene,
+        WebGLRenderer,
+        MeshBasicMaterial,
+        Raycaster,
+        Vector2,
+        PlaneGeometry,
+        SphereGeometry,
+        Group,
+        MathUtils,
+        Vector3,
+        Object3D,
+        Sprite,
+        SpriteMaterial,
+        CanvasTexture,
+        Color,
+        PointLight,
+} from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 import {TransformControls }from 'three/examples/jsm/controls/TransformControls';
 import { Sky } from 'three/examples/jsm/Addons.js';
@@ -610,27 +630,167 @@ export class DT3DCard extends LitElement  {
 		
 	}
 
-	/**
-	 * Adds a Home Assistant entity representation to the 3D scene.
-	 * 
-	 * @param entityId - The ID of the entity to add.
-	 */
-	private addEntityToScene(entityId: string): void {
-		const entity = this.hassInstance.states[entityId];
-		if (!entity) {
-			console.warn('DT3D: Entity not found:', entityId);
-			return;
-		}
+        /**
+         * Adds a Home Assistant entity representation to the 3D scene.
+         *
+         * @param entityId - The ID of the entity to add.
+         */
+        private addEntityToScene(entityId: string): void {
+                const entity = this.hassInstance.states[entityId];
+                if (!entity) {
+                        console.warn('DT3D: Entity not found:', entityId);
+                        return;
+                }
 
-		const material = new MeshBasicMaterial({ color: 0x0000ff, wireframe: true });
-		const geometry = new BoxGeometry(0.5, 0.5, 0.5);
-		const entityMesh = new Mesh(geometry, material);
+                const domain = entityId.split('.')[0];
+                let object: Object3D | null = null;
 
-		entityMesh.name = entityId;
-		entityMesh.position.set(Math.random() * 2 - 1, 0, Math.random() * 2 - 1);
+                if (domain === 'sensor') {
+                        object = this.createSensorRepresentation(entityId, entity);
+                } else if (domain === 'light') {
+                        object = this.createLightRepresentation(entityId, entity);
+                } else {
+                        object = this.createDefaultEntityRepresentation(entityId);
+                }
 
-		this.addToScene(entityMesh, entityId);
-	}
+                if (!object) {
+                        return;
+                }
+
+                object.position.set(Math.random() * 2 - 1, 0, Math.random() * 2 - 1);
+                this.addToScene(object, entityId);
+        }
+
+        /**
+         * Creates a simple icon sprite using a colored circle.
+         */
+        private createIconSprite(color: Color | number, size = 0.25): Sprite {
+                const canvas = document.createElement('canvas');
+                canvas.width = 128;
+                canvas.height = 128;
+
+                const ctx = canvas.getContext('2d');
+                if (ctx) {
+                        ctx.clearRect(0, 0, canvas.width, canvas.height);
+                        ctx.fillStyle = typeof color === 'number' ? `#${color.toString(16).padStart(6, '0')}` : `#${color.getHexString()}`;
+                        ctx.beginPath();
+                        ctx.arc(64, 64, 40, 0, Math.PI * 2);
+                        ctx.fill();
+                        ctx.strokeStyle = '#ffffff';
+                        ctx.lineWidth = 4;
+                        ctx.stroke();
+                }
+
+                const texture = new CanvasTexture(canvas);
+                const material = new SpriteMaterial({ map: texture, transparent: true });
+                const sprite = new Sprite(material);
+                sprite.scale.set(size, size, size);
+                return sprite;
+        }
+
+        /**
+         * Creates a sprite that displays text in 3D space.
+         */
+        private createTextSprite(text: string, width = 256, height = 128): Sprite {
+                const canvas = document.createElement('canvas');
+                canvas.width = width;
+                canvas.height = height;
+
+                const ctx = canvas.getContext('2d');
+                if (ctx) {
+                        ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+                        ctx.fillRect(0, 0, width, height);
+                        ctx.fillStyle = '#ffffff';
+                        ctx.font = 'bold 28px sans-serif';
+                        ctx.textBaseline = 'top';
+
+                        const lines = text.split('\n');
+                        lines.forEach((line, index) => {
+                                ctx.fillText(line, 10, 10 + index * 32);
+                        });
+                }
+
+                const texture = new CanvasTexture(canvas);
+                const material = new SpriteMaterial({ map: texture, transparent: true });
+                const sprite = new Sprite(material);
+                sprite.scale.set(1.2, 0.6, 1);
+                sprite.position.y = 0.35;
+                return sprite;
+        }
+
+        /**
+         * Creates a sensor representation with an icon and a text label.
+         */
+        private createSensorRepresentation(entityId: string, entity: any): Object3D {
+                const sensorGroup = new Group();
+                sensorGroup.name = entityId;
+
+                const icon = this.createIconSprite(0x1e90ff, 0.2);
+                icon.position.y = 0.1;
+                sensorGroup.add(icon);
+
+                const friendlyName = entity.attributes?.friendly_name ?? entityId;
+                const labelText = `${friendlyName}\n${entity.state}`;
+                const label = this.createTextSprite(labelText);
+                label.position.y = 0.45;
+                sensorGroup.add(label);
+
+                return sensorGroup;
+        }
+
+        /**
+         * Gets a color for a light entity using available attributes.
+         */
+        private getLightColor(entity: any): Color {
+                const rgbColor = entity.attributes?.rgb_color;
+                if (Array.isArray(rgbColor) && rgbColor.length === 3) {
+                        return new Color(rgbColor[0] / 255, rgbColor[1] / 255, rgbColor[2] / 255);
+                }
+
+                const hsColor = entity.attributes?.hs_color;
+                if (Array.isArray(hsColor) && hsColor.length === 2) {
+                        const color = new Color();
+                        color.setHSL(hsColor[0] / 360, hsColor[1] / 100, 0.5);
+                        return color;
+                }
+
+                return new Color(entity.state === 'on' ? 0xffffaa : 0x555555);
+        }
+
+        /**
+         * Creates a light representation with icon and colored point light.
+         */
+        private createLightRepresentation(entityId: string, entity: any): Object3D {
+                const lightGroup = new Group();
+                lightGroup.name = entityId;
+
+                const color = this.getLightColor(entity);
+
+                const icon = this.createIconSprite(color, 0.25);
+                icon.position.y = 0.1;
+                lightGroup.add(icon);
+
+                const pointLight = new PointLight(color, entity.state === 'on' ? 1 : 0, 6, 2);
+                pointLight.position.y = 0.4;
+                lightGroup.add(pointLight);
+
+                const label = this.createTextSprite(entity.attributes?.friendly_name ?? entityId, 256, 96);
+                label.position.y = 0.6;
+                lightGroup.add(label);
+
+                return lightGroup;
+        }
+
+        /**
+         * Default placeholder for unsupported entity domains.
+         */
+        private createDefaultEntityRepresentation(entityId: string): Object3D {
+                const material = new MeshBasicMaterial({ color: 0x0000ff, wireframe: true });
+                const geometry = new BoxGeometry(0.5, 0.5, 0.5);
+                const entityMesh = new Mesh(geometry, material);
+                entityMesh.name = entityId;
+                return entityMesh;
+        }
 
 	/**
 	 * Grid settings for the card
