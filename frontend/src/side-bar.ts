@@ -105,18 +105,26 @@ export class DT3DSidebar extends LitElement {
 		}));
 	}
 
-	private handleAddObject(type: string) {
-		this.dispatchEvent(new CustomEvent('add-object', {
-			detail: { type },
-			bubbles: true,
-			composed: true
-		}));
-	}
+        private handleAddObject(type: string) {
+                this.dispatchEvent(new CustomEvent('add-object', {
+                        detail: { type },
+                        bubbles: true,
+                        composed: true
+                }));
+        }
 
-	render() {
-		return html`
-			<button class="collapse-btn" @click=${this.toggleCollapse} title="Collapse sidebar">
-				${this.collapsed ? '⮞' : '⮜'}
+        private handleMeasurementSelect(mode: 'distance' | 'angle' | 'none') {
+                this.dispatchEvent(new CustomEvent('measurement-mode-selected', {
+                        detail: { mode },
+                        bubbles: true,
+                        composed: true
+                }));
+        }
+
+        render() {
+                return html`
+                        <button class="collapse-btn" @click=${this.toggleCollapse} title="Collapse sidebar">
+                                ${this.collapsed ? '⮞' : '⮜'}
 			</button>
 			<div class="sidebar-section">
 				<div class="sidebar-title">Controls</div>
@@ -127,15 +135,21 @@ export class DT3DSidebar extends LitElement {
 			<div class="sidebar-section">
 				<div class="sidebar-title">Add</div>
 				<button @click=${() => this.handleAddObject('cube')}>Cube</button>
-				<button @click=${() => this.handleAddObject('sphere')}>Sphere</button>
-				<button @click=${() => this.handleAddObject('plane')}>Plane</button>
-				<button @click=${() => this.handleAddObject('upload')}>Upload</button>
-				<button @click=${() => this.handleAddObject('entity')}>Entity</button>
-			</div>
+                                <button @click=${() => this.handleAddObject('sphere')}>Sphere</button>
+                                <button @click=${() => this.handleAddObject('plane')}>Plane</button>
+                                <button @click=${() => this.handleAddObject('upload')}>Upload</button>
+                                <button @click=${() => this.handleAddObject('entity')}>Entity</button>
+                        </div>
                         <div class="sidebar-section">
-				<div class="sidebar-title">Edit</div>
-				<button @click=${() => this.handleAddObject('cube')}>Delete</button>
-			</div>
-		`;
+                                <div class="sidebar-title">Measure</div>
+                                <button @click=${() => this.handleMeasurementSelect('distance')}>Distance</button>
+                                <button @click=${() => this.handleMeasurementSelect('angle')}>Angle</button>
+                                <button @click=${() => this.handleMeasurementSelect('none')}>Clear</button>
+                        </div>
+                        <div class="sidebar-section">
+                                <div class="sidebar-title">Edit</div>
+                                <button @click=${() => this.handleAddObject('cube')}>Delete</button>
+                        </div>
+                `;
 	}
 }
