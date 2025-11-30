@@ -1,15 +1,14 @@
 import { LitElement, html, css, unsafeCSS } from "lit";
 import { customElement } from 'lit/decorators.js';
-import style from './style.css?inline';
 
 @customElement('dt3d-sidebar')
 export class DT3DSidebar extends LitElement {
-        static styles = [unsafeCSS(style), css`
+        static styles = [css`
                 :host {
                         display: block;
                         width: 220px;
-                        background: color-mix(in srgb, var(--dt3d-card-bg-dark) 90%, transparent);
-                        color: var(--dt3d-text-inverted);
+                        background: color-mix(in srgb, var(--ha-color-neutral-10) 90%, transparent);
+                        color: var(--ha-color-neutral-95);
                         height: 100%;
                         padding: 16px 0;
                         z-index: 1;
@@ -28,7 +27,7 @@ export class DT3DSidebar extends LitElement {
                         right: 8px;
                         background: none;
                         border: none;
-                        color: var(--dt3d-text-inverted);
+                        color: var(--ha-color-neutral-95);
                         cursor: pointer;
                         font-size: 1.2em;
                         width: 24px;
@@ -56,7 +55,7 @@ export class DT3DSidebar extends LitElement {
                         margin-bottom: 8px;
                         font-weight: bold;
                         letter-spacing: 1px;
-                        color: var(--dt3d-primary-light);
+                        color: var(--ha-color-primary-60);
                 }
 
                 button {
@@ -64,23 +63,23 @@ export class DT3DSidebar extends LitElement {
                         width: 100%;
                         margin-bottom: 8px;
                         padding: 10px 0;
-                        background: var(--dt3d-primary-dark);
-                        color: var(--dt3d-text-inverted);
+                        background: var(--ha-color-primary-60);
+                        color: var(--ha-color-neutral-95);
                         border: none;
                         border-radius: 4px;
                         cursor: pointer;
                         font-size: 1em;
                         transition: background 0.2s, transform 0.2s;
-                        box-shadow: 0 2px 4px color-mix(in srgb, var(--dt3d-gray-999) 20%, transparent);
+                        box-shadow: 0 2px 4px color-mix(in srgb, var(--ha-color-neutral-10) 20%, transparent);
                 }
 
                 button:hover {
-                        background: var(--dt3d-primary);
+                        background: var(--ha-color-primary-60);
                         transform: translateY(-1px);
                 }
 
                 button:active {
-                        background: var(--dt3d-primary-dark);
+                        background: var(--ha-color-primary-60);
                         transform: translateY(0);
                 }
         `];

@@ -1,4 +1,3 @@
-import style from "./style.css?inline";
 import en from "./locale/en.json";
 import {
         Mesh,
@@ -27,7 +26,7 @@ import { Sky } from 'three/examples/jsm/Addons.js';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader.js';
 import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader.js';
-import { LitElement, unsafeCSS } from "lit";
+import { LitElement } from "lit";
 import { customElement } from 'lit/decorators.js';
 import { DT3DSidebar } from "./side-bar.js";
 import { DT3DTree } from "./object-tree.js";
@@ -35,8 +34,6 @@ import { Locale } from "./locale.js";
 
 @customElement('dt3d-card')
 export class DT3DCard extends LitElement  {
-	public static styles = unsafeCSS(style);
-
 	private config: any;
 
 	public hassInstance: any;
@@ -88,12 +85,12 @@ export class DT3DCard extends LitElement  {
 			console.log('DT3D: Entity states', this, DT3DCard.styles, hass.states);
 		}
 
-		console.log('DT3D: Styles loaded from file', style);
+		// console.log('DT3D: Styles loaded from file', style);
 
-		this.locale = new Locale();
-		this.locale.load('en', en);
+		// this.locale = new Locale();
+		// this.locale.load('en', en);
 
-		console.log('DT3D: Translation data loaded ', this.locale);
+		// console.log('DT3D: Translation data loaded ', this.locale);
 
 		this.hassInstance = hass;
 	}
@@ -320,7 +317,7 @@ export class DT3DCard extends LitElement  {
 		this.container.style.cssText = `
 			width: 100%;
 			height: 100%;
-			background-color: var(--ha-primary);
+			background-color: var(--ha-color-primary-60);
 			overflow: hidden;
 		`;
 		this.appendChild(this.container);
@@ -457,18 +454,18 @@ export class DT3DCard extends LitElement  {
 		this.tree.updateTreeFromScene(this.home, true);
 
 		// Listen for selection events from the tree
-				this.tree.addEventListener('object-selected', (e: any) => {
-						const id = e.detail.id;
-						const object = this.home.getObjectByProperty('uuid', id);
-						if (object) {
-								this.transform.attach(object);
-						}
-				});
+		this.tree.addEventListener('object-selected', (e: any) => {
+				const id = e.detail.id;
+				const object = this.home.getObjectByProperty('uuid', id);
+				if (object) {
+						this.transform.attach(object);
+				}
+		});
 
-				this.tree.addEventListener('object-dropped', (e: any) => {
-						const { sourceId, targetId, position } = e.detail as { sourceId: string; targetId: string; position: 'before' | 'after' | 'inside' };
-						this.handleTreeDrop(sourceId, targetId, position);
-				});
+		this.tree.addEventListener('object-dropped', (e: any) => {
+				const { sourceId, targetId, position } = e.detail as { sourceId: string; targetId: string; position: 'before' | 'after' | 'inside' };
+				this.handleTreeDrop(sourceId, targetId, position);
+		});
 
 		// Raycaster for object picking
 		const raycaster = new Raycaster();
@@ -570,7 +567,7 @@ export class DT3DCard extends LitElement  {
 			top: 50%;
 			left: 50%;
 			transform: translate(-50%, -50%);
-			background: white;
+			background: var(--ha-color-neutral-10);
 			padding: 20px;
 			border-radius: 10px;
 			box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
@@ -614,7 +611,7 @@ export class DT3DCard extends LitElement  {
 		cancelButton.style.cssText = `
 			margin-top: 10px;
 			padding: 5px 10px;
-			background: var(--error);
+			background: var(--ha-color-red-40);
 			color: white;
 			border: none;
 			border-radius: 5px;

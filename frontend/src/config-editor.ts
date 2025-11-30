@@ -1,18 +1,17 @@
-import { LitElement, html, css, unsafeCSS} from "lit";
+import { LitElement, html, css} from "lit";
 import { customElement } from "lit/decorators.js";
-import style from './style.css?inline';
 
 @customElement('dt3d-config-editor')
 export class DT3DConfigEditor extends LitElement {
-        static styles = [unsafeCSS(style), css`
+        static styles = [css`
                 :host {
                         display: block;
-                        color: var(--dt3d-text-primary);
-                        background: var(--dt3d-card-bg);
+                        color: var(--ha-color-neutral-95);
+                        background: var(--ha-color-neutral-20);
                         padding: 8px;
-                        border: 1px solid var(--dt3d-card-border);
+                        border: 1px solid var(--ha-color-primary-40);
                         border-radius: 8px;
-                        box-shadow: 0 2px 4px color-mix(in srgb, var(--dt3d-gray-999) 10%, transparent);
+                        box-shadow: 0 2px 4px color-mix(in srgb, var(--ha-color-neutral-05) 10%, transparent);
                         font-family: "Roboto", "Noto", sans-serif;
                 }
 
@@ -20,24 +19,24 @@ export class DT3DConfigEditor extends LitElement {
                         display: block;
                         margin-bottom: 6px;
                         font-weight: 600;
-                        color: var(--dt3d-text-secondary);
+                        color: var(--ha-color-neutral-80);
                 }
 
                 input {
                         width: 100%;
                         padding: 8px;
                         border-radius: 6px;
-                        border: 1px solid var(--dt3d-card-border);
-                        background: var(--dt3d-gray-000);
-                        color: var(--dt3d-text-primary);
+                        border: 1px solid var(--ha-color-primary-40);
+                        background: var(--ha-color-neutral-80);
+                        color: var(--ha-color-neutral-95);
                         box-sizing: border-box;
                         font-size: 1em;
                 }
 
                 input:focus {
-                        border-color: var(--dt3d-primary);
+                        border-color: var(--ha-color-primary-60);
                         outline: none;
-                        box-shadow: 0 0 0 2px color-mix(in srgb, var(--dt3d-primary-light) 50%, transparent);
+                        box-shadow: 0 0 0 2px color-mix(in srgb, var(--ha-color-primary-60-light) 50%, transparent);
                 }
         `];
         static properties = {

@@ -1,7 +1,6 @@
 import { LitElement, html, css, unsafeCSS } from "lit";
 import { customElement, property, state } from 'lit/decorators.js';
-import type { Object3D, Scene } from "three";
-import style from './style.css?inline';
+import type { Object3D } from "three";
 
 type UUID = string;
 
@@ -19,12 +18,12 @@ type DropPosition = 'before' | 'after' | 'inside';
 @customElement('dt3d-tree')
 export class DT3DTree extends LitElement {
 
-    static styles = [unsafeCSS(style), css`
+    static styles = [ css`
         :host {
             display: block;
             width: 220px;
-            background: color-mix(in srgb, var(--dt3d-card-bg) 90%, transparent);
-            color: var(--dt3d-text-primary);
+            background: color-mix(in srgb, var(--ha-color-neutral-10) 90%, transparent);
+            color: var(--ha-color-neutral-95);
             height: 100%;
             padding: 16px 0;
             z-index: 1;
@@ -38,22 +37,22 @@ export class DT3DTree extends LitElement {
             text-overflow: ellipsis;
             white-space: nowrap;
             width: 100%;
-            color: var(--dt3d-text-secondary);
+            color: var(--ha-color-neutral-95);
         }
         .tree-node.selected {
-            background: color-mix(in srgb, var(--dt3d-primary-light) 40%, transparent);
-            color: var(--dt3d-text-primary);
+            background: color-mix(in srgb, var(--ha-color-primary-60) 40%, transparent);
+            color: var(--ha-color-neutral-95);
         }
         .tree-node.dragging {
             opacity: 0.6;
         }
         .tree-node.drop-target {
-            background: color-mix(in srgb, var(--dt3d-primary) 35%, transparent);
+            background: color-mix(in srgb, var(--ha-color-primary-60) 35%, transparent);
         }
         .toggle {
             cursor: pointer;
             margin-right: 4px;
-            color: var(--dt3d-primary);
+            color: var(--ha-color-primary-60);
         }
         .drop-zone {
             height: 6px;
@@ -61,11 +60,11 @@ export class DT3DTree extends LitElement {
             border: 1px dashed transparent;
         }
         .drop-zone.visible {
-            border-color: color-mix(in srgb, var(--dt3d-primary) 30%, transparent);
+            border-color: color-mix(in srgb, var(--ha-color-primary-60) 30%, transparent);
         }
         .drop-zone.active {
-            border-color: var(--dt3d-primary);
-            background: color-mix(in srgb, var(--dt3d-primary) 35%, transparent);
+            border-color: var(--ha-color-primary-60);
+            background: color-mix(in srgb, var(--ha-color-primary-60) 35%, transparent);
         }
     `];
     
