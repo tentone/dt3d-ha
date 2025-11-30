@@ -1,4 +1,4 @@
-import { LitElement, html, css, unsafeCSS } from "lit";
+import { LitElement, html, css } from "lit";
 import { customElement } from 'lit/decorators.js';
 
 @customElement('dt3d-sidebar')
@@ -125,12 +125,16 @@ export class DT3DSidebar extends LitElement {
 				<button @click=${() => this.handleTransformSelect('scale')}>Scale</button>
 			</div>
 			<div class="sidebar-section">
-				<div class="sidebar-title">Add Object</div>
+				<div class="sidebar-title">Add</div>
 				<button @click=${() => this.handleAddObject('cube')}>Cube</button>
 				<button @click=${() => this.handleAddObject('sphere')}>Sphere</button>
 				<button @click=${() => this.handleAddObject('plane')}>Plane</button>
 				<button @click=${() => this.handleAddObject('upload')}>Upload</button>
 				<button @click=${() => this.handleAddObject('entity')}>Entity</button>
+			</div>
+                        <div class="sidebar-section">
+				<div class="sidebar-title">Edit</div>
+				<button @click=${() => this.handleAddObject('cube')}>Delete</button>
 			</div>
 		`;
 	}

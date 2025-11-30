@@ -1,4 +1,4 @@
-import { LitElement, html, css, unsafeCSS } from "lit";
+import { LitElement, html, css } from "lit";
 import { customElement, property, state } from 'lit/decorators.js';
 import type { Object3D } from "three";
 
@@ -357,7 +357,10 @@ export class DT3DTree extends LitElement {
 
     public render() {
         return html`
-            <div>
+            <div style="
+                overflow-y: scroll;
+                overflow-x: auto;
+                height: 100%;">
                 ${this.renderTree(this.tree)}
             </div>
         `;
