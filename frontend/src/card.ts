@@ -13,12 +13,15 @@ import {
 		Group,
 		MathUtils,
 		Vector3,
-		Object3D,
-		Sprite,
-		SpriteMaterial,
-		CanvasTexture,
-		Color,
-		PointLight,
+                Object3D,
+                Sprite,
+                SpriteMaterial,
+                CanvasTexture,
+                Color,
+                PointLight,
+                Line,
+                BufferGeometry,
+                LineBasicMaterial,
 } from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 import {TransformControls }from 'three/examples/jsm/controls/TransformControls';
@@ -69,10 +72,29 @@ export class DT3DCard extends LitElement  {
 	 */
 	public sidebar: DT3DSidebar;
 
-	/**
-	 * Tree element for displaying the 3D object hierarchy.
-	 */
-	public tree: DT3DTree;
+        /**
+         * Tree element for displaying the 3D object hierarchy.
+         */
+        public tree: DT3DTree;
+
+        /**
+         * Tracks which measurement tool is currently active.
+         */
+        private measurementMode: 'none' | 'distance' | 'angle' = 'none';
+
+        /**
+         * Points selected for the current measurement operation.
+         */
+        private measurementPoints: Vector3[] = [];
+
+        /**
+         * Helper group that renders measurement visuals (markers, lines, labels).
+         */
+        private measurementHelpers: Group = null;
+
+        private raycaster: Raycaster = new Raycaster();
+
+        private pointer: Vector2 = new Vector2();
 
 	static properties = {
 		hass: { attribute: false },
@@ -234,10 +256,10 @@ export class DT3DCard extends LitElement  {
 				return false;
 		}
 
-		private handleTreeDrop(sourceId: string, targetId: string, position: 'before' | 'after' | 'inside'): void {
-				if (!this.home) {
-						return;
-				}
+                private handleTreeDrop(sourceId: string, targetId: string, position: 'before' | 'after' | 'inside'): void {
+                                if (!this.home) {
+                                                return;
+                                }
 
 				const source = this.home.getObjectByProperty('uuid', sourceId) as Object3D | null;
 				const target = this.home.getObjectByProperty('uuid', targetId) as Object3D | null;
@@ -286,8 +308,122 @@ export class DT3DCard extends LitElement  {
 						parent.children.splice(newIndex, 0, source);
 				}
 
-				this.tree.updateTreeFromScene();
-		}
+                                this.tree.updateTreeFromScene();
+                }
+
+                private setMeasurementMode(mode: 'distance' | 'angle' | 'none'): void {
+                                this.measurementMode = mode;
+                                this.clearMeasurements();
+                }
+
+                private clearMeasurements(): void {
+                                this.measurementPoints = [];
+                                this.measurementHelpers?.clear();
+                }
+
+                private processMeasurementClick(event: MouseEvent): void {
+                                if (this.measurementMode === 'none' || !this.canvas || !this.camera || !this.home) {
+                                                return;
+                                }
+
+                                const rect = this.canvas.getBoundingClientRect();
+                                this.pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+                                this.pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+                                this.raycaster.setFromCamera(this.pointer, this.camera);
+
+                                const intersects = this.raycaster.intersectObjects(this.home.children, true);
+                                const point = intersects[0]?.point;
+
+                                if (!point) {
+                                                return;
+                                }
+
+                                this.addMeasurementPoint(point);
+                }
+
+                private addMeasurementPoint(point: Vector3): void {
+                                this.measurementPoints.push(point.clone());
+
+                                if (this.measurementMode === 'distance' && this.measurementPoints.length === 2) {
+                                                this.renderDistanceMeasurement();
+                                                this.measurementPoints = [];
+                                } else if (this.measurementMode === 'angle' && this.measurementPoints.length === 3) {
+                                                this.renderAngleMeasurement();
+                                                this.measurementPoints = [];
+                                } else {
+                                                this.renderMeasurementMarkers();
+                                }
+                }
+
+                private renderMeasurementMarkers(): void {
+                                if (!this.measurementHelpers) {
+                                                return;
+                                }
+
+                                this.measurementHelpers.clear();
+                                this.measurementPoints.forEach((point) => {
+                                                this.measurementHelpers.add(this.createMeasurementMarker(point));
+                                });
+                }
+
+                private renderDistanceMeasurement(): void {
+                                if (this.measurementPoints.length < 2 || !this.measurementHelpers) {
+                                                return;
+                                }
+
+                                this.measurementHelpers.clear();
+
+                                const [start, end] = this.measurementPoints;
+                                this.measurementHelpers.add(this.createMeasurementMarker(start));
+                                this.measurementHelpers.add(this.createMeasurementMarker(end));
+
+                                const geometry = new BufferGeometry().setFromPoints([start, end]);
+                                const line = new Line(geometry, new LineBasicMaterial({ color: 0xffcc00 }));
+                                this.measurementHelpers.add(line);
+
+                                const distance = start.distanceTo(end);
+                                const label = this.createTextSprite(`Distance: ${distance.toFixed(2)}`);
+                                label.position.copy(start.clone().add(end).multiplyScalar(0.5));
+                                label.position.y += 0.2;
+                                this.measurementHelpers.add(label);
+                }
+
+                private renderAngleMeasurement(): void {
+                                if (this.measurementPoints.length < 3 || !this.measurementHelpers) {
+                                                return;
+                                }
+
+                                this.measurementHelpers.clear();
+
+                                const [first, vertex, last] = this.measurementPoints;
+                                this.measurementHelpers.add(this.createMeasurementMarker(first));
+                                this.measurementHelpers.add(this.createMeasurementMarker(vertex));
+                                this.measurementHelpers.add(this.createMeasurementMarker(last));
+
+                                const line1 = new Line(new BufferGeometry().setFromPoints([vertex, first]), new LineBasicMaterial({ color: 0x66ccff }));
+                                const line2 = new Line(new BufferGeometry().setFromPoints([vertex, last]), new LineBasicMaterial({ color: 0x66ccff }));
+
+                                this.measurementHelpers.add(line1);
+                                this.measurementHelpers.add(line2);
+
+                                const v1 = first.clone().sub(vertex).normalize();
+                                const v2 = last.clone().sub(vertex).normalize();
+                                const angle = Math.acos(MathUtils.clamp(v1.dot(v2), -1, 1));
+                                const degrees = MathUtils.radToDeg(angle);
+
+                                const label = this.createTextSprite(`Angle: ${degrees.toFixed(1)}°`);
+                                label.position.copy(vertex);
+                                label.position.y += 0.5;
+                                this.measurementHelpers.add(label);
+                }
+
+                private createMeasurementMarker(position: Vector3): Mesh {
+                                const markerGeometry = new SphereGeometry(0.05, 16, 16);
+                                const markerMaterial = new MeshBasicMaterial({ color: 0xff0000 });
+                                const marker = new Mesh(markerGeometry, markerMaterial);
+                                marker.position.copy(position);
+                                return marker;
+                }
 
 
 	/**
@@ -339,12 +475,16 @@ export class DT3DCard extends LitElement  {
 			height: ${height}px;
 			border-radius: 10px;
 		`;
-		this.content.appendChild(this.canvas);
+                this.content.appendChild(this.canvas);
 
-		this.scene = new Scene();
+                this.scene = new Scene();
 
-		this.home = new Group();
-		this.scene.add(this.home);
+                this.measurementHelpers = new Group();
+                this.measurementHelpers.name = 'Measurements';
+                this.scene.add(this.measurementHelpers);
+
+                this.home = new Group();
+                this.scene.add(this.home);
 
 		this.sidebar = document.createElement('dt3d-sidebar') as DT3DSidebar;
 		this.sidebar.style.cssText = `
@@ -364,13 +504,18 @@ export class DT3DCard extends LitElement  {
 		`;
 		this.content.appendChild(this.tree);
 		
-		this.sidebar.addEventListener('transform-tool-selected', (e: any) => {
-			const tool = e.detail.tool;
-			this.transform.setMode(tool);
-		});
+                this.sidebar.addEventListener('transform-tool-selected', (e: any) => {
+                        const tool = e.detail.tool;
+                        this.transform.setMode(tool);
+                });
 
-		this.sidebar.addEventListener('add-object', (e: any) => {
-			const type = e.detail.type;
+                this.sidebar.addEventListener('measurement-mode-selected', (e: any) => {
+                        const mode = e.detail.mode as 'distance' | 'angle' | 'none';
+                        this.setMeasurementMode(mode);
+                });
+
+                this.sidebar.addEventListener('add-object', (e: any) => {
+                        const type = e.detail.type;
 
 			let object: Mesh = null;
 			const material = new MeshBasicMaterial({ color: 0x00ffff, wireframe: true });
@@ -462,31 +607,30 @@ export class DT3DCard extends LitElement  {
 				}
 		});
 
-		this.tree.addEventListener('object-dropped', (e: any) => {
-				const { sourceId, targetId, position } = e.detail as { sourceId: string; targetId: string; position: 'before' | 'after' | 'inside' };
-				this.handleTreeDrop(sourceId, targetId, position);
-		});
+                this.tree.addEventListener('object-dropped', (e: any) => {
+                                const { sourceId, targetId, position } = e.detail as { sourceId: string; targetId: string; position: 'before' | 'after' | 'inside' };
+                                this.handleTreeDrop(sourceId, targetId, position);
+                });
 
-		// Raycaster for object picking
-		const raycaster = new Raycaster();
-		const pointer = new Vector2();
+                // Raycaster for object picking
+                this.canvas.addEventListener('dblclick', (event: MouseEvent) => {
+                        const rect = this.canvas.getBoundingClientRect();
+                        this.pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+                        this.pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+                        this.raycaster.setFromCamera(this.pointer, this.camera);
 
-		this.canvas.addEventListener('dblclick', (event: MouseEvent) => {
-			const rect = this.canvas.getBoundingClientRect();
-			pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-			pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
-			raycaster.setFromCamera(pointer, this.camera);
+                        const intersects = this.raycaster.intersectObjects(this.home.children, false);
+                        if (intersects.length > 0) {
+                                const picked = intersects[0].object as Mesh;
+                                this.transform.attach(picked);
+                        }
+                });
 
-			const intersects = raycaster.intersectObjects(this.home.children, false);
-			if (intersects.length > 0) {
-				const picked = intersects[0].object as Mesh;
-				this.transform.attach(picked);
-			}
-		});
+                this.canvas.addEventListener('click', (event: MouseEvent) => this.processMeasurementClick(event));
 
-		const animate = () => {
-			requestAnimationFrame(animate);
-			cube.rotation.x += 0.01;
+                const animate = () => {
+                        requestAnimationFrame(animate);
+                        cube.rotation.x += 0.01;
 			cube.rotation.y += 0.01;
 
 			// Update controls
