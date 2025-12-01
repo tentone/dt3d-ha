@@ -1,24 +1,19 @@
 import en from "./locale/en.json";
 import {
-		Mesh,
-		BoxGeometry,
-		PerspectiveCamera,
-		Scene,
-		WebGLRenderer,
-		MeshBasicMaterial,
-		Raycaster,
-		Vector2,
-		PlaneGeometry,
-		SphereGeometry,
-		Group,
-		MathUtils,
-		Vector3,
+                Mesh,
+                BoxGeometry,
+                PerspectiveCamera,
+                Scene,
+                WebGLRenderer,
+                MeshBasicMaterial,
+                Raycaster,
+                Vector2,
+                PlaneGeometry,
+                SphereGeometry,
+                Group,
+                MathUtils,
+                Vector3,
                 Object3D,
-                Sprite,
-                SpriteMaterial,
-                CanvasTexture,
-                Color,
-                PointLight,
                 Line,
                 BufferGeometry,
                 LineBasicMaterial,
@@ -34,6 +29,9 @@ import { customElement } from 'lit/decorators.js';
 import { DT3DSidebar } from "./side-bar.js";
 import { DT3DTree } from "./object-tree.js";
 import { Locale } from "./locale.js";
+import { EntityLight } from "./objects/entity-light.js";
+import { EntitySensor } from "./objects/entity-sensor.js";
+import { createTextSprite } from "./objects/text.js";
 
 @customElement('dt3d-card')
 export class DT3DCard extends LitElement  {
@@ -382,7 +380,7 @@ export class DT3DCard extends LitElement  {
                                 this.measurementHelpers.add(line);
 
                                 const distance = start.distanceTo(end);
-                                const label = this.createTextSprite(`Distance: ${distance.toFixed(2)}`);
+                                const label = createTextSprite(`Distance: ${distance.toFixed(2)}`);
                                 label.position.copy(start.clone().add(end).multiplyScalar(0.5));
                                 label.position.y += 0.2;
                                 this.measurementHelpers.add(label);
@@ -411,7 +409,7 @@ export class DT3DCard extends LitElement  {
                                 const angle = Math.acos(MathUtils.clamp(v1.dot(v2), -1, 1));
                                 const degrees = MathUtils.radToDeg(angle);
 
-                                const label = this.createTextSprite(`Angle: ${degrees.toFixed(1)}°`);
+                                const label = createTextSprite(`Angle: ${degrees.toFixed(1)}°`);
                                 label.position.copy(vertex);
                                 label.position.y += 0.5;
                                 this.measurementHelpers.add(label);
@@ -811,16 +809,16 @@ export class DT3DCard extends LitElement  {
 						return;
 				}
 
-				const domain = entityId.split('.')[0];
-				let object: Object3D | null = null;
+                                const domain = entityId.split('.')[0];
+                                let object: Object3D | null = null;
 
-				if (domain === 'sensor') {
-						object = this.createSensorRepresentation(entityId, entity);
-				} else if (domain === 'light') {
-						object = this.createLightRepresentation(entityId, entity);
-				} else {
-						object = this.createDefaultEntityRepresentation(entityId);
-				}
+                                if (domain === 'sensor') {
+                                                object = new EntitySensor(entityId, entity);
+                                } else if (domain === 'light') {
+                                                object = new EntityLight(entityId, entity);
+                                } else {
+                                                object = this.createDefaultEntityRepresentation(entityId);
+                                }
 
 				if (!object) {
 						return;
@@ -830,133 +828,10 @@ export class DT3DCard extends LitElement  {
 				this.addToScene(object, entityId);
 		}
 
-		/**
-		 * Creates a simple icon sprite using a colored circle.
-		 * 
-		 * Color can vary based on the type of entity.
-		 */
-		private createIconSprite(color: Color | number, size = 0.25): Sprite {
-				const canvas = document.createElement('canvas');
-				canvas.width = 128;
-				canvas.height = 128;
-
-				const ctx = canvas.getContext('2d');
-				if (ctx) {
-						ctx.clearRect(0, 0, canvas.width, canvas.height);
-						ctx.fillStyle = typeof color === 'number' ? `#${color.toString(16).padStart(6, '0')}` : `#${color.getHexString()}`;
-						ctx.beginPath();
-						ctx.arc(64, 64, 40, 0, Math.PI * 2);
-						ctx.fill();
-						ctx.strokeStyle = '#ffffff';
-						ctx.lineWidth = 4;
-						ctx.stroke();
-				}
-
-				const texture = new CanvasTexture(canvas);
-				const material = new SpriteMaterial({ map: texture, transparent: true });
-				const sprite = new Sprite(material);
-				sprite.scale.set(size, size, size);
-				return sprite;
-		}
-
-		/**
-		 * Creates a sprite that displays text in 3D space.
-		 */
-		private createTextSprite(text: string, width = 256, height = 128): Sprite {
-			const canvas = document.createElement('canvas');
-			canvas.width = width;
-			canvas.height = height;
-
-			const ctx = canvas.getContext('2d');
-			if (ctx) {
-					ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
-					ctx.fillRect(0, 0, width, height);
-					ctx.fillStyle = '#ffffff';
-					ctx.font = 'bold 28px sans-serif';
-					ctx.textBaseline = 'top';
-
-					const lines = text.split('\n');
-					lines.forEach((line, index) => {
-							ctx.fillText(line, 10, 10 + index * 32);
-					});
-			}
-
-			const texture = new CanvasTexture(canvas);
-			const material = new SpriteMaterial({ map: texture, transparent: true });
-			const sprite = new Sprite(material);
-			sprite.scale.set(1.2, 0.6, 1);
-			sprite.position.y = 0.35;
-			return sprite;
-		}
-
-		/**
-		 * Creates a sensor representation with an icon and a text label.
-		 */
-		private createSensorRepresentation(entityId: string, entity: any): Object3D {
-			const sensorGroup = new Group();
-			sensorGroup.name = entityId;
-
-			const icon = this.createIconSprite(0x1e90ff, 0.2);
-			icon.position.y = 0.1;
-			sensorGroup.add(icon);
-
-			const friendlyName = entity.attributes?.friendly_name ?? entityId;
-			const labelText = `${friendlyName}\n${entity.state}`;
-			const label = this.createTextSprite(labelText);
-			label.position.y = 0.45;
-			sensorGroup.add(label);
-
-			return sensorGroup;
-		}
-
-
-		/**
-		 * Creates a light representation with icon and colored point light.
-		 */
-		private createLightRepresentation(entityId: string, entity: any): Object3D {
-			/**
-			 * Gets a color for a light entity using available attributes.
-			 */
-			function getLightColor(entity: any): Color {
-				const rgbColor = entity.attributes?.rgb_color;
-				if (Array.isArray(rgbColor) && rgbColor.length === 3) {
-					return new Color(rgbColor[0] / 255, rgbColor[1] / 255, rgbColor[2] / 255);
-				}
-
-				const hsColor = entity.attributes?.hs_color;
-				if (Array.isArray(hsColor) && hsColor.length === 2) {
-					const color = new Color();
-					color.setHSL(hsColor[0] / 360, hsColor[1] / 100, 0.5);
-					return color;
-				}
-
-				return new Color(entity.state === 'on' ? 0xffffaa : 0x555555);
-			}
-
-			const lightGroup = new Group();
-			lightGroup.name = entityId;
-
-			const color = getLightColor(entity);
-
-			const icon = this.createIconSprite(color, 0.25);
-			icon.position.y = 0.1;
-			lightGroup.add(icon);
-
-			const pointLight = new PointLight(color, entity.state === 'on' ? 1 : 0, 6, 2);
-			pointLight.position.y = 0.4;
-			lightGroup.add(pointLight);
-
-			const label = this.createTextSprite(entity.attributes?.friendly_name ?? entityId, 256, 96);
-			label.position.y = 0.6;
-			lightGroup.add(label);
-
-			return lightGroup;
-		}
-
-		/**
-		 * Default placeholder for unsupported entity domains.
-		 */
-		private createDefaultEntityRepresentation(entityId: string): Object3D {
+                /**
+                 * Default placeholder for unsupported entity domains.
+                 */
+                private createDefaultEntityRepresentation(entityId: string): Object3D {
 				const material = new MeshBasicMaterial({ color: 0x0000ff, wireframe: true });
 				const geometry = new BoxGeometry(0.5, 0.5, 0.5);
 				const entityMesh = new Mesh(geometry, material);
