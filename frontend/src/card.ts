@@ -704,11 +704,11 @@ export class DT3DCard extends LitElement  {
 		const states = this.hassInstance.states;
 		console.log('DT3D: Available entities:', states);
 
-		const dialog = document.createElement('div');
-		dialog.style.cssText = `
-			position: absolute;
-			top: 50%;
-			left: 50%;
+                const dialog = document.createElement('div');
+                dialog.style.cssText = `
+                        position: absolute;
+                        top: 50%;
+                        left: 50%;
 			transform: translate(-50%, -50%);
 			background: var(--ha-color-neutral-10);
 			padding: 20px;
@@ -717,41 +717,70 @@ export class DT3DCard extends LitElement  {
 			z-index: 1000;
 		`;
 
-		const title = document.createElement('h3');
-		title.textContent = 'Select an Entity';
-		dialog.appendChild(title);
+                const title = document.createElement('h3');
+                title.textContent = 'Select an Entity';
+                dialog.appendChild(title);
 
-		const list = document.createElement('ul');
-		list.style.cssText = `
-			list-style: none;
-			padding: 0;
-			margin: 10px 0;
-			max-height: 200px;
-			overflow-y: auto;
-		`;
+                const searchInput = document.createElement('input');
+                searchInput.type = 'search';
+                searchInput.placeholder = 'Search entities...';
+                searchInput.style.cssText = `
+                        width: 100%;
+                        padding: 6px 8px;
+                        margin: 8px 0 12px 0;
+                        border-radius: 6px;
+                        border: 1px solid var(--ha-color-border);
+                        background: var(--ha-color-neutral-05);
+                        color: var(--ha-color-neutral-95);
+                `;
 
-		Object.keys(states).forEach((entityId) => {
-			const listItem = document.createElement('li');
-			listItem.style.cssText = `
-				padding: 5px;
-				cursor: pointer;
-				border-bottom: 1px solid #ccc;
-			`;
+                dialog.appendChild(searchInput);
 
-			listItem.textContent = entityId;
-			listItem.addEventListener('click', () => {
-				this.addEntityToScene(entityId);
-				dialog.remove();
-			});
+                const list = document.createElement('ul');
+                list.style.cssText = `
+                        list-style: none;
+                        padding: 0;
+                        margin: 10px 0;
+                        max-height: 200px;
+                        overflow-y: auto;
+                `;
 
-			list.appendChild(listItem);
-		});
+                const listItems: HTMLLIElement[] = [];
 
-		dialog.appendChild(list);
+                Object.keys(states).forEach((entityId) => {
+                        const listItem = document.createElement('li');
+                        listItem.style.cssText = `
+                                padding: 5px;
+                                cursor: pointer;
+                                border-bottom: 1px solid #ccc;
+                        `;
 
-		const cancelButton = document.createElement('button');
-		cancelButton.textContent = 'Cancel';
-		cancelButton.style.cssText = `
+                        listItem.textContent = entityId;
+                        listItem.dataset.entityId = entityId.toLowerCase();
+                        listItem.addEventListener('click', () => {
+                                this.addEntityToScene(entityId);
+                                dialog.remove();
+                        });
+
+                        listItems.push(listItem);
+                        list.appendChild(listItem);
+                });
+
+                const filterList = () => {
+                        const query = searchInput.value.trim().toLowerCase();
+                        listItems.forEach((item) => {
+                                const match = !query || item.dataset.entityId?.includes(query);
+                                item.style.display = match ? '' : 'none';
+                        });
+                };
+
+                searchInput.addEventListener('input', filterList);
+
+                dialog.appendChild(list);
+
+                const cancelButton = document.createElement('button');
+                cancelButton.textContent = 'Cancel';
+                cancelButton.style.cssText = `
 			margin-top: 10px;
 			padding: 5px 10px;
 			background: var(--ha-color-red-40);
