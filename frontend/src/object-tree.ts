@@ -20,15 +20,21 @@ export class DT3DTree extends LitElement {
 
     static styles = [ css`
         :host {
-            display: block;
+            display: flex;
+            flex-direction: column;
             width: 220px;
             background: color-mix(in srgb, var(--ha-color-neutral-10) 90%, transparent);
             color: var(--ha-color-neutral-95);
             height: 100%;
-            padding: 16px 0;
+            padding: 12px 0;
             z-index: 1;
             transition: width 0.2s;
             overflow: hidden;
+        }
+        .panel {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
         }
         .tree-node {
             padding-left: 16px;
@@ -66,6 +72,69 @@ export class DT3DTree extends LitElement {
             border-color: var(--ha-color-primary-60);
             background: color-mix(in srgb, var(--ha-color-primary-60) 35%, transparent);
         }
+        .tree-section {
+            flex: 1 1 55%;
+            min-height: 40%;
+            overflow-y: auto;
+            overflow-x: hidden;
+            padding-right: 8px;
+            border-bottom: 1px solid color-mix(in srgb, var(--ha-color-neutral-20) 60%, transparent);
+            margin-bottom: 8px;
+        }
+        .inspector {
+            flex: 1 1 45%;
+            padding: 0 12px;
+            overflow-y: auto;
+            color: var(--ha-color-neutral-90);
+        }
+        .inspector h4 {
+            margin: 4px 0 8px 0;
+            font-size: 14px;
+            color: var(--ha-color-primary-60);
+        }
+        .field {
+            display: flex;
+            flex-direction: column;
+            margin-bottom: 8px;
+            gap: 4px;
+        }
+        .field label {
+            font-size: 12px;
+            color: var(--ha-color-neutral-80);
+        }
+        .field input {
+            background: color-mix(in srgb, var(--ha-color-neutral-10) 95%, transparent);
+            border: 1px solid color-mix(in srgb, var(--ha-color-neutral-30) 80%, transparent);
+            border-radius: 4px;
+            padding: 6px 8px;
+            color: var(--ha-color-neutral-90);
+        }
+        .group-row {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 6px;
+        }
+        .group-row label {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            font-size: 12px;
+            color: var(--ha-color-neutral-80);
+        }
+        .group-row input {
+            width: 100%;
+            padding: 6px 8px;
+            box-sizing: border-box;
+            border-radius: 4px;
+            border: 1px solid color-mix(in srgb, var(--ha-color-neutral-30) 80%, transparent);
+            background: color-mix(in srgb, var(--ha-color-neutral-10) 95%, transparent);
+            color: var(--ha-color-neutral-90);
+        }
+        .placeholder {
+            color: var(--ha-color-neutral-70);
+            font-size: 13px;
+            line-height: 1.4;
+        }
     `];
     
     /**
@@ -89,7 +158,13 @@ export class DT3DTree extends LitElement {
     /**
      * Tree data structure representing the 3D scene graph.
      */
-    public tree: TreeNode[] = [];
+    private tree: TreeNode[] = [];
+
+    /**
+     * Currently selected Object3D instance.
+     */
+    @state()
+    private selectedObject: Object3D | null = null;
 
     /**
      * ID of the node being dragged.
@@ -147,6 +222,12 @@ export class DT3DTree extends LitElement {
         });
 
         this.tree = [toTreeNode(scene)];
+
+        if (this.selectedId) {
+            this.selectedObject = this.scene?.getObjectByProperty('uuid', this.selectedId) ?? null;
+        }
+
+        this.requestUpdate();
 
         // Reset expanded/selected state
         if (reset) {
@@ -306,11 +387,92 @@ export class DT3DTree extends LitElement {
     private selectNode(id: UUID) {
         this.selectedId = id;
 
+        this.selectedObject = this.scene?.getObjectByProperty('uuid', id) ?? null;
+
         this.dispatchEvent(new CustomEvent('object-selected', {
             detail: { id },
             bubbles: true,
             composed: true
         }));
+    }
+
+    private handleNameChange(event: Event) {
+        if (!this.selectedObject) return;
+
+        const value = (event.target as HTMLInputElement).value;
+        this.selectedObject.name = value;
+        this.updateTreeFromScene();
+    }
+
+    private handleVectorChange(type: 'position' | 'scale', axis: 'x' | 'y' | 'z', event: Event) {
+        if (!this.selectedObject) return;
+
+        const value = parseFloat((event.target as HTMLInputElement).value);
+        if (Number.isNaN(value)) return;
+
+        if (type === 'position') {
+            this.selectedObject.position[axis] = value;
+        } else {
+            this.selectedObject.scale[axis] = value;
+        }
+
+        this.requestUpdate();
+    }
+
+    private handleRotationChange(axis: 'x' | 'y' | 'z', event: Event) {
+        if (!this.selectedObject) return;
+
+        const value = parseFloat((event.target as HTMLInputElement).value);
+        if (Number.isNaN(value)) return;
+
+        this.selectedObject.rotation[axis] = (value * Math.PI) / 180;
+        this.requestUpdate();
+    }
+
+    private renderVectorControls(label: string, type: 'position' | 'scale') {
+        if (!this.selectedObject) return null;
+
+        const source = type === 'position' ? this.selectedObject.position : this.selectedObject.scale;
+
+        return html`
+            <div class="field">
+                <label>${label}</label>
+                <div class="group-row">
+                    ${(['x', 'y', 'z'] as const).map(axis => html`
+                        <label>${axis.toUpperCase()}
+                            <input
+                                type="number"
+                                step="0.01"
+                                .value=${source[axis].toFixed(2)}
+                                @change=${(event: Event) => this.handleVectorChange(type, axis, event)}
+                            />
+                        </label>
+                    `)}
+                </div>
+            </div>
+        `;
+    }
+
+    private renderRotationControls() {
+        if (!this.selectedObject) return null;
+
+        return html`
+            <div class="field">
+                <label>Rotation (degrees)</label>
+                <div class="group-row">
+                    ${(['x', 'y', 'z'] as const).map(axis => html`
+                        <label>${axis.toUpperCase()}
+                            <input
+                                type="number"
+                                step="1"
+                                .value=${(this.selectedObject!.rotation[axis] * 180 / Math.PI).toFixed(1)}
+                                @change=${(event: Event) => this.handleRotationChange(axis, event)}
+                            />
+                        </label>
+                    `)}
+                </div>
+            </div>
+        `;
     }
 
     /**
@@ -357,11 +519,26 @@ export class DT3DTree extends LitElement {
 
     public render() {
         return html`
-            <div style="
-                overflow-y: scroll;
-                overflow-x: auto;
-                height: 100%;">
-                ${this.renderTree(this.tree)}
+            <div class="panel">
+                <div class="tree-section">
+                    ${this.renderTree(this.tree)}
+                </div>
+                <div class="inspector">
+                    <h4>Selected Object</h4>
+                    ${this.selectedObject ? html`
+                        <div class="field">
+                            <label>Name</label>
+                            <input type="text" .value=${this.selectedObject.name || ''} @input=${(event: Event) => this.handleNameChange(event)} />
+                        </div>
+                        <div class="field">
+                            <label>UUID</label>
+                            <input type="text" .value=${this.selectedObject.uuid} readonly />
+                        </div>
+                        ${this.renderVectorControls('Position', 'position')}
+                        ${this.renderVectorControls('Scale', 'scale')}
+                        ${this.renderRotationControls()}
+                    ` : html`<div class="placeholder">Select an object from the tree to edit its properties.</div>`}
+                </div>
             </div>
         `;
     }
