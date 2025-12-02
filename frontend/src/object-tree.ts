@@ -30,6 +30,7 @@ export class DT3DTree extends LitElement {
             z-index: 1;
             transition: width 0.2s;
             overflow: hidden;
+            position: relative;
         }
         .panel {
             display: flex;
@@ -135,6 +136,35 @@ export class DT3DTree extends LitElement {
             font-size: 13px;
             line-height: 1.4;
         }
+        .context-overlay {
+            position: absolute;
+            inset: 0;
+            background: transparent;
+            z-index: 10;
+        }
+        .context-menu {
+            position: fixed;
+            min-width: 140px;
+            background: color-mix(in srgb, var(--ha-color-neutral-10) 90%, transparent);
+            border: 1px solid color-mix(in srgb, var(--ha-color-neutral-30) 80%, transparent);
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.18);
+            border-radius: 6px;
+            padding: 4px 0;
+            z-index: 11;
+        }
+        .context-menu button {
+            display: flex;
+            width: 100%;
+            padding: 8px 12px;
+            background: transparent;
+            border: none;
+            color: var(--ha-color-neutral-95);
+            text-align: left;
+            cursor: pointer;
+        }
+        .context-menu button:hover {
+            background: color-mix(in srgb, var(--ha-color-primary-60) 25%, transparent);
+        }
     `];
     
     /**
@@ -177,6 +207,12 @@ export class DT3DTree extends LitElement {
      */
     @state()
     private dropTarget: { id: UUID; position: DropPosition } = null;
+
+    /**
+     * Active context menu target and position.
+     */
+    @state()
+    private contextMenu: { id: UUID; x: number; y: number } | null = null;
 
     /**
      * React to property changes.
@@ -396,6 +432,34 @@ export class DT3DTree extends LitElement {
         }));
     }
 
+    private handleContextMenu(event: MouseEvent, id: UUID) {
+        event.preventDefault();
+        event.stopPropagation();
+        this.contextMenu = { id, x: event.clientX, y: event.clientY };
+    }
+
+    private closeContextMenu() {
+        this.contextMenu = null;
+    }
+
+    private dispatchDelete(id: UUID) {
+        this.dispatchEvent(new CustomEvent('object-delete', {
+            detail: { id },
+            bubbles: true,
+            composed: true
+        }));
+        this.closeContextMenu();
+    }
+
+    private dispatchClone(id: UUID) {
+        this.dispatchEvent(new CustomEvent('object-clone', {
+            detail: { id },
+            bubbles: true,
+            composed: true
+        }));
+        this.closeContextMenu();
+    }
+
     private handleNameChange(event: Event) {
         if (!this.selectedObject) return;
 
@@ -475,6 +539,20 @@ export class DT3DTree extends LitElement {
         `;
     }
 
+    private renderContextMenu() {
+        if (!this.contextMenu) return null;
+
+        const { id, x, y } = this.contextMenu;
+
+        return html`
+            <div class="context-overlay" @click=${() => this.closeContextMenu()}></div>
+            <div class="context-menu" style="top:${y}px; left:${x}px;">
+                <button @click=${(event: MouseEvent) => { event.stopPropagation(); this.dispatchDelete(id); }}>Delete</button>
+                <button @click=${(event: MouseEvent) => { event.stopPropagation(); this.dispatchClone(id); }}>Clone</button>
+            </div>
+        `;
+    }
+
     /**
      * Render the tree recursively.
      * 
@@ -496,6 +574,7 @@ export class DT3DTree extends LitElement {
                             @dragleave=${(dragEvent: DragEvent) => this.handleDragLeave(dragEvent, node.id, 'inside')}
                             @drop=${(dragEvent: DragEvent) => this.handleDrop(dragEvent, node.id, 'inside')}
                             @click=${() => this.selectNode(node.id)}
+                            @contextmenu=${(event: MouseEvent) => this.handleContextMenu(event, node.id)}
                         >
                             ${node.children && node.children.length
                                 ? html`
@@ -539,6 +618,7 @@ export class DT3DTree extends LitElement {
                         ${this.renderRotationControls()}
                     ` : html`<div class="placeholder">Select an object from the tree to edit its properties.</div>`}
                 </div>
+                ${this.renderContextMenu()}
             </div>
         `;
     }
