@@ -309,6 +309,54 @@ export class DT3DCard extends LitElement  {
                                 this.tree.updateTreeFromScene();
                 }
 
+                private deleteObject(objectId: string): void {
+                                if (!this.home) {
+                                                return;
+                                }
+
+                                const target = this.home.getObjectByProperty('uuid', objectId) as Object3D | null;
+                                if (!target || target === this.home) {
+                                                return;
+                                }
+
+                                const parent = target.parent;
+                                if (!parent) {
+                                                return;
+                                }
+
+                                parent.remove(target);
+
+                                if (this.transform?.object === target) {
+                                                this.transform.detach();
+                                }
+
+                                this.tree.updateTreeFromScene(this.home, true);
+                }
+
+                private cloneObject(objectId: string): void {
+                                if (!this.home) {
+                                                return;
+                                }
+
+                                const original = this.home.getObjectByProperty('uuid', objectId) as Object3D | null;
+
+                                if (!original || original === this.home) {
+                                                return;
+                                }
+
+                                const parent = original.parent ?? this.home;
+                                const clone = original.clone(true);
+
+                                clone.position.x += 0.1;
+                                clone.position.z += 0.1;
+
+                                parent.add(clone);
+
+                                this.transform?.attach(clone);
+
+                                this.tree.updateTreeFromScene(this.home);
+                }
+
                 private setMeasurementMode(mode: 'distance' | 'angle' | 'none'): void {
                                 this.measurementMode = mode;
                                 this.clearMeasurements();
@@ -608,6 +656,16 @@ export class DT3DCard extends LitElement  {
                 this.tree.addEventListener('object-dropped', (e: any) => {
                                 const { sourceId, targetId, position } = e.detail as { sourceId: string; targetId: string; position: 'before' | 'after' | 'inside' };
                                 this.handleTreeDrop(sourceId, targetId, position);
+                });
+
+                this.tree.addEventListener('object-delete', (e: any) => {
+                                const id = e.detail.id as string;
+                                this.deleteObject(id);
+                });
+
+                this.tree.addEventListener('object-clone', (e: any) => {
+                                const id = e.detail.id as string;
+                                this.cloneObject(id);
                 });
 
                 // Raycaster for object picking
