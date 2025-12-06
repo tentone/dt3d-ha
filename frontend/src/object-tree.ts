@@ -29,7 +29,7 @@ export class DT3DTree extends LitElement {
             padding: 12px 0;
             z-index: 1;
             transition: width 0.2s;
-            overflow: hidden;
+            overflow: visible;
             position: relative;
         }
         .panel {
@@ -165,6 +165,17 @@ export class DT3DTree extends LitElement {
         .context-menu button:hover {
             background: color-mix(in srgb, var(--ha-color-primary-60) 25%, transparent);
         }
+
+        .resize-handle {
+            position: absolute;
+            top: 0;
+            left: -4px;
+            width: 8px;
+            height: 100%;
+            cursor: ew-resize;
+            z-index: 5;
+            background: transparent;
+        }
     `];
     
     /**
@@ -213,6 +224,42 @@ export class DT3DTree extends LitElement {
      */
     @state()
     private contextMenu: { id: UUID; x: number; y: number } | null = null;
+
+    private resizing = false;
+
+    private handleResizeMove = (event: MouseEvent) => {
+        if (!this.resizing) {
+            return;
+        }
+
+        const rect = this.getBoundingClientRect();
+        const nextWidth = Math.min(Math.max(rect.right - event.clientX, 200), 420);
+        this.style.width = `${nextWidth}px`;
+    };
+
+    private handleResizeEnd = () => {
+        if (!this.resizing) {
+            return;
+        }
+
+        this.resizing = false;
+        document.body.style.cursor = '';
+        window.removeEventListener('mousemove', this.handleResizeMove);
+        window.removeEventListener('mouseup', this.handleResizeEnd);
+    };
+
+    private startResize(_event: MouseEvent) {
+        this.resizing = true;
+        document.body.style.cursor = 'ew-resize';
+
+        window.addEventListener('mousemove', this.handleResizeMove);
+        window.addEventListener('mouseup', this.handleResizeEnd);
+    }
+
+    public disconnectedCallback(): void {
+        super.disconnectedCallback();
+        this.handleResizeEnd();
+    }
 
     /**
      * React to property changes.
@@ -610,6 +657,7 @@ export class DT3DTree extends LitElement {
 
     public render() {
         return html`
+            <div class="resize-handle" @mousedown=${(event: MouseEvent) => this.startResize(event)}></div>
             <div class="panel">
                 <div class="tree-section">
                     ${this.renderTree(this.tree)}

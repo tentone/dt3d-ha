@@ -13,7 +13,8 @@ export class DT3DSidebar extends LitElement {
                         padding: 16px 0;
                         z-index: 1;
                         transition: width 0.2s;
-                        overflow: hidden;
+                        overflow: visible;
+                        position: relative;
                 }
 
                 :host([collapsed]) {
@@ -82,13 +83,68 @@ export class DT3DSidebar extends LitElement {
                         background: var(--ha-color-primary-60);
                         transform: translateY(0);
                 }
+
+                .resize-handle {
+                        position: absolute;
+                        top: 0;
+                        right: -4px;
+                        width: 8px;
+                        height: 100%;
+                        cursor: ew-resize;
+                        z-index: 5;
+                        background: transparent;
+                }
         `];
 
-	static properties = {
-		collapsed: { type: Boolean, reflect: true }
-	};
+        static properties = {
+                collapsed: { type: Boolean, reflect: true }
+        };
 
-	public collapsed = true;
+        public collapsed = true;
+
+        private resizing = false;
+        private startX = 0;
+        private startWidth = 220;
+
+        private handleResizeMove = (event: MouseEvent) => {
+                if (!this.resizing) {
+                        return;
+                }
+
+                const delta = event.clientX - this.startX;
+                const nextWidth = Math.min(Math.max(this.startWidth + delta, 160), 400);
+                this.style.width = `${nextWidth}px`;
+        };
+
+        private handleResizeEnd = () => {
+                if (!this.resizing) {
+                        return;
+                }
+
+                this.resizing = false;
+                document.body.style.cursor = '';
+                window.removeEventListener('mousemove', this.handleResizeMove);
+                window.removeEventListener('mouseup', this.handleResizeEnd);
+        };
+
+        public disconnectedCallback(): void {
+                super.disconnectedCallback();
+                this.handleResizeEnd();
+        }
+
+        private startResize(event: MouseEvent) {
+                if (this.collapsed) {
+                        return;
+                }
+
+                this.resizing = true;
+                this.startX = event.clientX;
+                this.startWidth = this.getBoundingClientRect().width;
+                document.body.style.cursor = 'ew-resize';
+
+                window.addEventListener('mousemove', this.handleResizeMove);
+                window.addEventListener('mouseup', this.handleResizeEnd);
+        }
 
 	private toggleCollapse() {
 		this.collapsed = !this.collapsed;
@@ -125,10 +181,11 @@ export class DT3DSidebar extends LitElement {
                 return html`
                         <button class="collapse-btn" @click=${this.toggleCollapse} title="Collapse sidebar">
                                 ${this.collapsed ? '⮞' : '⮜'}
-			</button>
-			<div class="sidebar-section">
-				<div class="sidebar-title">Controls</div>
-				<button @click=${() => this.handleTransformSelect('translate')}>Translate</button>
+                        </button>
+                        <div class="resize-handle" @mousedown=${(event: MouseEvent) => this.startResize(event)}></div>
+                        <div class="sidebar-section">
+                                <div class="sidebar-title">Controls</div>
+                                <button @click=${() => this.handleTransformSelect('translate')}>Translate</button>
 				<button @click=${() => this.handleTransformSelect('rotate')}>Rotate</button>
 				<button @click=${() => this.handleTransformSelect('scale')}>Scale</button>
 			</div>
