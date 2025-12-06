@@ -460,6 +460,18 @@ export class DT3DTree extends LitElement {
         this.closeContextMenu();
     }
 
+    /**
+     * Refresh the inspector panel when the selected object changes externally.
+     */
+    public refreshSelectedObject() {
+        if (!this.selectedId || !this.scene) {
+            return;
+        }
+
+        this.selectedObject = this.scene.getObjectByProperty('uuid', this.selectedId) ?? null;
+        this.requestUpdate();
+    }
+
     private handleNameChange(event: Event) {
         if (!this.selectedObject) return;
 

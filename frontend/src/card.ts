@@ -620,11 +620,14 @@ export class DT3DCard extends LitElement  {
 		this.controls.enableDamping = true; // Enable damping for smoother controls
 		this.controls.dampingFactor = 0.05;
 
-		this.transform = new TransformControls( this.camera, this.renderer.domElement );
-		this.transform.addEventListener( 'dragging-changed', ( event: any) => {
-			this.controls.enabled = ! event.value;
-		} );
-		this.scene.add( this.transform.getHelper() );
+                this.transform = new TransformControls( this.camera, this.renderer.domElement );
+                this.transform.addEventListener( 'dragging-changed', ( event: any) => {
+                        this.controls.enabled = ! event.value;
+                } );
+                this.transform.addEventListener('objectChange', () => {
+                        this.tree.refreshSelectedObject();
+                });
+                this.scene.add( this.transform.getHelper() );
 
 		// Add a cube
 		const geometry = new BoxGeometry();
