@@ -1,44 +1,44 @@
 import en from "./locale/en.json";
 import {
-                Mesh,
-                BoxGeometry,
-                PerspectiveCamera,
-                Scene,
-                WebGLRenderer,
-                MeshBasicMaterial,
-                Raycaster,
-                Vector2,
-                PlaneGeometry,
-                SphereGeometry,
-                Group,
-                MathUtils,
-                Vector3,
-                Object3D,
-                Line,
-                BufferGeometry,
-                LineBasicMaterial,
-} from 'three';
-import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
-import {TransformControls }from 'three/examples/jsm/controls/TransformControls';
-import { Sky } from 'three/examples/jsm/Addons.js';
-import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
-import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader.js';
-import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader.js';
+	Mesh,
+	BoxGeometry,
+	PerspectiveCamera,
+	Scene,
+	WebGLRenderer,
+	MeshBasicMaterial,
+	Raycaster,
+	Vector2,
+	PlaneGeometry,
+	SphereGeometry,
+	Group,
+	MathUtils,
+	Vector3,
+	Object3D,
+	Line,
+	BufferGeometry,
+	LineBasicMaterial,
+} from "three";
+import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
+import { TransformControls } from "three/examples/jsm/controls/TransformControls";
+import { Sky } from "three/examples/jsm/Addons.js";
+import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
+import { OBJLoader } from "three/examples/jsm/loaders/OBJLoader.js";
+import { FBXLoader } from "three/examples/jsm/loaders/FBXLoader.js";
 import { LitElement } from "lit";
-import { customElement } from 'lit/decorators.js';
+import { customElement } from "lit/decorators.js";
 import { DT3DSidebar } from "./side-bar.js";
 import { DT3DTree } from "./object-tree.js";
 import { Locale } from "./locale.js";
 import { EntityLight } from "./objects/entity-light.js";
 import { EntitySensor } from "./objects/entity-sensor.js";
-import { createTextSprite } from "./objects/text.js";
+import { TextSprite } from "./objects/text.js";
 
-@customElement('dt3d-card')
-export class DT3DCard extends LitElement  {
+@customElement("dt3d-card")
+export class DT3DCard extends LitElement {
 	private config: any;
 
 	public hassInstance: any;
-	
+
 	private container: HTMLElement = null;
 
 	private content: HTMLElement = null;
@@ -70,39 +70,39 @@ export class DT3DCard extends LitElement  {
 	 */
 	public sidebar: DT3DSidebar;
 
-        /**
-         * Tree element for displaying the 3D object hierarchy.
-         */
-        public tree: DT3DTree;
+	/**
+	 * Tree element for displaying the 3D object hierarchy.
+	 */
+	public tree: DT3DTree;
 
-        /**
-         * Tracks which measurement tool is currently active.
-         */
-        private measurementMode: 'none' | 'distance' | 'angle' = 'none';
+	/**
+	 * Tracks which measurement tool is currently active.
+	 */
+	private measurementMode: "none" | "distance" | "angle" = "none";
 
-        /**
-         * Points selected for the current measurement operation.
-         */
-        private measurementPoints: Vector3[] = [];
+	/**
+	 * Points selected for the current measurement operation.
+	 */
+	private measurementPoints: Vector3[] = [];
 
-        /**
-         * Helper group that renders measurement visuals (markers, lines, labels).
-         */
-        private measurementHelpers: Group = null;
+	/**
+	 * Helper group that renders measurement visuals (markers, lines, labels).
+	 */
+	private measurementHelpers: Group = null;
 
-        private raycaster: Raycaster = new Raycaster();
+	private raycaster: Raycaster = new Raycaster();
 
-        private pointer: Vector2 = new Vector2();
+	private pointer: Vector2 = new Vector2();
 
 	static properties = {
 		hass: { attribute: false },
 		_config: { state: true },
 	};
 	public locale: Locale;
- 
+
 	set hass(hass: any) {
 		if (!this.hassInstance) {
-			console.log('DT3D: Entity states', this, DT3DCard.styles, hass.states);
+			console.log("DT3D: Entity states", this, DT3DCard.styles, hass.states);
 		}
 
 		// console.log('DT3D: Styles loaded from file', style);
@@ -117,7 +117,7 @@ export class DT3DCard extends LitElement  {
 
 	/**
 	 * Select a 3D model file to upload.
-	 * 
+	 *
 	 * Presents a file picker dialog to the user and loads the selected model into the scene.
 	 */
 	private selectFile() {
@@ -125,12 +125,12 @@ export class DT3DCard extends LitElement  {
 			return;
 		}
 
-		const input = document.createElement('input');
-		input.type = 'file';
-		input.accept = '.gltf,.glb,.obj,.fbx';
-		input.style.display = 'none';
+		const input = document.createElement("input");
+		input.type = "file";
+		input.accept = ".gltf,.glb,.obj,.fbx";
+		input.style.display = "none";
 
-		input.addEventListener('change', () => {
+		input.addEventListener("change", () => {
 			const file = input.files?.[0];
 			if (file) {
 				this.loadModelFromFile(file);
@@ -145,18 +145,18 @@ export class DT3DCard extends LitElement  {
 
 	/**
 	 * Loads a 3D model from a file.
-	 * 
-	 * @param file - The model file to load. 
+	 *
+	 * @param file - The model file to load.
 	 */
 	private loadModelFromFile(file: File) {
 		if (!this.home) {
 			return;
 		}
 
-		const extension = file.name.split('.').pop()?.toLowerCase();
+		const extension = file.name.split(".").pop()?.toLowerCase();
 
 		if (!extension) {
-			console.warn('Unable to detect model file extension:', file.name);
+			console.warn("Unable to detect model file extension:", file.name);
 			return;
 		}
 
@@ -171,39 +171,51 @@ export class DT3DCard extends LitElement  {
 			cleanup();
 		};
 
-		if (extension === 'gltf' || extension === 'glb') {
+		if (extension === "gltf" || extension === "glb") {
 			const loader = new GLTFLoader();
-			loader.load(url, (gltf: any) => {
-				cleanup();
-				this.addToScene(gltf.scene ?? gltf.scenes?.[0], file.name);
-			}, undefined, onError);
+			loader.load(
+				url,
+				(gltf: any) => {
+					cleanup();
+					this.addToScene(gltf.scene ?? gltf.scenes?.[0], file.name);
+				},
+				undefined,
+				onError,
+			);
 			return;
-		}
-		else if (extension === 'obj') {
+		} else if (extension === "obj") {
 			const loader = new OBJLoader();
-			loader.load(url, (obj: any) => {
-				cleanup();
-				this.addToScene(obj, file.name);
-			}, undefined, onError);
+			loader.load(
+				url,
+				(obj: any) => {
+					cleanup();
+					this.addToScene(obj, file.name);
+				},
+				undefined,
+				onError,
+			);
 			return;
-		}
-		else if (extension === 'fbx') {
+		} else if (extension === "fbx") {
 			const loader = new FBXLoader();
-			loader.load(url, (fbx: any) => {
-				cleanup();
-				this.addToScene(fbx, file.name);
-			}, undefined, onError);
+			loader.load(
+				url,
+				(fbx: any) => {
+					cleanup();
+					this.addToScene(fbx, file.name);
+				},
+				undefined,
+				onError,
+			);
 			return;
 		}
 
-		console.warn('DT3D: Unsupported model format:', extension);
+		console.warn("DT3D: Unsupported model format:", extension);
 		cleanup();
 	}
 
-
 	/**
 	 * Set the configuration for the card.
-	 * 
+	 *
 	 * @param config - configuration object
 	 * @throws Error if the configuration is invalid.
 	 */
@@ -214,267 +226,319 @@ export class DT3DCard extends LitElement  {
 
 		this.config = {
 			port: 8080,
-			...config
+			...config,
 		};
 
-		console.log('DT3D: Config set:', this.config);
+		console.log("DT3D: Config set:", this.config);
 	}
 
 	/**
 	 * Adds a 3D object to the scene.
-	 * 
+	 *
 	 * @param object - The 3D object to add to the scene.
 	 */
 	public addToScene(object: Object3D | null | undefined, name?: string): void {
 		if (!object) {
-				return;
+			return;
 		}
 
 		if (name) {
 			object.name = name;
 		}
 
-		console.log('DT3d: Adding object to scene', object, name);
+		console.log("DT3d: Adding object to scene", object, name);
 
 		this.home.add(object);
 		this.transform?.attach(object);
 
 		this.tree.updateTreeFromScene(this.home, true);
-	};
+	}
 
-		private isDescendant(object: Object3D, potentialAncestor: Object3D): boolean {
-				let current = object.parent;
-				while (current) {
-						if (current === potentialAncestor) {
-								return true;
-						}
-						current = current.parent;
-				}
-
-				return false;
+	private isDescendant(object: Object3D, potentialAncestor: Object3D): boolean {
+		let current = object.parent;
+		while (current) {
+			if (current === potentialAncestor) {
+				return true;
+			}
+			current = current.parent;
 		}
 
-                private handleTreeDrop(sourceId: string, targetId: string, position: 'before' | 'after' | 'inside'): void {
-                                if (!this.home) {
-                                                return;
-                                }
+		return false;
+	}
 
-				const source = this.home.getObjectByProperty('uuid', sourceId) as Object3D | null;
-				const target = this.home.getObjectByProperty('uuid', targetId) as Object3D | null;
+	private handleTreeDrop(
+		sourceId: string,
+		targetId: string,
+		position: "before" | "after" | "inside",
+	): void {
+		if (!this.home) {
+			return;
+		}
 
-				if (!source || !target || source === target) {
-						return;
+		const source = this.home.getObjectByProperty(
+			"uuid",
+			sourceId,
+		) as Object3D | null;
+		const target = this.home.getObjectByProperty(
+			"uuid",
+			targetId,
+		) as Object3D | null;
+
+		if (!source || !target || source === target) {
+			return;
+		}
+
+		if (this.isDescendant(target, source)) {
+			return;
+		}
+
+		if (position === "inside") {
+			if (source.parent !== target) {
+				target.attach(source);
+			} else {
+				const index = target.children.indexOf(source);
+				if (index > -1) {
+					target.children.splice(index, 1);
+					target.children.push(source);
 				}
+			}
+		} else {
+			const parent = target.parent;
+			if (!parent || parent === source) {
+				return;
+			}
 
-				if (this.isDescendant(target, source)) {
-						return;
-				}
+			if (source.parent !== parent) {
+				parent.attach(source);
+			}
 
-				if (position === 'inside') {
-						if (source.parent !== target) {
-								target.attach(source);
-						} else {
-								const index = target.children.indexOf(source);
-								if (index > -1) {
-										target.children.splice(index, 1);
-										target.children.push(source);
-								}
-						}
-				} else {
-						const parent = target.parent;
-						if (!parent || parent === source) {
-								return;
-						}
+			const currentIndex = parent.children.indexOf(source);
+			if (currentIndex === -1) {
+				return;
+			}
 
-						if (source.parent !== parent) {
-								parent.attach(source);
-						}
+			parent.children.splice(currentIndex, 1);
 
-						const currentIndex = parent.children.indexOf(source);
-						if (currentIndex === -1) {
-								return;
-						}
+			const targetIndex = parent.children.indexOf(target);
+			let newIndex = position === "before" ? targetIndex : targetIndex + 1;
+			if (newIndex > parent.children.length) {
+				newIndex = parent.children.length;
+			}
 
-						parent.children.splice(currentIndex, 1);
+			parent.children.splice(newIndex, 0, source);
+		}
 
-						const targetIndex = parent.children.indexOf(target);
-						let newIndex = position === 'before' ? targetIndex : targetIndex + 1;
-						if (newIndex > parent.children.length) {
-								newIndex = parent.children.length;
-						}
+		this.tree.updateTreeFromScene();
+	}
 
-						parent.children.splice(newIndex, 0, source);
-				}
+	private deleteObject(objectId: string): void {
+		if (!this.home) {
+			return;
+		}
 
-                                this.tree.updateTreeFromScene();
-                }
+		const target = this.home.getObjectByProperty(
+			"uuid",
+			objectId,
+		) as Object3D | null;
+		if (!target || target === this.home) {
+			return;
+		}
 
-                private deleteObject(objectId: string): void {
-                                if (!this.home) {
-                                                return;
-                                }
+		const parent = target.parent;
+		if (!parent) {
+			return;
+		}
 
-                                const target = this.home.getObjectByProperty('uuid', objectId) as Object3D | null;
-                                if (!target || target === this.home) {
-                                                return;
-                                }
+		parent.remove(target);
 
-                                const parent = target.parent;
-                                if (!parent) {
-                                                return;
-                                }
+		if (this.transform?.object === target) {
+			this.transform.detach();
+		}
 
-                                parent.remove(target);
+		this.tree.updateTreeFromScene(this.home, true);
+	}
 
-                                if (this.transform?.object === target) {
-                                                this.transform.detach();
-                                }
+	private cloneObject(objectId: string): void {
+		if (!this.home) {
+			return;
+		}
 
-                                this.tree.updateTreeFromScene(this.home, true);
-                }
+		const original = this.home.getObjectByProperty(
+			"uuid",
+			objectId,
+		) as Object3D | null;
 
-                private cloneObject(objectId: string): void {
-                                if (!this.home) {
-                                                return;
-                                }
+		if (!original || original === this.home) {
+			return;
+		}
 
-                                const original = this.home.getObjectByProperty('uuid', objectId) as Object3D | null;
+		const parent = original.parent ?? this.home;
+		const clone = original.clone(true);
 
-                                if (!original || original === this.home) {
-                                                return;
-                                }
+		clone.position.x += 0.1;
+		clone.position.z += 0.1;
 
-                                const parent = original.parent ?? this.home;
-                                const clone = original.clone(true);
+		parent.add(clone);
 
-                                clone.position.x += 0.1;
-                                clone.position.z += 0.1;
+		this.transform?.attach(clone);
 
-                                parent.add(clone);
+		this.tree.updateTreeFromScene(this.home);
+	}
 
-                                this.transform?.attach(clone);
+	private setMeasurementMode(mode: "distance" | "angle" | "none"): void {
+		this.measurementMode = mode;
+		this.clearMeasurements();
+	}
 
-                                this.tree.updateTreeFromScene(this.home);
-                }
+	private clearMeasurements(): void {
+		this.measurementPoints = [];
+		this.measurementHelpers?.clear();
+	}
 
-                private setMeasurementMode(mode: 'distance' | 'angle' | 'none'): void {
-                                this.measurementMode = mode;
-                                this.clearMeasurements();
-                }
+	private processMeasurementClick(event: MouseEvent): void {
+		if (
+			this.measurementMode === "none" ||
+			!this.canvas ||
+			!this.camera ||
+			!this.home
+		) {
+			return;
+		}
 
-                private clearMeasurements(): void {
-                                this.measurementPoints = [];
-                                this.measurementHelpers?.clear();
-                }
+		const rect = this.canvas.getBoundingClientRect();
+		this.pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+		this.pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+		this.raycaster.setFromCamera(this.pointer, this.camera);
 
-                private processMeasurementClick(event: MouseEvent): void {
-                                if (this.measurementMode === 'none' || !this.canvas || !this.camera || !this.home) {
-                                                return;
-                                }
+		const intersects = this.raycaster.intersectObjects(
+			this.home.children,
+			true,
+		);
+		const point = intersects[0]?.point;
 
-                                const rect = this.canvas.getBoundingClientRect();
-                                this.pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-                                this.pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
-                                this.raycaster.setFromCamera(this.pointer, this.camera);
+		if (!point) {
+			return;
+		}
 
-                                const intersects = this.raycaster.intersectObjects(this.home.children, true);
-                                const point = intersects[0]?.point;
+		this.addMeasurementPoint(point);
+	}
 
-                                if (!point) {
-                                                return;
-                                }
+	/**
+	 * Add a measurement point based on the current measurement mode.
+	 *
+	 * @param point - Position of the measurement point.
+	 */
+	private addMeasurementPoint(point: Vector3): void {
+		this.measurementPoints.push(point.clone());
 
-                                this.addMeasurementPoint(point);
-                }
+		if (
+			this.measurementMode === "distance" &&
+			this.measurementPoints.length === 2
+		) {
+			this.createDistanceMeasurementHelper();
+			this.measurementPoints = [];
+		} else if (
+			this.measurementMode === "angle" &&
+			this.measurementPoints.length === 3
+		) {
+			this.createAngleMeasurementHelper();
+			this.measurementPoints = [];
+		} else {
+			if (!this.measurementHelpers) {
+				return;
+			}
 
-                private addMeasurementPoint(point: Vector3): void {
-                                this.measurementPoints.push(point.clone());
+			this.measurementHelpers.clear();
+			this.measurementPoints.forEach((point) => {
+				this.measurementHelpers.add(this.createMeasurementMarker(point));
+			});
+		}
+	}
 
-                                if (this.measurementMode === 'distance' && this.measurementPoints.length === 2) {
-                                                this.renderDistanceMeasurement();
-                                                this.measurementPoints = [];
-                                } else if (this.measurementMode === 'angle' && this.measurementPoints.length === 3) {
-                                                this.renderAngleMeasurement();
-                                                this.measurementPoints = [];
-                                } else {
-                                                this.renderMeasurementMarkers();
-                                }
-                }
+	/**
+	 * Display the distance measurement between two points.
+	 *
+	 * Add to the measurementHelpers group.
+	 */
+	private createDistanceMeasurementHelper(): void {
+		if (this.measurementPoints.length < 2 || !this.measurementHelpers) {
+			return;
+		}
 
-                private renderMeasurementMarkers(): void {
-                                if (!this.measurementHelpers) {
-                                                return;
-                                }
+		this.measurementHelpers.clear();
 
-                                this.measurementHelpers.clear();
-                                this.measurementPoints.forEach((point) => {
-                                                this.measurementHelpers.add(this.createMeasurementMarker(point));
-                                });
-                }
+		const [start, end] = this.measurementPoints;
+		this.measurementHelpers.add(this.createMeasurementMarker(start));
+		this.measurementHelpers.add(this.createMeasurementMarker(end));
 
-                private renderDistanceMeasurement(): void {
-                                if (this.measurementPoints.length < 2 || !this.measurementHelpers) {
-                                                return;
-                                }
+		const geometry = new BufferGeometry().setFromPoints([start, end]);
+		const line = new Line(geometry, new LineBasicMaterial({ color: 0xffcc00 }));
+		this.measurementHelpers.add(line);
 
-                                this.measurementHelpers.clear();
+		const distance = start.distanceTo(end);
+		const label = new TextSprite(`Distance: ${distance.toFixed(2)}`);
+		label.position.copy(start.clone().add(end).multiplyScalar(0.5));
+		label.position.y += 0.2;
+		this.measurementHelpers.add(label);
+	}
 
-                                const [start, end] = this.measurementPoints;
-                                this.measurementHelpers.add(this.createMeasurementMarker(start));
-                                this.measurementHelpers.add(this.createMeasurementMarker(end));
+	/**
+	 * Create and display the angle measurement between three points.
+	 *
+	 * Add to the measurementHelpers group.
+	 */
+	private createAngleMeasurementHelper(): void {
+		if (this.measurementPoints.length < 3 || !this.measurementHelpers) {
+			return;
+		}
 
-                                const geometry = new BufferGeometry().setFromPoints([start, end]);
-                                const line = new Line(geometry, new LineBasicMaterial({ color: 0xffcc00 }));
-                                this.measurementHelpers.add(line);
+		this.measurementHelpers.clear();
 
-                                const distance = start.distanceTo(end);
-                                const label = createTextSprite(`Distance: ${distance.toFixed(2)}`);
-                                label.position.copy(start.clone().add(end).multiplyScalar(0.5));
-                                label.position.y += 0.2;
-                                this.measurementHelpers.add(label);
-                }
+		const [first, vertex, last] = this.measurementPoints;
+		this.measurementHelpers.add(this.createMeasurementMarker(first));
+		this.measurementHelpers.add(this.createMeasurementMarker(vertex));
+		this.measurementHelpers.add(this.createMeasurementMarker(last));
 
-                private renderAngleMeasurement(): void {
-                                if (this.measurementPoints.length < 3 || !this.measurementHelpers) {
-                                                return;
-                                }
+		const line1 = new Line(
+			new BufferGeometry().setFromPoints([vertex, first]),
+			new LineBasicMaterial({ color: 0x66ccff }),
+		);
+		const line2 = new Line(
+			new BufferGeometry().setFromPoints([vertex, last]),
+			new LineBasicMaterial({ color: 0x66ccff }),
+		);
 
-                                this.measurementHelpers.clear();
+		this.measurementHelpers.add(line1);
+		this.measurementHelpers.add(line2);
 
-                                const [first, vertex, last] = this.measurementPoints;
-                                this.measurementHelpers.add(this.createMeasurementMarker(first));
-                                this.measurementHelpers.add(this.createMeasurementMarker(vertex));
-                                this.measurementHelpers.add(this.createMeasurementMarker(last));
+		const v1 = first.clone().sub(vertex).normalize();
+		const v2 = last.clone().sub(vertex).normalize();
+		const angle = Math.acos(MathUtils.clamp(v1.dot(v2), -1, 1));
+		const degrees = MathUtils.radToDeg(angle);
 
-                                const line1 = new Line(new BufferGeometry().setFromPoints([vertex, first]), new LineBasicMaterial({ color: 0x66ccff }));
-                                const line2 = new Line(new BufferGeometry().setFromPoints([vertex, last]), new LineBasicMaterial({ color: 0x66ccff }));
+		const label = new TextSprite(`Angle: ${degrees.toFixed(1)}°`);
+		label.position.copy(vertex);
+		label.position.y += 0.5;
+		this.measurementHelpers.add(label);
+	}
 
-                                this.measurementHelpers.add(line1);
-                                this.measurementHelpers.add(line2);
-
-                                const v1 = first.clone().sub(vertex).normalize();
-                                const v2 = last.clone().sub(vertex).normalize();
-                                const angle = Math.acos(MathUtils.clamp(v1.dot(v2), -1, 1));
-                                const degrees = MathUtils.radToDeg(angle);
-
-                                const label = createTextSprite(`Angle: ${degrees.toFixed(1)}°`);
-                                label.position.copy(vertex);
-                                label.position.y += 0.5;
-                                this.measurementHelpers.add(label);
-                }
-
-                private createMeasurementMarker(position: Vector3): Mesh {
-                                const markerGeometry = new SphereGeometry(0.05, 16, 16);
-                                const markerMaterial = new MeshBasicMaterial({ color: 0xff0000 });
-                                const marker = new Mesh(markerGeometry, markerMaterial);
-                                marker.position.copy(position);
-                                return marker;
-                }
-
+	/**
+	 * Create a marker for measurement.
+	 *
+	 * @param position - Position of the marker.
+	 * @returns - The marker mesh.
+	 */
+	private createMeasurementMarker(position: Vector3): Mesh {
+		const markerGeometry = new SphereGeometry(0.05, 16, 16);
+		const markerMaterial = new MeshBasicMaterial({ color: 0xff0000 });
+		const marker = new Mesh(markerGeometry, markerMaterial);
+		marker.position.copy(position);
+		return marker;
+	}
 
 	/**
 	 * Method called when the element is added to the DOM.
-	 * 
+	 *
 	 * Initializes the 3D scene and starts the rendering loop.
 	 */
 	public connectedCallback() {
@@ -485,7 +549,7 @@ export class DT3DCard extends LitElement  {
 		const port = this.config?.port || 8080;
 		const width = 300;
 		const height = 300;
-		
+
 		this.style.cssText = `
 			overflow: hidden;
 			width: 100%;
@@ -495,7 +559,7 @@ export class DT3DCard extends LitElement  {
 			border-radius: 10px;
 		`;
 
-		this.container = document.createElement('div');
+		this.container = document.createElement("div");
 		this.container.style.cssText = `
 			width: 100%;
 			height: 100%;
@@ -503,7 +567,7 @@ export class DT3DCard extends LitElement  {
 		`;
 		this.appendChild(this.container);
 
-		this.content = document.createElement('div');
+		this.content = document.createElement("div");
 		this.content.style.cssText = `
 			position: absolute;
 			top: 0;
@@ -512,7 +576,7 @@ export class DT3DCard extends LitElement  {
 		`;
 		this.container.appendChild(this.content);
 
-		this.canvas = document.createElement('canvas');
+		this.canvas = document.createElement("canvas");
 		this.canvas.style.cssText = `
 			position: absolute;
 			top: 0;
@@ -521,18 +585,18 @@ export class DT3DCard extends LitElement  {
 			height: ${height}px;
 			border-radius: 10px;
 		`;
-                this.content.appendChild(this.canvas);
+		this.content.appendChild(this.canvas);
 
-                this.scene = new Scene();
+		this.scene = new Scene();
 
-                this.measurementHelpers = new Group();
-                this.measurementHelpers.name = 'Measurements';
-                this.scene.add(this.measurementHelpers);
+		this.measurementHelpers = new Group();
+		this.measurementHelpers.name = "Measurements";
+		this.scene.add(this.measurementHelpers);
 
-                this.home = new Group();
-                this.scene.add(this.home);
+		this.home = new Group();
+		this.scene.add(this.home);
 
-		this.sidebar = document.createElement('dt3d-sidebar') as DT3DSidebar;
+		this.sidebar = document.createElement("dt3d-sidebar") as DT3DSidebar;
 		this.sidebar.style.cssText = `
 			position: absolute;
 			top: 0;
@@ -540,8 +604,8 @@ export class DT3DCard extends LitElement  {
 			height: 100%;
 		`;
 		this.content.appendChild(this.sidebar);
-		
-		this.tree = document.createElement('dt3d-tree') as DT3DTree;
+
+		this.tree = document.createElement("dt3d-tree") as DT3DTree;
 		this.tree.style.cssText = `
 			position: absolute;
 			top: 0;	
@@ -549,52 +613,53 @@ export class DT3DCard extends LitElement  {
 			height: 100%;
 		`;
 		this.content.appendChild(this.tree);
-		
-                this.sidebar.addEventListener('transform-tool-selected', (e: any) => {
-                        const tool = e.detail.tool;
-                        this.transform.setMode(tool);
-                });
 
-                this.sidebar.addEventListener('measurement-mode-selected', (e: any) => {
-                        const mode = e.detail.mode as 'distance' | 'angle' | 'none';
-                        this.setMeasurementMode(mode);
-                });
+		this.sidebar.addEventListener("transform-tool-selected", (e: any) => {
+			const tool = e.detail.tool;
+			this.transform.setMode(tool);
+		});
 
-                this.sidebar.addEventListener('add-object', (e: any) => {
-                        const type = e.detail.type;
+		this.sidebar.addEventListener("measurement-mode-selected", (e: any) => {
+			const mode = e.detail.mode as "distance" | "angle" | "none";
+			this.setMeasurementMode(mode);
+		});
+
+		this.sidebar.addEventListener("add-object", (e: any) => {
+			const type = e.detail.type;
 
 			let object: Mesh = null;
-			const material = new MeshBasicMaterial({ color: 0x00ffff, wireframe: true });
+			const material = new MeshBasicMaterial({
+				color: 0x00ffff,
+				wireframe: true,
+			});
 
-			if (type === 'cube') {
+			if (type === "cube") {
 				const geometry = new BoxGeometry();
 				object = new Mesh(geometry, material);
-				object.name = 'Cube';
-			}
-			else if (type === 'plane') {
-				const geometry = new PlaneGeometry(1,1,1);
+				object.name = "Cube";
+			} else if (type === "plane") {
+				const geometry = new PlaneGeometry(1, 1, 1);
 				object = new Mesh(geometry, material);
 				object.rotation.x = -Math.PI / 2;
 				object.position.y = -1;
-				object.name = 'Plane';
-			} else if (type === 'sphere') {
+				object.name = "Plane";
+			} else if (type === "sphere") {
 				const geometry = new SphereGeometry();
 				object = new Mesh(geometry, material);
-				object.name = 'Sphere';
+				object.name = "Sphere";
 			}
 
 			if (object) {
 				this.addToScene(object);
 			}
 
-			if (type === 'upload') {
+			if (type === "upload") {
 				this.selectFile();
 			}
-			if (type === 'entity') {
+			if (type === "entity") {
 				this.addEntity();
 			}
 		});
-
 
 		this.camera = new PerspectiveCamera(75, width / height, 0.1, 10000);
 		this.camera.position.z = 3;
@@ -608,9 +673,9 @@ export class DT3DCard extends LitElement  {
 		const sky = new Sky();
 		sky.scale.setScalar(1e4);
 
-		const phi = MathUtils.degToRad( 90 );
-		const theta = MathUtils.degToRad( 180 );
-		const sunPosition = new Vector3().setFromSphericalCoords( 1, phi, theta );
+		const phi = MathUtils.degToRad(90);
+		const theta = MathUtils.degToRad(180);
+		const sunPosition = new Vector3().setFromSphericalCoords(1, phi, theta);
 
 		sky.material.uniforms.sunPosition.value = sunPosition;
 		this.scene.add(sky);
@@ -620,18 +685,24 @@ export class DT3DCard extends LitElement  {
 		this.controls.enableDamping = true; // Enable damping for smoother controls
 		this.controls.dampingFactor = 0.05;
 
-                this.transform = new TransformControls( this.camera, this.renderer.domElement );
-                this.transform.addEventListener( 'dragging-changed', ( event: any) => {
-                        this.controls.enabled = ! event.value;
-                } );
-                this.transform.addEventListener('objectChange', () => {
-                        this.tree.refreshSelectedObject();
-                });
-                this.scene.add( this.transform.getHelper() );
+		this.transform = new TransformControls(
+			this.camera,
+			this.renderer.domElement,
+		);
+		this.transform.addEventListener("dragging-changed", (event: any) => {
+			this.controls.enabled = !event.value;
+		});
+		this.transform.addEventListener("objectChange", () => {
+			this.tree.refreshSelectedObject();
+		});
+		this.scene.add(this.transform.getHelper());
 
 		// Add a cube
 		const geometry = new BoxGeometry();
-		const material = new MeshBasicMaterial({ color: 0xffff00, wireframe: true });
+		const material = new MeshBasicMaterial({
+			color: 0xffff00,
+			wireframe: true,
+		});
 		const cube = new Mesh(geometry, material);
 		this.transform.attach(cube);
 		this.home.add(cube);
@@ -648,48 +719,57 @@ export class DT3DCard extends LitElement  {
 		this.tree.updateTreeFromScene(this.home, true);
 
 		// Listen for selection events from the tree
-		this.tree.addEventListener('object-selected', (e: any) => {
-				const id = e.detail.id;
-				const object = this.home.getObjectByProperty('uuid', id);
-				if (object) {
-						this.transform.attach(object);
-				}
+		this.tree.addEventListener("object-selected", (e: any) => {
+			const id = e.detail.id;
+			const object = this.home.getObjectByProperty("uuid", id);
+			if (object) {
+				this.transform.attach(object);
+			}
 		});
 
-                this.tree.addEventListener('object-dropped', (e: any) => {
-                                const { sourceId, targetId, position } = e.detail as { sourceId: string; targetId: string; position: 'before' | 'after' | 'inside' };
-                                this.handleTreeDrop(sourceId, targetId, position);
-                });
+		this.tree.addEventListener("object-dropped", (e: any) => {
+			const { sourceId, targetId, position } = e.detail as {
+				sourceId: string;
+				targetId: string;
+				position: "before" | "after" | "inside";
+			};
+			this.handleTreeDrop(sourceId, targetId, position);
+		});
 
-                this.tree.addEventListener('object-delete', (e: any) => {
-                                const id = e.detail.id as string;
-                                this.deleteObject(id);
-                });
+		this.tree.addEventListener("object-delete", (e: any) => {
+			const id = e.detail.id as string;
+			this.deleteObject(id);
+		});
 
-                this.tree.addEventListener('object-clone', (e: any) => {
-                                const id = e.detail.id as string;
-                                this.cloneObject(id);
-                });
+		this.tree.addEventListener("object-clone", (e: any) => {
+			const id = e.detail.id as string;
+			this.cloneObject(id);
+		});
 
-                // Raycaster for object picking
-                this.canvas.addEventListener('dblclick', (event: MouseEvent) => {
-                        const rect = this.canvas.getBoundingClientRect();
-                        this.pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-                        this.pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
-                        this.raycaster.setFromCamera(this.pointer, this.camera);
+		// Raycaster for object picking
+		this.canvas.addEventListener("dblclick", (event: MouseEvent) => {
+			const rect = this.canvas.getBoundingClientRect();
+			this.pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+			this.pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+			this.raycaster.setFromCamera(this.pointer, this.camera);
 
-                        const intersects = this.raycaster.intersectObjects(this.home.children, false);
-                        if (intersects.length > 0) {
-                                const picked = intersects[0].object as Mesh;
-                                this.transform.attach(picked);
-                        }
-                });
+			const intersects = this.raycaster.intersectObjects(
+				this.home.children,
+				false,
+			);
+			if (intersects.length > 0) {
+				const picked = intersects[0].object as Mesh;
+				this.transform.attach(picked);
+			}
+		});
 
-                this.canvas.addEventListener('click', (event: MouseEvent) => this.processMeasurementClick(event));
+		this.canvas.addEventListener("click", (event: MouseEvent) =>
+			this.processMeasurementClick(event),
+		);
 
-                const animate = () => {
-                        requestAnimationFrame(animate);
-                        cube.rotation.x += 0.01;
+		const animate = () => {
+			requestAnimationFrame(animate);
+			cube.rotation.x += 0.01;
 			cube.rotation.y += 0.01;
 
 			// Update controls
@@ -705,7 +785,7 @@ export class DT3DCard extends LitElement  {
 
 			this.content.style.width = `${width}px`;
 			this.content.style.height = `${height}px`;
-			
+
 			this.canvas.style.width = `${width}px`;
 			this.canvas.style.height = `${height}px`;
 
@@ -714,12 +794,12 @@ export class DT3DCard extends LitElement  {
 
 			this.renderer.setSize(width, height, false);
 		});
-		resizeDetector.observe(this.container, { box: 'border-box' });
+		resizeDetector.observe(this.container, { box: "border-box" });
 
 		fetch(`http://localhost:${port}/api/hello`)
 			.then((r) => r.text())
 			.then((text) => {
-				const msg = document.createElement('p');
+				const msg = document.createElement("p");
 				msg.style.cssText = `
 					color: white;
 					z-index: 10;
@@ -735,7 +815,7 @@ export class DT3DCard extends LitElement  {
 				this.content.appendChild(msg);
 			})
 			.catch(() => {
-				const err = document.createElement('p');
+				const err = document.createElement("p");
 				err.style.cssText = `
 					color: red;
 					z-index: 10;
@@ -754,20 +834,20 @@ export class DT3DCard extends LitElement  {
 
 	/**
 	 * Method called to add a HA entity to the 3D scene.
-	 * 
+	 *
 	 * Presents a dialog to select an entity and adds a representation to the scene.
-	 * 
+	 *
 	 * The entities list is fetched from Home Assistant.
 	 */
 	public addEntity(): void {
 		const states = this.hassInstance.states;
-		console.log('DT3D: Available entities:', states);
+		console.log("DT3D: Available entities:", states);
 
-                const dialog = document.createElement('div');
-                dialog.style.cssText = `
-                        position: absolute;
-                        top: 50%;
-                        left: 50%;
+		const dialog = document.createElement("div");
+		dialog.style.cssText = `
+						position: absolute;
+						top: 50%;
+						left: 50%;
 			transform: translate(-50%, -50%);
 			background: var(--ha-color-neutral-10);
 			padding: 20px;
@@ -776,70 +856,70 @@ export class DT3DCard extends LitElement  {
 			z-index: 1000;
 		`;
 
-                const title = document.createElement('h3');
-                title.textContent = 'Select an Entity';
-                dialog.appendChild(title);
+		const title = document.createElement("h3");
+		title.textContent = "Select an Entity";
+		dialog.appendChild(title);
 
-                const searchInput = document.createElement('input');
-                searchInput.type = 'search';
-                searchInput.placeholder = 'Search entities...';
-                searchInput.style.cssText = `
-                        width: 100%;
-                        padding: 6px 8px;
-                        margin: 8px 0 12px 0;
-                        border-radius: 6px;
-                        border: 1px solid var(--ha-color-border);
-                        background: var(--ha-color-neutral-05);
-                        color: var(--ha-color-neutral-95);
-                `;
+		const searchInput = document.createElement("input");
+		searchInput.type = "search";
+		searchInput.placeholder = "Search entities...";
+		searchInput.style.cssText = `
+						width: 100%;
+						padding: 6px 8px;
+						margin: 8px 0 12px 0;
+						border-radius: 6px;
+						border: 1px solid var(--ha-color-border);
+						background: var(--ha-color-neutral-05);
+						color: var(--ha-color-neutral-95);
+				`;
 
-                dialog.appendChild(searchInput);
+		dialog.appendChild(searchInput);
 
-                const list = document.createElement('ul');
-                list.style.cssText = `
-                        list-style: none;
-                        padding: 0;
-                        margin: 10px 0;
-                        max-height: 200px;
-                        overflow-y: auto;
-                `;
+		const list = document.createElement("ul");
+		list.style.cssText = `
+						list-style: none;
+						padding: 0;
+						margin: 10px 0;
+						max-height: 200px;
+						overflow-y: auto;
+				`;
 
-                const listItems: HTMLLIElement[] = [];
+		const listItems: HTMLLIElement[] = [];
 
-                Object.keys(states).forEach((entityId) => {
-                        const listItem = document.createElement('li');
-                        listItem.style.cssText = `
-                                padding: 5px;
-                                cursor: pointer;
-                                border-bottom: 1px solid #ccc;
-                        `;
+		Object.keys(states).forEach((entityId) => {
+			const listItem = document.createElement("li");
+			listItem.style.cssText = `
+								padding: 5px;
+								cursor: pointer;
+								border-bottom: 1px solid #ccc;
+						`;
 
-                        listItem.textContent = entityId;
-                        listItem.dataset.entityId = entityId.toLowerCase();
-                        listItem.addEventListener('click', () => {
-                                this.addEntityToScene(entityId);
-                                dialog.remove();
-                        });
+			listItem.textContent = entityId;
+			listItem.dataset.entityId = entityId.toLowerCase();
+			listItem.addEventListener("click", () => {
+				this.addEntityToScene(entityId);
+				dialog.remove();
+			});
 
-                        listItems.push(listItem);
-                        list.appendChild(listItem);
-                });
+			listItems.push(listItem);
+			list.appendChild(listItem);
+		});
 
-                const filterList = () => {
-                        const query = searchInput.value.trim().toLowerCase();
-                        listItems.forEach((item) => {
-                                const match = !query || item.dataset.entityId?.includes(query);
-                                item.style.display = match ? '' : 'none';
-                        });
-                };
+		const filterList = () => {
+			const query = searchInput.value.trim().toLowerCase();
+			listItems.forEach((item) => {
+				const match = !query || item.dataset.entityId?.includes(query);
+				item.style.display = match ? "" : "none";
+			});
+		};
 
-                searchInput.addEventListener('input', filterList);
+		searchInput.addEventListener("input", filterList);
 
-                dialog.appendChild(list);
+		dialog.appendChild(list);
 
-                const cancelButton = document.createElement('button');
-                cancelButton.textContent = 'Cancel';
-                cancelButton.style.cssText = `
+		const cancelButton = document.createElement("button");
+		cancelButton.textContent = "Cancel";
+		cancelButton.style.cssText = `
 			margin-top: 10px;
 			padding: 5px 10px;
 			background: var(--ha-color-red-40);
@@ -849,60 +929,62 @@ export class DT3DCard extends LitElement  {
 			cursor: pointer;
 		`;
 
-		cancelButton.addEventListener('click', () => {
+		cancelButton.addEventListener("click", () => {
 			dialog.remove();
 		});
 
 		dialog.appendChild(cancelButton);
 		this.content.appendChild(dialog);
-		
 	}
 
-		/**
-		 * Adds a Home Assistant entity representation to the 3D scene.
-		 *
-		 * @param entityId - The ID of the entity to add.
-		 */
-		private addEntityToScene(entityId: string): void {
-				const entity = this.hassInstance.states[entityId];
-				if (!entity) {
-						console.warn('DT3D: Entity not found:', entityId);
-						return;
-				}
-
-                                const domain = entityId.split('.')[0];
-                                let object: Object3D | null = null;
-
-                                if (domain === 'sensor') {
-                                                object = new EntitySensor(entityId, entity);
-                                } else if (domain === 'light') {
-                                                object = new EntityLight(entityId, entity);
-                                } else {
-                                                object = this.createDefaultEntityRepresentation(entityId);
-                                }
-
-				if (!object) {
-						return;
-				}
-
-				object.position.set(Math.random() * 2 - 1, 0, Math.random() * 2 - 1);
-				this.addToScene(object, entityId);
+	/**
+	 * Adds a Home Assistant entity representation to the 3D scene.
+	 *
+	 * @param entityId - The ID of the entity to add.
+	 */
+	private addEntityToScene(entityId: string): void {
+		const entity = this.hassInstance.states[entityId];
+		if (!entity) {
+			console.warn("DT3D: Entity not found:", entityId);
+			return;
 		}
 
-                /**
-                 * Default placeholder for unsupported entity domains.
-                 */
-                private createDefaultEntityRepresentation(entityId: string): Object3D {
-				const material = new MeshBasicMaterial({ color: 0x0000ff, wireframe: true });
-				const geometry = new BoxGeometry(0.5, 0.5, 0.5);
-				const entityMesh = new Mesh(geometry, material);
-				entityMesh.name = entityId;
-				return entityMesh;
+		const domain = entityId.split(".")[0];
+		let object: Object3D | null = null;
+
+		if (domain === "sensor") {
+			object = new EntitySensor(entityId, entity);
+		} else if (domain === "light") {
+			object = new EntityLight(entityId, entity);
+		} else {
+			object = this.createDefaultEntityRepresentation(entityId);
 		}
+
+		if (!object) {
+			return;
+		}
+
+		object.position.set(Math.random() * 2 - 1, 0, Math.random() * 2 - 1);
+		this.addToScene(object, entityId);
+	}
+
+	/**
+	 * Default placeholder for unsupported entity domains.
+	 */
+	private createDefaultEntityRepresentation(entityId: string): Object3D {
+		const material = new MeshBasicMaterial({
+			color: 0x0000ff,
+			wireframe: true,
+		});
+		const geometry = new BoxGeometry(0.5, 0.5, 0.5);
+		const entityMesh = new Mesh(geometry, material);
+		entityMesh.name = entityId;
+		return entityMesh;
+	}
 
 	/**
 	 * Grid settings for the card
-	 * 
+	 *
 	 * @returns grid options
 	 */
 	public getGridOptions(): any {
@@ -916,21 +998,21 @@ export class DT3DCard extends LitElement  {
 
 	/**
 	 * Get the configuration element for the card.
-	 * 
+	 *
 	 * @returns - configuration element
 	 */
 	static getConfigElement(): HTMLElement {
-		return document.createElement('dt3d-config-editor');
+		return document.createElement("dt3d-config-editor");
 	}
 
 	/**
 	 * Get a stub configuration for the card.
-	 * 
+	 *
 	 * @returns - stub configuration
 	 */
 	static getStubConfig(): any {
 		return {
-			port: 8080
+			port: 8080,
 		};
 	}
 }
