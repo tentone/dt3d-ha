@@ -425,6 +425,8 @@ export class DT3DTree extends LitElement {
 
 	// Handle the start of a drag operation.
 	private handleDragStart(event: DragEvent, id: UUID) {
+        console.log('DT3D: Drag started for', id);
+
 		// Set drag data
 		event.dataTransfer?.setData("text/plain", id);
 		if (event.dataTransfer) {
@@ -434,11 +436,15 @@ export class DT3DTree extends LitElement {
 	}
 
 	private handleDragEnd() {
+        console.log('DT3D: Drag ended');
+
 		this.draggedId = null;
 		this.dropTarget = null;
 	}
 
 	private handleDragOver(event: DragEvent, id: UUID, position: DropPosition) {
+        console.log('DT3D: Drag over', id, position);
+
 		if (!this.canDrop(id, position)) {
 			return;
 		}
@@ -452,6 +458,8 @@ export class DT3DTree extends LitElement {
 	}
 
 	private handleDragLeave(_event: DragEvent, id: UUID, position: DropPosition) {
+        console.log('DT3D: Drag leave', id, position);
+
 		if (
 			this.dropTarget &&
 			this.dropTarget.id === id &&
@@ -462,6 +470,8 @@ export class DT3DTree extends LitElement {
 	}
 
 	private handleDrop(event: DragEvent, id: UUID, position: DropPosition) {
+        console.log('DT3D: Drop on', id, position);
+
 		if (!this.canDrop(id, position)) {
 			return;
 		}
@@ -586,6 +596,12 @@ export class DT3DTree extends LitElement {
 		this.requestUpdate();
 	}
 
+    /**
+     * Update the object after the name field was changed.
+     * 
+     * @param event 
+     * @returns 
+     */
 	private handleNameChange(event: Event) {
 		if (!this.selectedObject) return;
 
@@ -594,6 +610,13 @@ export class DT3DTree extends LitElement {
 		this.updateTreeFromScene();
 	}
 
+    /**
+     * 
+     * @param type 
+     * @param axis 
+     * @param event 
+     * @returns 
+     */
 	private handleVectorChange(
 		type: "position" | "scale",
 		axis: "x" | "y" | "z",
@@ -613,6 +636,13 @@ export class DT3DTree extends LitElement {
 		this.requestUpdate();
 	}
 
+    /**
+     * Handle rotation change
+     * 
+     * @param axis 
+     * @param event 
+     * @returns 
+     */
 	private handleRotationChange(axis: "x" | "y" | "z", event: Event) {
 		if (!this.selectedObject) return;
 
