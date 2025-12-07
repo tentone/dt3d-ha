@@ -31,7 +31,7 @@ import { DT3DTree } from "./object-tree.js";
 import { Locale } from "./locale.js";
 import { EntityLight } from "./objects/entity-light.js";
 import { EntitySensor } from "./objects/entity-sensor.js";
-import { TextSprite } from "./objects/text.js";
+import { TextSprite } from "./objects/text-sprite.js";
 
 @customElement("dt3d-card")
 export class DT3DCard extends LitElement {

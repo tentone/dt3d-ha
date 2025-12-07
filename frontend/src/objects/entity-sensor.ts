@@ -1,46 +1,39 @@
-import { CanvasTexture, Color, Group, Sprite, SpriteMaterial } from "three";
-import { TextSprite } from "./text.js";
+import { Group } from "three";
+import { TextSprite } from "./text-sprite.js";
+import { CircleIconSprite } from "./circle-icon-sprite.js";
 
-function createIconSprite(color: Color | number, size = 0.25): Sprite {
-	const canvas = document.createElement("canvas");
-	canvas.width = 128;
-	canvas.height = 128;
-
-	const ctx = canvas.getContext("2d");
-	if (ctx) {
-		ctx.clearRect(0, 0, canvas.width, canvas.height);
-		ctx.fillStyle =
-			typeof color === "number"
-				? `#${color.toString(16).padStart(6, "0")}`
-				: `#${color.getHexString()}`;
-		ctx.beginPath();
-		ctx.arc(64, 64, 40, 0, Math.PI * 2);
-		ctx.fill();
-		ctx.strokeStyle = "#ffffff";
-		ctx.lineWidth = 4;
-		ctx.stroke();
-	}
-
-	const texture = new CanvasTexture(canvas);
-	const material = new SpriteMaterial({ map: texture, transparent: true });
-	const sprite = new Sprite(material);
-	sprite.scale.set(size, size, size);
-	return sprite;
-}
-
+/**
+ * Creates a entity sensor representation.
+ */
 export class EntitySensor extends Group {
+    public label: TextSprite;
+
 	public constructor(entityId: string, entity: any) {
 		super();
 		this.name = entityId;
 
-		const icon = createIconSprite(0x1e90ff, 0.2);
+		const icon = new CircleIconSprite(0x1e90ff, 0.2);
 		icon.position.y = 0.1;
 		this.add(icon);
 
 		const friendlyName = entity.attributes?.friendly_name ?? entityId;
 		const labelText = `${friendlyName}\n${entity.state}`;
-		const label = new TextSprite(labelText);
-		label.position.y = 0.45;
-		this.add(label);
+
+		this.label = new TextSprite(labelText);
+		this.label.position.y = 0.45;
+		this.add(this.label);
 	}
+
+    /**
+     * Updates the sensor state.
+     * 
+     * @param entity - The entity data. 
+     */
+    public updateState(entity: any): void {
+        const friendlyName = entity.attributes?.friendly_name ?? this.name;
+        const labelText = `${friendlyName}\n${entity.state}`;
+        this.label.material.map.dispose(); 
+        this.label.material.map = new TextSprite(labelText).material.map;
+        this.label.material.needsUpdate = true; 
+    }
 }
