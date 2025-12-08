@@ -1,54 +1,60 @@
 import {
-	Color,
-	Group,
-	PointLight,
+        Color,
+        PointLight,
 } from "three";
 import { TextSprite } from "./text-sprite.js";
 import { CircleIconSprite } from "./circle-icon-sprite.js";
-
+import { EntityObject } from "./entity-object.js";
 
 function getLightColor(entity: any): Color {
-	const rgbColor = entity.attributes?.rgb_color;
-	if (Array.isArray(rgbColor) && rgbColor.length === 3) {
-		return new Color(rgbColor[0] / 255, rgbColor[1] / 255, rgbColor[2] / 255);
-	}
+        const rgbColor = entity.attributes?.rgb_color;
+        if (Array.isArray(rgbColor) && rgbColor.length === 3) {
+                return new Color(rgbColor[0] / 255, rgbColor[1] / 255, rgbColor[2] / 255);
+        }
 
-	const hsColor = entity.attributes?.hs_color;
-	if (Array.isArray(hsColor) && hsColor.length === 2) {
-		const color = new Color();
-		color.setHSL(hsColor[0] / 360, hsColor[1] / 100, 0.5);
-		return color;
-	}
+        const hsColor = entity.attributes?.hs_color;
+        if (Array.isArray(hsColor) && hsColor.length === 2) {
+                const color = new Color();
+                color.setHSL(hsColor[0] / 360, hsColor[1] / 100, 0.5);
+                return color;
+        }
 
-	return new Color(entity.state === "on" ? 0xffffaa : 0x555555);
+        return new Color(entity.state === "on" ? 0xffffaa : 0x555555);
 }
 
-export class EntityLight extends Group {
-	public constructor(entityId: string, entity: any) {
-		super();
-		this.name = entityId;
+export class EntityLight extends EntityObject {
+        private icon: CircleIconSprite;
+        private pointLight: PointLight;
+        private label: TextSprite;
 
-		const color = getLightColor(entity);
+        public constructor(entityId: string, entity: any) {
+                super(entityId);
 
-		const icon = new CircleIconSprite(color, 0.25);
-		icon.position.y = 0.1;
-		this.add(icon);
+                this.icon = new CircleIconSprite(0x555555, 0.25);
+                this.icon.position.y = 0.1;
+                this.add(this.icon);
 
-		const pointLight = new PointLight(
-			color,
-			entity.state === "on" ? 1 : 0,
-			6,
-			2,
-		);
-		pointLight.position.y = 0.4;
-		this.add(pointLight);
+                this.pointLight = new PointLight(0x555555, 0, 6, 2);
+                this.pointLight.position.y = 0.4;
+                this.add(this.pointLight);
 
-		const label = new TextSprite(
-			entity.attributes?.friendly_name ?? entityId,
-			256,
-			96,
-		);
-		label.position.y = 0.6;
-		this.add(label);
-	}
+                this.label = new TextSprite(entity.attributes?.friendly_name ?? entityId, 256, 96);
+                this.label.position.y = 0.6;
+                this.add(this.label);
+
+                this.setEntity(entity);
+        }
+
+        protected updateFromEntity(entity: any): void {
+                const color = getLightColor(entity);
+                this.icon.setColor(color.getHex());
+
+                this.pointLight.color = color;
+                this.pointLight.intensity = entity.state === "on" ? 1 : 0;
+
+                const friendlyName = entity.attributes?.friendly_name ?? this.name;
+                this.label.material.map.dispose();
+                this.label.material.map = new TextSprite(friendlyName, 256, 96).material.map;
+                this.label.material.needsUpdate = true;
+        }
 }
