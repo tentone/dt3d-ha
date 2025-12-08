@@ -1,58 +1,55 @@
-import {
-        Color,
-        PointLight,
-} from "three";
+import { Color, PointLight } from "three";
 import { SdfText } from "./sdf-text.js";
 import { CircleIconSprite } from "./circle-icon-sprite.js";
 import { EntityObject } from "./entity-object.js";
 
 function getLightColor(entity: any): Color {
-        const rgbColor = entity.attributes?.rgb_color;
-        if (Array.isArray(rgbColor) && rgbColor.length === 3) {
-                return new Color(rgbColor[0] / 255, rgbColor[1] / 255, rgbColor[2] / 255);
-        }
+	const rgbColor = entity.attributes?.rgb_color;
+	if (Array.isArray(rgbColor) && rgbColor.length === 3) {
+		return new Color(rgbColor[0] / 255, rgbColor[1] / 255, rgbColor[2] / 255);
+	}
 
-        const hsColor = entity.attributes?.hs_color;
-        if (Array.isArray(hsColor) && hsColor.length === 2) {
-                const color = new Color();
-                color.setHSL(hsColor[0] / 360, hsColor[1] / 100, 0.5);
-                return color;
-        }
+	const hsColor = entity.attributes?.hs_color;
+	if (Array.isArray(hsColor) && hsColor.length === 2) {
+		const color = new Color();
+		color.setHSL(hsColor[0] / 360, hsColor[1] / 100, 0.5);
+		return color;
+	}
 
-        return new Color(entity.state === "on" ? 0xffffaa : 0x555555);
+	return new Color(entity.state === "on" ? 0xffffaa : 0x555555);
 }
 
 export class EntityLight extends EntityObject {
-        private icon: CircleIconSprite;
-        private pointLight: PointLight;
-        private label: SdfText;
+	private icon: CircleIconSprite;
+	private pointLight: PointLight;
+	private label: SdfText;
 
-        public constructor(entityId: string, entity: any) {
-                super(entityId);
+	public constructor(entityId: string, entity: any) {
+		super(entityId);
 
-                this.icon = new CircleIconSprite(0x555555, 0.25);
-                this.icon.position.y = 0.1;
-                this.add(this.icon);
+		this.icon = new CircleIconSprite(0x555555, 0.25);
+		this.icon.position.y = 0.1;
+		this.add(this.icon);
 
-                this.pointLight = new PointLight(0x555555, 0, 6, 2);
-                this.pointLight.position.y = 0.4;
-                this.add(this.pointLight);
+		this.pointLight = new PointLight(0x555555, 0, 6, 2);
+		this.pointLight.position.y = 0.4;
+		this.add(this.pointLight);
 
-                this.label = new SdfText(entity.attributes?.friendly_name ?? entityId);
-                this.label.position.y = 0.6;
-                this.add(this.label);
+		this.label = new SdfText(entity.attributes?.friendly_name ?? entityId);
+		this.label.position.y = 0.6;
+		this.add(this.label);
 
-                this.setEntity(entity);
-        }
+		this.setEntity(entity);
+	}
 
-        protected updateFromEntity(entity: any): void {
-                const color = getLightColor(entity);
-                this.icon.setColor(color.getHex());
+	protected updateFromEntity(entity: any): void {
+		const color = getLightColor(entity);
+		this.icon.setColor(color.getHex());
 
-                this.pointLight.color = color;
-                this.pointLight.intensity = entity.state === "on" ? 1 : 0;
+		this.pointLight.color = color;
+		this.pointLight.intensity = entity.state === "on" ? 1 : 0;
 
-                const friendlyName = entity.attributes?.friendly_name ?? this.name;
-                this.label.setText(friendlyName);
-        }
+		const friendlyName = entity.attributes?.friendly_name ?? this.name;
+		this.label.setText(friendlyName);
+	}
 }

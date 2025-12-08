@@ -10,14 +10,14 @@ import {
 	Vector2,
 	PlaneGeometry,
 	SphereGeometry,
-        Group,
-        MathUtils,
-        Vector3,
-        Object3D,
-        Intersection,
-        Line,
-        BufferGeometry,
-        LineBasicMaterial,
+	Group,
+	MathUtils,
+	Vector3,
+	Object3D,
+	Intersection,
+	Line,
+	BufferGeometry,
+	LineBasicMaterial,
 } from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 import { TransformControls } from "three/examples/jsm/controls/TransformControls";
@@ -92,13 +92,13 @@ export class DT3DCard extends LitElement {
 	/**
 	 * Helper group that renders measurement visuals (markers, lines, labels).
 	 */
-        private measurementHelpers: Group = null;
+	private measurementHelpers: Group = null;
 
-        private raycaster: Raycaster = new Raycaster();
+	private raycaster: Raycaster = new Raycaster();
 
-        private pointer: Vector2 = new Vector2();
+	private pointer: Vector2 = new Vector2();
 
-        private hoveredObject: DTObject | null = null;
+	private hoveredObject: DTObject | null = null;
 
 	static properties = {
 		hass: { attribute: false },
@@ -106,22 +106,22 @@ export class DT3DCard extends LitElement {
 	};
 	public locale: Locale;
 
-        set hass(hass: any) {
-                if (!this.hassInstance) {
-                        console.log("DT3D: Entity states", this, DT3DCard.styles, hass.states);
-                }
+	set hass(hass: any) {
+		if (!this.hassInstance) {
+			console.log("DT3D: Entity states", this, DT3DCard.styles, hass.states);
+		}
 
-                // console.log('DT3D: Styles loaded from file', style);
+		// console.log('DT3D: Styles loaded from file', style);
 
 		// this.locale = new Locale();
 		// this.locale.load('en', en);
 
-                // console.log('DT3D: Translation data loaded ', this.locale);
+		// console.log('DT3D: Translation data loaded ', this.locale);
 
-                this.hassInstance = hass;
+		this.hassInstance = hass;
 
-                this.updateEntityObjects();
-        }
+		this.updateEntityObjects();
+	}
 
 	/**
 	 * Select a 3D model file to upload.
@@ -245,26 +245,26 @@ export class DT3DCard extends LitElement {
 	 *
 	 * @param object - The 3D object to add to the scene.
 	 */
-        public addToScene(object: Object3D | null | undefined, name?: string): void {
-                if (!object) {
-                        return;
-                }
+	public addToScene(object: Object3D | null | undefined, name?: string): void {
+		if (!object) {
+			return;
+		}
 
-                if (name) {
-                        object.name = name;
-                }
+		if (name) {
+			object.name = name;
+		}
 
-                console.log("DT3d: Adding object to scene", object, name);
+		console.log("DT3d: Adding object to scene", object, name);
 
-                if (object instanceof DTObject) {
-                        object.ensureInitialized();
-                }
+		if (object instanceof DTObject) {
+			object.ensureInitialized();
+		}
 
-                this.home.add(object);
-                this.transform?.attach(object);
+		this.home.add(object);
+		this.transform?.attach(object);
 
-                this.tree.updateTreeFromScene(this.home, true);
-        }
+		this.tree.updateTreeFromScene(this.home, true);
+	}
 
 	private isDescendant(object: Object3D, potentialAncestor: Object3D): boolean {
 		let current = object.parent;
@@ -278,11 +278,11 @@ export class DT3DCard extends LitElement {
 		return false;
 	}
 
-        private handleTreeDrop(
-                sourceId: string,
-                targetId: string,
-                position: "before" | "after" | "inside",
-        ): void {
+	private handleTreeDrop(
+		sourceId: string,
+		targetId: string,
+		position: "before" | "after" | "inside",
+	): void {
 		if (!this.home) {
 			return;
 		}
@@ -407,11 +407,11 @@ export class DT3DCard extends LitElement {
 		this.measurementHelpers?.clear();
 	}
 
-        private processMeasurementClick(event: MouseEvent): void {
-                if (
-                        this.measurementMode === "none" ||
-                        !this.canvas ||
-                        !this.camera ||
+	private processMeasurementClick(event: MouseEvent): void {
+		if (
+			this.measurementMode === "none" ||
+			!this.canvas ||
+			!this.camera ||
 			!this.home
 		) {
 			return;
@@ -432,93 +432,94 @@ export class DT3DCard extends LitElement {
 			return;
 		}
 
-                this.addMeasurementPoint(point);
-        }
+		this.addMeasurementPoint(point);
+	}
 
-        private handleCanvasClick(event: MouseEvent): void {
-                if (this.measurementMode !== "none") {
-                        this.processMeasurementClick(event);
-                        return;
-                }
+	private handleCanvasClick(event: MouseEvent): void {
+		if (this.measurementMode !== "none") {
+			this.processMeasurementClick(event);
+			return;
+		}
 
-                const { object } = this.pickDTObjectFromEvent(event);
+		const { object } = this.pickDTObjectFromEvent(event);
 
-                object?.onInteraction({
-                        type: "click",
-                        originalEvent: event,
-                        hass: this.hassInstance,
-                });
-        }
+		object?.onInteraction({
+			type: "click",
+			originalEvent: event,
+			hass: this.hassInstance,
+		});
+	}
 
-        private handlePointerMove(event: MouseEvent): void {
-                const { object } = this.pickDTObjectFromEvent(event);
+	private handlePointerMove(event: MouseEvent): void {
+		const { object } = this.pickDTObjectFromEvent(event);
 
-                if (object === this.hoveredObject) {
-                        return;
-                }
+		if (object === this.hoveredObject) {
+			return;
+		}
 
-                if (this.hoveredObject) {
-                        this.hoveredObject.onInteraction({
-                                type: "pointerleave",
-                                originalEvent: event,
-                                hass: this.hassInstance,
-                        });
-                }
+		if (this.hoveredObject) {
+			this.hoveredObject.onInteraction({
+				type: "pointerleave",
+				originalEvent: event,
+				hass: this.hassInstance,
+			});
+		}
 
-                this.hoveredObject = object;
+		this.hoveredObject = object;
 
-                if (this.hoveredObject) {
-                        this.hoveredObject.onInteraction({
-                                type: "pointerenter",
-                                originalEvent: event,
-                                hass: this.hassInstance,
-                        });
-                }
-        }
+		if (this.hoveredObject) {
+			this.hoveredObject.onInteraction({
+				type: "pointerenter",
+				originalEvent: event,
+				hass: this.hassInstance,
+			});
+		}
+	}
 
-        private pickDTObjectFromEvent(
-                event: MouseEvent,
-        ): { object: DTObject | null; intersection: Intersection<Object3D> | null } {
-                if (!this.canvas || !this.camera || !this.home) {
-                        return { object: null, intersection: null };
-                }
+	private pickDTObjectFromEvent(event: MouseEvent): {
+		object: DTObject | null;
+		intersection: Intersection<Object3D> | null;
+	} {
+		if (!this.canvas || !this.camera || !this.home) {
+			return { object: null, intersection: null };
+		}
 
-                const rect = this.canvas.getBoundingClientRect();
-                this.pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-                this.pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
-                this.raycaster.setFromCamera(this.pointer, this.camera);
+		const rect = this.canvas.getBoundingClientRect();
+		this.pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+		this.pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+		this.raycaster.setFromCamera(this.pointer, this.camera);
 
-                const intersects = this.raycaster.intersectObjects(
-                        this.home.children,
-                        true,
-                );
+		const intersects = this.raycaster.intersectObjects(
+			this.home.children,
+			true,
+		);
 
-                const intersection = intersects[0] ?? null;
-                let current = intersection?.object ?? null;
+		const intersection = intersects[0] ?? null;
+		let current = intersection?.object ?? null;
 
-                while (current) {
-                        if (current instanceof DTObject) {
-                                return { object: current, intersection };
-                        }
+		while (current) {
+			if (current instanceof DTObject) {
+				return { object: current, intersection };
+			}
 
-                        current = current.parent;
-                }
+			current = current.parent;
+		}
 
-                return { object: null, intersection };
-        }
+		return { object: null, intersection };
+	}
 
-        private updateDTObjects(time: number): void {
-                if (!this.home) {
-                        return;
-                }
+	private updateDTObjects(time: number): void {
+		if (!this.home) {
+			return;
+		}
 
-                this.home.traverse((child) => {
-                        if (child instanceof DTObject) {
-                                child.ensureInitialized();
-                                child.update(time);
-                        }
-                });
-        }
+		this.home.traverse((child) => {
+			if (child instanceof DTObject) {
+				child.ensureInitialized();
+				child.update(time);
+			}
+		});
+	}
 
 	/**
 	 * Add a measurement point based on the current measurement mode.
@@ -573,10 +574,10 @@ export class DT3DCard extends LitElement {
 		this.measurementHelpers.add(line);
 
 		const distance = start.distanceTo(end);
-                const label = new SdfText(`Distance: ${distance.toFixed(2)}`);
-                label.position.copy(start.clone().add(end).multiplyScalar(0.5));
-                label.position.y += 0.2;
-                this.measurementHelpers.add(label);
+		const label = new SdfText(`Distance: ${distance.toFixed(2)}`);
+		label.position.copy(start.clone().add(end).multiplyScalar(0.5));
+		label.position.y += 0.2;
+		this.measurementHelpers.add(label);
 	}
 
 	/**
@@ -613,10 +614,10 @@ export class DT3DCard extends LitElement {
 		const angle = Math.acos(MathUtils.clamp(v1.dot(v2), -1, 1));
 		const degrees = MathUtils.radToDeg(angle);
 
-                const label = new SdfText(`Angle: ${degrees.toFixed(1)}°`);
-                label.position.copy(vertex);
-                label.position.y += 0.5;
-                this.measurementHelpers.add(label);
+		const label = new SdfText(`Angle: ${degrees.toFixed(1)}°`);
+		label.position.copy(vertex);
+		label.position.y += 0.5;
+		this.measurementHelpers.add(label);
 	}
 
 	/**
@@ -844,54 +845,54 @@ export class DT3DCard extends LitElement {
 		});
 
 		// Raycaster for object picking
-                this.canvas.addEventListener("dblclick", (event: MouseEvent) => {
-                        const { object, intersection } = this.pickDTObjectFromEvent(event);
+		this.canvas.addEventListener("dblclick", (event: MouseEvent) => {
+			const { object, intersection } = this.pickDTObjectFromEvent(event);
 
-                        if (intersection) {
-                                this.transform.attach(intersection.object as Mesh);
-                        }
+			if (intersection) {
+				this.transform.attach(intersection.object as Mesh);
+			}
 
-                        object?.onInteraction({
-                                type: "dblclick",
-                                originalEvent: event,
-                                hass: this.hassInstance,
-                        });
-                });
+			object?.onInteraction({
+				type: "dblclick",
+				originalEvent: event,
+				hass: this.hassInstance,
+			});
+		});
 
-                this.canvas.addEventListener("click", (event: MouseEvent) =>
-                        this.handleCanvasClick(event),
-                );
+		this.canvas.addEventListener("click", (event: MouseEvent) =>
+			this.handleCanvasClick(event),
+		);
 
-                this.canvas.addEventListener("mousemove", (event: MouseEvent) =>
-                        this.handlePointerMove(event),
-                );
+		this.canvas.addEventListener("mousemove", (event: MouseEvent) =>
+			this.handlePointerMove(event),
+		);
 
-                this.canvas.addEventListener("mouseleave", (event: MouseEvent) => {
-                        if (!this.hoveredObject) {
-                                return;
-                        }
+		this.canvas.addEventListener("mouseleave", (event: MouseEvent) => {
+			if (!this.hoveredObject) {
+				return;
+			}
 
-                        this.hoveredObject.onInteraction({
-                                type: "pointerleave",
-                                originalEvent: event,
-                                hass: this.hassInstance,
-                        });
-                        this.hoveredObject = null;
-                });
+			this.hoveredObject.onInteraction({
+				type: "pointerleave",
+				originalEvent: event,
+				hass: this.hassInstance,
+			});
+			this.hoveredObject = null;
+		});
 
-                const animate = (time: number) => {
-                        requestAnimationFrame(animate);
-                        cube.rotation.x += 0.01;
-                        cube.rotation.y += 0.01;
+		const animate = (time: number) => {
+			requestAnimationFrame(animate);
+			cube.rotation.x += 0.01;
+			cube.rotation.y += 0.01;
 
-                        this.updateDTObjects(time);
+			this.updateDTObjects(time);
 
-                        // Update controls
-                        this.controls.update();
+			// Update controls
+			this.controls.update();
 
-                        this.renderer.render(this.scene, this.camera);
-                };
-                animate(0);
+			this.renderer.render(this.scene, this.camera);
+		};
+		animate(0);
 
 		const resizeDetector = new ResizeObserver((event) => {
 			const width = event[0].contentRect.width;
@@ -1056,48 +1057,48 @@ export class DT3DCard extends LitElement {
 	 *
 	 * @param entityId - The ID of the entity to add.
 	 */
-        private addEntityToScene(entityId: string): void {
-                const entity = this.hassInstance.states[entityId];
-                if (!entity) {
-                        console.warn("DT3D: Entity not found:", entityId);
-                        return;
+	private addEntityToScene(entityId: string): void {
+		const entity = this.hassInstance.states[entityId];
+		if (!entity) {
+			console.warn("DT3D: Entity not found:", entityId);
+			return;
 		}
 
 		const domain = entityId.split(".")[0];
-                let object: Object3D | null = null;
+		let object: Object3D | null = null;
 
-                if (domain === "sensor") {
-                        object = new EntitySensor(entityId, entity);
-                } else if (domain === "light") {
-                        object = new EntityLight(entityId, entity);
-                } else if (domain === "switch") {
-                        object = new EntitySwitch(entityId, entity);
-                } else {
-                        object = this.createDefaultEntityRepresentation(entityId);
-                }
+		if (domain === "sensor") {
+			object = new EntitySensor(entityId, entity);
+		} else if (domain === "light") {
+			object = new EntityLight(entityId, entity);
+		} else if (domain === "switch") {
+			object = new EntitySwitch(entityId, entity);
+		} else {
+			object = this.createDefaultEntityRepresentation(entityId);
+		}
 
-                if (!object) {
-                        return;
-                }
+		if (!object) {
+			return;
+		}
 
-                object.position.set(Math.random() * 2 - 1, 0, Math.random() * 2 - 1);
-                this.addToScene(object, entityId);
-        }
+		object.position.set(Math.random() * 2 - 1, 0, Math.random() * 2 - 1);
+		this.addToScene(object, entityId);
+	}
 
-        private updateEntityObjects(): void {
-                if (!this.home || !this.hassInstance?.states) {
-                        return;
-                }
+	private updateEntityObjects(): void {
+		if (!this.home || !this.hassInstance?.states) {
+			return;
+		}
 
-                this.home.traverse((child) => {
-                        if (child instanceof EntityObject) {
-                                const entityState = this.hassInstance.states[child.entityId];
-                                if (entityState) {
-                                        child.setEntity(entityState);
-                                }
-                        }
-                });
-        }
+		this.home.traverse((child) => {
+			if (child instanceof EntityObject) {
+				const entityState = this.hassInstance.states[child.entityId];
+				if (entityState) {
+					child.setEntity(entityState);
+				}
+			}
+		});
+	}
 
 	/**
 	 * Default placeholder for unsupported entity domains.

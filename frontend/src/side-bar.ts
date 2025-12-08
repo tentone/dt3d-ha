@@ -4,7 +4,7 @@ import componentStyles from "./side-bar.css?inline";
 
 @customElement("dt3d-sidebar")
 export class DT3DSidebar extends LitElement {
-        static styles = unsafeCSS(componentStyles);
+	static styles = unsafeCSS(componentStyles);
 
 	static properties = {
 		collapsed: { type: Boolean, reflect: true },

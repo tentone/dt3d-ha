@@ -4,7 +4,7 @@ import componentStyles from "./config-editor.css?inline";
 
 @customElement("dt3d-config-editor")
 export class DT3DConfigEditor extends LitElement {
-        static styles = unsafeCSS(componentStyles);
+	static styles = unsafeCSS(componentStyles);
 	static properties = {
 		_config: { state: true },
 	};
