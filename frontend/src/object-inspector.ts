@@ -1,106 +1,12 @@
-import { LitElement, html, css } from "lit";
+import { LitElement, html, unsafeCSS } from "lit";
 import { customElement, property } from "lit/decorators.js";
+import componentStyles from "./object-inspector.css?inline";
 import type { Object3D } from "three";
 import { EntityObject } from "./objects/entity-object.js";
 
 @customElement("dt3d-object-inspector")
 export class DT3DObjectInspector extends LitElement {
-        static styles = [
-                css`
-                        :host {
-                                display: flex;
-                                flex-direction: column;
-                                gap: 8px;
-                        }
-
-                        h4 {
-                                margin: 4px 0 8px 0;
-                                font-size: 14px;
-                                color: var(--ha-color-primary-60);
-                        }
-                        .field {
-                                display: flex;
-                                flex-direction: column;
-                                margin-bottom: 8px;
-                                gap: 4px;
-                        }
-                        .field label {
-                                font-size: 12px;
-                                color: var(--ha-color-neutral-80);
-                        }
-                        .field input {
-                                background: color-mix(
-                                        in srgb,
-                                        var(--ha-color-neutral-10) 95%,
-                                        transparent
-                                );
-                                border: 1px solid
-                                        color-mix(in srgb, var(--ha-color-neutral-30) 80%, transparent);
-                                border-radius: 4px;
-                                padding: 6px 8px;
-                                color: var(--ha-color-neutral-90);
-                        }
-                        .attribute-list {
-                                display: flex;
-                                flex-direction: column;
-                                gap: 6px;
-                        }
-                        .attribute-row {
-                                display: flex;
-                                justify-content: space-between;
-                                align-items: center;
-                                padding: 6px 8px;
-                                border-radius: 4px;
-                                border: 1px solid
-                                        color-mix(in srgb, var(--ha-color-neutral-30) 80%, transparent);
-                                background: color-mix(
-                                        in srgb,
-                                        var(--ha-color-neutral-10) 95%,
-                                        transparent
-                                );
-                        }
-                        .attribute-row .attr-key {
-                                font-weight: 600;
-                                color: var(--ha-color-neutral-80);
-                        }
-                        .attribute-row .attr-value {
-                                color: var(--ha-color-neutral-90);
-                                word-break: break-all;
-                                text-align: right;
-                        }
-                        .group-row {
-                                display: grid;
-                                grid-template-columns: repeat(3, 1fr);
-                                gap: 6px;
-                        }
-                        .group-row label {
-                                display: flex;
-                                flex-direction: column;
-                                gap: 4px;
-                                font-size: 12px;
-                                color: var(--ha-color-neutral-80);
-                        }
-                        .group-row input {
-                                width: 100%;
-                                padding: 6px 8px;
-                                box-sizing: border-box;
-                                border-radius: 4px;
-                                border: 1px solid
-                                        color-mix(in srgb, var(--ha-color-neutral-30) 80%, transparent);
-                                background: color-mix(
-                                        in srgb,
-                                        var(--ha-color-neutral-10) 95%,
-                                        transparent
-                                );
-                                color: var(--ha-color-neutral-90);
-                        }
-                        .placeholder {
-                                color: var(--ha-color-neutral-70);
-                                font-size: 13px;
-                                line-height: 1.4;
-                        }
-                `,
-        ];
+        static styles = unsafeCSS(componentStyles);
 
         @property({ attribute: false })
         public selectedObject: Object3D | null = null;
