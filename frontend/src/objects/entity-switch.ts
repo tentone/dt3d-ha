@@ -1,30 +1,27 @@
-import { Group, Object3D } from "three";
+import { Object3D } from "three";
 import { TextSprite } from "./text-sprite.js";
 import { CircleIconSprite } from "./circle-icon-sprite.js";
+import { EntityObject } from "./entity-object.js";
 
-export class EntitySwitch extends Group {
-        public entityId: string;
+export class EntitySwitch extends EntityObject {
         public label: TextSprite;
         private icon: Object3D;
 
         public constructor(entityId: string, entity: any) {
-                super();
-                this.entityId = entityId;
-                this.name = entityId;
+                super(entityId);
 
-                this.icon = this.createIcon(entity.state === "on");
+                this.icon = this.createIcon(false);
                 this.icon.position.y = 0.1;
                 this.add(this.icon);
 
-                const friendlyName = entity.attributes?.friendly_name ?? entityId;
-                const labelText = `${friendlyName}\n${entity.state}`;
-
-                this.label = new TextSprite(labelText);
+                this.label = new TextSprite("Loading\n...");
                 this.label.position.y = 0.45;
                 this.add(this.label);
+
+                this.setEntity(entity);
         }
 
-        public updateState(entity: any): void {
+        protected updateFromEntity(entity: any): void {
                 const friendlyName = entity.attributes?.friendly_name ?? this.name;
                 const labelText = `${friendlyName}\n${entity.state}`;
                 this.label.material.map.dispose();
@@ -34,7 +31,7 @@ export class EntitySwitch extends Group {
                 this.refreshIcon(entity.state === "on");
         }
 
-        public async toggle(hass: any): Promise<void> {
+        public async handleClick(hass: any): Promise<void> {
                 if (!hass?.callService) {
                         console.warn("DT3D: Unable to toggle switch; hass instance not available");
                         return;

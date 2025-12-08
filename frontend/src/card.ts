@@ -32,6 +32,7 @@ import { Locale } from "./locale.js";
 import { EntityLight } from "./objects/entity-light.js";
 import { EntitySensor } from "./objects/entity-sensor.js";
 import { EntitySwitch } from "./objects/entity-switch.js";
+import { EntityObject } from "./objects/entity-object.js";
 import { TextSprite } from "./objects/text-sprite.js";
 
 @customElement("dt3d-card")
@@ -101,20 +102,22 @@ export class DT3DCard extends LitElement {
 	};
 	public locale: Locale;
 
-	set hass(hass: any) {
-		if (!this.hassInstance) {
-			console.log("DT3D: Entity states", this, DT3DCard.styles, hass.states);
-		}
+        set hass(hass: any) {
+                if (!this.hassInstance) {
+                        console.log("DT3D: Entity states", this, DT3DCard.styles, hass.states);
+                }
 
-		// console.log('DT3D: Styles loaded from file', style);
+                // console.log('DT3D: Styles loaded from file', style);
 
 		// this.locale = new Locale();
 		// this.locale.load('en', en);
 
-		// console.log('DT3D: Translation data loaded ', this.locale);
+                // console.log('DT3D: Translation data loaded ', this.locale);
 
-		this.hassInstance = hass;
-	}
+                this.hassInstance = hass;
+
+                this.updateEntityObjects();
+        }
 
 	/**
 	 * Select a 3D model file to upload.
@@ -430,14 +433,14 @@ export class DT3DCard extends LitElement {
                         return;
                 }
 
-                const switchEntity = this.pickSwitchFromEvent(event);
+                const entityObject = this.pickEntityObjectFromEvent(event);
 
-                if (switchEntity) {
-                        switchEntity.toggle(this.hassInstance);
+                if (entityObject) {
+                        entityObject.handleClick(this.hassInstance);
                 }
         }
 
-        private pickSwitchFromEvent(event: MouseEvent): EntitySwitch | null {
+        private pickEntityObjectFromEvent(event: MouseEvent): EntityObject | null {
                 if (!this.canvas || !this.camera || !this.home) {
                         return null;
                 }
@@ -456,7 +459,7 @@ export class DT3DCard extends LitElement {
                 let current = target as Object3D | null;
 
                 while (current) {
-                        if (current instanceof EntitySwitch) {
+                        if (current instanceof EntityObject) {
                                 return current;
                         }
 
@@ -985,11 +988,11 @@ export class DT3DCard extends LitElement {
 	 *
 	 * @param entityId - The ID of the entity to add.
 	 */
-	private addEntityToScene(entityId: string): void {
-		const entity = this.hassInstance.states[entityId];
-		if (!entity) {
-			console.warn("DT3D: Entity not found:", entityId);
-			return;
+        private addEntityToScene(entityId: string): void {
+                const entity = this.hassInstance.states[entityId];
+                if (!entity) {
+                        console.warn("DT3D: Entity not found:", entityId);
+                        return;
 		}
 
 		const domain = entityId.split(".")[0];
@@ -1005,13 +1008,28 @@ export class DT3DCard extends LitElement {
                         object = this.createDefaultEntityRepresentation(entityId);
                 }
 
-		if (!object) {
-			return;
-		}
+                if (!object) {
+                        return;
+                }
 
-		object.position.set(Math.random() * 2 - 1, 0, Math.random() * 2 - 1);
-		this.addToScene(object, entityId);
-	}
+                object.position.set(Math.random() * 2 - 1, 0, Math.random() * 2 - 1);
+                this.addToScene(object, entityId);
+        }
+
+        private updateEntityObjects(): void {
+                if (!this.home || !this.hassInstance?.states) {
+                        return;
+                }
+
+                this.home.traverse((child) => {
+                        if (child instanceof EntityObject) {
+                                const entityState = this.hassInstance.states[child.entityId];
+                                if (entityState) {
+                                        child.setEntity(entityState);
+                                }
+                        }
+                });
+        }
 
 	/**
 	 * Default placeholder for unsupported entity domains.
