@@ -1,6 +1,7 @@
 import { LitElement, html, css } from "lit";
 import { customElement, property } from "lit/decorators.js";
 import type { Object3D } from "three";
+import { EntityObject } from "./objects/entity-object.js";
 
 @customElement("dt3d-object-inspector")
 export class DT3DObjectInspector extends LitElement {
@@ -39,6 +40,34 @@ export class DT3DObjectInspector extends LitElement {
                                 padding: 6px 8px;
                                 color: var(--ha-color-neutral-90);
                         }
+                        .attribute-list {
+                                display: flex;
+                                flex-direction: column;
+                                gap: 6px;
+                        }
+                        .attribute-row {
+                                display: flex;
+                                justify-content: space-between;
+                                align-items: center;
+                                padding: 6px 8px;
+                                border-radius: 4px;
+                                border: 1px solid
+                                        color-mix(in srgb, var(--ha-color-neutral-30) 80%, transparent);
+                                background: color-mix(
+                                        in srgb,
+                                        var(--ha-color-neutral-10) 95%,
+                                        transparent
+                                );
+                        }
+                        .attribute-row .attr-key {
+                                font-weight: 600;
+                                color: var(--ha-color-neutral-80);
+                        }
+                        .attribute-row .attr-value {
+                                color: var(--ha-color-neutral-90);
+                                word-break: break-all;
+                                text-align: right;
+                        }
                         .group-row {
                                 display: grid;
                                 grid-template-columns: repeat(3, 1fr);
@@ -75,6 +104,10 @@ export class DT3DObjectInspector extends LitElement {
 
         @property({ attribute: false })
         public selectedObject: Object3D | null = null;
+
+        private isEntityObject(object: Object3D | null): object is EntityObject {
+                return object instanceof EntityObject;
+        }
 
         private dispatchUpdated() {
                 this.dispatchEvent(
@@ -178,6 +211,52 @@ export class DT3DObjectInspector extends LitElement {
                 `;
         }
 
+        private renderEntityDetails() {
+                if (!this.isEntityObject(this.selectedObject)) {
+                        return null;
+                }
+
+                const entityData = this.selectedObject.getEntity();
+                const friendlyName =
+                        entityData?.attributes?.friendly_name ?? this.selectedObject.entityId;
+                const stateValue = entityData?.state ?? "unknown";
+                const attributes = entityData?.attributes ?? {};
+                const attributeEntries = Object.entries(attributes);
+
+                return html`
+                        <h4>Entity</h4>
+                        <div class="field">
+                                <label>Entity ID</label>
+                                <input type="text" .value=${this.selectedObject.entityId} readonly />
+                        </div>
+                        <div class="field">
+                                <label>Entity Name</label>
+                                <input type="text" .value=${friendlyName} readonly />
+                        </div>
+                        <div class="field">
+                                <label>State</label>
+                                <input type="text" .value=${String(stateValue)} readonly />
+                        </div>
+                        <div class="field">
+                                <label>Attributes</label>
+                                ${attributeEntries.length
+                                        ? html`<div class="attribute-list">
+                                                        ${attributeEntries.map(
+                                                                ([key, value]) => html`<div class="attribute-row">
+                                                                        <span class="attr-key">${key}</span>
+                                                                        <span class="attr-value">
+                                                                                ${typeof value === "object"
+                                                                                        ? JSON.stringify(value)
+                                                                                        : String(value)}
+                                                                        </span>
+                                                                </div>`,
+                                                        )}
+                                                </div>`
+                                        : html`<div class="placeholder">No attributes available.</div>`}
+                        </div>
+                `;
+        }
+
         public render() {
                 return html`
                         <h4>Selected Object</h4>
@@ -198,6 +277,7 @@ export class DT3DObjectInspector extends LitElement {
                                                 ${this.renderVectorControls("Position", "position")}
                                                 ${this.renderVectorControls("Scale", "scale")}
                                                 ${this.renderRotationControls()}
+                                                ${this.renderEntityDetails()}
                                         `
                                 : html`<div class="placeholder">
                                                 Select an object from the tree to edit its properties.
