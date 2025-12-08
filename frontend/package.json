@@ -11,7 +11,8 @@
 	"dependencies": {
 		"three": "~0.180.0",
 		"lit": "~3.3.1",
-		"troika-three-text": "~0.49.1"
+		"troika-three-text": "~0.49.1",
+		"@material-icons/svg": "~1.0.33"
 	},
 	"devDependencies": {
 		"@types/three": "~0.180.0",
