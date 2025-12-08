@@ -2,6 +2,8 @@ import { LitElement, html, css } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import type { Object3D } from "three";
 
+import "./object-inspector.js";
+
 type UUID = string;
 
 interface TreeNode {
@@ -85,88 +87,30 @@ export class DT3DTree extends LitElement {
 					transparent
 				);
 			}
-			.drop-zone.active {
-				border-color: var(--ha-color-primary-60);
-				background: color-mix(
-					in srgb,
-					var(--ha-color-primary-60) 35%,
-					transparent
-				);
-			}
-			.tree-section {
-				flex: 1 1 55%;
-				min-height: 40%;
-				overflow-y: auto;
-				overflow-x: hidden;
-				padding-right: 8px;
-				border-bottom: 1px solid
-					color-mix(in srgb, var(--ha-color-neutral-20) 60%, transparent);
-				margin-bottom: 8px;
-			}
-			.inspector {
-				flex: 1 1 45%;
-				padding: 0 12px;
-				overflow-y: auto;
-				color: var(--ha-color-neutral-90);
-			}
-			.inspector h4 {
-				margin: 4px 0 8px 0;
-				font-size: 14px;
-				color: var(--ha-color-primary-60);
-			}
-			.field {
-				display: flex;
-				flex-direction: column;
-				margin-bottom: 8px;
-				gap: 4px;
-			}
-			.field label {
-				font-size: 12px;
-				color: var(--ha-color-neutral-80);
-			}
-			.field input {
-				background: color-mix(
-					in srgb,
-					var(--ha-color-neutral-10) 95%,
-					transparent
-				);
-				border: 1px solid
-					color-mix(in srgb, var(--ha-color-neutral-30) 80%, transparent);
-				border-radius: 4px;
-				padding: 6px 8px;
-				color: var(--ha-color-neutral-90);
-			}
-			.group-row {
-				display: grid;
-				grid-template-columns: repeat(3, 1fr);
-				gap: 6px;
-			}
-			.group-row label {
-				display: flex;
-				flex-direction: column;
-				gap: 4px;
-				font-size: 12px;
-				color: var(--ha-color-neutral-80);
-			}
-			.group-row input {
-				width: 100%;
-				padding: 6px 8px;
-				box-sizing: border-box;
-				border-radius: 4px;
-				border: 1px solid
-					color-mix(in srgb, var(--ha-color-neutral-30) 80%, transparent);
-				background: color-mix(
-					in srgb,
-					var(--ha-color-neutral-10) 95%,
-					transparent
-				);
-				color: var(--ha-color-neutral-90);
-			}
-			.placeholder {
-				color: var(--ha-color-neutral-70);
-				font-size: 13px;
-				line-height: 1.4;
-			}
+                        .drop-zone.active {
+                                border-color: var(--ha-color-primary-60);
+                                background: color-mix(
+                                        in srgb,
+                                        var(--ha-color-primary-60) 35%,
+                                        transparent
+                                );
+                        }
+                        .tree-section {
+                                flex: 1 1 55%;
+                                min-height: 40%;
+                                overflow-y: auto;
+                                overflow-x: hidden;
+                                padding-right: 8px;
+                                border-bottom: 1px solid
+                                        color-mix(in srgb, var(--ha-color-neutral-20) 60%, transparent);
+                                margin-bottom: 8px;
+                        }
+                        dt3d-object-inspector {
+                                flex: 1 1 45%;
+                                padding: 0 12px;
+                                overflow-y: auto;
+                                color: var(--ha-color-neutral-90);
+                        }
 			.context-overlay {
 				position: absolute;
 				inset: 0;
@@ -242,11 +186,11 @@ export class DT3DTree extends LitElement {
 	 */
 	private tree: TreeNode[] = [];
 
-	/**
-	 * Currently selected Object3D instance.
-	 */
-	@state()
-	private selectedObject: Object3D | null = null;
+        /**
+         * Currently selected Object3D instance.
+         */
+        @state()
+        private selectedObject: Object3D | null = null;
 
 	/**
 	 * ID of the node being dragged.
@@ -583,135 +527,24 @@ export class DT3DTree extends LitElement {
 		this.closeContextMenu();
 	}
 
-	/**
-	 * Refresh the inspector panel when the selected object changes externally.
-	 */
-	public refreshSelectedObject() {
-		if (!this.selectedId || !this.scene) {
-			return;
-		}
+        /**
+         * Refresh the inspector panel when the selected object changes externally.
+         */
+        public refreshSelectedObject() {
+                if (!this.selectedId || !this.scene) {
+                        return;
+                }
 
-		this.selectedObject =
-			this.scene.getObjectByProperty("uuid", this.selectedId) ?? null;
-		this.requestUpdate();
-	}
+                this.selectedObject =
+                        this.scene.getObjectByProperty("uuid", this.selectedId) ?? null;
+                this.requestUpdate();
+        }
 
-    /**
-     * Update the object after the name field was changed.
-     * 
-     * @param event 
-     * @returns 
-     */
-	private handleNameChange(event: Event) {
-		if (!this.selectedObject) return;
+        private handleObjectUpdated() {
+                if (!this.scene) return;
 
-		const value = (event.target as HTMLInputElement).value;
-		this.selectedObject.name = value;
-		this.updateTreeFromScene();
-	}
-
-    /**
-     * 
-     * @param type 
-     * @param axis 
-     * @param event 
-     * @returns 
-     */
-	private handleVectorChange(
-		type: "position" | "scale",
-		axis: "x" | "y" | "z",
-		event: Event,
-	) {
-		if (!this.selectedObject) return;
-
-		const value = parseFloat((event.target as HTMLInputElement).value);
-		if (Number.isNaN(value)) return;
-
-		if (type === "position") {
-			this.selectedObject.position[axis] = value;
-		} else {
-			this.selectedObject.scale[axis] = value;
-		}
-
-		this.requestUpdate();
-	}
-
-    /**
-     * Handle rotation change
-     * 
-     * @param axis 
-     * @param event 
-     * @returns 
-     */
-	private handleRotationChange(axis: "x" | "y" | "z", event: Event) {
-		if (!this.selectedObject) return;
-
-		const value = parseFloat((event.target as HTMLInputElement).value);
-		if (Number.isNaN(value)) return;
-
-		this.selectedObject.rotation[axis] = (value * Math.PI) / 180;
-		this.requestUpdate();
-	}
-
-	private renderVectorControls(label: string, type: "position" | "scale") {
-		if (!this.selectedObject) return null;
-
-		const source =
-			type === "position"
-				? this.selectedObject.position
-				: this.selectedObject.scale;
-
-		return html`
-			<div class="field">
-				<label>${label}</label>
-				<div class="group-row">
-					${(["x", "y", "z"] as const).map(
-						(axis) => html`
-							<label
-								>${axis.toUpperCase()}
-								<input
-									type="number"
-									step="0.01"
-									.value=${source[axis].toFixed(2)}
-									@change=${(event: Event) =>
-										this.handleVectorChange(type, axis, event)}
-								/>
-							</label>
-						`,
-					)}
-				</div>
-			</div>
-		`;
-	}
-
-	private renderRotationControls() {
-		if (!this.selectedObject) return null;
-
-		return html`
-			<div class="field">
-				<label>Rotation (degrees)</label>
-				<div class="group-row">
-					${(["x", "y", "z"] as const).map(
-						(axis) => html`
-							<label
-								>${axis.toUpperCase()}
-								<input
-									type="number"
-									step="1"
-									.value=${(
-										(this.selectedObject!.rotation[axis] * 180) /
-										Math.PI
-									).toFixed(1)}
-									@change=${(event: Event) =>
-										this.handleRotationChange(axis, event)}
-								/>
-							</label>
-						`,
-					)}
-				</div>
-			</div>
-		`;
-	}
+                this.updateTreeFromScene();
+        }
 
 	private renderContextMenu() {
 		if (!this.contextMenu) return null;
@@ -757,9 +590,9 @@ export class DT3DTree extends LitElement {
 					(node) => html`
 						<li>
 							${this.renderDropZone(node.id, "before", depth)}
-							<div
-								class="tree-node ${this.selectedId === node.id
-									? "selected"
+                                                        <div
+                                                                class="tree-node ${this.selectedId === node.id
+                                                                        ? "selected"
 									: ""} ${this.draggedId === node.id ? "dragging" : ""} ${this
 									.dropTarget &&
 								this.dropTarget.id === node.id &&
@@ -776,7 +609,7 @@ export class DT3DTree extends LitElement {
 									this.handleDragLeave(dragEvent, node.id, "inside")}
 								@drop=${(dragEvent: DragEvent) =>
 									this.handleDrop(dragEvent, node.id, "inside")}
-								@click=${() => this.selectNode(node.id)}
+                                                                @click=${() => this.selectNode(node.id)}
 								@contextmenu=${(event: MouseEvent) =>
 									this.handleContextMenu(event, node.id)}
 							>
@@ -793,11 +626,11 @@ export class DT3DTree extends LitElement {
 											</span>
 										`
 									: html`<span style="display:inline-block;width:16px"></span>`}
-								${node.name}
-							</div>
-							${node.children &&
-							node.children.length &&
-							this.expanded.has(node.id)
+                                                                ${node.name}
+                                                        </div>
+                                                        ${node.children &&
+                                                        node.children.length &&
+                                                        this.expanded.has(node.id)
 								? this.renderTree(node.children, depth + 1)
 								: null}
 							${this.renderDropZone(node.id, "after", depth)}
@@ -810,42 +643,18 @@ export class DT3DTree extends LitElement {
 
 	public render() {
 		return html`
-			<div
-				class="resize-handle"
-				@mousedown=${(event: MouseEvent) => this.startResize(event)}
-			></div>
-			<div class="panel">
-				<div class="tree-section">${this.renderTree(this.tree)}</div>
-				<div class="inspector">
-					<h4>Selected Object</h4>
-					${this.selectedObject
-						? html`
-								<div class="field">
-									<label>Name</label>
-									<input
-										type="text"
-										.value=${this.selectedObject.name || ""}
-										@input=${(event: Event) => this.handleNameChange(event)}
-									/>
-								</div>
-								<div class="field">
-									<label>UUID</label>
-									<input
-										type="text"
-										.value=${this.selectedObject.uuid}
-										readonly
-									/>
-								</div>
-								${this.renderVectorControls("Position", "position")}
-								${this.renderVectorControls("Scale", "scale")}
-								${this.renderRotationControls()}
-							`
-						: html`<div class="placeholder">
-								Select an object from the tree to edit its properties.
-							</div>`}
-				</div>
-				${this.renderContextMenu()}
-			</div>
-		`;
-	}
+                        <div
+                                class="resize-handle"
+                                @mousedown=${(event: MouseEvent) => this.startResize(event)}
+                        ></div>
+                        <div class="panel">
+                                <div class="tree-section">${this.renderTree(this.tree)}</div>
+                                <dt3d-object-inspector
+                                        .selectedObject=${this.selectedObject}
+                                        @object-updated=${this.handleObjectUpdated}
+                                ></dt3d-object-inspector>
+                                ${this.renderContextMenu()}
+                        </div>
+                `;
+        }
 }
