@@ -1,0 +1,152 @@
+:host {
+        display: flex;
+        flex-direction: column;
+        width: 220px;
+        background: color-mix(
+                in srgb,
+                var(--ha-color-neutral-10) 90%,
+                transparent
+        );
+        color: var(--ha-color-neutral-95);
+        height: 100%;
+        padding: 12px 0;
+        z-index: 1;
+        transition: width 0.2s;
+        overflow: visible;
+        position: relative;
+}
+
+.panel {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+}
+
+.tree-node {
+        padding-left: 16px;
+        cursor: pointer;
+        user-select: none;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        width: 100%;
+        color: var(--ha-color-neutral-95);
+}
+
+.tree-node.selected {
+        background: color-mix(
+                in srgb,
+                var(--ha-color-primary-60) 40%,
+                transparent
+        );
+        color: var(--ha-color-neutral-95);
+}
+
+.tree-node.dragging {
+        opacity: 0.6;
+}
+
+.tree-node.drop-target {
+        background: color-mix(
+                in srgb,
+                var(--ha-color-primary-60) 35%,
+                transparent
+        );
+}
+
+.toggle {
+        cursor: pointer;
+        margin-right: 4px;
+        color: var(--ha-color-primary-60);
+}
+
+.drop-zone {
+        height: 6px;
+        margin: 2px 0;
+        border: 1px dashed transparent;
+}
+
+.drop-zone.visible {
+        border-color: color-mix(
+                in srgb,
+                var(--ha-color-primary-60) 30%,
+                transparent
+        );
+}
+
+.drop-zone.active {
+        border-color: var(--ha-color-primary-60);
+        background: color-mix(
+                in srgb,
+                var(--ha-color-primary-60) 35%,
+                transparent
+        );
+}
+
+.tree-section {
+        flex: 1 1 55%;
+        min-height: 40%;
+        overflow-y: auto;
+        overflow-x: hidden;
+        padding-right: 8px;
+        border-bottom: 1px solid color-mix(in srgb, var(--ha-color-neutral-20) 60%, transparent);
+        margin-bottom: 8px;
+}
+
+dt3d-object-inspector {
+        flex: 1 1 45%;
+        padding: 0 12px;
+        overflow-y: auto;
+        color: var(--ha-color-neutral-90);
+}
+
+.context-overlay {
+        position: absolute;
+        inset: 0;
+        background: transparent;
+        z-index: 10;
+}
+
+.context-menu {
+        position: fixed;
+        min-width: 140px;
+        background: color-mix(
+                in srgb,
+                var(--ha-color-neutral-10) 90%,
+                transparent
+        );
+        border: 1px solid color-mix(in srgb, var(--ha-color-neutral-30) 80%, transparent);
+        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.18);
+        border-radius: 6px;
+        padding: 4px 0;
+        z-index: 11;
+}
+
+.context-menu button {
+        display: flex;
+        width: 100%;
+        padding: 8px 12px;
+        background: transparent;
+        border: none;
+        color: var(--ha-color-neutral-95);
+        text-align: left;
+        cursor: pointer;
+}
+
+.context-menu button:hover {
+        background: color-mix(
+                in srgb,
+                var(--ha-color-primary-60) 25%,
+                transparent
+        );
+}
+
+.resize-handle {
+        position: absolute;
+        top: 0;
+        left: -4px;
+        width: 8px;
+        height: 100%;
+        cursor: ew-resize;
+        z-index: 5;
+        background: transparent;
+}

@@ -1,48 +1,10 @@
-import { LitElement, html, css } from "lit";
+import { LitElement, html, unsafeCSS } from "lit";
 import { customElement } from "lit/decorators.js";
+import componentStyles from "./config-editor.css?inline";
 
 @customElement("dt3d-config-editor")
 export class DT3DConfigEditor extends LitElement {
-	static styles = [
-		css`
-			:host {
-				display: block;
-				color: var(--ha-color-neutral-95);
-				background: var(--ha-color-neutral-20);
-				padding: 8px;
-				border: 1px solid var(--ha-color-primary-40);
-				border-radius: 8px;
-				box-shadow: 0 2px 4px
-					color-mix(in srgb, var(--ha-color-neutral-05) 10%, transparent);
-				font-family: "Roboto", "Noto", sans-serif;
-			}
-
-			label {
-				display: block;
-				margin-bottom: 6px;
-				font-weight: 600;
-				color: var(--ha-color-neutral-80);
-			}
-
-			input {
-				width: 100%;
-				padding: 8px;
-				border-radius: 6px;
-				border: 1px solid var(--ha-color-primary-40);
-				background: var(--ha-color-neutral-80);
-				color: var(--ha-color-neutral-95);
-				box-sizing: border-box;
-				font-size: 1em;
-			}
-
-			input:focus {
-				border-color: var(--ha-color-primary-60);
-				outline: none;
-				box-shadow: 0 0 0 2px
-					color-mix(in srgb, var(--ha-color-primary-60-light) 50%, transparent);
-			}
-		`,
-	];
+        static styles = unsafeCSS(componentStyles);
 	static properties = {
 		_config: { state: true },
 	};

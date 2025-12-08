@@ -1,77 +1,11 @@
-import { LitElement, html, css } from "lit";
+import { LitElement, html, unsafeCSS } from "lit";
 import { customElement, property } from "lit/decorators.js";
+import componentStyles from "./object-inspector.css?inline";
 import type { Object3D } from "three";
 
 @customElement("dt3d-object-inspector")
 export class DT3DObjectInspector extends LitElement {
-        static styles = [
-                css`
-                        :host {
-                                display: flex;
-                                flex-direction: column;
-                                gap: 8px;
-                        }
-
-                        h4 {
-                                margin: 4px 0 8px 0;
-                                font-size: 14px;
-                                color: var(--ha-color-primary-60);
-                        }
-                        .field {
-                                display: flex;
-                                flex-direction: column;
-                                margin-bottom: 8px;
-                                gap: 4px;
-                        }
-                        .field label {
-                                font-size: 12px;
-                                color: var(--ha-color-neutral-80);
-                        }
-                        .field input {
-                                background: color-mix(
-                                        in srgb,
-                                        var(--ha-color-neutral-10) 95%,
-                                        transparent
-                                );
-                                border: 1px solid
-                                        color-mix(in srgb, var(--ha-color-neutral-30) 80%, transparent);
-                                border-radius: 4px;
-                                padding: 6px 8px;
-                                color: var(--ha-color-neutral-90);
-                        }
-                        .group-row {
-                                display: grid;
-                                grid-template-columns: repeat(3, 1fr);
-                                gap: 6px;
-                        }
-                        .group-row label {
-                                display: flex;
-                                flex-direction: column;
-                                gap: 4px;
-                                font-size: 12px;
-                                color: var(--ha-color-neutral-80);
-                        }
-                        .group-row input {
-                                width: 100%;
-                                padding: 6px 8px;
-                                box-sizing: border-box;
-                                border-radius: 4px;
-                                border: 1px solid
-                                        color-mix(in srgb, var(--ha-color-neutral-30) 80%, transparent);
-                                background: color-mix(
-                                        in srgb,
-                                        var(--ha-color-neutral-10) 95%,
-                                        transparent
-                                );
-                                color: var(--ha-color-neutral-90);
-                        }
-                        .placeholder {
-                                color: var(--ha-color-neutral-70);
-                                font-size: 13px;
-                                line-height: 1.4;
-                        }
-                `,
-        ];
+        static styles = unsafeCSS(componentStyles);
 
         @property({ attribute: false })
         public selectedObject: Object3D | null = null;
