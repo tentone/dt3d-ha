@@ -2,6 +2,7 @@ import { LitElement, html, unsafeCSS } from "lit";
 import { customElement, property } from "lit/decorators.js";
 import componentStyles from "./object-inspector.css?inline";
 import type { Object3D } from "three";
+import { EntityObject } from "./objects/entity-object.js";
 
 @customElement("dt3d-object-inspector")
 export class DT3DObjectInspector extends LitElement {
@@ -9,6 +10,10 @@ export class DT3DObjectInspector extends LitElement {
 
         @property({ attribute: false })
         public selectedObject: Object3D | null = null;
+
+        private isEntityObject(object: Object3D | null): object is EntityObject {
+                return object instanceof EntityObject;
+        }
 
         private dispatchUpdated() {
                 this.dispatchEvent(
@@ -112,6 +117,52 @@ export class DT3DObjectInspector extends LitElement {
                 `;
         }
 
+        private renderEntityDetails() {
+                if (!this.isEntityObject(this.selectedObject)) {
+                        return null;
+                }
+
+                const entityData = this.selectedObject.getEntity();
+                const friendlyName =
+                        entityData?.attributes?.friendly_name ?? this.selectedObject.entityId;
+                const stateValue = entityData?.state ?? "unknown";
+                const attributes = entityData?.attributes ?? {};
+                const attributeEntries = Object.entries(attributes);
+
+                return html`
+                        <h4>Entity</h4>
+                        <div class="field">
+                                <label>Entity ID</label>
+                                <input type="text" .value=${this.selectedObject.entityId} readonly />
+                        </div>
+                        <div class="field">
+                                <label>Entity Name</label>
+                                <input type="text" .value=${friendlyName} readonly />
+                        </div>
+                        <div class="field">
+                                <label>State</label>
+                                <input type="text" .value=${String(stateValue)} readonly />
+                        </div>
+                        <div class="field">
+                                <label>Attributes</label>
+                                ${attributeEntries.length
+                                        ? html`<div class="attribute-list">
+                                                        ${attributeEntries.map(
+                                                                ([key, value]) => html`<div class="attribute-row">
+                                                                        <span class="attr-key">${key}</span>
+                                                                        <span class="attr-value">
+                                                                                ${typeof value === "object"
+                                                                                        ? JSON.stringify(value)
+                                                                                        : String(value)}
+                                                                        </span>
+                                                                </div>`,
+                                                        )}
+                                                </div>`
+                                        : html`<div class="placeholder">No attributes available.</div>`}
+                        </div>
+                `;
+        }
+
         public render() {
                 return html`
                         <h4>Selected Object</h4>
@@ -132,6 +183,7 @@ export class DT3DObjectInspector extends LitElement {
                                                 ${this.renderVectorControls("Position", "position")}
                                                 ${this.renderVectorControls("Scale", "scale")}
                                                 ${this.renderRotationControls()}
+                                                ${this.renderEntityDetails()}
                                         `
                                 : html`<div class="placeholder">
                                                 Select an object from the tree to edit its properties.
