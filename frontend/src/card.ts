@@ -35,7 +35,7 @@ import { EntitySensor } from "./objects/entity-sensor.js";
 import { EntitySwitch } from "./objects/entity-switch.js";
 import { EntityObject } from "./objects/entity-object.js";
 import { DTObject } from "./objects/dt-object.js";
-import { TextSprite } from "./objects/text-sprite.js";
+import { SdfText } from "./objects/sdf-text.js";
 
 @customElement("dt3d-card")
 export class DT3DCard extends LitElement {
@@ -573,10 +573,10 @@ export class DT3DCard extends LitElement {
 		this.measurementHelpers.add(line);
 
 		const distance = start.distanceTo(end);
-		const label = new TextSprite(`Distance: ${distance.toFixed(2)}`);
-		label.position.copy(start.clone().add(end).multiplyScalar(0.5));
-		label.position.y += 0.2;
-		this.measurementHelpers.add(label);
+                const label = new SdfText(`Distance: ${distance.toFixed(2)}`);
+                label.position.copy(start.clone().add(end).multiplyScalar(0.5));
+                label.position.y += 0.2;
+                this.measurementHelpers.add(label);
 	}
 
 	/**
@@ -613,10 +613,10 @@ export class DT3DCard extends LitElement {
 		const angle = Math.acos(MathUtils.clamp(v1.dot(v2), -1, 1));
 		const degrees = MathUtils.radToDeg(angle);
 
-		const label = new TextSprite(`Angle: ${degrees.toFixed(1)}°`);
-		label.position.copy(vertex);
-		label.position.y += 0.5;
-		this.measurementHelpers.add(label);
+                const label = new SdfText(`Angle: ${degrees.toFixed(1)}°`);
+                label.position.copy(vertex);
+                label.position.y += 0.5;
+                this.measurementHelpers.add(label);
 	}
 
 	/**
