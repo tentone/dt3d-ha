@@ -2,7 +2,7 @@ import {
         Color,
         PointLight,
 } from "three";
-import { TextSprite } from "./text-sprite.js";
+import { SdfText } from "./sdf-text.js";
 import { CircleIconSprite } from "./circle-icon-sprite.js";
 import { EntityObject } from "./entity-object.js";
 
@@ -25,7 +25,7 @@ function getLightColor(entity: any): Color {
 export class EntityLight extends EntityObject {
         private icon: CircleIconSprite;
         private pointLight: PointLight;
-        private label: TextSprite;
+        private label: SdfText;
 
         public constructor(entityId: string, entity: any) {
                 super(entityId);
@@ -38,7 +38,7 @@ export class EntityLight extends EntityObject {
                 this.pointLight.position.y = 0.4;
                 this.add(this.pointLight);
 
-                this.label = new TextSprite(entity.attributes?.friendly_name ?? entityId, 256, 96);
+                this.label = new SdfText(entity.attributes?.friendly_name ?? entityId);
                 this.label.position.y = 0.6;
                 this.add(this.label);
 
@@ -53,8 +53,6 @@ export class EntityLight extends EntityObject {
                 this.pointLight.intensity = entity.state === "on" ? 1 : 0;
 
                 const friendlyName = entity.attributes?.friendly_name ?? this.name;
-                this.label.material.map.dispose();
-                this.label.material.map = new TextSprite(friendlyName, 256, 96).material.map;
-                this.label.material.needsUpdate = true;
+                this.label.setText(friendlyName);
         }
 }
