@@ -1,9 +1,9 @@
-import { Group } from "three";
+import { DTInteractionEvent, DTObject } from "./dt-object.js";
 
 /**
  * Base 3D representation for Home Assistant entities.
  */
-export abstract class EntityObject extends Group {
+export abstract class EntityObject extends DTObject {
         public readonly entityId: string;
         private entityData: any;
 
@@ -39,6 +39,12 @@ export abstract class EntityObject extends Group {
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
         public handleClick(_hass: any): void {
                 // Default: no-op
+        }
+
+        public onInteraction(event: DTInteractionEvent): void {
+                if (event.type === "click") {
+                        this.handleClick((event as any).hass ?? null);
+                }
         }
 
         /**
