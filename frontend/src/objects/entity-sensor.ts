@@ -1,12 +1,12 @@
 import { Group } from "three";
-import { TextSprite } from "./text-sprite.js";
+import { SdfText } from "./sdf-text.js";
 import { CircleIconSprite } from "./circle-icon-sprite.js";
 
 /**
  * Creates a entity sensor representation.
  */
 export class EntitySensor extends Group {
-    public label: TextSprite;
+    public label: SdfText;
 
 	public constructor(entityId: string, entity: any) {
 		super();
@@ -19,9 +19,9 @@ export class EntitySensor extends Group {
 		const friendlyName = entity.attributes?.friendly_name ?? entityId;
 		const labelText = `${friendlyName}\n${entity.state}`;
 
-		this.label = new TextSprite(labelText);
-		this.label.position.y = 0.45;
-		this.add(this.label);
+                this.label = new SdfText(labelText, 0.16);
+                this.label.position.y = 0.45;
+                this.add(this.label);
 	}
 
     /**
@@ -32,8 +32,6 @@ export class EntitySensor extends Group {
     public updateState(entity: any): void {
         const friendlyName = entity.attributes?.friendly_name ?? this.name;
         const labelText = `${friendlyName}\n${entity.state}`;
-        this.label.material.map.dispose(); 
-        this.label.material.map = new TextSprite(labelText).material.map;
-        this.label.material.needsUpdate = true; 
+        this.label.setText(labelText);
     }
 }

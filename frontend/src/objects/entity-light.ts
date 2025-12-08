@@ -1,9 +1,9 @@
 import {
-	Color,
-	Group,
-	PointLight,
+        Color,
+        Group,
+        PointLight,
 } from "three";
-import { TextSprite } from "./text-sprite.js";
+import { SdfText } from "./sdf-text.js";
 import { CircleIconSprite } from "./circle-icon-sprite.js";
 
 
@@ -43,12 +43,8 @@ export class EntityLight extends Group {
 		pointLight.position.y = 0.4;
 		this.add(pointLight);
 
-		const label = new TextSprite(
-			entity.attributes?.friendly_name ?? entityId,
-			256,
-			96,
-		);
-		label.position.y = 0.6;
-		this.add(label);
-	}
+                const label = new SdfText(entity.attributes?.friendly_name ?? entityId);
+                label.position.y = 0.6;
+                this.add(label);
+        }
 }

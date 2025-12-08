@@ -10,7 +10,8 @@
 	},
 	"dependencies": {
 		"three": "~0.180.0",
-		"lit": "~3.3.1"
+		"lit": "~3.3.1",
+		"troika-three-text": "~0.52.2"
 	},
 	"devDependencies": {
 		"@types/three": "~0.180.0",
