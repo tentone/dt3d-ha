@@ -31,6 +31,7 @@ import { DT3DTree } from "./object-tree.js";
 import { Locale } from "./locale.js";
 import { EntityLight } from "./objects/entity-light.js";
 import { EntitySensor } from "./objects/entity-sensor.js";
+import { EntitySwitch } from "./objects/entity-switch.js";
 import { TextSprite } from "./objects/text-sprite.js";
 
 @customElement("dt3d-card")
@@ -395,11 +396,11 @@ export class DT3DCard extends LitElement {
 		this.measurementHelpers?.clear();
 	}
 
-	private processMeasurementClick(event: MouseEvent): void {
-		if (
-			this.measurementMode === "none" ||
-			!this.canvas ||
-			!this.camera ||
+        private processMeasurementClick(event: MouseEvent): void {
+                if (
+                        this.measurementMode === "none" ||
+                        !this.canvas ||
+                        !this.camera ||
 			!this.home
 		) {
 			return;
@@ -420,8 +421,50 @@ export class DT3DCard extends LitElement {
 			return;
 		}
 
-		this.addMeasurementPoint(point);
-	}
+                this.addMeasurementPoint(point);
+        }
+
+        private handleCanvasClick(event: MouseEvent): void {
+                if (this.measurementMode !== "none") {
+                        this.processMeasurementClick(event);
+                        return;
+                }
+
+                const switchEntity = this.pickSwitchFromEvent(event);
+
+                if (switchEntity) {
+                        switchEntity.toggle(this.hassInstance);
+                }
+        }
+
+        private pickSwitchFromEvent(event: MouseEvent): EntitySwitch | null {
+                if (!this.canvas || !this.camera || !this.home) {
+                        return null;
+                }
+
+                const rect = this.canvas.getBoundingClientRect();
+                this.pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+                this.pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+                this.raycaster.setFromCamera(this.pointer, this.camera);
+
+                const intersects = this.raycaster.intersectObjects(
+                        this.home.children,
+                        true,
+                );
+
+                const target = intersects[0]?.object ?? null;
+                let current = target as Object3D | null;
+
+                while (current) {
+                        if (current instanceof EntitySwitch) {
+                                return current;
+                        }
+
+                        current = current.parent;
+                }
+
+                return null;
+        }
 
 	/**
 	 * Add a measurement point based on the current measurement mode.
@@ -763,9 +806,9 @@ export class DT3DCard extends LitElement {
 			}
 		});
 
-		this.canvas.addEventListener("click", (event: MouseEvent) =>
-			this.processMeasurementClick(event),
-		);
+                this.canvas.addEventListener("click", (event: MouseEvent) =>
+                        this.handleCanvasClick(event),
+                );
 
 		const animate = () => {
 			requestAnimationFrame(animate);
@@ -950,15 +993,17 @@ export class DT3DCard extends LitElement {
 		}
 
 		const domain = entityId.split(".")[0];
-		let object: Object3D | null = null;
+                let object: Object3D | null = null;
 
-		if (domain === "sensor") {
-			object = new EntitySensor(entityId, entity);
-		} else if (domain === "light") {
-			object = new EntityLight(entityId, entity);
-		} else {
-			object = this.createDefaultEntityRepresentation(entityId);
-		}
+                if (domain === "sensor") {
+                        object = new EntitySensor(entityId, entity);
+                } else if (domain === "light") {
+                        object = new EntityLight(entityId, entity);
+                } else if (domain === "switch") {
+                        object = new EntitySwitch(entityId, entity);
+                } else {
+                        object = this.createDefaultEntityRepresentation(entityId);
+                }
 
 		if (!object) {
 			return;
