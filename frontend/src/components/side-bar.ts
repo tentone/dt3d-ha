@@ -2,6 +2,11 @@ import { LitElement, html, unsafeCSS } from "lit";
 import { customElement } from "lit/decorators.js";
 import componentStyles from "./side-bar.css?inline";
 
+/**
+ * Sidebar contains tools to edit the space.
+ * 
+ * 
+ */
 @customElement("dt3d-sidebar")
 export class DT3DSidebar extends LitElement {
 	static styles = unsafeCSS(componentStyles);
@@ -12,8 +17,13 @@ export class DT3DSidebar extends LitElement {
 
 	public collapsed = true;
 
+	/**
+	 * 
+	 */
 	private resizing = false;
+
 	private startX = 0;
+
 	private startWidth = 220;
 
 	private handleResizeMove = (event: MouseEvent) => {
@@ -136,10 +146,6 @@ export class DT3DSidebar extends LitElement {
 				<button @click=${() => this.handleMeasurementSelect("none")}>
 					Clear
 				</button>
-			</div>
-			<div class="sidebar-section">
-				<div class="sidebar-title">Edit</div>
-				<button @click=${() => this.handleAddObject("cube")}>Delete</button>
 			</div>
 		`;
 	}

@@ -1,4 +1,4 @@
-import en from "./locale/en.json";
+import en from "../locale/en.json";
 import {
 	Mesh,
 	BoxGeometry,
@@ -29,13 +29,13 @@ import { LitElement } from "lit";
 import { customElement } from "lit/decorators.js";
 import { DT3DSidebar } from "./side-bar.js";
 import { DT3DTree } from "./object-tree.js";
-import { Locale } from "./locale.js";
-import { EntityLight } from "./objects/entity-light.js";
-import { EntitySensor } from "./objects/entity-sensor.js";
-import { EntitySwitch } from "./objects/entity-switch.js";
-import { EntityObject } from "./objects/entity-object.js";
-import { DTObject } from "./objects/dt-object.js";
-import { SdfText } from "./objects/sdf-text.js";
+import { Locale } from "../locale/locale.js";
+import { EntityLight } from "../objects/entity-light.js";
+import { EntitySensor } from "../objects/entity-sensor.js";
+import { EntitySwitch } from "../objects/entity-switch.js";
+import { EntityObject } from "../objects/entity-object.js";
+import { DTObject } from "../objects/dt-object.js";
+import { SdfText } from "../objects/sdf-text.js";
 
 @customElement("dt3d-card")
 export class DT3DCard extends LitElement {

@@ -2,7 +2,7 @@ import { LitElement, html, unsafeCSS } from "lit";
 import { customElement, property } from "lit/decorators.js";
 import componentStyles from "./object-inspector.css?inline";
 import type { Object3D } from "three";
-import { EntityObject } from "./objects/entity-object.js";
+import { EntityObject } from "../objects/entity-object.js";
 
 @customElement("dt3d-object-inspector")
 export class DT3DObjectInspector extends LitElement {

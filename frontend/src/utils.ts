@@ -5,7 +5,7 @@
  * @returns Value of the variable.
  */
 export function getCSSVar(variable: string): string {
-	// Remove  var() if present
+	// Remove var() if present
 	if (variable.includes("var(") && variable.includes(")")) {
 		const varName = variable
 			.substring(variable.indexOf("var(") + 4, variable.indexOf(")"))
