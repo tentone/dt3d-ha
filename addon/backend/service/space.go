@@ -11,29 +11,29 @@ import (
 	"gorm.io/datatypes"
 )
 
-type SceneService struct {
-	scenes    *repository.SceneRepository
+type SpaceService struct {
+	spaces    *repository.SpaceRepository
 	instances *repository.ObjectInstanceRepository
 }
 
-func NewSceneService(sceneRepo *repository.SceneRepository, instanceRepo *repository.ObjectInstanceRepository) *SceneService {
-	return &SceneService{scenes: sceneRepo, instances: instanceRepo}
+func NewSpaceService(spaceRepo *repository.SpaceRepository, instanceRepo *repository.ObjectInstanceRepository) *SpaceService {
+	return &SpaceService{spaces: spaceRepo, instances: instanceRepo}
 }
 
-func (s *SceneService) CreateScene(scene *models.Scene) error {
-	scene.Name = strings.TrimSpace(scene.Name)
-	if scene.Name == "" {
-		return errors.New("scene name is required")
+func (s *SpaceService) CreateSpace(space *models.Space) error {
+	space.Name = strings.TrimSpace(space.Name)
+	if space.Name == "" {
+		return errors.New("space name is required")
 	}
-	return s.scenes.Create(scene)
+	return s.spaces.Create(space)
 }
 
-func (s *SceneService) ListScenes() ([]models.Scene, error) {
-	return s.scenes.FindAll()
+func (s *SpaceService) ListSpaces() ([]models.Space, error) {
+	return s.spaces.FindAll()
 }
 
-func (s *SceneService) GetSceneByID(id string) (*models.Scene, error) {
-	return s.scenes.FindByID(id)
+func (s *SpaceService) GetSpaceByID(id string) (*models.Space, error) {
+	return s.spaces.FindByID(id)
 }
 
 var allowedInstanceTypes = map[string]struct{}{
@@ -42,8 +42,8 @@ var allowedInstanceTypes = map[string]struct{}{
 	"Entity":  {},
 }
 
-func (s *SceneService) CreateObjectInstance(sceneID string, instance *models.ObjectInstance) error {
-	instance.SceneID = sceneID
+func (s *SpaceService) CreateObjectInstance(spaceID string, instance *models.ObjectInstance) error {
+	instance.SpaceID = spaceID
 	instance.Type = strings.TrimSpace(instance.Type)
 
 	if instance.Type == "" {
@@ -61,15 +61,15 @@ func (s *SceneService) CreateObjectInstance(sceneID string, instance *models.Obj
 		if err != nil {
 			return fmt.Errorf("parent object lookup failed: %w", err)
 		}
-		if parent.SceneID != sceneID {
-			return errors.New("parent object must belong to the same scene")
+		if parent.SpaceID != spaceID {
+			return errors.New("parent object must belong to the same space")
 		}
 	}
 	return s.instances.Create(instance)
 }
 
-func (s *SceneService) ListObjectInstances(sceneID string) ([]models.ObjectInstance, error) {
-	return s.instances.FindBySceneID(sceneID)
+func (s *SpaceService) ListObjectInstances(spaceID string) ([]models.ObjectInstance, error) {
+	return s.instances.FindBySpaceID(spaceID)
 }
 
 type UpdateObjectInstanceInput struct {
@@ -80,13 +80,13 @@ type UpdateObjectInstanceInput struct {
 	ParentProvided bool
 }
 
-func (s *SceneService) UpdateObjectInstance(sceneID, objectID string, payload UpdateObjectInstanceInput) (*models.ObjectInstance, error) {
+func (s *SpaceService) UpdateObjectInstance(spaceID, objectID string, payload UpdateObjectInstanceInput) (*models.ObjectInstance, error) {
 	instance, err := s.instances.FindByID(objectID)
 	if err != nil {
 		return nil, err
 	}
-	if instance.SceneID != sceneID {
-		return nil, errors.New("object instance does not belong to scene")
+	if instance.SpaceID != spaceID {
+		return nil, errors.New("object instance does not belong to space")
 	}
 
 	payload.Type = strings.TrimSpace(payload.Type)
@@ -115,8 +115,8 @@ func (s *SceneService) UpdateObjectInstance(sceneID, objectID string, payload Up
 			if err != nil {
 				return nil, fmt.Errorf("parent object lookup failed: %w", err)
 			}
-			if parent.SceneID != sceneID {
-				return nil, errors.New("parent object must belong to the same scene")
+			if parent.SpaceID != spaceID {
+				return nil, errors.New("parent object must belong to the same space")
 			}
 		}
 		instance.ParentID = payload.ParentID
@@ -128,20 +128,20 @@ func (s *SceneService) UpdateObjectInstance(sceneID, objectID string, payload Up
 	return instance, nil
 }
 
-func (s *SceneService) DeleteObjectInstance(sceneID, objectID string) error {
+func (s *SpaceService) DeleteObjectInstance(spaceID, objectID string) error {
 	instance, err := s.instances.FindByID(objectID)
 	if err != nil {
 		return err
 	}
-	if instance.SceneID != sceneID {
-		return errors.New("object instance does not belong to scene")
+	if instance.SpaceID != spaceID {
+		return errors.New("object instance does not belong to space")
 	}
 	return s.instances.Delete(objectID)
 }
 
 type ObjectTreeNode struct {
 	ID       string
-	SceneID  string
+	SpaceID  string
 	ParentID *string
 	Name     string
 	Type     string
@@ -149,8 +149,8 @@ type ObjectTreeNode struct {
 	Children []*ObjectTreeNode
 }
 
-func (s *SceneService) GetObjectTree(sceneID string) ([]*ObjectTreeNode, error) {
-	instances, err := s.instances.FindBySceneID(sceneID)
+func (s *SpaceService) GetObjectTree(spaceID string) ([]*ObjectTreeNode, error) {
+	instances, err := s.instances.FindBySpaceID(spaceID)
 	if err != nil {
 		return nil, err
 	}
@@ -160,7 +160,7 @@ func (s *SceneService) GetObjectTree(sceneID string) ([]*ObjectTreeNode, error) 
 	for _, inst := range instances {
 		node := &ObjectTreeNode{
 			ID:       inst.ID,
-			SceneID:  inst.SceneID,
+			SpaceID:  inst.SpaceID,
 			ParentID: inst.ParentID,
 			Name:     inst.Name,
 			Type:     inst.Type,

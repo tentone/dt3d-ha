@@ -4,8 +4,6 @@ import componentStyles from "./side-bar.css?inline";
 
 /**
  * Sidebar contains tools to edit the space.
- * 
- * 
  */
 @customElement("dt3d-sidebar")
 export class DT3DSidebar extends LitElement {
@@ -17,61 +15,23 @@ export class DT3DSidebar extends LitElement {
 
 	public collapsed = true;
 
-	/**
-	 * 
-	 */
-	private resizing = false;
-
-	private startX = 0;
-
-	private startWidth = 220;
-
-	private handleResizeMove = (event: MouseEvent) => {
-		if (!this.resizing) {
-			return;
-		}
-
-		const delta = event.clientX - this.startX;
-		const nextWidth = Math.min(Math.max(this.startWidth + delta, 160), 400);
-		this.style.width = `${nextWidth}px`;
-	};
-
-	private handleResizeEnd = () => {
-		if (!this.resizing) {
-			return;
-		}
-
-		this.resizing = false;
-		document.body.style.cursor = "";
-		window.removeEventListener("mousemove", this.handleResizeMove);
-		window.removeEventListener("mouseup", this.handleResizeEnd);
-	};
-
 	public disconnectedCallback(): void {
 		super.disconnectedCallback();
-		this.handleResizeEnd();
 	}
 
-	private startResize(event: MouseEvent) {
-		if (this.collapsed) {
-			return;
-		}
-
-		this.resizing = true;
-		this.startX = event.clientX;
-		this.startWidth = this.getBoundingClientRect().width;
-		document.body.style.cursor = "ew-resize";
-
-		window.addEventListener("mousemove", this.handleResizeMove);
-		window.addEventListener("mouseup", this.handleResizeEnd);
-	}
-
+	/**
+	 * Toggle collapsed state of the side bar.
+	 */
 	private toggleCollapse() {
 		this.collapsed = !this.collapsed;
 
 		this.requestUpdate();
 	}
 
+	/**
+	 * Change v bnnnn
+	 * @param tool 
+	 */
 	private handleTransformSelect(tool: string) {
 		this.dispatchEvent(
 			new CustomEvent("transform-tool-selected", {
@@ -91,7 +51,12 @@ export class DT3DSidebar extends LitElement {
 			}),
 		);
 	}
-
+	
+	/**
+	 * Select measurement tool.
+	 * 
+	 * @param mode - Measuremente tool to use. 
+	 */
 	private handleMeasurementSelect(mode: "distance" | "angle" | "none") {
 		this.dispatchEvent(
 			new CustomEvent("measurement-mode-selected", {
@@ -111,10 +76,6 @@ export class DT3DSidebar extends LitElement {
 			>
 				${this.collapsed ? "⮞" : "⮜"}
 			</button>
-			<div
-				class="resize-handle"
-				@mousedown=${(event: MouseEvent) => this.startResize(event)}
-			></div>
 			<div class="sidebar-section">
 				<div class="sidebar-title">Controls</div>
 				<button @click=${() => this.handleTransformSelect("translate")}>

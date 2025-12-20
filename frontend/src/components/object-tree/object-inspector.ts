@@ -1,8 +1,8 @@
 import { LitElement, html, unsafeCSS } from "lit";
 import { customElement, property } from "lit/decorators.js";
-import componentStyles from "./object-inspector.css?inline";
 import type { Object3D } from "three";
-import { EntityObject } from "../objects/entity-object.js";
+import { EntityObject } from "../../objects/entity-object.js";
+import componentStyles from "./object-inspector.css?inline";
 
 @customElement("dt3d-object-inspector")
 export class DT3DObjectInspector extends LitElement {
@@ -11,6 +11,12 @@ export class DT3DObjectInspector extends LitElement {
 	@property({ attribute: false })
 	public selectedObject: Object3D | null = null;
 
+	/**
+	 * Check if object is a entity object.
+	 * 
+	 * @param object - Object attached to the inspector.
+	 * @returns True if object is a entity object.
+	 */
 	private isEntityObject(object: Object3D | null): object is EntityObject {
 		return object instanceof EntityObject;
 	}
@@ -130,8 +136,7 @@ export class DT3DObjectInspector extends LitElement {
 		}
 
 		const entityData = this.selectedObject.getEntity();
-		const friendlyName =
-			entityData?.attributes?.friendly_name ?? this.selectedObject.entityId;
+		const friendlyName = entityData?.attributes?.friendly_name ?? this.selectedObject.entityId;
 		const stateValue = entityData?.state ?? "unknown";
 		const attributes = entityData?.attributes ?? {};
 		const attributeEntries = Object.entries(attributes);

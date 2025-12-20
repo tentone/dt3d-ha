@@ -14,76 +14,76 @@ import (
 	"gorm.io/gorm"
 )
 
-type SceneHandler struct {
-	scenes *service.SceneService
+type SpaceHandler struct {
+	spaces *service.SpaceService
 }
 
-func NewSceneHandler(sceneService *service.SceneService) *SceneHandler {
-	return &SceneHandler{scenes: sceneService}
+func NewSpaceHandler(spaceService *service.SpaceService) *SpaceHandler {
+	return &SpaceHandler{spaces: spaceService}
 }
 
-func (h *SceneHandler) Register(router *gin.Engine) {
-	scenes := router.Group("/api/scenes")
+func (h *SpaceHandler) Register(router *gin.Engine) {
+	spaces := router.Group("/api/spaces")
 	{
-		scenes.GET("", h.listScenes)
-		scenes.POST("", h.createScene)
-		scenes.GET(":sceneID", h.getScene)
-		scenes.GET(":sceneID/objects", h.listObjectInstances)
-		scenes.GET(":sceneID/tree", h.getObjectTree)
-		scenes.POST(":sceneID/objects", h.createObjectInstance)
-		scenes.PUT(":sceneID/objects/:objectID", h.updateObjectInstance)
-		scenes.DELETE(":sceneID/objects/:objectID", h.deleteObjectInstance)
+		spaces.GET("", h.listSpaces)
+		spaces.POST("", h.createSpace)
+		spaces.GET(":spaceID", h.getSpace)
+		spaces.GET(":spaceID/objects", h.listObjectInstances)
+		spaces.GET(":spaceID/tree", h.getObjectTree)
+		spaces.POST(":spaceID/objects", h.createObjectInstance)
+		spaces.PUT(":spaceID/objects/:objectID", h.updateObjectInstance)
+		spaces.DELETE(":spaceID/objects/:objectID", h.deleteObjectInstance)
 	}
 }
 
-func (h *SceneHandler) listScenes(c *gin.Context) {
-	scenes, err := h.scenes.ListScenes()
+func (h *SpaceHandler) listSpaces(c *gin.Context) {
+	spaces, err := h.spaces.ListSpaces()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	responses := make([]sceneResponse, 0, len(scenes))
-	for _, scene := range scenes {
-		responses = append(responses, toSceneResponse(scene))
+	responses := make([]spaceResponse, 0, len(spaces))
+	for _, space := range spaces {
+		responses = append(responses, toSpaceResponse(space))
 	}
 	c.JSON(http.StatusOK, responses)
 }
 
-func (h *SceneHandler) createScene(c *gin.Context) {
-	var req createSceneRequest
+func (h *SpaceHandler) createSpace(c *gin.Context) {
+	var req createSpaceRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid scene payload"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid space payload"})
 		return
 	}
 
-	scene := models.Scene{
+	space := models.Space{
 		Name:        req.Name,
 		Description: req.Description,
 	}
-	if err := h.scenes.CreateScene(&scene); err != nil {
+	if err := h.spaces.CreateSpace(&space); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(http.StatusCreated, toSceneResponse(scene))
+	c.JSON(http.StatusCreated, toSpaceResponse(space))
 }
 
-func (h *SceneHandler) getScene(c *gin.Context) {
-	sceneID := c.Param("sceneID")
-	scene, err := h.scenes.GetSceneByID(sceneID)
+func (h *SpaceHandler) getSpace(c *gin.Context) {
+	spaceID := c.Param("spaceID")
+	space, err := h.spaces.GetSpaceByID(spaceID)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			c.JSON(http.StatusNotFound, gin.H{"error": "scene not found"})
+			c.JSON(http.StatusNotFound, gin.H{"error": "space not found"})
 			return
 		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(http.StatusOK, toSceneResponse(*scene))
+	c.JSON(http.StatusOK, toSpaceResponse(*space))
 }
 
-func (h *SceneHandler) listObjectInstances(c *gin.Context) {
-	sceneID := c.Param("sceneID")
-	instances, err := h.scenes.ListObjectInstances(sceneID)
+func (h *SpaceHandler) listObjectInstances(c *gin.Context) {
+	spaceID := c.Param("spaceID")
+	instances, err := h.spaces.ListObjectInstances(spaceID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -95,9 +95,9 @@ func (h *SceneHandler) listObjectInstances(c *gin.Context) {
 	c.JSON(http.StatusOK, responses)
 }
 
-func (h *SceneHandler) getObjectTree(c *gin.Context) {
-	sceneID := c.Param("sceneID")
-	tree, err := h.scenes.GetObjectTree(sceneID)
+func (h *SpaceHandler) getObjectTree(c *gin.Context) {
+	spaceID := c.Param("spaceID")
+	tree, err := h.spaces.GetObjectTree(spaceID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -109,8 +109,8 @@ func (h *SceneHandler) getObjectTree(c *gin.Context) {
 	c.JSON(http.StatusOK, responses)
 }
 
-func (h *SceneHandler) createObjectInstance(c *gin.Context) {
-	sceneID := c.Param("sceneID")
+func (h *SpaceHandler) createObjectInstance(c *gin.Context) {
+	spaceID := c.Param("spaceID")
 	var req createObjectInstanceRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid object instance payload"})
@@ -123,15 +123,15 @@ func (h *SceneHandler) createObjectInstance(c *gin.Context) {
 		ParentID: req.ParentID,
 		Data:     rawMessageToJSON(req.Data),
 	}
-	if err := h.scenes.CreateObjectInstance(sceneID, &instance); err != nil {
+	if err := h.spaces.CreateObjectInstance(spaceID, &instance); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 	c.JSON(http.StatusCreated, toObjectInstanceResponse(instance))
 }
 
-func (h *SceneHandler) updateObjectInstance(c *gin.Context) {
-	sceneID := c.Param("sceneID")
+func (h *SpaceHandler) updateObjectInstance(c *gin.Context) {
+	spaceID := c.Param("spaceID")
 	objectID := c.Param("objectID")
 
 	body, err := io.ReadAll(c.Request.Body)
@@ -167,7 +167,7 @@ func (h *SceneHandler) updateObjectInstance(c *gin.Context) {
 		ParentProvided: parentProvided,
 	}
 
-	instance, err := h.scenes.UpdateObjectInstance(sceneID, objectID, payload)
+	instance, err := h.spaces.UpdateObjectInstance(spaceID, objectID, payload)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "object instance not found"})
@@ -180,11 +180,11 @@ func (h *SceneHandler) updateObjectInstance(c *gin.Context) {
 	c.JSON(http.StatusOK, toObjectInstanceResponse(*instance))
 }
 
-func (h *SceneHandler) deleteObjectInstance(c *gin.Context) {
-	sceneID := c.Param("sceneID")
+func (h *SpaceHandler) deleteObjectInstance(c *gin.Context) {
+	spaceID := c.Param("spaceID")
 	objectID := c.Param("objectID")
 
-	if err := h.scenes.DeleteObjectInstance(sceneID, objectID); err != nil {
+	if err := h.spaces.DeleteObjectInstance(spaceID, objectID); err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "object instance not found"})
 			return

@@ -6,7 +6,7 @@ import (
 	"gorm.io/datatypes"
 )
 
-type Scene struct {
+type Space struct {
 	Base
 
 	Name        string `gorm:"size:255" json:"name"`
@@ -18,8 +18,8 @@ type Scene struct {
 type ObjectInstance struct {
 	Base
 
-	SceneID string `gorm:"type:uuid;index" json:"scene_id"`
-	Scene   *Scene `gorm:"constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"-"`
+	SpaceID string `gorm:"type:uuid;index" json:"space_id"`
+	Space   *Space `gorm:"constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"-"`
 
 	ParentID *string          `gorm:"type:uuid;index" json:"parent_id,omitempty"`
 	Parent   *ObjectInstance  `gorm:"constraint:OnUpdate:CASCADE,OnDelete:SET NULL;" json:"-"`

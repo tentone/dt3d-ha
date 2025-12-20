@@ -10,6 +10,11 @@ export class DT3DConfigEditor extends LitElement {
 	};
 	private _config: any;
 
+	/**
+	 * Set the configuration of the card.
+	 * 
+	 * @param config - Configuration object.
+	 */
 	public setConfig(config: any) {
 		this._config = {
 			port: 8080,
@@ -18,7 +23,7 @@ export class DT3DConfigEditor extends LitElement {
 	}
 
 	/**
-	 * Update the config and fire the "config-changed" event.
+	 * Update the config and fire the "config-changed" event. 
 	 *
 	 * This will update the card in the UI.
 	 *
@@ -35,6 +40,11 @@ export class DT3DConfigEditor extends LitElement {
 		);
 	}
 
+	/**
+	 * Update the config on change.
+	 * 
+	 * @param e - Event
+	 */
 	public onValueChanged(e: any) {
 		const key = e.target.dataset.key;
 		const value = e.target.value;
@@ -52,7 +62,7 @@ export class DT3DConfigEditor extends LitElement {
 			return html``;
 		}
 
-		const { port } = this._config;
+		const port = this._config.port;
 
 		const content = html`
 			<div>

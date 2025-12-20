@@ -45,17 +45,17 @@ func main() {
 		log.Fatalf("failed to connect database: %v", err)
 	}
 
-	if err := db.AutoMigrate(&models.User{}, &models.Scene{}, &models.ObjectInstance{}); err != nil {
+	if err := db.AutoMigrate(&models.User{}, &models.Space{}, &models.ObjectInstance{}); err != nil {
 		log.Fatalf("failed to migrate database: %v", err)
 	}
 
-	sceneRepo := repository.NewSceneRepository(db)
+	spaceRepo := repository.NewSpaceRepository(db)
 	objectRepo := repository.NewObjectInstanceRepository(db)
-	sceneService := service.NewSceneService(sceneRepo, objectRepo)
+	spaceService := service.NewSpaceService(spaceRepo, objectRepo)
 
 	router := gin.Default()
-	sceneHandler := handlers.NewSceneHandler(sceneService)
-	handlers.RegisterRoutes(router, sceneHandler)
+	spaceHandler := handlers.NewSpaceHandler(spaceService)
+	handlers.RegisterRoutes(router, spaceHandler)
 
 	log.Printf("Listening on :%d", port)
 	if err := router.Run(fmt.Sprintf(":%d", port)); err != nil {

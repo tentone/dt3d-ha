@@ -1,4 +1,3 @@
-import en from "../locale/en.json";
 import {
 	Mesh,
 	BoxGeometry,
@@ -27,8 +26,8 @@ import { OBJLoader } from "three/examples/jsm/loaders/OBJLoader.js";
 import { FBXLoader } from "three/examples/jsm/loaders/FBXLoader.js";
 import { LitElement } from "lit";
 import { customElement } from "lit/decorators.js";
-import { DT3DSidebar } from "./side-bar.js";
-import { DT3DTree } from "./object-tree.js";
+import { DT3DSidebar } from "./side-bar/side-bar.js";
+import { DT3DTree } from "./object-tree/object-tree.js";
 import { Locale } from "../locale/locale.js";
 import { EntityLight } from "../objects/entity-light.js";
 import { EntitySensor } from "../objects/entity-sensor.js";
@@ -39,8 +38,14 @@ import { SdfText } from "../objects/sdf-text.js";
 
 @customElement("dt3d-card")
 export class DT3DCard extends LitElement {
+	/**
+	 * Home assistant card configuration.
+	 */
 	private config: any;
 
+	/**
+	 * Home assistant instance.
+	 */
 	public hassInstance: any;
 
 	private container: HTMLElement = null;
@@ -49,12 +54,24 @@ export class DT3DCard extends LitElement {
 
 	private canvas: HTMLCanvasElement = null;
 
+	/**
+	 * Viewport into the 3D space.
+	 */
 	private camera: PerspectiveCamera = null;
 
+	/**
+	 * Renderer for the 3D content.
+	 */
 	private renderer: WebGLRenderer = null;
 
+	/**
+	 * Controls to navigate the 3D space using input.
+	 */
 	private controls: OrbitControls;
 
+	/**
+	 * Transform controls are used to manipulate objects.
+	 */
 	private transform: TransformControls = null;
 
 	/**
@@ -266,7 +283,7 @@ export class DT3DCard extends LitElement {
 		console.log("DT3d: Adding object to scene", object, name);
 
 		if (object instanceof DTObject) {
-			object.ensureInitialized();
+			object.init();
 		}
 
 		this.home.add(object);
@@ -454,7 +471,7 @@ export class DT3DCard extends LitElement {
 
 		object?.onInteraction({
 			type: "click",
-			originalEvent: event,
+			event: event,
 			hass: this.hassInstance,
 		});
 	}
@@ -469,7 +486,7 @@ export class DT3DCard extends LitElement {
 		if (this.hoveredObject) {
 			this.hoveredObject.onInteraction({
 				type: "pointerleave",
-				originalEvent: event,
+				event: event,
 				hass: this.hassInstance,
 			});
 		}
@@ -479,7 +496,7 @@ export class DT3DCard extends LitElement {
 		if (this.hoveredObject) {
 			this.hoveredObject.onInteraction({
 				type: "pointerenter",
-				originalEvent: event,
+				event: event,
 				hass: this.hassInstance,
 			});
 		}
@@ -527,7 +544,7 @@ export class DT3DCard extends LitElement {
 
 		this.home.traverse((child) => {
 			if (child instanceof DTObject) {
-				child.ensureInitialized();
+				child.init();
 				child.update(time);
 			}
 		});
@@ -866,7 +883,7 @@ export class DT3DCard extends LitElement {
 
 			object?.onInteraction({
 				type: "dblclick",
-				originalEvent: event,
+				event: event,
 				hass: this.hassInstance,
 			});
 		});
@@ -886,7 +903,7 @@ export class DT3DCard extends LitElement {
 
 			this.hoveredObject.onInteraction({
 				type: "pointerleave",
-				originalEvent: event,
+				event: event,
 				hass: this.hassInstance,
 			});
 			this.hoveredObject = null;

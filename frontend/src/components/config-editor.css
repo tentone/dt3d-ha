@@ -5,8 +5,7 @@
 	padding: 8px;
 	border: 1px solid var(--ha-color-primary-40);
 	border-radius: 8px;
-	box-shadow: 0 2px 4px
-		color-mix(in srgb, var(--ha-color-neutral-05) 10%, transparent);
+	box-shadow: 0 2px 4px color-mix(in srgb, var(--ha-color-neutral-05) 10%, transparent);
 	font-family: "Roboto", "Noto", sans-serif;
 }
 
@@ -31,6 +30,5 @@ input {
 input:focus {
 	border-color: var(--ha-color-primary-60);
 	outline: none;
-	box-shadow: 0 0 0 2px
-		color-mix(in srgb, var(--ha-color-primary-60-light) 50%, transparent);
+	box-shadow: 0 0 0 2px color-mix(in srgb, var(--ha-color-primary-60-light) 50%, transparent);
 }

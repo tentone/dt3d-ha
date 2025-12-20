@@ -5,10 +5,11 @@ import (
 
 	"dt3d-ha/backend/models"
 	"dt3d-ha/backend/service"
+
 	"gorm.io/datatypes"
 )
 
-type createSceneRequest struct {
+type createSpaceRequest struct {
 	Name        string `json:"name"`
 	Description string `json:"description"`
 }
@@ -29,7 +30,7 @@ type updateObjectInstanceRequest struct {
 
 type objectInstanceResponse struct {
 	ID        string          `json:"id"`
-	SceneID   string          `json:"scene_id"`
+	SpaceID   string          `json:"space_id"`
 	ParentID  *string         `json:"parent_id"`
 	Name      string          `json:"name"`
 	Type      string          `json:"type"`
@@ -38,7 +39,7 @@ type objectInstanceResponse struct {
 	UpdatedAt int64           `json:"updated_at"`
 }
 
-type sceneResponse struct {
+type spaceResponse struct {
 	ID              string                   `json:"id"`
 	Name            string                   `json:"name"`
 	Description     string                   `json:"description"`
@@ -49,7 +50,7 @@ type sceneResponse struct {
 
 type objectTreeNodeResponse struct {
 	ID       string                   `json:"id"`
-	SceneID  string                   `json:"scene_id"`
+	SpaceID  string                   `json:"space_id"`
 	ParentID *string                  `json:"parent_id"`
 	Name     string                   `json:"name"`
 	Type     string                   `json:"type"`
@@ -64,7 +65,7 @@ func toObjectInstanceResponse(instance models.ObjectInstance) objectInstanceResp
 	}
 	return objectInstanceResponse{
 		ID:        instance.ID,
-		SceneID:   instance.SceneID,
+		SpaceID:   instance.SpaceID,
 		ParentID:  instance.ParentID,
 		Name:      instance.Name,
 		Type:      instance.Type,
@@ -74,17 +75,17 @@ func toObjectInstanceResponse(instance models.ObjectInstance) objectInstanceResp
 	}
 }
 
-func toSceneResponse(scene models.Scene) sceneResponse {
-	responses := make([]objectInstanceResponse, 0, len(scene.ObjectInstances))
-	for _, inst := range scene.ObjectInstances {
+func toSpaceResponse(space models.Space) spaceResponse {
+	responses := make([]objectInstanceResponse, 0, len(space.ObjectInstances))
+	for _, inst := range space.ObjectInstances {
 		responses = append(responses, toObjectInstanceResponse(inst))
 	}
-	return sceneResponse{
-		ID:              scene.ID,
-		Name:            scene.Name,
-		Description:     scene.Description,
-		CreatedAt:       scene.CreatedAt,
-		UpdatedAt:       scene.UpdatedAt,
+	return spaceResponse{
+		ID:              space.ID,
+		Name:            space.Name,
+		Description:     space.Description,
+		CreatedAt:       space.CreatedAt,
+		UpdatedAt:       space.UpdatedAt,
 		ObjectInstances: responses,
 	}
 }
@@ -100,7 +101,7 @@ func toObjectTreeNodeResponse(node *service.ObjectTreeNode) objectTreeNodeRespon
 	}
 	return objectTreeNodeResponse{
 		ID:       node.ID,
-		SceneID:  node.SceneID,
+		SpaceID:  node.SpaceID,
 		ParentID: node.ParentID,
 		Name:     node.Name,
 		Type:     node.Type,

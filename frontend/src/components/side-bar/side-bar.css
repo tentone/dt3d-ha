@@ -64,11 +64,8 @@ button {
 	border-radius: 4px;
 	cursor: pointer;
 	font-size: 1em;
-	transition:
-		background 0.2s,
-		transform 0.2s;
-	box-shadow: 0 2px 4px
-		color-mix(in srgb, var(--ha-color-neutral-10) 20%, transparent);
+	transition: background 0.2s, transform 0.2s;
+	box-shadow: 0 2px 4px color-mix(in srgb, var(--ha-color-neutral-10) 20%, transparent);
 }
 
 button:hover {
@@ -79,15 +76,4 @@ button:hover {
 button:active {
 	background: var(--ha-color-primary-60);
 	transform: translateY(0);
-}
-
-.resize-handle {
-	position: absolute;
-	top: 0;
-	right: -4px;
-	width: 8px;
-	height: 100%;
-	cursor: ew-resize;
-	z-index: 5;
-	background: transparent;
 }

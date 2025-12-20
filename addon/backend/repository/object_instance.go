@@ -18,9 +18,9 @@ func (r *ObjectInstanceRepository) Create(instance *models.ObjectInstance) error
 	return r.db.Create(instance).Error
 }
 
-func (r *ObjectInstanceRepository) FindBySceneID(sceneID string) ([]models.ObjectInstance, error) {
+func (r *ObjectInstanceRepository) FindBySpaceID(spaceID string) ([]models.ObjectInstance, error) {
 	var instances []models.ObjectInstance
-	err := r.db.Where("scene_id = ?", sceneID).Find(&instances).Error
+	err := r.db.Where("space_id = ?", spaceID).Find(&instances).Error
 	return instances, err
 }
 

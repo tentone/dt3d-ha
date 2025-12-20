@@ -64,11 +64,14 @@ export class DT3DTree extends LitElement {
 	private dropTarget: { id: UUID; position: DropPosition } = null;
 
 	/**
-	 * Active context menu target and position.
+	 * Data of the context menu, (object id and context menu position). 
 	 */
 	@state()
 	private contextMenu: { id: UUID; x: number; y: number } | null = null;
 
+	/**
+	 * Object tree resizing flag. Set true when the 
+	 */
 	private resizing = false;
 
 	private resizeStartX = 0;
@@ -391,12 +394,21 @@ export class DT3DTree extends LitElement {
 		);
 	}
 
+	/**
+	 * Open the context menu, in a specific position.
+	 * 
+	 * @param event - Mouse event with the position to open the context menu. 
+	 * @param id - ID of the object that opened the context menu.
+	 */
 	private handleContextMenu(event: MouseEvent, id: UUID) {
 		event.preventDefault();
 		event.stopPropagation();
 		this.contextMenu = { id, x: event.clientX, y: event.clientY };
 	}
 
+	/**
+	 * Close the context menu.
+	 */
 	private closeContextMenu() {
 		this.contextMenu = null;
 	}
@@ -442,8 +454,15 @@ export class DT3DTree extends LitElement {
 		this.updateTreeFromScene();
 	}
 
+	/**
+	 * Render a context menu when the user right clicks a object in the tree.
+	 * 
+	 * @returns - Context menu object.
+	 */
 	private renderContextMenu() {
-		if (!this.contextMenu) return null;
+		if (!this.contextMenu) {
+			return null;
+		}
 
 		const { id, x, y } = this.contextMenu;
 
