@@ -1,11 +1,17 @@
 import { Group } from "three";
 
+/**
+ * Possible types of interaction with 3D objects.
+ */
 export type DTInteractionType =
 	| "pointerenter"
 	| "pointerleave"
 	| "click"
 	| "dblclick";
 
+/**
+ * Description of the object interaction event.
+ */
 export interface DTInteractionEvent {
 	type: DTInteractionType;
 	originalEvent: MouseEvent;
@@ -16,6 +22,9 @@ export interface DTInteractionEvent {
  * Base class for 3D objects with lifecycle hooks and pointer interactions.
  */
 export class DTObject extends Group {
+	/**
+	 * Indicates if the object has been initialized.
+	 */
 	private initialized = false;
 
 	/**

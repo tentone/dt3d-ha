@@ -71,16 +71,27 @@ export class DT3DTree extends LitElement {
 
 	private resizing = false;
 
+	private resizeStartX = 0;
+
+	private resizeInitialSize = 0;
+	/**
+	 * Handle the resize move event.
+	 * 
+	 * @param event - Mouse event when resizing the tree. 
+	 */
 	private handleResizeMove = (event: MouseEvent) => {
 		if (!this.resizing) {
 			return;
 		}
 
-		const rect = this.getBoundingClientRect();
-		const nextWidth = Math.min(Math.max(rect.right - event.clientX, 200), 420);
-		this.style.width = `${nextWidth}px`;
+		this.style.width = `${this.resizeInitialSize + this.resizeStartX - event.clientX}px`;
 	};
 
+	/**
+	 * Stop the resizing operation.
+	 * 
+	 * Destroys event listeners and resets state.
+	 */
 	private handleResizeEnd = () => {
 		if (!this.resizing) {
 			return;
@@ -92,8 +103,15 @@ export class DT3DTree extends LitElement {
 		window.removeEventListener("mouseup", this.handleResizeEnd);
 	};
 
+	/**
+	 * 
+	 * @param _event 
+	 */
 	private startResize(_event: MouseEvent) {
 		this.resizing = true;
+		this.resizeStartX = _event.clientX;
+		this.resizeInitialSize = Number.parseInt(this.style.width);
+
 		document.body.style.cursor = "ew-resize";
 
 		window.addEventListener("mousemove", this.handleResizeMove);

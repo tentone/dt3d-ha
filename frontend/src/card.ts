@@ -94,10 +94,19 @@ export class DT3DCard extends LitElement {
 	 */
 	private measurementHelpers: Group = null;
 
+	/**
+	 * Raycaster for interaction with the scene.
+	 */
 	private raycaster: Raycaster = new Raycaster();
 
+	/**
+	 * Normalized pointer position. 
+	 */
 	private pointer: Vector2 = new Vector2();
 
+	/**
+	 * Object currently hovered.
+	 */
 	private hoveredObject: DTObject | null = null;
 
 	static properties = {
@@ -476,10 +485,13 @@ export class DT3DCard extends LitElement {
 		}
 	}
 
-	private pickDTObjectFromEvent(event: MouseEvent): {
-		object: DTObject | null;
-		intersection: Intersection<Object3D> | null;
-	} {
+	/**
+	 * Pick digital tiwn object using the raycaster.
+	 * 
+	 * @param event 
+	 * @returns 
+	 */
+	private pickDTObjectFromEvent(event: MouseEvent): {object: DTObject | null; intersection: Intersection<Object3D> | null;} {
 		if (!this.canvas || !this.camera || !this.home) {
 			return { object: null, intersection: null };
 		}

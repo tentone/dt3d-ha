@@ -3,21 +3,6 @@ import { SdfText } from "./sdf-text.js";
 import { CircleIconSprite } from "./circle-icon-sprite.js";
 import { EntityObject } from "./entity-object.js";
 
-function getLightColor(entity: any): Color {
-	const rgbColor = entity.attributes?.rgb_color;
-	if (Array.isArray(rgbColor) && rgbColor.length === 3) {
-		return new Color(rgbColor[0] / 255, rgbColor[1] / 255, rgbColor[2] / 255);
-	}
-
-	const hsColor = entity.attributes?.hs_color;
-	if (Array.isArray(hsColor) && hsColor.length === 2) {
-		const color = new Color();
-		color.setHSL(hsColor[0] / 360, hsColor[1] / 100, 0.5);
-		return color;
-	}
-
-	return new Color(entity.state === "on" ? 0xffffaa : 0x555555);
-}
 
 export class EntityLight extends EntityObject {
 	private icon: CircleIconSprite;
@@ -43,7 +28,7 @@ export class EntityLight extends EntityObject {
 	}
 
 	protected updateFromEntity(entity: any): void {
-		const color = getLightColor(entity);
+		const color = EntityLight.getLightColor(entity);
 		this.icon.setColor(color.getHex());
 
 		this.pointLight.color = color;
@@ -52,4 +37,28 @@ export class EntityLight extends EntityObject {
 		const friendlyName = entity.attributes?.friendly_name ?? this.name;
 		this.label.setText(friendlyName);
 	}
+
+
+	/**
+	 * Get the entity light color.
+	 * 
+	 * @param entity - Entity to get light color from.
+	 * @returns Color object.
+	 */
+	public static getLightColor(entity: any): Color {
+		const rgbColor = entity.attributes?.rgb_color;
+		if (Array.isArray(rgbColor) && rgbColor.length === 3) {
+			return new Color(rgbColor[0] / 255, rgbColor[1] / 255, rgbColor[2] / 255);
+		}
+
+		const hsColor = entity.attributes?.hs_color;
+		if (Array.isArray(hsColor) && hsColor.length === 2) {
+			const color = new Color();
+			color.setHSL(hsColor[0] / 360, hsColor[1] / 100, 0.5);
+			return color;
+		}
+
+		return new Color(entity.state === "on" ? 0xffffaa : 0x555555);
+	}
+
 }
