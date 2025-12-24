@@ -13,7 +13,7 @@ export class DT3DObjectInspector extends LitElement {
 
 	/**
 	 * Check if object is a entity object.
-	 * 
+	 *
 	 * @param object - Object attached to the inspector.
 	 * @returns True if object is a entity object.
 	 */
@@ -136,7 +136,8 @@ export class DT3DObjectInspector extends LitElement {
 		}
 
 		const entityData = this.selectedObject.getEntity();
-		const friendlyName = entityData?.attributes?.friendly_name ?? this.selectedObject.entityId;
+		const friendlyName =
+			entityData?.attributes?.friendly_name ?? this.selectedObject.entityId;
 		const stateValue = entityData?.state ?? "unknown";
 		const attributes = entityData?.attributes ?? {};
 		const attributeEntries = Object.entries(attributes);

@@ -12,7 +12,7 @@ export class DT3DConfigEditor extends LitElement {
 
 	/**
 	 * Set the configuration of the card.
-	 * 
+	 *
 	 * @param config - Configuration object.
 	 */
 	public setConfig(config: any) {
@@ -23,7 +23,7 @@ export class DT3DConfigEditor extends LitElement {
 	}
 
 	/**
-	 * Update the config and fire the "config-changed" event. 
+	 * Update the config and fire the "config-changed" event.
 	 *
 	 * This will update the card in the UI.
 	 *
@@ -42,7 +42,7 @@ export class DT3DConfigEditor extends LitElement {
 
 	/**
 	 * Update the config on change.
-	 * 
+	 *
 	 * @param e - Event
 	 */
 	public onValueChanged(e: any) {

@@ -18,7 +18,7 @@ export interface DTInteractionEvent {
 
 	// Event from the browser
 	event: MouseEvent;
-	
+
 	// Home assistant data
 	hass?: any;
 }

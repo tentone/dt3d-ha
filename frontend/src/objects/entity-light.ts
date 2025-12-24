@@ -3,7 +3,6 @@ import { SdfText } from "./sdf-text.js";
 import { CircleIconSprite } from "./circle-icon-sprite.js";
 import { EntityObject } from "./entity-object.js";
 
-
 export class EntityLight extends EntityObject {
 	private icon: CircleIconSprite;
 	private pointLight: PointLight;
@@ -38,10 +37,9 @@ export class EntityLight extends EntityObject {
 		this.label.setText(friendlyName);
 	}
 
-
 	/**
 	 * Get the entity light color.
-	 * 
+	 *
 	 * @param entity - Entity to get light color from.
 	 * @returns Color object.
 	 */
@@ -60,5 +58,4 @@ export class EntityLight extends EntityObject {
 
 		return new Color(entity.state === "on" ? 0xffffaa : 0x555555);
 	}
-
 }

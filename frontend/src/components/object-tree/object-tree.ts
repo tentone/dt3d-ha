@@ -64,37 +64,47 @@ export class DT3DTree extends LitElement {
 	private dropTarget: { id: UUID; position: DropPosition } = null;
 
 	/**
-	 * Data of the context menu, (object id and context menu position). 
+	 * Data of the context menu, (object id and context menu position).
 	 */
 	@state()
 	private contextMenu: { id: UUID; x: number; y: number } | null = null;
 
 	/**
-	 * Object tree resizing flag. Set true when the 
+	 * Object tree resizing flag. Set true when the
 	 */
 	private resizing = false;
 
+	/**
+	 * Initial position of the mouse when resizing.
+	 */
 	private resizeStartX = 0;
 
+	/**
+	 * Width of the element.
+	 */
+	private width = 220;
+
 	private resizeInitialSize = 0;
+
 	/**
 	 * Handle the resize move event.
-	 * 
-	 * @param event - Mouse event when resizing the tree. 
+	 *
+	 * @param event - Mouse event when resizing the tree.
 	 */
 	private handleResizeMove = (event: MouseEvent) => {
 		if (!this.resizing) {
 			return;
 		}
 
-		console.log('Resizing move', event, this.resizeInitialSize, this.resizeInitialSize + this.resizeStartX - event.clientX);
+		this.width = this.resizeInitialSize + (this.resizeStartX - event.clientX);
+		this.style.width = this.width + "px";
 
-		this.style.width = `${this.resizeInitialSize + this.resizeStartX - event.clientX}px`;
+		console.log("Resizing move", this.width);
 	};
 
 	/**
 	 * Stop the resizing operation.
-	 * 
+	 *
 	 * Destroys event listeners and resets state.
 	 */
 	private handleResizeEnd = () => {
@@ -102,7 +112,7 @@ export class DT3DTree extends LitElement {
 			return;
 		}
 
-		console.log('Stop resizing');
+		console.log("Stop resizing");
 
 		this.resizing = false;
 
@@ -113,15 +123,15 @@ export class DT3DTree extends LitElement {
 
 	/**
 	 * Start the resizing process.
-	 * 
+	 *
 	 * @param event - Pointer event
 	 */
 	private handleResizeStart(event: MouseEvent) {
 		this.resizing = true;
 		this.resizeStartX = event.clientX;
-		this.resizeInitialSize = Number.parseInt(this.style.width);
+		this.resizeInitialSize = this.width;
 
-		console.log('Start resizing', event.clientX);
+		console.log("Start resizing", event.clientX);
 
 		document.body.style.cursor = "ew-resize";
 
@@ -234,7 +244,9 @@ export class DT3DTree extends LitElement {
 		return this.isAncestor(ancestorId, parentId);
 	}
 
-	// Check if a node can be dropped onto a target node.
+	/**
+	 * Check if a node can be dropped onto a target node.
+	 */
 	private canDrop(targetId: UUID, position: DropPosition): boolean {
 		if (!this.draggedId || this.draggedId === targetId) {
 			return false;
@@ -256,44 +268,51 @@ export class DT3DTree extends LitElement {
 		return true;
 	}
 
-	// Handle the start of a drag operation.
-        private handleDragStart(event: DragEvent, id: UUID) {
-                console.log("DT3D: Drag started for", id);
+	/**
+	 * Handle the start of a drag operation.
+	 */
+	private handleDragStart(event: DragEvent, id: UUID) {
+		console.log("DT3D: Drag started for", id);
 
-                event.stopPropagation();
+		event.stopPropagation();
 
-                // Set drag data
-                event.dataTransfer?.setData("text/plain", id);
-                if (event.dataTransfer) {
-                        event.dataTransfer.effectAllowed = "move";
-                        event.dataTransfer.dropEffect = "move";
-                }
-                this.dropTarget = null;
-                this.draggedId = id;
-        }
+		// Set drag data
+		event.dataTransfer?.setData("text/plain", id);
+		if (event.dataTransfer) {
+			event.dataTransfer.effectAllowed = "move";
+			event.dataTransfer.dropEffect = "move";
+		}
+		this.dropTarget = null;
+		this.draggedId = id;
+	}
 
-        private handleDragEnd(event?: DragEvent) {
-                console.log("DT3D: Drag ended");
+	/**
+	 * Handle drag end.
+	 *
+	 * @param event
+	 */
+	private handleDragEnd(event?: DragEvent) {
+		console.log("DT3D: Drag ended");
 
-                event?.stopPropagation();
+		event?.stopPropagation();
 
-                this.draggedId = null;
-                this.dropTarget = null;
-        }
+		this.draggedId = null;
+		this.dropTarget = null;
+	}
 
-        private handleDragEnter(event: DragEvent, id: UUID, position: DropPosition) {
-                console.log("DT3D: Drag enter", id, position);
+	private handleDragEnter(event: DragEvent, id: UUID, position: DropPosition) {
+		console.log("DT3D: Drag enter", id, position);
 
-                if (!this.canDrop(id, position)) {
-                        return;
-                }
+		if (!this.canDrop(id, position)) {
+			return;
+		}
 
-                event.preventDefault();
-                this.dropTarget = { id, position };
-        }
+		event.preventDefault();
+		this.dropTarget = { id, position };
+	}
 
-        private handleDragOver(event: DragEvent, id: UUID, position: DropPosition) {
-                console.log("DT3D: Drag over", id, position);
+	private handleDragOver(event: DragEvent, id: UUID, position: DropPosition) {
+		console.log("DT3D: Drag over", id, position);
 
 		if (!this.canDrop(id, position)) {
 			return;
@@ -372,12 +391,12 @@ export class DT3DTree extends LitElement {
 		return html`
 			<div
 				class="${classes.join(" ")}"
-                                @dragenter=${(dragEvent: DragEvent) =>
-                                        this.handleDragEnter(dragEvent, id, position)}
-                                @dragover=${(dragEvent: DragEvent) =>
-                                        this.handleDragOver(dragEvent, id, position)}
-                                @dragleave=${(dragEvent: DragEvent) =>
-                                        this.handleDragLeave(dragEvent, id, position)}
+				@dragenter=${(dragEvent: DragEvent) =>
+					this.handleDragEnter(dragEvent, id, position)}
+				@dragover=${(dragEvent: DragEvent) =>
+					this.handleDragOver(dragEvent, id, position)}
+				@dragleave=${(dragEvent: DragEvent) =>
+					this.handleDragLeave(dragEvent, id, position)}
 				@drop=${(dragEvent: DragEvent) =>
 					this.handleDrop(dragEvent, id, position)}
 			></div>
@@ -405,8 +424,8 @@ export class DT3DTree extends LitElement {
 
 	/**
 	 * Open the context menu, in a specific position.
-	 * 
-	 * @param event - Mouse event with the position to open the context menu. 
+	 *
+	 * @param event - Mouse event with the position to open the context menu.
 	 * @param id - ID of the object that opened the context menu.
 	 */
 	private handleContextMenu(event: MouseEvent, id: UUID) {
@@ -465,7 +484,7 @@ export class DT3DTree extends LitElement {
 
 	/**
 	 * Render a context menu when the user right clicks a object in the tree.
-	 * 
+	 *
 	 * @returns - Context menu object.
 	 */
 	private renderContextMenu() {
@@ -487,7 +506,7 @@ export class DT3DTree extends LitElement {
 						this.dispatchDelete(id);
 					}}
 				>
-					Delete
+					${"Delete"}
 				</button>
 				<button
 					@click=${(event: MouseEvent) => {
@@ -495,7 +514,7 @@ export class DT3DTree extends LitElement {
 						this.dispatchClone(id);
 					}}
 				>
-					Clone
+					${"Clone"}
 				</button>
 			</div>
 		`;
@@ -523,13 +542,13 @@ export class DT3DTree extends LitElement {
 								this.dropTarget.position === "inside"
 									? "drop-target"
 									: ""}"
-                                                                ?draggable=${depth > 0}
-                                                                @dragstart=${(dragEvent: DragEvent) =>
-                                                                        this.handleDragStart(dragEvent, node.id)}
-                                                                @dragend=${(dragEvent: DragEvent) =>
-                                                                        this.handleDragEnd(dragEvent)}
-                                                                @dragover=${(dragEvent: DragEvent) =>
-                                                                        this.handleDragOver(dragEvent, node.id, "inside")}
+								?draggable=${depth > 0}
+								@dragstart=${(dragEvent: DragEvent) =>
+									this.handleDragStart(dragEvent, node.id)}
+								@dragend=${(dragEvent: DragEvent) =>
+									this.handleDragEnd(dragEvent)}
+								@dragover=${(dragEvent: DragEvent) =>
+									this.handleDragOver(dragEvent, node.id, "inside")}
 								@dragleave=${(dragEvent: DragEvent) =>
 									this.handleDragLeave(dragEvent, node.id, "inside")}
 								@drop=${(dragEvent: DragEvent) =>

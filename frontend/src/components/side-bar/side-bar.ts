@@ -30,7 +30,7 @@ export class DT3DSidebar extends LitElement {
 
 	/**
 	 * Change v bnnnn
-	 * @param tool 
+	 * @param tool
 	 */
 	private handleTransformSelect(tool: string) {
 		this.dispatchEvent(
@@ -51,11 +51,11 @@ export class DT3DSidebar extends LitElement {
 			}),
 		);
 	}
-	
+
 	/**
 	 * Select measurement tool.
-	 * 
-	 * @param mode - Measuremente tool to use. 
+	 *
+	 * @param mode - Measuremente tool to use.
 	 */
 	private handleMeasurementSelect(mode: "distance" | "angle" | "none") {
 		this.dispatchEvent(

@@ -117,7 +117,7 @@ export class DT3DCard extends LitElement {
 	private raycaster: Raycaster = new Raycaster();
 
 	/**
-	 * Normalized pointer position. 
+	 * Normalized pointer position.
 	 */
 	private pointer: Vector2 = new Vector2();
 
@@ -504,11 +504,14 @@ export class DT3DCard extends LitElement {
 
 	/**
 	 * Pick digital tiwn object using the raycaster.
-	 * 
-	 * @param event 
-	 * @returns 
+	 *
+	 * @param event
+	 * @returns
 	 */
-	private pickDTObjectFromEvent(event: MouseEvent): {object: DTObject | null; intersection: Intersection<Object3D> | null;} {
+	private pickDTObjectFromEvent(event: MouseEvent): {
+		object: DTObject | null;
+		intersection: Intersection<Object3D> | null;
+	} {
 		if (!this.canvas || !this.camera || !this.home) {
 			return { object: null, intersection: null };
 		}
