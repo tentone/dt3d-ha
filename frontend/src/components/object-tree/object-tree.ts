@@ -98,8 +98,6 @@ export class DT3DTree extends LitElement {
 
 		this.width = this.resizeInitialSize + (this.resizeStartX - event.clientX);
 		this.style.width = this.width + "px";
-
-		console.log("Resizing move", this.width);
 	};
 
 	/**
@@ -111,8 +109,6 @@ export class DT3DTree extends LitElement {
 		if (!this.resizing) {
 			return;
 		}
-
-		console.log("Stop resizing");
 
 		this.resizing = false;
 
@@ -131,12 +127,14 @@ export class DT3DTree extends LitElement {
 		this.resizeStartX = event.clientX;
 		this.resizeInitialSize = this.width;
 
-		console.log("Start resizing", event.clientX);
-
 		document.body.style.cursor = "ew-resize";
 
 		window.addEventListener("mousemove", this.handleResizeMove);
 		window.addEventListener("mouseup", this.handleResizeEnd);
+	}
+
+	public connectedCallback(): void {
+		this.style.width = this.width + "px";
 	}
 
 	public disconnectedCallback(): void {
@@ -587,10 +585,7 @@ export class DT3DTree extends LitElement {
 
 	public render() {
 		return html`
-			<div
-				class="resize-handle"
-				@mousedown=${(event: MouseEvent) => this.handleResizeStart(event)}
-			></div>
+			<div class="resize-handle" @mousedown=${(event: MouseEvent) => this.handleResizeStart(event)} ></div>
 			<div class="panel">
 				<div class="tree-section">${this.renderTree(this.tree)}</div>
 				<dt3d-object-inspector
