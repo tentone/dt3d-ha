@@ -79,33 +79,33 @@ export class DT3DSidebar extends LitElement {
 			<div class="sidebar-section">
 				<div class="sidebar-title">Controls</div>
 				<button @click=${() => this.handleTransformSelect("translate")}>
-					Translate
+					<ha-icon icon="mdi:cursor-move"></ha-icon>
 				</button>
 				<button @click=${() => this.handleTransformSelect("rotate")}>
-					Rotate
+					<ha-icon icon="mdi:rotate-right"></ha-icon>
 				</button>
 				<button @click=${() => this.handleTransformSelect("scale")}>
-					Scale
+					<ha-icon icon="mdi:resize"></ha-icon>
 				</button>
 			</div>
 			<div class="sidebar-section">
 				<div class="sidebar-title">Add</div>
-				<button @click=${() => this.handleAddObject("cube")}>Cube</button>
-				<button @click=${() => this.handleAddObject("sphere")}>Sphere</button>
-				<button @click=${() => this.handleAddObject("plane")}>Plane</button>
-				<button @click=${() => this.handleAddObject("upload")}>Upload</button>
-				<button @click=${() => this.handleAddObject("entity")}>Entity</button>
+				<button @click=${() => this.handleAddObject("cube")}><ha-icon icon="mdi:cube-outline"></ha-icon></button>
+				<button @click=${() => this.handleAddObject("sphere")}><ha-icon icon="mdi:sphere"></ha-icon></button>
+				<button @click=${() => this.handleAddObject("plane")}><ha-icon icon="mdi:square-outline"></ha-icon></button>
+				<button @click=${() => this.handleAddObject("upload")}><ha-icon icon="mdi:upload-box-outline"></ha-icon></button>
+				<button @click=${() => this.handleAddObject("entity")}><ha-icon icon="mdi:state-machine"></ha-icon></button>
 			</div>
 			<div class="sidebar-section">
 				<div class="sidebar-title">Measure</div>
 				<button @click=${() => this.handleMeasurementSelect("distance")}>
-					Distance
+					<ha-icon icon="mdi:social-distance-2-meters"></ha-icon>
 				</button>
 				<button @click=${() => this.handleMeasurementSelect("angle")}>
-					Angle
+					<ha-icon icon="mdi:angle-acute"></ha-icon>
 				</button>
 				<button @click=${() => this.handleMeasurementSelect("none")}>
-					Clear
+					<ha-icon icon="mdi:cancel"></ha-icon>
 				</button>
 			</div>
 		`;

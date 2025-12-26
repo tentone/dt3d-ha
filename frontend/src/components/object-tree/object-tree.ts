@@ -97,7 +97,7 @@ export class DT3DTree extends LitElement {
 		}
 
 		this.width = this.resizeInitialSize + (this.resizeStartX - event.clientX);
-		
+
 		if (this.width > 50 && this.width < document.body.clientWidth / 2) {
 			this.style.width = this.width + "px";
 		}
@@ -207,7 +207,13 @@ export class DT3DTree extends LitElement {
 		}
 	}
 
-	// Find the parent ID of a given child ID in the tree.
+	/**
+	 * Find the parent ID of a given child ID in the tree.
+	 * 
+	 * @param nodes - Tree nodes.
+	 * @param childId - Child UUID
+	 * @param parentId - Parent UUID
+	 */
 	private findParentId(
 		nodes: TreeNode[],
 		childId: UUID,
@@ -229,7 +235,12 @@ export class DT3DTree extends LitElement {
 		return null;
 	}
 
-	// Check if ancestorId is an ancestor of nodeId in the tree.
+	/**
+	 * Check if ancestorId is an ancestor of nodeId in the tree.
+	 * 
+	 * @param ancestorId - Ancestor ID
+	 * @param nodeId - Node ID
+	 */
 	private isAncestor(ancestorId: UUID, nodeId: UUID): boolean {
 		if (!ancestorId || !nodeId || ancestorId === nodeId) {
 			return false;
@@ -295,7 +306,7 @@ export class DT3DTree extends LitElement {
 	 * @param event
 	 */
 	private handleDragEnd(event?: DragEvent) {
-		console.log("DT3D: Drag ended");
+		console.log("DT3D: Drag ended", event);
 
 		event?.stopPropagation();
 
@@ -373,38 +384,7 @@ export class DT3DTree extends LitElement {
 		this.dropTarget = null;
 	}
 
-	private renderDropZone(id: UUID, position: DropPosition, depth: number): any {
-		if (!this.draggedId || (depth === 0 && position !== "inside")) {
-			return null;
-		}
 
-		const classes = ["drop-zone"];
-		if (this.draggedId) {
-			classes.push("visible");
-		}
-
-		if (
-			this.dropTarget &&
-			this.dropTarget.id === id &&
-			this.dropTarget.position === position
-		) {
-			classes.push("active");
-		}
-
-		return html`
-			<div
-				class="${classes.join(" ")}"
-				@dragenter=${(dragEvent: DragEvent) =>
-					this.handleDragEnter(dragEvent, id, position)}
-				@dragover=${(dragEvent: DragEvent) =>
-					this.handleDragOver(dragEvent, id, position)}
-				@dragleave=${(dragEvent: DragEvent) =>
-					this.handleDragLeave(dragEvent, id, position)}
-				@drop=${(dragEvent: DragEvent) =>
-					this.handleDrop(dragEvent, id, position)}
-			></div>
-		`;
-	}
 
 	/**
 	 * Select a node by its ID, dispatching an event.
@@ -468,14 +448,18 @@ export class DT3DTree extends LitElement {
 
 	/**
 	 * Refresh the inspector panel when the selected object changes externally.
+	 *
+	 * Must be called when changes are applied.
 	 */
 	public refreshSelectedObject() {
+		console.log("refreshSelectedObject", this.selectedId, this.scene);
 		if (!this.selectedId || !this.scene) {
 			return;
 		}
 
 		this.selectedObject =
 			this.scene.getObjectByProperty("uuid", this.selectedId) ?? null;
+
 		this.requestUpdate();
 	}
 
@@ -483,6 +467,46 @@ export class DT3DTree extends LitElement {
 		if (!this.scene) return;
 
 		this.updateTreeFromScene();
+	}
+
+	/**
+	 * Render the drop zone of a element.
+	 * @param id 
+	 * @param position 
+	 * @param depth 
+	 * @returns 
+	 */
+	private renderDropZone(id: UUID, position: DropPosition, depth: number): any {
+		if (!this.draggedId || (depth === 0 && position !== "inside")) {
+			return null;
+		}
+
+		const classes = ["drop-zone"];
+		if (this.draggedId) {
+			classes.push("visible");
+		}
+
+		if (
+			this.dropTarget &&
+			this.dropTarget.id === id &&
+			this.dropTarget.position === position
+		) {
+			classes.push("active");
+		}
+
+		return html`
+			<div
+				class="${classes.join(" ")}"
+				@dragenter=${(dragEvent: DragEvent) =>
+					this.handleDragEnter(dragEvent, id, position)}
+				@dragover=${(dragEvent: DragEvent) =>
+					this.handleDragOver(dragEvent, id, position)}
+				@dragleave=${(dragEvent: DragEvent) =>
+					this.handleDragLeave(dragEvent, id, position)}
+				@drop=${(dragEvent: DragEvent) =>
+					this.handleDrop(dragEvent, id, position)}
+			></div>
+		`;
 	}
 
 	/**
@@ -536,6 +560,7 @@ export class DT3DTree extends LitElement {
 					(node) => html`
 						<li>
 							${this.renderDropZone(node.id, "before", depth)}
+							<!-- Node -->
 							<div
 								class="tree-node ${this.selectedId === node.id
 									? "selected"
@@ -590,7 +615,10 @@ export class DT3DTree extends LitElement {
 
 	public render() {
 		return html`
-			<div class="resize-handle" @mousedown=${(event: MouseEvent) => this.handleResizeStart(event)} ></div>
+			<div
+				class="resize-handle"
+				@mousedown=${(event: MouseEvent) => this.handleResizeStart(event)}
+			></div>
 			<div class="panel">
 				<div class="tree-section">${this.renderTree(this.tree)}</div>
 				<dt3d-object-inspector

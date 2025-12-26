@@ -35,6 +35,7 @@ import { EntitySwitch } from "../objects/entity-switch.js";
 import { EntityObject } from "../objects/entity-object.js";
 import { DTObject } from "../objects/dt-object.js";
 import { SdfText } from "../objects/sdf-text.js";
+import en from "../locale/en.json";
 
 @customElement("dt3d-card")
 export class DT3DCard extends LitElement {
@@ -137,12 +138,8 @@ export class DT3DCard extends LitElement {
 			console.log("DT3D: Entity states", this, DT3DCard.styles, hass.states);
 		}
 
-		// console.log('DT3D: Styles loaded from file', style);
-
-		// this.locale = new Locale();
-		// this.locale.load('en', en);
-
-		// console.log('DT3D: Translation data loaded ', this.locale);
+		this.locale = new Locale();
+		this.locale.load("en", en);
 
 		this.hassInstance = hass;
 

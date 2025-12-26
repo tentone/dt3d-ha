@@ -43,11 +43,11 @@ export class DT3DObjectInspector extends LitElement {
 	}
 
 	/**
-	 * 
-	 * @param type 
-	 * @param axis 
-	 * @param event 
-	 * @returns 
+	 *
+	 * @param type
+	 * @param axis
+	 * @param event
+	 * @returns
 	 */
 	private handleVectorChange(
 		type: "position" | "scale",
@@ -82,8 +82,8 @@ export class DT3DObjectInspector extends LitElement {
 
 	/**
 	 * Render a vector control element.
-	 * 
-	 * @param label - Label of the element. 
+	 *
+	 * @param label - Label of the element.
 	 * @param type - Type (position or scale)
 	 * @returns Rendered element.
 	 */
@@ -120,8 +120,8 @@ export class DT3DObjectInspector extends LitElement {
 
 	/**
 	 * Render euler rotation controls.
-	 * 
-	 * @returns - Renderer element for rotation controls. 
+	 *
+	 * @returns - Renderer element for rotation controls.
 	 */
 	private renderRotationControls() {
 		if (!this.selectedObject) {
