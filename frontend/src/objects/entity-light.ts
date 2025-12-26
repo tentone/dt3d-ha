@@ -1,12 +1,12 @@
 import { Color, PointLight } from "three";
-import { SdfText } from "./helpers/sdf-text.js";
+import { TextSDF } from "./helpers/text-sdf.js";
 import { CircleIconSprite } from "./helpers/circle-icon-sprite.js";
 import { EntityObject } from "./entity-object.js";
 
 export class EntityLight extends EntityObject {
 	private icon: CircleIconSprite;
 	private pointLight: PointLight;
-	private label: SdfText;
+	private label: TextSDF;
 
 	public constructor(entityId: string, entity: any) {
 		super(entityId);
@@ -19,7 +19,7 @@ export class EntityLight extends EntityObject {
 		this.pointLight.position.y = 0.4;
 		this.add(this.pointLight);
 
-		this.label = new SdfText(entity.attributes?.friendly_name ?? entityId);
+		this.label = new TextSDF(entity.attributes?.friendly_name ?? entityId);
 		this.label.position.y = 0.6;
 		this.add(this.label);
 

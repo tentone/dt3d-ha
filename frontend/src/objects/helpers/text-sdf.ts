@@ -1,6 +1,6 @@
 import { Text } from "troika-three-text";
 
-export class SdfText extends Text {
+export class TextSDF extends Text {
 	public constructor(text: string, maxWidth = 1.6) {
 		super();
 

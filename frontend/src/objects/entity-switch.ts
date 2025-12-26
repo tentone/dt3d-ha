@@ -1,10 +1,10 @@
 import { Object3D } from "three";
-import { SdfText } from "./helpers/sdf-text.js";
+import { TextSDF } from "./helpers/text-sdf.js";
 import { CircleIconSprite } from "./helpers/circle-icon-sprite.js";
 import { EntityObject } from "./entity-object.js";
 
 export class EntitySwitch extends EntityObject {
-	public label: SdfText;
+	public label: TextSDF;
 	private icon: Object3D;
 
 	public constructor(entityId: string, entity: any) {
@@ -14,7 +14,7 @@ export class EntitySwitch extends EntityObject {
 		this.icon.position.y = 0.1;
 		this.add(this.icon);
 
-		this.label = new SdfText("Loading\n...");
+		this.label = new TextSDF("Loading\n...");
 		this.label.position.y = 0.45;
 		this.add(this.label);
 

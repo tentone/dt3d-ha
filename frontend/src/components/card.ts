@@ -35,9 +35,10 @@ import { EntitySensor } from "../objects/entity-sensor.js";
 import { EntitySwitch } from "../objects/entity-switch.js";
 import { EntityObject } from "../objects/entity-object.js";
 import { DTObject } from "../objects/dt-object.js";
-import { SdfText } from "../objects/helpers/sdf-text.js";
+import { TextSDF } from "../objects/helpers/text-sdf.js";
 import en from "../locale/en.json";
 import { getCSSVar } from "../utils.js";
+import { TextSprite } from "../objects/helpers/text-sprite.js";
 
 @customElement("dt3d-card")
 export class DT3DCard extends LitElement {
@@ -564,19 +565,15 @@ export class DT3DCard extends LitElement {
 			this.measurementMode === "distance" &&
 			this.measurementPoints.length === 2
 		) {
-			this.createDistanceMeasurementHelper();
+			this.createDistanceMeasurementHelper([...this.measurementPoints]);
 			this.measurementPoints = [];
 		} else if (
 			this.measurementMode === "angle" &&
 			this.measurementPoints.length === 3
 		) {
-			this.createAngleMeasurementHelper();
+			this.createAngleMeasurementHelper([...this.measurementPoints]);
 			this.measurementPoints = [];
 		} else {
-			if (!this.measurementHelpers) {
-				return;
-			}
-
 			this.measurementHelpers.clear();
 			this.measurementPoints.forEach((point) => {
 				this.measurementHelpers.add(this.createMeasurementMarker(point));
@@ -589,26 +586,28 @@ export class DT3DCard extends LitElement {
 	 *
 	 * Add to the measurementHelpers group.
 	 */
-	private createDistanceMeasurementHelper(): void {
-		if (this.measurementPoints.length < 2 || !this.measurementHelpers) {
-			return;
+	private createDistanceMeasurementHelper(points: Vector3[]): void {
+		if (points.length !== 2 || !this.measurementHelpers) {
+			throw new Error("Points must have length 2");
 		}
-
 		this.measurementHelpers.clear();
 
-		const color = new Color(getCSSVar('--ha-color-primary-60'));
+		const color = new Color(getCSSVar("--ha-color-primary-60"));
 
-		const [start, end] = this.measurementPoints;
+		const [start, end] = points;
 		this.measurementHelpers.add(this.createMeasurementMarker(start));
 		this.measurementHelpers.add(this.createMeasurementMarker(end));
 
 		const geometry = new BufferGeometry().setFromPoints([start, end]);
-		const line = new Line(geometry, new LineBasicMaterial({ color: color, linewidth: 10 }));
+		const line = new Line(
+			geometry,
+			new LineBasicMaterial({ color: color, linewidth: 10 }),
+		);
 		this.measurementHelpers.add(line);
 
 		const distance = start.distanceTo(end);
-		
-		const label = new SdfText(`Distance: ${distance.toFixed(2)}`);
+
+		const label = new TextSprite(`Distance: ${distance.toFixed(2)}`, 64);
 		label.position.copy(start.clone().add(end).multiplyScalar(0.5));
 		label.position.y += 0.2;
 
@@ -620,20 +619,22 @@ export class DT3DCard extends LitElement {
 	 *
 	 * Add to the measurementHelpers group.
 	 */
-	private createAngleMeasurementHelper(): void {
-		if (this.measurementPoints.length < 3 || !this.measurementHelpers) {
-			return;
+	private createAngleMeasurementHelper(points: Vector3[]): void {
+		if (points.length !== 3 || !this.measurementHelpers) {
+			throw new Error("Points must have length 3");
 		}
 
 		this.measurementHelpers.clear();
 
-		const [first, vertex, last] = this.measurementPoints;
+		const [first, vertex, last] = points;
+		// Points
 		this.measurementHelpers.add(this.createMeasurementMarker(first));
 		this.measurementHelpers.add(this.createMeasurementMarker(vertex));
 		this.measurementHelpers.add(this.createMeasurementMarker(last));
 
-		const color = new Color(getCSSVar('--ha-color-primary-60'));
+		const color = new Color(getCSSVar("--ha-color-primary-60"));
 
+		// Lines
 		const line1 = new Line(
 			new BufferGeometry().setFromPoints([vertex, first]),
 			new LineBasicMaterial({ color: color }),
@@ -651,7 +652,8 @@ export class DT3DCard extends LitElement {
 		const angle = Math.acos(MathUtils.clamp(v1.dot(v2), -1, 1));
 		const degrees = MathUtils.radToDeg(angle);
 
-		const label = new SdfText(`Angle: ${degrees.toFixed(1)}°`);
+		// Label
+		const label = new TextSDF(`Angle: ${degrees.toFixed(1)}°`);
 		label.position.copy(vertex);
 		label.position.y += 0.5;
 		this.measurementHelpers.add(label);
@@ -664,8 +666,8 @@ export class DT3DCard extends LitElement {
 	 * @returns - The marker mesh.
 	 */
 	private createMeasurementMarker(position: Vector3): Mesh {
-		const color = new Color(getCSSVar('--ha-color-primary-60'));
-		
+		const color = new Color(getCSSVar("--ha-color-primary-60"));
+
 		const geometry = new SphereGeometry(0.02, 16, 16);
 		const material = new MeshBasicMaterial({ color: color });
 		const marker = new Mesh(geometry, material);

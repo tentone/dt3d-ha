@@ -90,11 +90,21 @@ export class DT3DSidebar extends LitElement {
 			</div>
 			<div class="sidebar-section">
 				<div class="sidebar-title">Add</div>
-				<button @click=${() => this.handleAddObject("cube")}><ha-icon icon="mdi:cube-outline"></ha-icon></button>
-				<button @click=${() => this.handleAddObject("sphere")}><ha-icon icon="mdi:sphere"></ha-icon></button>
-				<button @click=${() => this.handleAddObject("plane")}><ha-icon icon="mdi:square-outline"></ha-icon></button>
-				<button @click=${() => this.handleAddObject("upload")}><ha-icon icon="mdi:upload-box-outline"></ha-icon></button>
-				<button @click=${() => this.handleAddObject("entity")}><ha-icon icon="mdi:state-machine"></ha-icon></button>
+				<button @click=${() => this.handleAddObject("cube")}>
+					<ha-icon icon="mdi:cube-outline"></ha-icon>
+				</button>
+				<button @click=${() => this.handleAddObject("sphere")}>
+					<ha-icon icon="mdi:sphere"></ha-icon>
+				</button>
+				<button @click=${() => this.handleAddObject("plane")}>
+					<ha-icon icon="mdi:square-outline"></ha-icon>
+				</button>
+				<button @click=${() => this.handleAddObject("upload")}>
+					<ha-icon icon="mdi:upload-box-outline"></ha-icon>
+				</button>
+				<button @click=${() => this.handleAddObject("entity")}>
+					<ha-icon icon="mdi:state-machine"></ha-icon>
+				</button>
 			</div>
 			<div class="sidebar-section">
 				<div class="sidebar-title">Measure</div>

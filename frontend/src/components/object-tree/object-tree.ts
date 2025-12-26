@@ -209,7 +209,7 @@ export class DT3DTree extends LitElement {
 
 	/**
 	 * Find the parent ID of a given child ID in the tree.
-	 * 
+	 *
 	 * @param nodes - Tree nodes.
 	 * @param childId - Child UUID
 	 * @param parentId - Parent UUID
@@ -237,7 +237,7 @@ export class DT3DTree extends LitElement {
 
 	/**
 	 * Check if ancestorId is an ancestor of nodeId in the tree.
-	 * 
+	 *
 	 * @param ancestorId - Ancestor ID
 	 * @param nodeId - Node ID
 	 */
@@ -384,8 +384,6 @@ export class DT3DTree extends LitElement {
 		this.dropTarget = null;
 	}
 
-
-
 	/**
 	 * Select a node by its ID, dispatching an event.
 	 *
@@ -471,10 +469,10 @@ export class DT3DTree extends LitElement {
 
 	/**
 	 * Render the drop zone of a element.
-	 * @param id 
-	 * @param position 
-	 * @param depth 
-	 * @returns 
+	 * @param id
+	 * @param position
+	 * @param depth
+	 * @returns
 	 */
 	private renderDropZone(id: UUID, position: DropPosition, depth: number): any {
 		if (!this.draggedId || (depth === 0 && position !== "inside")) {

@@ -1,4 +1,4 @@
-import { SdfText } from "./helpers/sdf-text.js";
+import { TextSDF } from "./helpers/text-sdf.js";
 import { CircleIconSprite } from "./helpers/circle-icon-sprite.js";
 import { EntityObject } from "./entity-object.js";
 
@@ -6,7 +6,7 @@ import { EntityObject } from "./entity-object.js";
  * Creates a entity sensor representation.
  */
 export class EntitySensor extends EntityObject {
-	public label: SdfText;
+	public label: TextSDF;
 
 	public constructor(entityId: string, entity: any) {
 		super(entityId);
@@ -15,7 +15,7 @@ export class EntitySensor extends EntityObject {
 		icon.position.y = 0.1;
 		this.add(icon);
 
-		this.label = new SdfText("Loading\n...");
+		this.label = new TextSDF("Loading\n...");
 		this.label.position.y = 0.45;
 		this.add(this.label);
 
