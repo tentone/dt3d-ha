@@ -21,6 +21,9 @@ export class DT3DObjectInspector extends LitElement {
 		return object instanceof EntityObject;
 	}
 
+	/**
+	 *
+	 */
 	private dispatchUpdated() {
 		this.dispatchEvent(
 			new CustomEvent("object-updated", {
@@ -39,6 +42,13 @@ export class DT3DObjectInspector extends LitElement {
 		this.dispatchUpdated();
 	}
 
+	/**
+	 * 
+	 * @param type 
+	 * @param axis 
+	 * @param event 
+	 * @returns 
+	 */
 	private handleVectorChange(
 		type: "position" | "scale",
 		axis: "x" | "y" | "z",
@@ -70,6 +80,13 @@ export class DT3DObjectInspector extends LitElement {
 		this.requestUpdate();
 	}
 
+	/**
+	 * Render a vector control element.
+	 * 
+	 * @param label - Label of the element. 
+	 * @param type - Type (position or scale)
+	 * @returns Rendered element.
+	 */
 	private renderVectorControls(label: string, type: "position" | "scale") {
 		if (!this.selectedObject) return null;
 
@@ -101,8 +118,15 @@ export class DT3DObjectInspector extends LitElement {
 		`;
 	}
 
+	/**
+	 * Render euler rotation controls.
+	 * 
+	 * @returns - Renderer element for rotation controls. 
+	 */
 	private renderRotationControls() {
-		if (!this.selectedObject) return null;
+		if (!this.selectedObject) {
+			return null;
+		}
 
 		return html`
 			<div class="field">
@@ -131,6 +155,7 @@ export class DT3DObjectInspector extends LitElement {
 	}
 
 	private renderEntityDetails() {
+		// Check if object is entity
 		if (!this.isEntityObject(this.selectedObject)) {
 			return null;
 		}

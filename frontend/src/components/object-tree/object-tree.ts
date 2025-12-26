@@ -97,7 +97,10 @@ export class DT3DTree extends LitElement {
 		}
 
 		this.width = this.resizeInitialSize + (this.resizeStartX - event.clientX);
-		this.style.width = this.width + "px";
+		
+		if (this.width > 50 && this.width < document.body.clientWidth / 2) {
+			this.style.width = this.width + "px";
+		}
 	};
 
 	/**
@@ -134,6 +137,8 @@ export class DT3DTree extends LitElement {
 	}
 
 	public connectedCallback(): void {
+		super.connectedCallback();
+
 		this.style.width = this.width + "px";
 	}
 
