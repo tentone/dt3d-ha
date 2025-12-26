@@ -607,7 +607,7 @@ export class DT3DCard extends LitElement {
 
 		const distance = start.distanceTo(end);
 
-		const label = new TextSprite(`Distance: ${distance.toFixed(2)}`, 64);
+		const label = new TextSprite(`Distance: ${distance.toFixed(2)}`, 32);
 		label.position.copy(start.clone().add(end).multiplyScalar(0.5));
 		label.position.y += 0.2;
 
@@ -653,7 +653,7 @@ export class DT3DCard extends LitElement {
 		const degrees = MathUtils.radToDeg(angle);
 
 		// Label
-		const label = new TextSDF(`Angle: ${degrees.toFixed(1)}°`);
+		const label = new TextSprite(`Angle: ${degrees.toFixed(1)}°`, 64);
 		label.position.copy(vertex);
 		label.position.y += 0.5;
 		this.measurementHelpers.add(label);

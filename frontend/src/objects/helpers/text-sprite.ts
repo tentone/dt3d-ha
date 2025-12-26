@@ -77,7 +77,7 @@ export class TextSprite extends Sprite {
 			baseline: options.baseline ?? "top",
 		};
 
-        this.scale.setScalar(0.2);
+        this.scale.setScalar(0.03);
         
 		this.setText(text);
 	}
@@ -97,6 +97,8 @@ export class TextSprite extends Sprite {
      */
 	private redraw() {
 		const ctx = this.ctx;
+		const canvas = this.canvas;
+
 		const {
 			fontFamily,
 			fontWeight,
@@ -131,6 +133,11 @@ export class TextSprite extends Sprite {
 		// Final canvas size in CSS px
 		const cssW = Math.max(1, textWidth + 2 * (pad + bw));
 		const cssH = Math.max(1, textHeight + 2 * (pad + bw));
+
+
+		// Set backing store size in real pixels for crisp rendering
+		canvas.width = Math.max(1, Math.ceil(cssW));
+		canvas.height = Math.max(1, Math.ceil(cssH));
 
 		// Clear
 		ctx.clearRect(0, 0, cssW, cssH);
