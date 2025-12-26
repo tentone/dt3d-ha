@@ -1,6 +1,6 @@
 import { Object3D } from "three";
-import { SdfText } from "./sdf-text.js";
-import { CircleIconSprite } from "./circle-icon-sprite.js";
+import { SdfText } from "./helpers/sdf-text.js";
+import { CircleIconSprite } from "./helpers/circle-icon-sprite.js";
 import { EntityObject } from "./entity-object.js";
 
 export class EntitySwitch extends EntityObject {

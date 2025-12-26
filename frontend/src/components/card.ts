@@ -17,6 +17,7 @@ import {
 	Line,
 	BufferGeometry,
 	LineBasicMaterial,
+	Color,
 } from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 import { TransformControls } from "three/examples/jsm/controls/TransformControls";
@@ -34,8 +35,9 @@ import { EntitySensor } from "../objects/entity-sensor.js";
 import { EntitySwitch } from "../objects/entity-switch.js";
 import { EntityObject } from "../objects/entity-object.js";
 import { DTObject } from "../objects/dt-object.js";
-import { SdfText } from "../objects/sdf-text.js";
+import { SdfText } from "../objects/helpers/sdf-text.js";
 import en from "../locale/en.json";
+import { getCSSVar } from "../utils.js";
 
 @customElement("dt3d-card")
 export class DT3DCard extends LitElement {
@@ -594,18 +596,22 @@ export class DT3DCard extends LitElement {
 
 		this.measurementHelpers.clear();
 
+		const color = new Color(getCSSVar('--ha-color-primary-60'));
+
 		const [start, end] = this.measurementPoints;
 		this.measurementHelpers.add(this.createMeasurementMarker(start));
 		this.measurementHelpers.add(this.createMeasurementMarker(end));
 
 		const geometry = new BufferGeometry().setFromPoints([start, end]);
-		const line = new Line(geometry, new LineBasicMaterial({ color: 0xffcc00 }));
+		const line = new Line(geometry, new LineBasicMaterial({ color: color, linewidth: 10 }));
 		this.measurementHelpers.add(line);
 
 		const distance = start.distanceTo(end);
+		
 		const label = new SdfText(`Distance: ${distance.toFixed(2)}`);
 		label.position.copy(start.clone().add(end).multiplyScalar(0.5));
 		label.position.y += 0.2;
+
 		this.measurementHelpers.add(label);
 	}
 
@@ -626,13 +632,15 @@ export class DT3DCard extends LitElement {
 		this.measurementHelpers.add(this.createMeasurementMarker(vertex));
 		this.measurementHelpers.add(this.createMeasurementMarker(last));
 
+		const color = new Color(getCSSVar('--ha-color-primary-60'));
+
 		const line1 = new Line(
 			new BufferGeometry().setFromPoints([vertex, first]),
-			new LineBasicMaterial({ color: 0x66ccff }),
+			new LineBasicMaterial({ color: color }),
 		);
 		const line2 = new Line(
 			new BufferGeometry().setFromPoints([vertex, last]),
-			new LineBasicMaterial({ color: 0x66ccff }),
+			new LineBasicMaterial({ color: color }),
 		);
 
 		this.measurementHelpers.add(line1);
@@ -656,10 +664,13 @@ export class DT3DCard extends LitElement {
 	 * @returns - The marker mesh.
 	 */
 	private createMeasurementMarker(position: Vector3): Mesh {
-		const markerGeometry = new SphereGeometry(0.05, 16, 16);
-		const markerMaterial = new MeshBasicMaterial({ color: 0xff0000 });
-		const marker = new Mesh(markerGeometry, markerMaterial);
+		const color = new Color(getCSSVar('--ha-color-primary-60'));
+		
+		const geometry = new SphereGeometry(0.02, 16, 16);
+		const material = new MeshBasicMaterial({ color: color });
+		const marker = new Mesh(geometry, material);
 		marker.position.copy(position);
+
 		return marker;
 	}
 

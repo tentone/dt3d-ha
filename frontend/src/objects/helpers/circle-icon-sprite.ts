@@ -1,7 +1,7 @@
 import { Sprite, Color, CanvasTexture, SpriteMaterial } from "three";
 
 /**
- *
+ * Icon with a gradient circle of a specific color.
  */
 export class CircleIconSprite extends Sprite {
 	public constructor(color: Color | number, size = 0.25) {
