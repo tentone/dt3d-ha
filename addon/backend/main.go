@@ -45,7 +45,7 @@ func main() {
 		log.Fatalf("failed to connect database: %v", err)
 	}
 
-	if err := db.AutoMigrate(&models.User{}, &models.Space{}, &models.ObjectInstance{}); err != nil {
+	if err := db.AutoMigrate(&models.Space{}, &models.ObjectInstance{}); err != nil {
 		log.Fatalf("failed to migrate database: %v", err)
 	}
 
