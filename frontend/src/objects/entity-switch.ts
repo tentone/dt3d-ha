@@ -2,6 +2,8 @@ import { Object3D } from "three";
 import { TextSDF } from "./helpers/text-sdf.js";
 import { CircleIconSprite } from "./helpers/circle-icon-sprite.js";
 import { EntityObject } from "./entity-object.js";
+import type { DTInteractionEvent } from "./dt-object.js";
+import { TextSprite } from "./helpers/text-sprite.js";
 
 export class EntitySwitch extends EntityObject {
 	public label: TextSDF;
@@ -14,7 +16,7 @@ export class EntitySwitch extends EntityObject {
 		this.icon.position.y = 0.1;
 		this.add(this.icon);
 
-		this.label = new TextSDF("Loading\n...");
+		this.label = new TextSprite("Loading\n...");
 		this.label.position.y = 0.45;
 		this.add(this.label);
 
@@ -29,11 +31,21 @@ export class EntitySwitch extends EntityObject {
 		this.refreshIcon(entity.state === "on");
 	}
 
-	public async handleClick(hass: any): Promise<void> {
+	public onInteraction(event: DTInteractionEvent): void {
+		if (event.type === "click") {
+			this.toggle((event as any).hass ?? null);
+		}
+	}
+
+	/**
+	 * Toggle the switch, called on click.
+	 * 
+	 * @param hass - HA data
+	 */
+	public async toggle(hass: any): Promise<void> {
+	
 		if (!hass?.callService) {
-			console.warn(
-				"DT3D: Unable to toggle switch; hass instance not available",
-			);
+			console.warn("DT3D: Unable to toggle switch; hass instance not available",);
 			return;
 		}
 

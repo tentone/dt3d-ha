@@ -607,7 +607,7 @@ export class DT3DCard extends LitElement {
 
 		const distance = start.distanceTo(end);
 
-		const label = new TextSprite(`Distance: ${distance.toFixed(2)}`, 32);
+		const label = new TextSprite(`Distance: ${distance.toFixed(2)}`);
 		label.position.copy(start.clone().add(end).multiplyScalar(0.5));
 		label.position.y += 0.2;
 

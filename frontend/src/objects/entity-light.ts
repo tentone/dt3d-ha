@@ -2,11 +2,20 @@ import { Color, PointLight } from "three";
 import { TextSDF } from "./helpers/text-sdf.js";
 import { CircleIconSprite } from "./helpers/circle-icon-sprite.js";
 import { EntityObject } from "./entity-object.js";
+import { TextSprite } from "./helpers/text-sprite.js";
 
 export class EntityLight extends EntityObject {
 	private icon: CircleIconSprite;
+	
+	/**
+	 * Point light to represent the light.
+	 */
 	private pointLight: PointLight;
-	private label: TextSDF;
+
+	/**
+	 * Label with name of the entity.
+	 */
+	private label: TextSprite;
 
 	public constructor(entityId: string, entity: any) {
 		super(entityId);
@@ -19,13 +28,18 @@ export class EntityLight extends EntityObject {
 		this.pointLight.position.y = 0.4;
 		this.add(this.pointLight);
 
-		this.label = new TextSDF(entity.attributes?.friendly_name ?? entityId);
+		this.label = new TextSprite(entity.attributes?.friendly_name ?? entityId);
 		this.label.position.y = 0.6;
 		this.add(this.label);
 
 		this.setEntity(entity);
 	}
 
+	/**
+	 * Update the color of the light based on entity value.
+	 * 
+	 * @param entity 
+	 */
 	protected updateFromEntity(entity: any): void {
 		const color = EntityLight.getLightColor(entity);
 		this.icon.setColor(color.getHex());

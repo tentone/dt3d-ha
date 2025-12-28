@@ -30,7 +30,12 @@ export class DTObject extends Group {
 	/**
 	 * Indicates if the object has been initialized.
 	 */
-	private initialized: boolean = false;
+	public initialized: boolean = false;
+
+	/**
+	 * Indicates that it is a digital twin object.
+	 */
+	public isDTObject: boolean = true;
 
 	/**
 	 * Called once when the object is first added to the scene.

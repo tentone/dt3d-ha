@@ -4,11 +4,19 @@ import { DTInteractionEvent, DTObject } from "./dt-object.js";
  * Base 3D representation for Home Assistant entities.
  */
 export abstract class EntityObject extends DTObject {
+	/**
+	 * ID of the HA entity associated.
+	 */
 	public readonly entityId: string;
+	
+	/**
+	 * Entity data.
+	 */
 	private entityData: any;
 
 	protected constructor(entityId: string, entity?: any) {
 		super();
+
 		this.entityId = entityId;
 		this.name = entityId;
 
@@ -30,21 +38,6 @@ export abstract class EntityObject extends DTObject {
 	 */
 	public getEntity(): any {
 		return this.entityData;
-	}
-
-	/**
-	 * Handle pointer click interaction.
-	 * Subclasses can override this to perform entity-specific actions.
-	 */
-	// eslint-disable-next-line @typescript-eslint/no-unused-vars
-	public handleClick(_hass: any): void {
-		// Default: no-op
-	}
-
-	public onInteraction(event: DTInteractionEvent): void {
-		if (event.type === "click") {
-			this.handleClick((event as any).hass ?? null);
-		}
 	}
 
 	/**

@@ -12,4 +12,7 @@ export default defineConfig({
 			treeshake: "recommended",
 		},
 	},
+	define: {
+		DT3D_BUILD_TIMESTAMP: new Date(),
+	}
 });

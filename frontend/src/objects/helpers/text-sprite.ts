@@ -32,11 +32,11 @@ export class TextSprite extends Sprite {
 
 	private text: string;
 
-	private size: number; // font size in CSS px
+	private resolution: number; // font size in CSS px
 
-	private opts: Required<TextSpriteOptions>;
+	private options: Required<TextSpriteOptions>;
 
-	public constructor(text: string,size: number,options: TextSpriteOptions = {},) {
+	public constructor(text: string,resolution: number = 64,options: TextSpriteOptions = {},) {
 		const canvas = document.createElement("canvas");
 		const ctx = canvas.getContext("2d");
 		if (!ctx) {
@@ -62,9 +62,9 @@ export class TextSprite extends Sprite {
 		this.texture = texture;
 
 		this.text = text;
-		this.size = size;
+		this.resolution = resolution;
 
-		this.opts = {
+		this.options = {
 			fontFamily: options.fontFamily ?? "sans-serif",
 			fontWeight: options.fontWeight ?? "normal",
 			color: options.color ?? "#ffffff",
@@ -76,8 +76,6 @@ export class TextSprite extends Sprite {
 			align: options.align ?? "left",
 			baseline: options.baseline ?? "top",
 		};
-
-        this.scale.setScalar(0.03);
         
 		this.setText(text);
 	}
@@ -110,10 +108,10 @@ export class TextSprite extends Sprite {
 			borderWidth,
 			align,
 			baseline,
-		} = this.opts;
+		} = this.options;
 
 		// Configure font for measuring
-		const font = `${fontWeight} ${this.size}px ${fontFamily}`;
+		const font = `${fontWeight} ${this.resolution}px ${fontFamily}`;
 		ctx.font = font;
 		ctx.textAlign = align;
 		ctx.textBaseline = baseline;
@@ -123,8 +121,8 @@ export class TextSprite extends Sprite {
 
 		// Prefer bounding boxes if available; otherwise estimate from font size
 		const textWidth = Math.ceil((metrics.actualBoundingBoxLeft ?? 0) + (metrics.actualBoundingBoxRight ?? metrics.width),);
-		const ascent = metrics.actualBoundingBoxAscent ?? this.size * 0.8;
-		const descent = metrics.actualBoundingBoxDescent ?? this.size * 0.2;
+		const ascent = metrics.actualBoundingBoxAscent ?? this.resolution * 0.8;
+		const descent = metrics.actualBoundingBoxDescent ?? this.resolution * 0.2;
 		const textHeight = Math.ceil(ascent + descent);
 
 		const pad = padding;
@@ -133,7 +131,6 @@ export class TextSprite extends Sprite {
 		// Final canvas size in CSS px
 		const cssW = Math.max(1, textWidth + 2 * (pad + bw));
 		const cssH = Math.max(1, textHeight + 2 * (pad + bw));
-
 
 		// Set backing store size in real pixels for crisp rendering
 		canvas.width = Math.max(1, Math.ceil(cssW));
@@ -200,9 +197,9 @@ export class TextSprite extends Sprite {
 		// Update texture and sprite scale
 		this.texture.needsUpdate = true;
 
-		// Sprite scale in world units:
-		// Common approach: 1 world unit per CSS px (you can change this by multiplying)
+		// Sprite scale in world units
 		this.scale.set(cssW, cssH, 1);
+		this.scale.multiplyScalar(0.005);
 	}
 
     /**
@@ -216,7 +213,7 @@ export class TextSprite extends Sprite {
      * @param r - Radius of the corners
      */
 	private roundRect(
-ctx: CanvasRenderingContext2D,
+		ctx: CanvasRenderingContext2D,
 		x: number,
 		y: number,
 		w: number,
