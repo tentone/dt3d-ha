@@ -72,9 +72,8 @@ export class DT3DSidebar extends LitElement {
 			<button
 				class="collapse-btn"
 				@click=${this.toggleCollapse}
-				title="Collapse sidebar"
-			>
-				${this.collapsed ? "⮞" : "⮜"}
+				title="Collapse sidebar">
+			${this.collapsed ?  html`<ha-icon icon="mdi:arrow-right-drop-circle-outline"></ha-icon>` :  html`<ha-icon icon="mdi:arrow-left-drop-circle-outline"></ha-icon>`}
 			</button>
 			<div class="sidebar-section">
 				<div class="sidebar-title">Controls</div>
@@ -106,6 +105,7 @@ export class DT3DSidebar extends LitElement {
 					<ha-icon icon="mdi:state-machine"></ha-icon>
 				</button>
 			</div>
+			<!-- --ha-color-primary-30) -->
 			<div class="sidebar-section">
 				<div class="sidebar-title">Measure</div>
 				<button @click=${() => this.handleMeasurementSelect("distance")}>

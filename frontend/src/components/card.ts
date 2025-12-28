@@ -18,6 +18,9 @@ import {
 	BufferGeometry,
 	LineBasicMaterial,
 	Color,
+	MeshStandardMaterial,
+	AmbientLight,
+	DirectionalLight,
 } from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 import { TransformControls } from "three/examples/jsm/controls/TransformControls";
@@ -39,6 +42,9 @@ import { TextSDF } from "../objects/helpers/text-sdf.js";
 import en from "../locale/en.json";
 import { getCSSVar } from "../utils.js";
 import { TextSprite } from "../objects/helpers/text-sprite.js";
+import { Marker } from "../objects/measurement/marker.js";
+import { AngleMeasurement } from "../objects/measurement/angle.js";
+import { DistanceMeasurement } from "../objects/measurement/distance.js";
 
 @customElement("dt3d-card")
 export class DT3DCard extends LitElement {
@@ -565,115 +571,24 @@ export class DT3DCard extends LitElement {
 			this.measurementMode === "distance" &&
 			this.measurementPoints.length === 2
 		) {
-			this.createDistanceMeasurementHelper([...this.measurementPoints]);
+			const points = [...this.measurementPoints];
+			this.measurementHelpers.clear();
+			this.measurementHelpers.add(new DistanceMeasurement(points));
 			this.measurementPoints = [];
 		} else if (
 			this.measurementMode === "angle" &&
 			this.measurementPoints.length === 3
 		) {
-			this.createAngleMeasurementHelper([...this.measurementPoints]);
+			const points = [...this.measurementPoints];
+			this.measurementHelpers.clear();
+			this.measurementHelpers.add(new AngleMeasurement(points));
 			this.measurementPoints = [];
 		} else {
 			this.measurementHelpers.clear();
 			this.measurementPoints.forEach((point) => {
-				this.measurementHelpers.add(this.createMeasurementMarker(point));
+				this.measurementHelpers.add(new Marker(point));
 			});
 		}
-	}
-
-	/**
-	 * Display the distance measurement between two points.
-	 *
-	 * Add to the measurementHelpers group.
-	 */
-	private createDistanceMeasurementHelper(points: Vector3[]): void {
-		if (points.length !== 2 || !this.measurementHelpers) {
-			throw new Error("Points must have length 2");
-		}
-		this.measurementHelpers.clear();
-
-		const color = new Color(getCSSVar("--ha-color-primary-60"));
-
-		const [start, end] = points;
-		this.measurementHelpers.add(this.createMeasurementMarker(start));
-		this.measurementHelpers.add(this.createMeasurementMarker(end));
-
-		const geometry = new BufferGeometry().setFromPoints([start, end]);
-		const line = new Line(
-			geometry,
-			new LineBasicMaterial({ color: color, linewidth: 10 }),
-		);
-		this.measurementHelpers.add(line);
-
-		const distance = start.distanceTo(end);
-
-		const label = new TextSprite(`Distance: ${distance.toFixed(2)}`);
-		label.position.copy(start.clone().add(end).multiplyScalar(0.5));
-		label.position.y += 0.2;
-
-		this.measurementHelpers.add(label);
-	}
-
-	/**
-	 * Create and display the angle measurement between three points.
-	 *
-	 * Add to the measurementHelpers group.
-	 */
-	private createAngleMeasurementHelper(points: Vector3[]): void {
-		if (points.length !== 3 || !this.measurementHelpers) {
-			throw new Error("Points must have length 3");
-		}
-
-		this.measurementHelpers.clear();
-
-		const [first, vertex, last] = points;
-		// Points
-		this.measurementHelpers.add(this.createMeasurementMarker(first));
-		this.measurementHelpers.add(this.createMeasurementMarker(vertex));
-		this.measurementHelpers.add(this.createMeasurementMarker(last));
-
-		const color = new Color(getCSSVar("--ha-color-primary-60"));
-
-		// Lines
-		const line1 = new Line(
-			new BufferGeometry().setFromPoints([vertex, first]),
-			new LineBasicMaterial({ color: color }),
-		);
-		const line2 = new Line(
-			new BufferGeometry().setFromPoints([vertex, last]),
-			new LineBasicMaterial({ color: color }),
-		);
-
-		this.measurementHelpers.add(line1);
-		this.measurementHelpers.add(line2);
-
-		const v1 = first.clone().sub(vertex).normalize();
-		const v2 = last.clone().sub(vertex).normalize();
-		const angle = Math.acos(MathUtils.clamp(v1.dot(v2), -1, 1));
-		const degrees = MathUtils.radToDeg(angle);
-
-		// Label
-		const label = new TextSprite(`Angle: ${degrees.toFixed(1)}°`, 64);
-		label.position.copy(vertex);
-		label.position.y += 0.5;
-		this.measurementHelpers.add(label);
-	}
-
-	/**
-	 * Create a marker for measurement.
-	 *
-	 * @param position - Position of the marker.
-	 * @returns - The marker mesh.
-	 */
-	private createMeasurementMarker(position: Vector3): Mesh {
-		const color = new Color(getCSSVar("--ha-color-primary-60"));
-
-		const geometry = new SphereGeometry(0.02, 16, 16);
-		const material = new MeshBasicMaterial({ color: color });
-		const marker = new Mesh(geometry, material);
-		marker.position.copy(position);
-
-		return marker;
 	}
 
 	/**
@@ -730,8 +645,13 @@ export class DT3DCard extends LitElement {
 		this.scene = new Scene();
 
 		this.measurementHelpers = new Group();
-		this.measurementHelpers.name = "Measurements";
 		this.scene.add(this.measurementHelpers);
+
+		this.scene.add(new AmbientLight(0xbbbbbb));
+
+		const directional = new DirectionalLight(0xcccccc);
+		directional.position.set(200, 1000, 300);
+		this.scene.add(directional);
 
 		this.home = new Group();
 		this.scene.add(this.home);
@@ -768,9 +688,9 @@ export class DT3DCard extends LitElement {
 			const type = e.detail.type;
 
 			let object: Mesh = null;
-			const material = new MeshBasicMaterial({
-				color: 0x00ffff,
-				wireframe: true,
+			const material = new MeshStandardMaterial({
+				color: Math.floor(Math.random() * 0xffffff),
+				wireframe: false,
 			});
 
 			if (type === "cube") {
@@ -797,7 +717,7 @@ export class DT3DCard extends LitElement {
 				this.selectFile();
 			}
 			if (type === "entity") {
-				this.addEntity();
+				this.addEntityModal();
 			}
 		});
 
@@ -996,15 +916,15 @@ export class DT3DCard extends LitElement {
 	 *
 	 * The entities list is fetched from Home Assistant.
 	 */
-	public addEntity(): void {
+	public addEntityModal(): void {
 		const states = this.hassInstance.states;
 		console.log("DT3D: Available entities:", states);
 
 		const dialog = document.createElement("div");
 		dialog.style.cssText = `
-						position: absolute;
-						top: 50%;
-						left: 50%;
+			position: absolute;
+			top: 50%;
+			left: 50%;
 			transform: translate(-50%, -50%);
 			background: var(--ha-color-neutral-10);
 			padding: 20px;

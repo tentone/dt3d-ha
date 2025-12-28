@@ -30,10 +30,19 @@ export class TextSprite extends Sprite {
 
 	private readonly texture: CanvasTexture;
 
+	/**
+	 * Text to be displayed.
+	 */
 	private text: string;
 
-	private resolution: number; // font size in CSS px
+	/**
+	 * Resolution of the canvas.
+	 */
+	private resolution: number;
 
+	/**
+	 * Text font options.
+	 */
 	private options: Required<TextSpriteOptions>;
 
 	public constructor(text: string,resolution: number = 64,options: TextSpriteOptions = {},) {
@@ -53,6 +62,7 @@ export class TextSprite extends Sprite {
 			map: texture,
 			transparent: true,
 			depthWrite: false,
+			sizeAttenuation: false
 		});
 
 		super(material);
@@ -199,7 +209,7 @@ export class TextSprite extends Sprite {
 
 		// Sprite scale in world units
 		this.scale.set(cssW, cssH, 1);
-		this.scale.multiplyScalar(0.005);
+		this.scale.multiplyScalar(0.001);
 	}
 
     /**
