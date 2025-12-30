@@ -402,6 +402,11 @@ export class DT3DCard extends LitElement {
 		this.tree.updateTreeFromScene(this.home, true);
 	}
 
+	/**
+	 * Clone a object in the scene.
+	 * 
+	 * @param objectId - Object ID
+	 */
 	private cloneObject(objectId: string): void {
 		if (!this.home) {
 			return;
@@ -429,16 +434,29 @@ export class DT3DCard extends LitElement {
 		this.tree.updateTreeFromScene(this.home);
 	}
 
+	/**
+	 * Measurement mode.
+	 * 
+	 * @param mode - Measurement mode to be used.
+	 */
 	private setMeasurementMode(mode: "distance" | "angle" | "none"): void {
 		this.measurementMode = mode;
 		this.clearMeasurements();
 	}
 
+	/**
+	 * Clear the measurements.
+	 */
 	private clearMeasurements(): void {
 		this.measurementPoints = [];
 		this.measurementHelpers?.clear();
 	}
 
+	/**
+	 * Add a new measurement point.
+	 * 
+	 * @param event - Mouse event.
+	 */
 	private processMeasurementClick(event: MouseEvent): void {
 		if (
 			this.measurementMode === "none" ||
@@ -647,9 +665,9 @@ export class DT3DCard extends LitElement {
 		this.measurementHelpers = new Group();
 		this.scene.add(this.measurementHelpers);
 
-		this.scene.add(new AmbientLight(0xbbbbbb));
+		this.scene.add(new AmbientLight(0xBBBBBB));
 
-		const directional = new DirectionalLight(0xcccccc);
+		const directional = new DirectionalLight(0xEEEEEE);
 		directional.position.set(200, 1000, 300);
 		this.scene.add(directional);
 
