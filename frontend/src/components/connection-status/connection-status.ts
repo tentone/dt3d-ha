@@ -1,6 +1,7 @@
 import { html, LitElement, unsafeCSS } from "lit";
-import { customElement } from "lit/decorators.js";
+import { customElement, property } from "lit/decorators.js";
 import componentStyles from "./connection-status.css?inline";
+import {DT3D_BUILD_TIMESTAMP} from "../../../vite-env.d.ts";
 
 @customElement("connection-status")
 export class ConnectionStatus extends LitElement {
@@ -12,24 +13,34 @@ export class ConnectionStatus extends LitElement {
 
     public port: number = 8080;
 
+	@property()
+	public msg: string = 'Waiting...';
+
+	/**
+	 * Flag to define if the comunication was successfull or not.
+	 */
+	@property()
+	public success: boolean = true;
+
     public connectedCallback(): void {
         super.connectedCallback();
 
 		fetch(`http://localhost:${this.port}/api/hello`)
 			.then((r) => r.text())
 			.then((text) => {
-				this.setAttribute('class', 'connection-status-success');
-				this.textContent = text;
+				this.msg = text;
+				this.success = true;
 			})
 			.catch(() => {
-				this.setAttribute('class', 'connection-status-error');
-				this.textContent = `Failed to reach backend on port ${this.port}`;
+				this.msg = `Failed to reach backend on port ${this.port}`;
+				this.success = false;
 
 			});
     }
 
 	public render() {
-		return html`<div>
+		return html`<div style="margin: 5px;" class="${this.success ? 'connection-status-success' : 'connection-status-error'}">
+			${this.msg}<br>${DT3D_BUILD_TIMESTAMP}
 		</div>`;
 	}
 }

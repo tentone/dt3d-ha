@@ -72,18 +72,13 @@ button {
 }
 
 .transform-btn.selected {
-	background: color-mix(in srgb, var(--ha-color-primary-60) 80%, var(--ha-color-neutral-05));
-	box-shadow:
-		0 2px 6px color-mix(in srgb, var(--ha-color-primary-60) 35%, transparent),
-		0 0 0 2px color-mix(in srgb, var(--ha-color-primary-60) 50%, transparent) inset;
+	background: var(--ha-color-primary-30);
 }
 
 button:hover {
-	background: var(--ha-color-primary-60);
-	transform: translateY(-1px);
+	background: var(--ha-color-primary-40);
 }
 
 button:active {
-	background: var(--ha-color-primary-60);
-	transform: translateY(0);
+	background: var(--ha-color-primary-40);
 }
