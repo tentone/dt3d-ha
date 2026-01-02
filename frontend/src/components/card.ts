@@ -33,6 +33,7 @@ import { EntityLight } from "../objects/entity-light.js";
 import { EntitySensor } from "../objects/entity-sensor.js";
 import { EntitySwitch } from "../objects/entity-switch.js";
 import { EntityObject } from "../objects/entity-object.js";
+import { DT3DAddEntityModal } from "./add-entity-modal.js";
 import { DTObject } from "../objects/dt-object.js";
 import en from "../locale/en.json";
 import { Marker } from "../objects/measurement/marker.js";
@@ -899,102 +900,24 @@ export class DT3DCard extends LitElement {
 	 * The entities list is fetched from Home Assistant.
 	 */
 	public addEntityModal(): void {
-		const states = this.hassInstance.states;
-		console.log("DT3D: Available entities:", states);
+		const modal = document.createElement(
+			"dt3d-add-entity-modal",
+		) as DT3DAddEntityModal;
 
-		const dialog = document.createElement("div");
-		dialog.style.cssText = `
-			position: absolute;
-			top: 50%;
-			left: 50%;
-			transform: translate(-50%, -50%);
-			background: var(--ha-color-neutral-10);
-			padding: 20px;
-			border-radius: 10px;
-			box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
-			z-index: 1000;
-		`;
+		modal.states = this.hassInstance?.states ?? {};
 
-		const title = document.createElement("h3");
-		title.textContent = "Select an Entity";
-		dialog.appendChild(title);
+		const removeModal = () => modal.remove();
 
-		const searchInput = document.createElement("input");
-		searchInput.type = "search";
-		searchInput.placeholder = "Search entities...";
-		searchInput.style.cssText = `
-						width: 100%;
-						padding: 6px 8px;
-						margin: 8px 0 12px 0;
-						border-radius: 6px;
-						border: 1px solid var(--ha-color-border);
-						background: var(--ha-color-neutral-05);
-						color: var(--ha-color-neutral-95);
-				`;
-
-		dialog.appendChild(searchInput);
-
-		const list = document.createElement("ul");
-		list.style.cssText = `
-						list-style: none;
-						padding: 0;
-						margin: 10px 0;
-						max-height: 200px;
-						overflow-y: auto;
-				`;
-
-		const listItems: HTMLLIElement[] = [];
-
-		Object.keys(states).forEach((entityId) => {
-			const listItem = document.createElement("li");
-			listItem.style.cssText = `
-								padding: 5px;
-								cursor: pointer;
-								border-bottom: 1px solid #ccc;
-						`;
-
-			listItem.textContent = entityId;
-			listItem.dataset.entityId = entityId.toLowerCase();
-			listItem.addEventListener("click", () => {
-				this.addEntityToScene(entityId);
-				dialog.remove();
-			});
-
-			listItems.push(listItem);
-			list.appendChild(listItem);
+		modal.addEventListener("entity-selected", (event: Event) => {
+			const { entityId } = (event as CustomEvent<{ entityId: string }>)
+				.detail;
+			this.addEntityToScene(entityId);
+			removeModal();
 		});
 
-		// Auxiliar function to filter the list of options.
-		const filterList = () => {
-			const query = searchInput.value.trim().toLowerCase();
-			listItems.forEach((item) => {
-				const match = !query || item.dataset.entityId?.includes(query);
-				item.style.display = match ? "" : "none";
-			});
-		};
+		modal.addEventListener("modal-close", removeModal);
 
-		searchInput.addEventListener("input", filterList);
-
-		dialog.appendChild(list);
-
-		const cancelButton = document.createElement("button");
-		cancelButton.textContent = "Cancel";
-		cancelButton.style.cssText = `
-			margin-top: 10px;
-			padding: 5px 10px;
-			background: var(--ha-color-red-40);
-			color: white;
-			border: none;
-			border-radius: 5px;
-			cursor: pointer;
-		`;
-
-		cancelButton.addEventListener("click", () => {
-			dialog.remove();
-		});
-
-		dialog.appendChild(cancelButton);
-		this.content.appendChild(dialog);
+		this.content.appendChild(modal);
 	}
 
 	/**
