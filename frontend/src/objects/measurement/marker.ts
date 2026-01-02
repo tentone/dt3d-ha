@@ -1,5 +1,5 @@
 import { Mesh, Color, SphereGeometry, MeshBasicMaterial, Vector3 } from "three";
-import { getCSSVar } from "../../utils";
+import { getCSSVar } from "../../utils/css-utils";
 
 export class Marker extends Mesh {
     /**

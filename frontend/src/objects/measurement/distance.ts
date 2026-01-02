@@ -1,5 +1,5 @@
 import { Group, Vector3, Color, Line, BufferGeometry, LineBasicMaterial } from "three";
-import { getCSSVar } from "../../utils";
+import { getCSSVar } from "../../utils/css-utils";
 import { TextSprite } from "../helpers/text-sprite";
 import { Marker } from "./marker";
 
