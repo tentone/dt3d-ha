@@ -1,3 +1,4 @@
+import type { Scene, Camera, WebGLRenderer } from "three";
 import { CSS3DObject } from "three/examples/jsm/renderers/CSS3DRenderer.js";
 
 export type CSSTextOptions = {
@@ -9,33 +10,30 @@ export type CSSTextOptions = {
  * Text rendered via CSS3DRenderer using DOM elements.
  */
 export class CSSText extends CSS3DObject {
-	private readonly element: HTMLDivElement;
+	public element: HTMLDivElement;
 
 	public constructor(text: string, options: CSSTextOptions = {}) {
 		const element = document.createElement("div");
-		element.className = options.className ?? "dt3d-css-text";
-		element.textContent = text;
-
-		element.style.position = "absolute";
-		element.style.padding = "4px 8px";
-		element.style.borderRadius = "8px";
-		element.style.background = "rgba(0, 0, 0, 0.7)";
-		element.style.color = "#ffffff";
-		element.style.fontSize = "12px";
-		element.style.fontWeight = "600";
-		element.style.whiteSpace = "nowrap";
-		element.style.pointerEvents = "none";
-		element.style.boxShadow = "0 2px 6px rgba(0, 0, 0, 0.35)";
 
 		super(element);
 
-		this.element = element;
+		this.element.style.transformStyle =  "preserve-3d";
+		this.element.style.backfaceVisibility = "hidden";
+		this.element.style.willChange = "transform";
 
-		this.applyStyle(options.style);
+		this.element.style.padding = "4px 8px";
+		this.element.style.borderRadius = "8px";
+		this.element.style.color = "#ffffff";
+		this.element.style.fontSize = "12px";
+		this.element.style.fontWeight = "600";
+		this.element.style.whiteSpace = "nowrap";
+		this.element.style.pointerEvents = "none";
+		this.element.style.boxShadow = "0 2px 6px rgba(0, 0, 0, 0.35)";
+		this.element.textContent = text;
 
-		this.onBeforeRender = (_renderer, _scene, camera) => {
-			this.quaternion.copy(camera.quaternion);
-		};
+		if (options?.style) {
+			this.applyStyle(options.style);
+		}
 	}
 
 	/**

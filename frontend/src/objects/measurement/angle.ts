@@ -49,20 +49,14 @@ export class AngleMeasurement extends Group {
 		const angle = Math.acos(MathUtils.clamp(v1.dot(v2), -1, 1));
 		const degrees = MathUtils.radToDeg(angle);
 
-		// Label
-		const labelColor = getCSSVar("--ha-color-primary-95").trim() || "#ffffff";
-		const labelBackground =
-			getCSSVar("--ha-color-primary-10").trim() || "rgba(0, 0, 0, 0.7)";
-		const labelBorder =
-			getCSSVar("--ha-color-primary-50").trim() || "rgba(255, 255, 255, 0.3)";
-
 		const label = new CSSText(`${degrees.toFixed(1)}°`, {
 			style: {
-				color: labelColor,
-				background: labelBackground,
-				border: `1px solid ${labelBorder}`,
+				color: getCSSVar("--ha-color-primary-95"),
+				background: getCSSVar("--ha-color-primary-10"),
+				border: `1px solid ${getCSSVar("--ha-color-primary-50")}`,
 			},
 		});
+		label.scale.setScalar(0.2);
 		label.position.copy(vertex);
 		label.position.y += 0.5;
 		this.add(label);

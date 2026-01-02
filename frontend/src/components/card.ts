@@ -450,7 +450,10 @@ export class DT3DCard extends LitElement {
 	 */
 	private clearMeasurements(): void {
 		this.measurementPoints = [];
-		this.measurementHelpers?.clear();
+		
+
+		this.measurementHelpers.clear();
+
 	}
 
 	/**
@@ -661,14 +664,21 @@ export class DT3DCard extends LitElement {
 		`;
 		this.content.appendChild(this.canvas);
 
-		this.cssRenderer = new CSS3DRenderer();
+		const cssElem = document.createElement("div");
+		cssElem.style.cssText = `
+			position: absolute;
+			top: 0;
+			left: 0;
+			width: ${width}px;
+			height: ${height}px;
+			border-radius: 10px;
+			pointer-events: none;
+		`;
+		this.content.appendChild(cssElem);
+
+		this.cssRenderer = new CSS3DRenderer({element: cssElem});
 		this.cssRenderer.setSize(width, height);
-		this.cssRenderer.domElement.style.position = "absolute";
-		this.cssRenderer.domElement.style.top = "0";
-		this.cssRenderer.domElement.style.left = "0";
-		this.cssRenderer.domElement.style.pointerEvents = "none";
-		this.cssRenderer.domElement.style.borderRadius = "10px";
-		this.content.appendChild(this.cssRenderer.domElement);
+
 
 		this.scene = new Scene();
 

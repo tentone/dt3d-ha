@@ -36,19 +36,14 @@ export class DistanceMeasurement extends Group {
 
 		const distance = start.distanceTo(end);
 
-		const labelColor = getCSSVar("--ha-color-primary-95").trim() || "#ffffff";
-		const labelBackground =
-			getCSSVar("--ha-color-primary-10").trim() || "rgba(0, 0, 0, 0.7)";
-		const labelBorder =
-			getCSSVar("--ha-color-primary-50").trim() || "rgba(255, 255, 255, 0.3)";
-
 		const label = new CSSText(`${distance.toFixed(2)}m`, {
 			style: {
-				color: labelColor,
-				background: labelBackground,
-				border: `1px solid ${labelBorder}`,
+				color: getCSSVar("--ha-color-primary-95"),
+				background: getCSSVar("--ha-color-primary-10"),
+				border: `1px solid ${getCSSVar("--ha-color-primary-50")}`,
 			},
 		});
+		label.scale.setScalar(0.2);
 		label.position.copy(start.clone().add(end).multiplyScalar(0.5));
 		label.position.y += 0.2;
 
