@@ -14,10 +14,6 @@ import {
 	Vector3,
 	Object3D,
 	Intersection,
-	Line,
-	BufferGeometry,
-	LineBasicMaterial,
-	Color,
 	MeshStandardMaterial,
 	AmbientLight,
 	DirectionalLight,
@@ -38,10 +34,7 @@ import { EntitySensor } from "../objects/entity-sensor.js";
 import { EntitySwitch } from "../objects/entity-switch.js";
 import { EntityObject } from "../objects/entity-object.js";
 import { DTObject } from "../objects/dt-object.js";
-import { TextSDF } from "../objects/helpers/text-sdf.js";
 import en from "../locale/en.json";
-import { getCSSVar } from "../utils.js";
-import { TextSprite } from "../objects/helpers/text-sprite.js";
 import { Marker } from "../objects/measurement/marker.js";
 import { AngleMeasurement } from "../objects/measurement/angle.js";
 import { DistanceMeasurement } from "../objects/measurement/distance.js";
@@ -889,42 +882,8 @@ export class DT3DCard extends LitElement {
 
 			this.renderer.setSize(width, height, false);
 		});
+		
 		resizeDetector.observe(this.container, { box: "border-box" });
-
-		fetch(`http://localhost:${port}/api/hello`)
-			.then((r) => r.text())
-			.then((text) => {
-				const msg = document.createElement("p");
-				msg.style.cssText = `
-					color: white;
-					z-index: 10;
-					position: absolute;
-					top: 10px;
-					right: 10px;
-					background: rgba(0,0,0,0.5);
-					padding: 5px;
-					border-radius: 5px;
-				`;
-
-				msg.textContent = text;
-				this.content.appendChild(msg);
-			})
-			.catch(() => {
-				const err = document.createElement("p");
-				err.style.cssText = `
-					color: red;
-					z-index: 10;
-					position: absolute;
-					bottom: 10px;
-					right: 10px;
-					background: rgba(0,0,0,0.5);
-					padding: 5px;
-					border-radius: 5px;
-				`;
-
-				err.textContent = `Failed to reach backend on port ${port}`;
-				this.content.appendChild(err);
-			});
 	}
 
 	/**
