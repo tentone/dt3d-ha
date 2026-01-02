@@ -38,6 +38,7 @@ import en from "../locale/en.json";
 import { Marker } from "../objects/measurement/marker.js";
 import { AngleMeasurement } from "../objects/measurement/angle.js";
 import { DistanceMeasurement } from "../objects/measurement/distance.js";
+import { ConnectionStatus } from "./connection-status/connection-status.js";
 
 @customElement("dt3d-card")
 export class DT3DCard extends LitElement {
@@ -685,6 +686,10 @@ export class DT3DCard extends LitElement {
 		`;
 		this.content.appendChild(this.tree);
 
+		const connection = document.createElement('connection-status') as ConnectionStatus;
+		connection.port = port;
+		this.content.appendChild(connection);
+
 		this.sidebar.addEventListener("transform-tool-selected", (e: any) => {
 			const tool = e.detail.tool;
 			this.transform.setMode(tool);
@@ -770,9 +775,9 @@ export class DT3DCard extends LitElement {
 
 		// Add a cube
 		const geometry = new BoxGeometry();
-		const material = new MeshBasicMaterial({
+		const material = new MeshStandardMaterial({
 			color: 0xffff00,
-			wireframe: true,
+			wireframe: false,
 		});
 		const cube = new Mesh(geometry, material);
 		this.transform.attach(cube);
