@@ -1,0 +1,20 @@
+:host {
+	display: block;
+	width: 130px;
+	height: 50px;
+	background: rgba(0,0,0,0.5);
+	border-radius: 5px;
+	position: absolute;
+	bottom: 10px;
+	left: 10px;
+	z-index: 100;
+}
+
+
+.connection-status-success {
+	color: white;
+}
+
+.connection-status-error {
+	color: red;
+}

@@ -25,6 +25,7 @@ export class EntityLight extends EntityObject {
 		this.add(this.icon);
 
 		this.pointLight = new PointLight(0x555555, 0, 6, 2);
+		this.pointLight.castShadow = true;
 		this.pointLight.position.y = 0.4;
 		this.add(this.pointLight);
 

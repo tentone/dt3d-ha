@@ -13,10 +13,12 @@ export class DT3DSidebar extends LitElement {
 
 	static properties = {
 		collapsed: { type: Boolean, reflect: true },
+		transformTool: { type: String },
 	};
 
 	public collapsed = true;
 	private tooltipInstances: Array<Instance<Props>> = [];
+	public transformTool: "translate" | "rotate" | "scale" = "translate";
 
 	public disconnectedCallback(): void {
 		this.destroyTooltips();
@@ -41,7 +43,9 @@ export class DT3DSidebar extends LitElement {
 	 * Change v bnnnn
 	 * @param tool
 	 */
-	private handleTransformSelect(tool: string) {
+	private handleTransformSelect(tool: "translate" | "rotate" | "scale") {
+		this.transformTool = tool;
+
 		this.dispatchEvent(
 			new CustomEvent("transform-tool-selected", {
 				detail: { tool },
@@ -118,17 +122,20 @@ export class DT3DSidebar extends LitElement {
 				<div class="sidebar-title">Controls</div>
 				<button
 					@click=${() => this.handleTransformSelect("translate")}
+          class=${`transform-btn ${this.transformTool === "translate" ? "selected" : ""}`.trim()}
 					data-tooltip="Translate object"
 					aria-label="Translate object">
 					<ha-icon icon="mdi:cursor-move"></ha-icon>
 				</button>
 				<button
 					@click=${() => this.handleTransformSelect("rotate")}
+          	class=${`transform-btn ${this.transformTool === "rotate" ? "selected" : ""}`.trim()}
 					data-tooltip="Rotate object"
 					aria-label="Rotate object">
 					<ha-icon icon="mdi:rotate-right"></ha-icon>
 				</button>
 				<button
+          class=${`transform-btn ${this.transformTool === "scale" ? "selected" : ""}`.trim()}
 					@click=${() => this.handleTransformSelect("scale")}
 					data-tooltip="Scale object"
 					aria-label="Scale object">
