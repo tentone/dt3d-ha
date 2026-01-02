@@ -775,16 +775,13 @@ export class DT3DCard extends LitElement {
 
 		// Add a cube
 		const geometry = new BoxGeometry();
-		const material = new MeshStandardMaterial({
-			color: 0xffff00,
-			wireframe: false,
-		});
+		const material = new MeshStandardMaterial({ color: 0xffff00 });
 		const cube = new Mesh(geometry, material);
 		this.transform.attach(cube);
 		this.home.add(cube);
 
 		const planeGeometry = new BoxGeometry(5, 5, 0.1);
-		const planeMaterial = new MeshBasicMaterial({ color: 0x00ff00 });
+		const planeMaterial = new MeshStandardMaterial({ color: 0xffffff });
 
 		const plane = new Mesh(planeGeometry, planeMaterial);
 		plane.rotation.x = -Math.PI / 2; // Rotate to make it horizontal
