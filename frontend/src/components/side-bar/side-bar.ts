@@ -11,9 +11,11 @@ export class DT3DSidebar extends LitElement {
 
 	static properties = {
 		collapsed: { type: Boolean, reflect: true },
+		transformTool: { type: String },
 	};
 
 	public collapsed = true;
+	public transformTool: "translate" | "rotate" | "scale" = "translate";
 
 	public disconnectedCallback(): void {
 		super.disconnectedCallback();
@@ -32,7 +34,9 @@ export class DT3DSidebar extends LitElement {
 	 * Change v bnnnn
 	 * @param tool
 	 */
-	private handleTransformSelect(tool: string) {
+	private handleTransformSelect(tool: "translate" | "rotate" | "scale") {
+		this.transformTool = tool;
+
 		this.dispatchEvent(
 			new CustomEvent("transform-tool-selected", {
 				detail: { tool },
@@ -77,13 +81,19 @@ export class DT3DSidebar extends LitElement {
 			</button>
 			<div class="sidebar-section">
 				<div class="sidebar-title">Controls</div>
-				<button @click=${() => this.handleTransformSelect("translate")}>
+				<button
+					class=${`transform-btn ${this.transformTool === "translate" ? "selected" : ""}`.trim()}
+					@click=${() => this.handleTransformSelect("translate")}>
 					<ha-icon icon="mdi:cursor-move"></ha-icon>
 				</button>
-				<button @click=${() => this.handleTransformSelect("rotate")}>
+				<button
+					class=${`transform-btn ${this.transformTool === "rotate" ? "selected" : ""}`.trim()}
+					@click=${() => this.handleTransformSelect("rotate")}>
 					<ha-icon icon="mdi:rotate-right"></ha-icon>
 				</button>
-				<button @click=${() => this.handleTransformSelect("scale")}>
+				<button
+					class=${`transform-btn ${this.transformTool === "scale" ? "selected" : ""}`.trim()}
+					@click=${() => this.handleTransformSelect("scale")}>
 					<ha-icon icon="mdi:resize"></ha-icon>
 				</button>
 			</div>

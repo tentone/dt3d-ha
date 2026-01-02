@@ -71,6 +71,13 @@ button {
 		color-mix(in srgb, var(--ha-color-neutral-10) 20%, transparent);
 }
 
+.transform-btn.selected {
+	background: color-mix(in srgb, var(--ha-color-primary-60) 80%, var(--ha-color-neutral-05));
+	box-shadow:
+		0 2px 6px color-mix(in srgb, var(--ha-color-primary-60) 35%, transparent),
+		0 0 0 2px color-mix(in srgb, var(--ha-color-primary-60) 50%, transparent) inset;
+}
+
 button:hover {
 	background: var(--ha-color-primary-60);
 	transform: translateY(-1px);
