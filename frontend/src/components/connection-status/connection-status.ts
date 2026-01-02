@@ -1,7 +1,6 @@
 import { html, LitElement, unsafeCSS } from "lit";
 import { customElement, property } from "lit/decorators.js";
 import componentStyles from "./connection-status.css?inline";
-import {DT3D_BUILD_TIMESTAMP} from "../../../vite-env.d.ts";
 
 @customElement("connection-status")
 export class ConnectionStatus extends LitElement {
@@ -40,7 +39,7 @@ export class ConnectionStatus extends LitElement {
 
 	public render() {
 		return html`<div style="margin: 5px;" class="${this.success ? 'connection-status-success' : 'connection-status-error'}">
-			${this.msg}<br>${DT3D_BUILD_TIMESTAMP}
+			${this.msg}<br>${BUILD_TIMESTAMP}
 		</div>`;
 	}
 }

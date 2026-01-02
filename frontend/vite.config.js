@@ -13,6 +13,7 @@ export default defineConfig({
 		},
 	},
 	define: {
-		DT3D_BUILD_TIMESTAMP: new Date(),
+		BUILD_TIMESTAMP: JSON.stringify(new Date().toISOString()),
+		"process.env.NODE_ENV": JSON.stringify("production")
 	}
 });

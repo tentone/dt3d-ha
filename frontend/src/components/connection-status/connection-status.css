@@ -1,6 +1,6 @@
 :host {
 	display: block;
-	width: 200px;
+	width: auto;
 	height: 60px;
 	background: rgba(0,0,0,0.5);
 	border-radius: 5px;

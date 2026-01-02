@@ -43,7 +43,6 @@ export class EntitySwitch extends EntityObject {
 	 * @param hass - HA data
 	 */
 	public async toggle(hass: any): Promise<void> {
-	
 		if (!hass?.callService) {
 			console.warn("DT3D: Unable to toggle switch; hass instance not available",);
 			return;
@@ -58,6 +57,12 @@ export class EntitySwitch extends EntityObject {
 		}
 	}
 
+	/**
+	 * Refresh the icon of the switch after its state has been changed.
+	 * 
+	 * 
+	 * @param isOn - State of the switch.
+	 */
 	private refreshIcon(isOn: boolean): void {
 		if (this.icon) {
 			this.remove(this.icon);

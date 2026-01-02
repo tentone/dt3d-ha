@@ -2,31 +2,50 @@ import { LitElement, html, unsafeCSS, type PropertyValues } from "lit";
 import { customElement } from "lit/decorators.js";
 import tippy, { type Instance, type Props } from "tippy.js";
 import componentStyles from "./side-bar.css?inline";
-import "tippy.js/dist/tippy.css";
+import tippyStyles from  "tippy.js/dist/tippy.css?inline";
+
+export type TransformOptions = "translate" | "rotate" | "scale";
+
+export type MeasurementOptions = "distance" | "angle" | "none";
 
 /**
  * Sidebar contains tools to edit the space.
  */
 @customElement("dt3d-sidebar")
 export class DT3DSidebar extends LitElement {
-	static styles = unsafeCSS(componentStyles);
+	static styles = unsafeCSS(componentStyles + tippyStyles);
 
 	static properties = {
 		collapsed: { type: Boolean, reflect: true },
 		transformTool: { type: String },
 	};
 
+	/**
+	 * Indicates if the sidebar is collapsed or open.
+	 */
 	public collapsed = true;
+	
+	/**
+	 * Tooltip instances to preview the option name.
+	 */
 	private tooltipInstances: Array<Instance<Props>> = [];
-	public transformTool: "translate" | "rotate" | "scale" = "translate";
+
+	/**
+	 * The selected transform tool.
+	 */
+	public transformTool: TransformOptions = "translate";
 
 	public disconnectedCallback(): void {
 		this.destroyTooltips();
 		super.disconnectedCallback();
 	}
 
+	/**
+	 * Called on first render of the component.
+	 */
 	protected firstUpdated(_changedProperties: PropertyValues<this>): void {
 		super.firstUpdated(_changedProperties);
+
 		this.createTooltips();
 	}
 
@@ -55,6 +74,11 @@ export class DT3DSidebar extends LitElement {
 		);
 	}
 
+	/** 
+	 * Dispatch a new add object event.
+	 * 
+	 * @param type - Type of object to be created.
+	 */
 	private handleAddObject(type: string) {
 		this.dispatchEvent(
 			new CustomEvent("add-object", {
@@ -70,7 +94,7 @@ export class DT3DSidebar extends LitElement {
 	 *
 	 * @param mode - Measuremente tool to use.
 	 */
-	private handleMeasurementSelect(mode: "distance" | "angle" | "none") {
+	private handleMeasurementSelect(mode: MeasurementOptions) {
 		this.dispatchEvent(
 			new CustomEvent("measurement-mode-selected", {
 				detail: { mode },
@@ -80,11 +104,13 @@ export class DT3DSidebar extends LitElement {
 		);
 	}
 
+	/**
+	 * Create the tooltip element for each of the options.
+	 */
 	private createTooltips() {
 		this.destroyTooltips();
 
-		const tooltipTargets =
-			this.renderRoot?.querySelectorAll<HTMLElement>("[data-tooltip]") ?? [];
+		const tooltipTargets: any[] = this.renderRoot?.querySelectorAll<HTMLElement>("[data-tooltip]") ?? [];
 
 		tooltipTargets.forEach((element) => {
 			const content = element.dataset.tooltip;
@@ -103,6 +129,9 @@ export class DT3DSidebar extends LitElement {
 		});
 	}
 
+	/**
+	 * Destroy all tooltips created.
+	 */
 	private destroyTooltips() {
 		this.tooltipInstances.forEach((instance) => instance.destroy());
 		this.tooltipInstances = [];

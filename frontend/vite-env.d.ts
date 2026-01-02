@@ -1,1 +1,1 @@
-declare const DT3D_BUILD_TIMESTAMP: Date;
+declare const BUILD_TIMESTAMP: string;

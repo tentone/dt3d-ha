@@ -964,6 +964,7 @@ export class DT3DCard extends LitElement {
 			list.appendChild(listItem);
 		});
 
+		// Auxiliar function to filter the list of options.
 		const filterList = () => {
 			const query = searchInput.value.trim().toLowerCase();
 			listItems.forEach((item) => {

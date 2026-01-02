@@ -180,6 +180,10 @@ export class DT3DTree extends LitElement {
 	 * @param scene - The Three.js scene to convert into a tree structure.
 	 */
 	public updateTreeFromScene(scene?: Object3D, reset: boolean = false) {
+		if (!scene) {
+			return;
+		}
+
 		this.scene = scene || this.scene;
 
 		console.log("DT3d: Updating tree from scene", scene, reset);
