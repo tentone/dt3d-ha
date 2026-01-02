@@ -1,6 +1,14 @@
-import { Group, Vector3, Color, Line, BufferGeometry, LineBasicMaterial, MathUtils } from "three";
+import {
+	Group,
+	Vector3,
+	Color,
+	Line,
+	BufferGeometry,
+	LineBasicMaterial,
+	MathUtils,
+} from "three";
 import { getCSSVar } from "../../utils/css-utils";
-import { TextSprite } from "../helpers/text-sprite";
+import { CSSText } from "../helpers/css-text";
 import { Marker } from "./marker";
 
 /**
@@ -42,7 +50,19 @@ export class AngleMeasurement extends Group {
 		const degrees = MathUtils.radToDeg(angle);
 
 		// Label
-		const label = new TextSprite(`${degrees.toFixed(1)}°`);
+		const labelColor = getCSSVar("--ha-color-primary-95").trim() || "#ffffff";
+		const labelBackground =
+			getCSSVar("--ha-color-primary-10").trim() || "rgba(0, 0, 0, 0.7)";
+		const labelBorder =
+			getCSSVar("--ha-color-primary-50").trim() || "rgba(255, 255, 255, 0.3)";
+
+		const label = new CSSText(`${degrees.toFixed(1)}°`, {
+			style: {
+				color: labelColor,
+				background: labelBackground,
+				border: `1px solid ${labelBorder}`,
+			},
+		});
 		label.position.copy(vertex);
 		label.position.y += 0.5;
 		this.add(label);

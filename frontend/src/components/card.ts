@@ -20,6 +20,7 @@ import {
 } from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 import { TransformControls } from "three/examples/jsm/controls/TransformControls";
+import { CSS3DRenderer } from "three/examples/jsm/renderers/CSS3DRenderer.js";
 import { Sky } from "three/examples/jsm/Addons.js";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { OBJLoader } from "three/examples/jsm/loaders/OBJLoader.js";
@@ -68,6 +69,11 @@ export class DT3DCard extends LitElement {
 	 * Renderer for the 3D content.
 	 */
 	private renderer: WebGLRenderer = null;
+
+	/**
+	 * Renderer for CSS-based 3D objects.
+	 */
+	private cssRenderer: CSS3DRenderer = null;
 
 	/**
 	 * Controls to navigate the 3D space using input.
@@ -655,6 +661,15 @@ export class DT3DCard extends LitElement {
 		`;
 		this.content.appendChild(this.canvas);
 
+		this.cssRenderer = new CSS3DRenderer();
+		this.cssRenderer.setSize(width, height);
+		this.cssRenderer.domElement.style.position = "absolute";
+		this.cssRenderer.domElement.style.top = "0";
+		this.cssRenderer.domElement.style.left = "0";
+		this.cssRenderer.domElement.style.pointerEvents = "none";
+		this.cssRenderer.domElement.style.borderRadius = "10px";
+		this.content.appendChild(this.cssRenderer.domElement);
+
 		this.scene = new Scene();
 
 		this.measurementHelpers = new Group();
@@ -744,7 +759,6 @@ export class DT3DCard extends LitElement {
 		this.renderer = new WebGLRenderer({ alpha: true, canvas: this.canvas });
 		this.renderer.setSize(width, height, false);
 		this.renderer.setClearColor(0x446644, 1);
-		this.container.appendChild(this.renderer.domElement);
 
 		// Sky
 		const sky = new Sky();
@@ -866,6 +880,7 @@ export class DT3DCard extends LitElement {
 			// Update controls
 			this.controls.update();
 
+			this.cssRenderer.render(this.scene, this.camera);
 			this.renderer.render(this.scene, this.camera);
 		};
 		animate(0);
@@ -884,6 +899,7 @@ export class DT3DCard extends LitElement {
 			this.camera.updateProjectionMatrix();
 
 			this.renderer.setSize(width, height, false);
+			this.cssRenderer.setSize(width, height);
 		});
 		
 		resizeDetector.observe(this.container, { box: "border-box" });

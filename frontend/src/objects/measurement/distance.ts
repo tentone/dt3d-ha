@@ -1,6 +1,13 @@
-import { Group, Vector3, Color, Line, BufferGeometry, LineBasicMaterial } from "three";
+import {
+	Group,
+	Vector3,
+	Color,
+	Line,
+	BufferGeometry,
+	LineBasicMaterial,
+} from "three";
 import { getCSSVar } from "../../utils/css-utils";
-import { TextSprite } from "../helpers/text-sprite";
+import { CSSText } from "../helpers/css-text";
 import { Marker } from "./marker";
 
 /**
@@ -29,7 +36,19 @@ export class DistanceMeasurement extends Group {
 
 		const distance = start.distanceTo(end);
 
-		const label = new TextSprite(`${distance.toFixed(2)}m`);
+		const labelColor = getCSSVar("--ha-color-primary-95").trim() || "#ffffff";
+		const labelBackground =
+			getCSSVar("--ha-color-primary-10").trim() || "rgba(0, 0, 0, 0.7)";
+		const labelBorder =
+			getCSSVar("--ha-color-primary-50").trim() || "rgba(255, 255, 255, 0.3)";
+
+		const label = new CSSText(`${distance.toFixed(2)}m`, {
+			style: {
+				color: labelColor,
+				background: labelBackground,
+				border: `1px solid ${labelBorder}`,
+			},
+		});
 		label.position.copy(start.clone().add(end).multiplyScalar(0.5));
 		label.position.y += 0.2;
 
