@@ -1,6 +1,8 @@
-import { LitElement, html, unsafeCSS } from "lit";
+import { LitElement, html, unsafeCSS, type PropertyValues } from "lit";
 import { customElement } from "lit/decorators.js";
+import tippy, { type Instance, type Props } from "tippy.js";
 import componentStyles from "./side-bar.css?inline";
+import "tippy.js/dist/tippy.css";
 
 /**
  * Sidebar contains tools to edit the space.
@@ -15,10 +17,17 @@ export class DT3DSidebar extends LitElement {
 	};
 
 	public collapsed = true;
+	private tooltipInstances: Array<Instance<Props>> = [];
 	public transformTool: "translate" | "rotate" | "scale" = "translate";
 
 	public disconnectedCallback(): void {
+		this.destroyTooltips();
 		super.disconnectedCallback();
+	}
+
+	protected firstUpdated(_changedProperties: PropertyValues<this>): void {
+		super.firstUpdated(_changedProperties);
+		this.createTooltips();
 	}
 
 	/**
@@ -71,60 +80,120 @@ export class DT3DSidebar extends LitElement {
 		);
 	}
 
+	private createTooltips() {
+		this.destroyTooltips();
+
+		const tooltipTargets =
+			this.renderRoot?.querySelectorAll<HTMLElement>("[data-tooltip]") ?? [];
+
+		tooltipTargets.forEach((element) => {
+			const content = element.dataset.tooltip;
+
+			if (!content) {
+				return;
+			}
+
+			const instance = tippy(element, {
+				content,
+				placement: "right",
+				appendTo: document.body,
+			});
+
+			this.tooltipInstances.push(instance);
+		});
+	}
+
+	private destroyTooltips() {
+		this.tooltipInstances.forEach((instance) => instance.destroy());
+		this.tooltipInstances = [];
+	}
+
 	render() {
 		return html`
 			<button
 				class="collapse-btn"
 				@click=${this.toggleCollapse}
+				data-tooltip="Collapse sidebar"
+				aria-label="Collapse sidebar"
 				title="Collapse sidebar">
 			${this.collapsed ?  html`<ha-icon icon="mdi:arrow-right-drop-circle-outline"></ha-icon>` :  html`<ha-icon icon="mdi:arrow-left-drop-circle-outline"></ha-icon>`}
 			</button>
 			<div class="sidebar-section">
 				<div class="sidebar-title">Controls</div>
 				<button
-					class=${`transform-btn ${this.transformTool === "translate" ? "selected" : ""}`.trim()}
-					@click=${() => this.handleTransformSelect("translate")}>
+					@click=${() => this.handleTransformSelect("translate")}
+          class=${`transform-btn ${this.transformTool === "translate" ? "selected" : ""}`.trim()}
+					data-tooltip="Translate object"
+					aria-label="Translate object">
 					<ha-icon icon="mdi:cursor-move"></ha-icon>
 				</button>
 				<button
-					class=${`transform-btn ${this.transformTool === "rotate" ? "selected" : ""}`.trim()}
-					@click=${() => this.handleTransformSelect("rotate")}>
+					@click=${() => this.handleTransformSelect("rotate")}
+          	class=${`transform-btn ${this.transformTool === "rotate" ? "selected" : ""}`.trim()}
+					data-tooltip="Rotate object"
+					aria-label="Rotate object">
 					<ha-icon icon="mdi:rotate-right"></ha-icon>
 				</button>
 				<button
-					class=${`transform-btn ${this.transformTool === "scale" ? "selected" : ""}`.trim()}
-					@click=${() => this.handleTransformSelect("scale")}>
+          class=${`transform-btn ${this.transformTool === "scale" ? "selected" : ""}`.trim()}
+					@click=${() => this.handleTransformSelect("scale")}
+					data-tooltip="Scale object"
+					aria-label="Scale object">
 					<ha-icon icon="mdi:resize"></ha-icon>
 				</button>
 			</div>
 			<div class="sidebar-section">
 				<div class="sidebar-title">Add</div>
-				<button @click=${() => this.handleAddObject("cube")}>
+				<button
+					@click=${() => this.handleAddObject("cube")}
+					data-tooltip="Add cube"
+					aria-label="Add cube">
 					<ha-icon icon="mdi:cube-outline"></ha-icon>
 				</button>
-				<button @click=${() => this.handleAddObject("sphere")}>
+				<button
+					@click=${() => this.handleAddObject("sphere")}
+					data-tooltip="Add sphere"
+					aria-label="Add sphere">
 					<ha-icon icon="mdi:sphere"></ha-icon>
 				</button>
-				<button @click=${() => this.handleAddObject("plane")}>
+				<button
+					@click=${() => this.handleAddObject("plane")}
+					data-tooltip="Add plane"
+					aria-label="Add plane">
 					<ha-icon icon="mdi:square-outline"></ha-icon>
 				</button>
-				<button @click=${() => this.handleAddObject("upload")}>
+				<button
+					@click=${() => this.handleAddObject("upload")}
+					data-tooltip="Upload model"
+					aria-label="Upload model">
 					<ha-icon icon="mdi:upload-box-outline"></ha-icon>
 				</button>
-				<button @click=${() => this.handleAddObject("entity")}>
+				<button
+					@click=${() => this.handleAddObject("entity")}
+					data-tooltip="Add entity"
+					aria-label="Add entity">
 					<ha-icon icon="mdi:state-machine"></ha-icon>
 				</button>
 			</div>
 			<!-- --ha-color-primary-30) -->
 			<div class="sidebar-section">
 				<div class="sidebar-title">Measure</div>
-				<button @click=${() => this.handleMeasurementSelect("distance")}>
+				<button
+					@click=${() => this.handleMeasurementSelect("distance")}
+					data-tooltip="Measure distance"
+					aria-label="Measure distance">
 					<ha-icon icon="mdi:social-distance-2-meters"></ha-icon>
 				</button>
-				<button @click=${() => this.handleMeasurementSelect("angle")}>
+				<button
+					@click=${() => this.handleMeasurementSelect("angle")}
+					data-tooltip="Measure angle"
+					aria-label="Measure angle">
 					<ha-icon icon="mdi:angle-acute"></ha-icon>
 				</button>
-				<button @click=${() => this.handleMeasurementSelect("none")}>
+				<button
+					@click=${() => this.handleMeasurementSelect("none")}
+					data-tooltip="Clear measurements"
+					aria-label="Clear measurements">
 					<ha-icon icon="mdi:cancel"></ha-icon>
 				</button>
 			</div>
