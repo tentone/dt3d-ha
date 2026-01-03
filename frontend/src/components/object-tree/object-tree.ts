@@ -389,22 +389,25 @@ export class DT3DTree extends LitElement {
 	}
 
 	/**
-	 * Select a node by its ID, dispatching an event.
+	 * Select a object by its ID, dispatching an event.
 	 *
 	 * @param id - The ID of the node to select.
+	 * @param event - If select event shoudl be dispatched.
 	 */
-	private selectNode(id: UUID) {
+	public selectObject(id: UUID, event: boolean = false) {
 		this.selectedId = id;
-
 		this.selectedObject = this.scene?.getObjectByProperty("uuid", id) ?? null;
 
-		this.dispatchEvent(
-			new CustomEvent("object-selected", {
-				detail: { id },
-				bubbles: true,
-				composed: true,
-			}),
-		);
+		if (event) {
+			this.dispatchEvent(
+				new CustomEvent("object-selected", {
+					detail: { id },
+					bubbles: true,
+					composed: true,
+				}),
+			);
+		}
+
 	}
 
 	/**
@@ -426,6 +429,10 @@ export class DT3DTree extends LitElement {
 		this.contextMenu = null;
 	}
 
+	/**
+	 * Dispatch a object delete event. 
+	 * @param id - UUID of the object to be clones.
+	 */
 	private dispatchDelete(id: UUID) {
 		this.dispatchEvent(
 			new CustomEvent("object-delete", {
@@ -583,7 +590,7 @@ export class DT3DTree extends LitElement {
 									this.handleDragLeave(dragEvent, node.id, "inside")}
 								@drop=${(dragEvent: DragEvent) =>
 									this.handleDrop(dragEvent, node.id, "inside")}
-								@click=${() => this.selectNode(node.id)}
+								@click=${() => this.selectObject(node.id, true)}
 								@contextmenu=${(event: MouseEvent) =>
 									this.handleContextMenu(event, node.id)}
 							>

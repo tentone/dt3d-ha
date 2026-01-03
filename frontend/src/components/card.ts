@@ -778,13 +778,14 @@ export class DT3DCard extends LitElement {
 			this.cloneObject(id);
 		});
 
-		// Raycaster for object picking
 		this.canvas.addEventListener("dblclick", (event: MouseEvent) => {
 			const { object, intersection } = this.pickObjectFromEvent(event);
-
 			if (intersection) {
 				this.transform.attach(intersection.object as Mesh);
+				this.tree.selectObject(intersection.object.uuid);
 			}
+
+			
 
 			object?.onInteraction({
 				type: "dblclick",
