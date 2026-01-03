@@ -43,12 +43,6 @@ export class SceneManager {
 		this.measurementHelpers = new Group();
 		this.scene.add(this.measurementHelpers);
 
-		this.scene.add(new AmbientLight(0xbbbbbb));
-
-		const directional = new DirectionalLight(0xeeeeee);
-		directional.position.set(200, 1000, 300);
-		this.scene.add(directional);
-
 		this.home = new Group();
 		this.scene.add(this.home);
 
@@ -68,12 +62,27 @@ export class SceneManager {
 		this.scene.add(this.transform.getHelper());
 	}
 
+	/**
+	 * Update the size of the camera.
+	 * 
+	 * @param width - Width in px
+	 * @param height - Height in px
+	 */
 	public updateSize(width: number, height: number): void {
 		this.camera.aspect = width / height;
 		this.camera.updateProjectionMatrix();
 	}
 
+	/**
+	 * Create and add the sky to the scene.
+	 */
 	private addSky(): void {
+		this.scene.add(new AmbientLight(0xbbbbbb));
+
+		const directional = new DirectionalLight(0xeeeeee);
+		directional.position.set(200, 1000, 300);
+		this.scene.add(directional);
+
 		const sky = new Sky();
 		sky.scale.setScalar(1e4);
 
