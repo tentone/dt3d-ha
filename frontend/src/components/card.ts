@@ -1,27 +1,20 @@
+import type { PerspectiveCamera, Scene } from "three";
 import {
 	Mesh,
 	BoxGeometry,
-	PerspectiveCamera,
-	Scene,
-	WebGLRenderer,
 	MeshBasicMaterial,
 	Raycaster,
 	Vector2,
 	PlaneGeometry,
 	SphereGeometry,
 	Group,
-	MathUtils,
 	Vector3,
 	Object3D,
 	Intersection,
 	MeshStandardMaterial,
-	AmbientLight,
-	DirectionalLight,
 } from "three";
-import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
-import { TransformControls } from "three/examples/jsm/controls/TransformControls";
-import { CSS3DRenderer } from "three/examples/jsm/renderers/CSS3DRenderer.js";
-import { Sky } from "three/examples/jsm/Addons.js";
+import type { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
+import type { TransformControls } from "three/examples/jsm/controls/TransformControls";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { OBJLoader } from "three/examples/jsm/loaders/OBJLoader.js";
 import { FBXLoader } from "three/examples/jsm/loaders/FBXLoader.js";
@@ -41,6 +34,8 @@ import { Marker } from "../objects/measurement/marker.js";
 import { AngleMeasurement } from "../objects/measurement/angle.js";
 import { DistanceMeasurement } from "../objects/measurement/distance.js";
 import { ConnectionStatus } from "./connection-status/connection-status.js";
+import { SceneManager } from "./scene.js";
+import { RendererManager } from "./renderer.js";
 
 @customElement("dt3d-card")
 export class DT3DCard extends LitElement {
@@ -60,6 +55,10 @@ export class DT3DCard extends LitElement {
 
 	private canvas: HTMLCanvasElement = null;
 
+	private sceneManager: SceneManager;
+
+	private rendererManager: RendererManager;
+
 	/**
 	 * Viewport into the 3D space.
 	 */
@@ -67,16 +66,6 @@ export class DT3DCard extends LitElement {
 
 	/**
 	 * Renderer for the 3D content.
-	 */
-	private renderer: WebGLRenderer = null;
-
-	/**
-	 * Renderer for CSS-based 3D objects.
-	 */
-	private cssRenderer: CSS3DRenderer = null;
-
-	/**
-	 * Controls to navigate the 3D space using input.
 	 */
 	private controls: OrbitControls;
 
@@ -664,36 +653,6 @@ export class DT3DCard extends LitElement {
 		`;
 		this.content.appendChild(this.canvas);
 
-		const cssElem = document.createElement("div");
-		cssElem.style.cssText = `
-			position: absolute;
-			top: 0;
-			left: 0;
-			width: ${width}px;
-			height: ${height}px;
-			border-radius: 10px;
-			pointer-events: none;
-		`;
-		this.content.appendChild(cssElem);
-
-		this.cssRenderer = new CSS3DRenderer({element: cssElem});
-		this.cssRenderer.setSize(width, height);
-
-
-		this.scene = new Scene();
-
-		this.measurementHelpers = new Group();
-		this.scene.add(this.measurementHelpers);
-
-		this.scene.add(new AmbientLight(0xBBBBBB));
-
-		const directional = new DirectionalLight(0xEEEEEE);
-		directional.position.set(200, 1000, 300);
-		this.scene.add(directional);
-
-		this.home = new Group();
-		this.scene.add(this.home);
-
 		this.sidebar = document.createElement("dt3d-sidebar") as DT3DSidebar;
 		this.sidebar.style.cssText = `
 			position: absolute;
@@ -712,9 +671,44 @@ export class DT3DCard extends LitElement {
 		`;
 		this.content.appendChild(this.tree);
 
-		const connection = document.createElement('connection-status') as ConnectionStatus;
+		const connection = document.createElement("connection-status") as ConnectionStatus;
 		connection.port = port;
 		this.content.appendChild(connection);
+
+		const cssElem = document.createElement("div");
+		cssElem.style.cssText = `
+			position: absolute;
+			top: 0;
+			left: 0;
+			width: ${width}px;
+			height: ${height}px;
+			border-radius: 10px;
+			pointer-events: none;
+		`;
+		this.content.appendChild(cssElem);
+
+		this.sceneManager = new SceneManager({
+			canvas: this.canvas,
+			height,
+			onTransformChange: () => this.tree.refreshSelectedObject(),
+			width,
+		});
+		this.scene = this.sceneManager.scene;
+		this.camera = this.sceneManager.camera;
+		this.controls = this.sceneManager.controls;
+		this.transform = this.sceneManager.transform;
+		this.home = this.sceneManager.home;
+		this.measurementHelpers = this.sceneManager.measurementHelpers;
+
+		this.rendererManager = new RendererManager({
+			camera: this.camera,
+			canvas: this.canvas,
+			controls: this.controls,
+			cssElement: cssElem,
+			height,
+			scene: this.scene,
+			width,
+		});
 
 		this.sidebar.addEventListener("transform-tool-selected", (e: any) => {
 			const tool = e.detail.tool;
@@ -762,41 +756,6 @@ export class DT3DCard extends LitElement {
 				this.addEntityModal();
 			}
 		});
-
-		this.camera = new PerspectiveCamera(75, width / height, 0.1, 10000);
-		this.camera.position.z = 3;
-
-		this.renderer = new WebGLRenderer({ alpha: true, canvas: this.canvas });
-		this.renderer.setSize(width, height, false);
-		this.renderer.setClearColor(0x446644, 1);
-
-		// Sky
-		const sky = new Sky();
-		sky.scale.setScalar(1e4);
-
-		const phi = MathUtils.degToRad(90);
-		const theta = MathUtils.degToRad(180);
-		const sunPosition = new Vector3().setFromSphericalCoords(1, phi, theta);
-
-		sky.material.uniforms.sunPosition.value = sunPosition;
-		this.scene.add(sky);
-
-		// Add OrbitControls
-		this.controls = new OrbitControls(this.camera, this.renderer.domElement);
-		this.controls.enableDamping = true; // Enable damping for smoother controls
-		this.controls.dampingFactor = 0.05;
-
-		this.transform = new TransformControls(
-			this.camera,
-			this.renderer.domElement,
-		);
-		this.transform.addEventListener("dragging-changed", (event: any) => {
-			this.controls.enabled = !event.value;
-		});
-		this.transform.addEventListener("objectChange", () => {
-			this.tree.refreshSelectedObject();
-		});
-		this.scene.add(this.transform.getHelper());
 
 		// Add a cube
 		const geometry = new BoxGeometry();
@@ -880,20 +839,12 @@ export class DT3DCard extends LitElement {
 			this.hoveredObject = null;
 		});
 
-		const animate = (time: number) => {
-			requestAnimationFrame(animate);
+		this.rendererManager.start((time: number) => {
 			cube.rotation.x += 0.01;
 			cube.rotation.y += 0.01;
 
 			this.updateDTObjects(time);
-
-			// Update controls
-			this.controls.update();
-
-			this.cssRenderer.render(this.scene, this.camera);
-			this.renderer.render(this.scene, this.camera);
-		};
-		animate(0);
+		});
 
 		const resizeDetector = new ResizeObserver((event) => {
 			const width = event[0].contentRect.width;
@@ -905,11 +856,11 @@ export class DT3DCard extends LitElement {
 			this.canvas.style.width = `${width}px`;
 			this.canvas.style.height = `${height}px`;
 
-			this.camera.aspect = width / height;
-			this.camera.updateProjectionMatrix();
+			cssElem.style.width = `${width}px`;
+			cssElem.style.height = `${height}px`;
 
-			this.renderer.setSize(width, height, false);
-			this.cssRenderer.setSize(width, height);
+			this.sceneManager.updateSize(width, height);
+			this.rendererManager.resize(width, height);
 		});
 		
 		resizeDetector.observe(this.container, { box: "border-box" });
