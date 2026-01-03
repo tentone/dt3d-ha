@@ -1,4 +1,5 @@
-import { DTInteractionEvent, DTObject } from "./dt-object.js";
+import type { DTInteractionEvent } from "./dt-object.js";
+import { DTObject } from "./dt-object.js";
 
 /**
  * Base 3D representation for Home Assistant entities.

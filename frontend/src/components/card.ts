@@ -10,9 +10,9 @@ import {
 	Group,
 	Vector3,
 	Object3D,
-	Intersection,
 	MeshStandardMaterial,
 } from "three";
+import type { Intersection } from "three";
 import type { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 import type { TransformControls } from "three/examples/jsm/controls/TransformControls";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
@@ -807,7 +807,10 @@ export class DT3DCard extends LitElement {
 		this.canvas.addEventListener("dblclick", (event: MouseEvent) => {
 			const { object, intersection } = this.pickDTObjectFromEvent(event);
 
-			if (intersection) {
+			if (object) {
+				this.transform.attach(object);
+				this.tree?.selectObject(object.uuid);
+			} else if (intersection) {
 				this.transform.attach(intersection.object as Mesh);
 			}
 

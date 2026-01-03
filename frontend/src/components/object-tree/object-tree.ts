@@ -408,6 +408,39 @@ export class DT3DTree extends LitElement {
 	}
 
 	/**
+	 * Ensure all ancestors of the node are expanded so the element is visible.
+	 *
+	 * @param id - ID of the node to reveal.
+	 */
+	private expandToNode(id: UUID) {
+		const expanded = new Set(this.expanded);
+		let parentId = this.findParentId(this.tree, id);
+
+		while (parentId) {
+			expanded.add(parentId);
+			parentId = this.findParentId(this.tree, parentId);
+		}
+
+		this.expanded = expanded;
+	}
+
+	/**
+	 * Allow external callers to select a node by ID and sync the inspector.
+	 *
+	 * @param id - ID of the node to select.
+	 */
+	public selectObject(id: UUID | null) {
+		if (!id) {
+			this.selectedId = null;
+			this.selectedObject = null;
+			return;
+		}
+
+		this.expandToNode(id);
+		this.selectNode(id);
+	}
+
+	/**
 	 * Open the context menu, in a specific position.
 	 *
 	 * @param event - Mouse event with the position to open the context menu.
