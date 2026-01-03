@@ -1,44 +1,51 @@
-const STORAGE_PREFIX = "dt3d-ha-";
 
-const getStorage = (): Storage | null => {
-	if (typeof window === "undefined" || !window.localStorage) {
-		return null;
-	}
+export const STORAGE_PREFIX = "dt3d-ha-";
 
-	return window.localStorage;
-};
+/**
+ * Localstgorage util to read and write data from local storage.
+ */
+export class LocalStorage {
+	/**
+	 * Get local storage object.
+	 */
+	public static storage = (): Storage | null => {
+		if (typeof window === "undefined" || !window.localStorage) {
+			return null;
+		}
 
-const withPrefix = (key: string) => `${STORAGE_PREFIX}${key}`;
+		return window.localStorage;
+	};
 
-export const writeLocalStorageObject = (key: string, value: unknown): void => {
-	const storage = getStorage();
-	if (!storage) {
-		return;
-	}
+	/**
+	 * Add prefix to a key before read/write to storage.
+	 * 
+	 * @param key - Key to store value
+	 * @returns - Key with prefix
+	 */
+	public static prefix = (key: string) => `${STORAGE_PREFIX}${key}`;
 
-	try {
-		storage.setItem(withPrefix(key), JSON.stringify(value));
-	} catch (error) {
-		// eslint-disable-next-line no-console
-		console.warn("DT3D: Unable to store data in localStorage", error);
-	}
-};
+	/**
+	 * Write a value to local storage.
+	 * 
+	 * @param key - Key to store value
+	 * @param value - Value to store.
+	 */
+	public static write(key: string, value: unknown): void {
+		const storage = this.storage();
+		storage.setItem(this.prefix(key), JSON.stringify(value));
+	};
 
-export const readLocalStorageObject = <T>(
-	key: string,
-	defaultValue: T | null = null,
-): T | null => {
-	const storage = getStorage();
-	if (!storage) {
-		return defaultValue;
-	}
+	/**
+	 * Read a object from storage.
+	 * @param key - Key to read value from.
+	 * @param defaultValue - Default value in case key does not exist.
+	 * @returns Value read from the storage.
+	 */
+	public static read(key: string, defaultValue: any = null): any {
+		const storage = this.storage();
+		const value = storage.getItem(this.prefix(key));
+		return value ? (JSON.parse(value)) : defaultValue;
+	};
 
-	try {
-		const value = storage.getItem(withPrefix(key));
-		return value ? (JSON.parse(value) as T) : defaultValue;
-	} catch (error) {
-		// eslint-disable-next-line no-console
-		console.warn("DT3D: Unable to read data from localStorage", error);
-		return defaultValue;
-	}
-};
+}
+

@@ -3,10 +3,7 @@ import { customElement } from "lit/decorators.js";
 import tippy, { type Instance, type Props } from "tippy.js";
 import componentStyles from "./side-bar.css?inline";
 import tippyStyles from  "tippy.js/dist/tippy.css?inline";
-import {
-	readLocalStorageObject,
-	writeLocalStorageObject,
-} from "../../utils/local-storage.js";
+import {LocalStorage} from "../../utils/local-storage.js";
 
 export type TransformOptions = "translate" | "rotate" | "scale";
 
@@ -30,7 +27,7 @@ export class DT3DSidebar extends LitElement {
 	 * Indicates if the sidebar is collapsed or open.
 	 */
 	public collapsed =
-		readLocalStorageObject<boolean>(SIDEBAR_COLLAPSED_STORAGE_KEY, true) ??
+		LocalStorage.read(SIDEBAR_COLLAPSED_STORAGE_KEY, true) ??
 		true;
 	
 	/**
@@ -63,7 +60,7 @@ export class DT3DSidebar extends LitElement {
 	private toggleCollapse() {
 		this.collapsed = !this.collapsed;
 
-		writeLocalStorageObject(SIDEBAR_COLLAPSED_STORAGE_KEY, this.collapsed);
+		LocalStorage.write(SIDEBAR_COLLAPSED_STORAGE_KEY, this.collapsed);
 
 		this.requestUpdate();
 	}

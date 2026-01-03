@@ -3,10 +3,7 @@ import { customElement, property, state } from "lit/decorators.js";
 import componentStyles from "./object-tree.css?inline";
 import type { Object3D } from "three";
 
-import {
-	readLocalStorageObject,
-	writeLocalStorageObject,
-} from "../../utils/local-storage.js";
+import {LocalStorage} from "../../utils/local-storage.js";
 import "./object-inspector.js";
 
 type UUID = string;
@@ -88,8 +85,7 @@ export class DT3DTree extends LitElement {
 	/**
 	 * Width of the element.
 	 */
-	private width =
-		readLocalStorageObject<number>(TREE_WIDTH_STORAGE_KEY, 220) ?? 220;
+	private width = LocalStorage.read(TREE_WIDTH_STORAGE_KEY, 220) ?? 220;
 
 	private resizeInitialSize = 0;
 
@@ -124,7 +120,7 @@ export class DT3DTree extends LitElement {
 
 		this.resizing = false;
 
-		writeLocalStorageObject(TREE_WIDTH_STORAGE_KEY, this.width);
+		LocalStorage.write(TREE_WIDTH_STORAGE_KEY, this.width);
 
 		document.body.style.cursor = "";
 		window.removeEventListener("mousemove", this.handleResizeMove);
