@@ -3,10 +3,16 @@ import { customElement } from "lit/decorators.js";
 import tippy, { type Instance, type Props } from "tippy.js";
 import componentStyles from "./side-bar.css?inline";
 import tippyStyles from  "tippy.js/dist/tippy.css?inline";
+import {
+	readLocalStorageObject,
+	writeLocalStorageObject,
+} from "../../utils/local-storage.js";
 
 export type TransformOptions = "translate" | "rotate" | "scale";
 
 export type MeasurementOptions = "distance" | "angle" | "none";
+
+const SIDEBAR_COLLAPSED_STORAGE_KEY = "sidebar-collapsed";
 
 /**
  * Sidebar contains tools to edit the space.
@@ -23,7 +29,9 @@ export class DT3DSidebar extends LitElement {
 	/**
 	 * Indicates if the sidebar is collapsed or open.
 	 */
-	public collapsed = true;
+	public collapsed =
+		readLocalStorageObject<boolean>(SIDEBAR_COLLAPSED_STORAGE_KEY, true) ??
+		true;
 	
 	/**
 	 * Tooltip instances to preview the option name.
@@ -54,6 +62,8 @@ export class DT3DSidebar extends LitElement {
 	 */
 	private toggleCollapse() {
 		this.collapsed = !this.collapsed;
+
+		writeLocalStorageObject(SIDEBAR_COLLAPSED_STORAGE_KEY, this.collapsed);
 
 		this.requestUpdate();
 	}
