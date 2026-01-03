@@ -3,6 +3,10 @@ import { customElement, property, state } from "lit/decorators.js";
 import componentStyles from "./object-tree.css?inline";
 import type { Object3D } from "three";
 
+import {
+	readLocalStorageObject,
+	writeLocalStorageObject,
+} from "../../utils/local-storage.js";
 import "./object-inspector.js";
 
 type UUID = string;
@@ -17,6 +21,8 @@ interface TreeNode {
 }
 
 type DropPosition = "before" | "after" | "inside";
+
+const TREE_WIDTH_STORAGE_KEY = "object-tree-width";
 
 @customElement("dt3d-tree")
 export class DT3DTree extends LitElement {
@@ -82,7 +88,8 @@ export class DT3DTree extends LitElement {
 	/**
 	 * Width of the element.
 	 */
-	private width = 220;
+	private width =
+		readLocalStorageObject<number>(TREE_WIDTH_STORAGE_KEY, 220) ?? 220;
 
 	private resizeInitialSize = 0;
 
@@ -96,9 +103,11 @@ export class DT3DTree extends LitElement {
 			return;
 		}
 
-		this.width = this.resizeInitialSize + (this.resizeStartX - event.clientX);
+		const newWidth =
+			this.resizeInitialSize + (this.resizeStartX - event.clientX);
 
-		if (this.width > 50 && this.width < document.body.clientWidth / 2) {
+		if (newWidth > 50 && newWidth < document.body.clientWidth / 2) {
+			this.width = newWidth;
 			this.style.width = this.width + "px";
 		}
 	};
@@ -114,6 +123,8 @@ export class DT3DTree extends LitElement {
 		}
 
 		this.resizing = false;
+
+		writeLocalStorageObject(TREE_WIDTH_STORAGE_KEY, this.width);
 
 		document.body.style.cursor = "";
 		window.removeEventListener("mousemove", this.handleResizeMove);
