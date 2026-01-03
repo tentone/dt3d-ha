@@ -1,12 +1,11 @@
 import { Object3D } from "three";
-import { TextSDF } from "./helpers/text-sdf.js";
 import { CircleIconSprite } from "./helpers/circle-icon-sprite.js";
 import { EntityObject } from "./entity-object.js";
 import type { DTInteractionEvent } from "./dt-object.js";
 import { TextSprite } from "./helpers/text-sprite.js";
 
 export class EntitySwitch extends EntityObject {
-	public label: TextSDF;
+	public label: TextSprite;
 	private icon: Object3D;
 
 	public constructor(entityId: string, entity: any) {

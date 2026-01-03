@@ -1,5 +1,4 @@
 import { Color, PointLight } from "three";
-import { TextSDF } from "./helpers/text-sdf.js";
 import { CircleIconSprite } from "./helpers/circle-icon-sprite.js";
 import { EntityObject } from "./entity-object.js";
 import { TextSprite } from "./helpers/text-sprite.js";
