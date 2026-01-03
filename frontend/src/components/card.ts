@@ -84,7 +84,7 @@ export class DT3DCard extends LitElement {
 	 *
 	 * This allows for easy manipulation of the entire scene (e.g., moving, scaling, rotating the whole scene).
 	 */
-	private home: Group;
+	private space: Group;
 
 	/**
 	 * Sidebar element for tools and options.
@@ -151,7 +151,7 @@ export class DT3DCard extends LitElement {
 	 * Presents a file picker dialog to the user and loads the selected model into the scene.
 	 */
 	private selectFile() {
-		if (!this.home) {
+		if (!this.space) {
 			return;
 		}
 
@@ -179,7 +179,7 @@ export class DT3DCard extends LitElement {
 	 * @param file - The model file to load.
 	 */
 	private loadModelFromFile(file: File) {
-		if (!this.home) {
+		if (!this.space) {
 			return;
 		}
 
@@ -282,12 +282,13 @@ export class DT3DCard extends LitElement {
 			object.init();
 		}
 
-		this.home.add(object);
+		this.space.add(object);
 		this.transform?.attach(object);
 
-		this.tree.updateTreeFromScene(this.home, true);
+		this.tree.updateTreeFromScene(this.space, true);
 	}
 
+	
 	private isDescendant(object: Object3D, potentialAncestor: Object3D): boolean {
 		let current = object.parent;
 		while (current) {
@@ -300,20 +301,16 @@ export class DT3DCard extends LitElement {
 		return false;
 	}
 
-	private handleTreeDrop(
-		sourceId: string,
-		targetId: string,
-		position: "before" | "after" | "inside",
-	): void {
-		if (!this.home) {
+	private handleTreeDrop(sourceId: string, targetId: string, position: "before" | "after" | "inside"): void {
+		if (!this.space) {
 			return;
 		}
 
-		const source = this.home.getObjectByProperty(
+		const source = this.space.getObjectByProperty(
 			"uuid",
 			sourceId,
 		) as Object3D | null;
-		const target = this.home.getObjectByProperty(
+		const target = this.space.getObjectByProperty(
 			"uuid",
 			targetId,
 		) as Object3D | null;
@@ -365,16 +362,18 @@ export class DT3DCard extends LitElement {
 		this.tree.updateTreeFromScene();
 	}
 
+	/**
+	 * Delete object from space.
+	 * 
+	 * @param objectId - ID of the object to be delete from the space.
+	 */
 	private deleteObject(objectId: string): void {
-		if (!this.home) {
+		if (!this.space) {
 			return;
 		}
 
-		const target = this.home.getObjectByProperty(
-			"uuid",
-			objectId,
-		) as Object3D | null;
-		if (!target || target === this.home) {
+		const target = this.space.getObjectByProperty("uuid", objectId) as Object3D | null;
+		if (!target || target === this.space) {
 			return;
 		}
 
@@ -389,29 +388,26 @@ export class DT3DCard extends LitElement {
 			this.transform.detach();
 		}
 
-		this.tree.updateTreeFromScene(this.home, true);
+		this.tree.updateTreeFromScene(this.space, true);
 	}
 
 	/**
-	 * Clone a object in the scene.
+	 * Clone a object in the space.
 	 * 
-	 * @param objectId - Object ID
+	 * @param objectId - Object ID to clone
 	 */
 	private cloneObject(objectId: string): void {
-		if (!this.home) {
+		if (!this.space) {
 			return;
 		}
 
-		const original = this.home.getObjectByProperty(
-			"uuid",
-			objectId,
-		) as Object3D | null;
+		const original = this.space.getObjectByProperty("uuid", objectId) as Object3D | null;
 
-		if (!original || original === this.home) {
+		if (!original || original === this.space) {
 			return;
 		}
 
-		const parent = original.parent ?? this.home;
+		const parent = original.parent ?? this.space;
 		const clone = original.clone(true);
 
 		clone.position.x += 0.1;
@@ -420,8 +416,7 @@ export class DT3DCard extends LitElement {
 		parent.add(clone);
 
 		this.transform?.attach(clone);
-
-		this.tree.updateTreeFromScene(this.home);
+		this.tree.updateTreeFromScene(this.space);
 	}
 
 	/**
@@ -439,10 +434,7 @@ export class DT3DCard extends LitElement {
 	 */
 	private clearMeasurements(): void {
 		this.measurementPoints = [];
-		
-
 		this.measurementHelpers.clear();
-
 	}
 
 	/**
@@ -451,12 +443,7 @@ export class DT3DCard extends LitElement {
 	 * @param event - Mouse event.
 	 */
 	private processMeasurementClick(event: MouseEvent): void {
-		if (
-			this.measurementMode === "none" ||
-			!this.canvas ||
-			!this.camera ||
-			!this.home
-		) {
+		if (this.measurementMode === "none" || !this.canvas || !this.camera || !this.space) {
 			return;
 		}
 
@@ -466,7 +453,7 @@ export class DT3DCard extends LitElement {
 		this.raycaster.setFromCamera(this.pointer, this.camera);
 
 		const intersects = this.raycaster.intersectObjects(
-			this.home.children,
+			this.space.children,
 			true,
 		);
 		const point = intersects[0]?.point;
@@ -484,7 +471,7 @@ export class DT3DCard extends LitElement {
 			return;
 		}
 
-		const { object } = this.pickDTObjectFromEvent(event);
+		const { object } = this.pickObjectFromEvent(event);
 
 		object?.onInteraction({
 			type: "click",
@@ -494,7 +481,7 @@ export class DT3DCard extends LitElement {
 	}
 
 	private handlePointerMove(event: MouseEvent): void {
-		const { object } = this.pickDTObjectFromEvent(event);
+		const { object } = this.pickObjectFromEvent(event);
 
 		if (object === this.hoveredObject) {
 			return;
@@ -522,14 +509,11 @@ export class DT3DCard extends LitElement {
 	/**
 	 * Pick digital tiwn object using the raycaster.
 	 *
-	 * @param event
-	 * @returns
+	 * @param event - Mouse event to get pointer coordinates
+	 * @returns - Object fround in interaction
 	 */
-	private pickDTObjectFromEvent(event: MouseEvent): {
-		object: DTObject | null;
-		intersection: Intersection<Object3D> | null;
-	} {
-		if (!this.canvas || !this.camera || !this.home) {
+	private pickObjectFromEvent(event: MouseEvent): {object: DTObject | null; intersection: Intersection<Object3D> | null;} {
+		if (!this.canvas || !this.camera || !this.space) {
 			return { object: null, intersection: null };
 		}
 
@@ -539,7 +523,7 @@ export class DT3DCard extends LitElement {
 		this.raycaster.setFromCamera(this.pointer, this.camera);
 
 		const intersects = this.raycaster.intersectObjects(
-			this.home.children,
+			this.space.children,
 			true,
 		);
 
@@ -557,18 +541,7 @@ export class DT3DCard extends LitElement {
 		return { object: null, intersection };
 	}
 
-	private updateDTObjects(time: number): void {
-		if (!this.home) {
-			return;
-		}
 
-		this.home.traverse((child) => {
-			if (child instanceof DTObject) {
-				child.init();
-				child.update(time);
-			}
-		});
-	}
 
 	/**
 	 * Add a measurement point based on the current measurement mode.
@@ -693,11 +666,12 @@ export class DT3DCard extends LitElement {
 			onTransformChange: () => this.tree.refreshSelectedObject(),
 			width,
 		});
+
 		this.scene = this.sceneManager.scene;
 		this.camera = this.sceneManager.camera;
 		this.controls = this.sceneManager.controls;
 		this.transform = this.sceneManager.transform;
-		this.home = this.sceneManager.home;
+		this.space = this.sceneManager.home;
 		this.measurementHelpers = this.sceneManager.measurementHelpers;
 
 		this.rendererManager = new RendererManager({
@@ -762,7 +736,7 @@ export class DT3DCard extends LitElement {
 		const material = new MeshStandardMaterial({ color: 0xffff00 });
 		const cube = new Mesh(geometry, material);
 		this.transform.attach(cube);
-		this.home.add(cube);
+		this.space.add(cube);
 
 		const planeGeometry = new BoxGeometry(5, 5, 0.1);
 		const planeMaterial = new MeshStandardMaterial({ color: 0xffffff });
@@ -770,15 +744,16 @@ export class DT3DCard extends LitElement {
 		const plane = new Mesh(planeGeometry, planeMaterial);
 		plane.rotation.x = -Math.PI / 2; // Rotate to make it horizontal
 		plane.position.y = -1; // Position it below the cube
-		this.home.add(plane);
+		this.space.add(plane);
 
-		this.tree.scene = this.home;
-		this.tree.updateTreeFromScene(this.home, true);
+		// Set base scene and update three
+		this.tree.scene = this.space;
+		this.tree.updateTreeFromScene(this.space, true);
 
 		// Listen for selection events from the tree
 		this.tree.addEventListener("object-selected", (e: any) => {
 			const id = e.detail.id;
-			const object = this.home.getObjectByProperty("uuid", id);
+			const object = this.space.getObjectByProperty("uuid", id);
 			if (object) {
 				this.transform.attach(object);
 			}
@@ -805,7 +780,7 @@ export class DT3DCard extends LitElement {
 
 		// Raycaster for object picking
 		this.canvas.addEventListener("dblclick", (event: MouseEvent) => {
-			const { object, intersection } = this.pickDTObjectFromEvent(event);
+			const { object, intersection } = this.pickObjectFromEvent(event);
 
 			if (intersection) {
 				this.transform.attach(intersection.object as Mesh);
@@ -840,10 +815,11 @@ export class DT3DCard extends LitElement {
 		});
 
 		this.rendererManager.start((time: number) => {
-			cube.rotation.x += 0.01;
-			cube.rotation.y += 0.01;
-
-			this.updateDTObjects(time);
+			this.space.traverse((child) => {
+				if (child instanceof DTObject) {
+					child.update(time);
+				}
+			});
 		});
 
 		const resizeDetector = new ResizeObserver((event) => {
@@ -928,11 +904,11 @@ export class DT3DCard extends LitElement {
 	}
 
 	private updateEntityObjects(): void {
-		if (!this.home || !this.hassInstance?.states) {
+		if (!this.space || !this.hassInstance?.states) {
 			return;
 		}
 
-		this.home.traverse((child) => {
+		this.space.traverse((child) => {
 			if (child instanceof EntityObject) {
 				const entityState = this.hassInstance.states[child.entityId];
 				if (entityState) {
