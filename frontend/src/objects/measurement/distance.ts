@@ -38,9 +38,7 @@ export class DistanceMeasurement extends Group {
 
 		const label = new CSSText(`${distance.toFixed(2)}m`, {
 			style: {
-				color: getCSSVar("--ha-color-primary-95"),
-				background: getCSSVar("--ha-color-primary-10"),
-				border: `1px solid ${getCSSVar("--ha-color-primary-50")}`,
+				color: getCSSVar("--ha-color-primary-95")
 			},
 		});
 		label.scale.setScalar(0.2);

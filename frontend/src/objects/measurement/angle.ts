@@ -51,9 +51,7 @@ export class AngleMeasurement extends Group {
 
 		const label = new CSSText(`${degrees.toFixed(1)}°`, {
 			style: {
-				color: getCSSVar("--ha-color-primary-95"),
-				background: getCSSVar("--ha-color-primary-10"),
-				border: `1px solid ${getCSSVar("--ha-color-primary-50")}`,
+				color: getCSSVar("--ha-color-primary-95")
 			},
 		});
 		label.scale.setScalar(0.2);
