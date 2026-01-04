@@ -12,10 +12,7 @@ import { TransformControls } from "three/examples/jsm/controls/TransformControls
 import { Sky } from "three/examples/jsm/Addons.js";
 
 interface SceneManagerOptions {
-	canvas: HTMLCanvasElement;
-	height: number;
-	onTransformChange?: () => void;
-	width: number;
+
 }
 
 /**
@@ -29,12 +26,9 @@ export class SceneManager {
 	public controls: OrbitControls;
 	public transform: TransformControls;
 
-	constructor({
-		canvas,
-		height,
-		onTransformChange,
-		width,
-	}: SceneManagerOptions) {
+	constructor(canvas: HTMLCanvasElement,
+	height: number,
+	width: number,) {
 		this.scene = new Scene();
 
 		this.camera = new PerspectiveCamera(75, width / height, 0.1, 10000);
@@ -56,9 +50,7 @@ export class SceneManager {
 		this.transform.addEventListener("dragging-changed", (event: any) => {
 			this.controls.enabled = !event.value;
 		});
-		this.transform.addEventListener("objectChange", () => {
-			onTransformChange?.();
-		});
+
 		this.scene.add(this.transform.getHelper());
 	}
 

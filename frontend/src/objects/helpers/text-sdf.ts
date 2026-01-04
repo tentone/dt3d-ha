@@ -1,5 +1,5 @@
 import type { ColorRepresentation } from "three";
-import { Text } from "troika-three-text";
+import {Text} from 'troika-three-text'
 
 export type TextSDFOptions = {
 	font?: string;
@@ -21,8 +21,7 @@ export type TextSDFOptions = {
 /**
  * Signed-distance-field text mesh powered by troika-three-text.
  *
- * This object is not used directly in the scene yet but can be instantiated
- * elsewhere to render crisp text in 3D space.
+ * This object is not used directly in the scene yet but can be instantiated elsewhere to render crisp text in 3D space.
  */
 export class TextSDF extends Text {
 	/**
@@ -40,6 +39,7 @@ export class TextSDF extends Text {
 		this.textAlign = "center";
 		this.anchorX = "center";
 		this.anchorY = "middle";
+
 		this.applyOptions(options);
 		this.sync();
 	}

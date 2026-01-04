@@ -288,11 +288,17 @@ export class DT3DCard extends LitElement {
 		this.tree.updateTreeFromScene(this.space, true);
 	}
 
-	
-	private isDescendant(object: Object3D, potentialAncestor: Object3D): boolean {
+	/**
+	 * Check if a object is descendant of another.
+	 * 
+	 * @param object - Object to check
+	 * @param ancestor - Possible object to be tested as ancestor.
+	 * @returns True of object is descendant of ancestor.
+	 */
+	private isDescendant(object: Object3D, ancestor: Object3D): boolean {
 		let current = object.parent;
 		while (current) {
-			if (current === potentialAncestor) {
+			if (current === ancestor) {
 				return true;
 			}
 			current = current.parent;
@@ -301,6 +307,13 @@ export class DT3DCard extends LitElement {
 		return false;
 	}
 
+	/**
+	 * 
+	 * @param sourceId 
+	 * @param targetId 
+	 * @param position 
+	 * @returns 
+	 */
 	private handleTreeDrop(sourceId: string, targetId: string, position: "before" | "after" | "inside"): void {
 		if (!this.space) {
 			return;
@@ -420,7 +433,7 @@ export class DT3DCard extends LitElement {
 	}
 
 	/**
-	 * Measurement mode.
+	 * Change the measurement mode.
 	 * 
 	 * @param mode - Measurement mode to be used.
 	 */
@@ -660,11 +673,9 @@ export class DT3DCard extends LitElement {
 		`;
 		this.content.appendChild(cssElem);
 
-		this.sceneManager = new SceneManager({
-			canvas: this.canvas,
-			height,
-			onTransformChange: () => this.tree.refreshSelectedObject(),
-			width,
+		this.sceneManager = new SceneManager(this.canvas, height, width);
+		this.sceneManager.transform.addEventListener("objectChange", () => {
+			this.tree.refreshSelectedObject();
 		});
 
 		this.scene = this.sceneManager.scene;
@@ -674,15 +685,15 @@ export class DT3DCard extends LitElement {
 		this.space = this.sceneManager.home;
 		this.measurementHelpers = this.sceneManager.measurementHelpers;
 
-		this.rendererManager = new RendererManager({
-			camera: this.camera,
-			canvas: this.canvas,
-			controls: this.controls,
-			cssElement: cssElem,
+		this.rendererManager = new RendererManager(
+			this.camera,
+			this.canvas,
+			this.controls,
+			cssElem,
 			height,
-			scene: this.scene,
+			this.scene,
 			width,
-		});
+		);
 
 		this.sidebar.addEventListener("transform-tool-selected", (e: any) => {
 			const tool = e.detail.tool;

@@ -3,16 +3,6 @@ import { WebGLRenderer } from "three";
 import type { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 import { CSS3DRenderer } from "three/examples/jsm/renderers/CSS3DRenderer.js";
 
-interface RendererManagerOptions {
-	camera: PerspectiveCamera;
-	canvas: HTMLCanvasElement;
-	controls?: OrbitControls;
-	cssElement: HTMLElement;
-	height: number;
-	scene: Scene;
-	width: number;
-}
-
 /**
  * RendererManager handles WebGL and CSS renderers along with the render loop.
  */
@@ -47,15 +37,7 @@ export class RendererManager {
 	 */
 	private running: boolean = false;
 
-	constructor({
-		camera,
-		canvas,
-		controls,
-		cssElement,
-		height,
-		scene,
-		width,
-	}: RendererManagerOptions) {
+	constructor(camera: PerspectiveCamera, canvas: HTMLCanvasElement, controls: OrbitControls, cssElement: HTMLElement, height: number, scene: Scene, width: number) {
 		this.scene = scene;
 		this.camera = camera;
 		this.controls = controls;
