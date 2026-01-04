@@ -682,8 +682,8 @@ export class DT3DCard extends LitElement {
 		this.camera = this.sceneManager.camera;
 		this.controls = this.sceneManager.controls;
 		this.transform = this.sceneManager.transform;
-		this.space = this.sceneManager.home;
-		this.measurementHelpers = this.sceneManager.measurementHelpers;
+		this.space = this.sceneManager.space;
+		this.measurementHelpers = this.sceneManager.measurements;
 
 		this.rendererManager = new RendererManager(
 			this.camera,
@@ -742,22 +742,9 @@ export class DT3DCard extends LitElement {
 			}
 		});
 
-		// Add a cube
-		const geometry = new BoxGeometry();
-		const material = new MeshStandardMaterial({ color: 0xffff00 });
-		const cube = new Mesh(geometry, material);
-		this.transform.attach(cube);
-		this.space.add(cube);
-
-		const planeGeometry = new BoxGeometry(5, 5, 0.1);
-		const planeMaterial = new MeshStandardMaterial({ color: 0xffffff });
-
-		const plane = new Mesh(planeGeometry, planeMaterial);
-		plane.rotation.x = -Math.PI / 2; // Rotate to make it horizontal
-		plane.position.y = -1; // Position it below the cube
-		this.space.add(plane);
 
 		// Set base scene and update three
+		this.sceneManager.createDefaultScene();
 		this.tree.scene = this.space;
 		this.tree.updateTreeFromScene(this.space, true);
 
@@ -795,8 +782,6 @@ export class DT3DCard extends LitElement {
 				this.transform.attach(intersection.object as Mesh);
 				this.tree.selectObject(intersection.object.uuid);
 			}
-
-			
 
 			object?.onInteraction({
 				type: "dblclick",
@@ -862,14 +847,10 @@ export class DT3DCard extends LitElement {
 	 * The entities list is fetched from Home Assistant.
 	 */
 	public addEntityModal(): void {
-		const modal = document.createElement(
-			"dt3d-add-entity-modal",
-		) as DT3DAddEntityModal;
-
+		const modal = document.createElement("dt3d-add-entity-modal",) as DT3DAddEntityModal;
 		modal.states = this.hassInstance?.states ?? {};
 
 		const removeModal = () => modal.remove();
-
 		modal.addEventListener("entity-selected", (event: Event) => {
 			const { entityId } = (event as CustomEvent<{ entityId: string }>)
 				.detail;
