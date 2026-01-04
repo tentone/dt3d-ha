@@ -1,6 +1,6 @@
 import { LitElement, html, unsafeCSS } from "lit";
 import { customElement, property } from "lit/decorators.js";
-import type { Object3D } from "three";
+import { Color, Object3D } from "three";
 import { EntityObject } from "../../objects/entity-object.js";
 import componentStyles from "./object-inspector.css?inline";
 
@@ -19,6 +19,23 @@ export class DT3DObjectInspector extends LitElement {
 	 */
 	private isEntityObject(object: Object3D | null): object is EntityObject {
 		return object instanceof EntityObject;
+	}
+
+	/**
+	 * Check if object has a material with a color.
+	 *
+	 * @param object - Object attached to the inspector.
+	 * @returns True if the object has a material color to edit.
+	 */
+	private hasEditableColor(
+		object: Object3D | null,
+	): object is Object3D & { material: { color: Color } } {
+		if (!object || !("material" in object)) {
+			return false;
+		}
+
+		const material = (object as any).material;
+		return Boolean(material?.color && material.color instanceof Color);
 	}
 
 	/**
@@ -76,6 +93,21 @@ export class DT3DObjectInspector extends LitElement {
 		if (Number.isNaN(value)) return;
 
 		this.selectedObject.rotation[axis] = (value * Math.PI) / 180;
+		this.dispatchUpdated();
+		this.requestUpdate();
+	}
+
+	private handleColorChange(event: Event) {
+		if (!this.hasEditableColor(this.selectedObject)) {
+			return;
+		}
+
+		const value = (event.target as HTMLInputElement).value;
+		if (!/^#[0-9a-fA-F]{6}$/.test(value)) {
+			return;
+		}
+
+		this.selectedObject.material.color.set(value);
 		this.dispatchUpdated();
 		this.requestUpdate();
 	}
@@ -154,6 +186,26 @@ export class DT3DObjectInspector extends LitElement {
 		`;
 	}
 
+	private renderMaterialControls() {
+		if (!this.hasEditableColor(this.selectedObject)) {
+			return null;
+		}
+
+		const color = this.selectedObject.material.color;
+
+		return html`
+			<div class="field color-field">
+				<label>Material Color</label>
+				<input
+					type="color"
+					class="color-input"
+					.value=${`#${color.getHexString()}`}
+					@input=${(event: Event) => this.handleColorChange(event)}
+				/>
+			</div>
+		`;
+	}
+
 	private renderEntityDetails() {
 		// Check if object is entity
 		if (!this.isEntityObject(this.selectedObject)) {
@@ -221,7 +273,8 @@ export class DT3DObjectInspector extends LitElement {
 						</div>
 						${this.renderVectorControls("Position", "position")}
 						${this.renderVectorControls("Scale", "scale")}
-						${this.renderRotationControls()} ${this.renderEntityDetails()}
+						${this.renderRotationControls()} ${this.renderMaterialControls()}
+						${this.renderEntityDetails()}
 					`
 				: html`<div class="placeholder">
 						Select an object from the tree to edit its properties.
