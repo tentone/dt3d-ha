@@ -73,6 +73,13 @@ h4 {
 	background: color-mix(in srgb, var(--ha-color-neutral-10) 95%, transparent);
 	color: var(--ha-color-neutral-90);
 }
+.color-field input[type="color"] {
+	width: 100%;
+	height: 36px;
+	padding: 0 6px;
+	box-sizing: border-box;
+	cursor: pointer;
+}
 .placeholder {
 	color: var(--ha-color-neutral-70);
 	font-size: 13px;
