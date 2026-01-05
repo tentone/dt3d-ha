@@ -24,6 +24,9 @@
 	white-space: nowrap;
 	width: 100%;
 	color: var(--ha-color-neutral-95);
+	display: flex;
+	align-items: center;
+	gap: 4px;
 }
 
 .tree-node.selected {
@@ -43,6 +46,20 @@
 	cursor: pointer;
 	margin-right: 4px;
 	color: var(--ha-color-primary-60);
+}
+
+.node-label {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+}
+
+.lock-icon {
+	color: var(--ha-color-warning-50, #f0ad4e);
+	width: 14px;
+	height: 14px;
+	font-size: 14px;
+	line-height: 1;
 }
 
 .drop-zone {

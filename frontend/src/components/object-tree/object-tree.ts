@@ -2,6 +2,7 @@ import { LitElement, html, unsafeCSS } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import componentStyles from "./object-tree.css?inline";
 import type { Object3D } from "three";
+import { DTObject } from "../../objects/dt-object.js";
 
 import {LocalStorage} from "../../utils/local-storage.js";
 import "./object-inspector.js";
@@ -13,6 +14,8 @@ interface TreeNode {
 	id: UUID;
 	// Display name of the node
 	name: string;
+	// Locked state for DTObjects
+	locked?: boolean;
 	// Children nodes
 	children?: TreeNode[];
 }
@@ -198,6 +201,7 @@ export class DT3DTree extends LitElement {
 		const toTreeNode = (obj: Object3D): TreeNode => ({
 			id: obj.uuid,
 			name: obj.name || obj.type,
+			locked: obj instanceof DTObject ? obj.locked : false,
 			children:
 				obj.children.length > 0 ? obj.children.map(toTreeNode) : undefined,
 		});
@@ -614,7 +618,16 @@ export class DT3DTree extends LitElement {
 											</span>
 										`
 									: html`<span style="display:inline-block;width:16px"></span>`}
-								${node.name}
+								<span class="node-label">
+									${node.name}
+									${node.locked
+										? html`<ha-icon
+												class="lock-icon"
+												icon="mdi:lock"
+												title="Locked"
+											></ha-icon>`
+										: null}
+								</span>
 							</div>
 							${node.children &&
 							node.children.length &&

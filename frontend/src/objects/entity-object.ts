@@ -1,4 +1,3 @@
-import type { DTInteractionEvent } from "./dt-object.js";
 import { DTObject } from "./dt-object.js";
 
 /**
