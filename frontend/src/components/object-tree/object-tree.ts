@@ -486,7 +486,7 @@ export class DT3DTree extends LitElement {
 	private handleObjectUpdated() {
 		if (!this.scene) return;
 
-		this.updateTreeFromScene();
+		this.updateTreeFromScene(this.scene);
 	}
 
 	/**
