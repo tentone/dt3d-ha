@@ -2,6 +2,7 @@ import { LitElement, html, unsafeCSS } from "lit";
 import { customElement, property } from "lit/decorators.js";
 import { Color, Object3D } from "three";
 import { EntityObject } from "../../objects/entity-object.js";
+import { DTObject } from "../../objects/dt-object.js";
 import componentStyles from "./object-inspector.css?inline";
 
 @customElement("dt3d-object-inspector")
@@ -38,6 +39,10 @@ export class DT3DObjectInspector extends LitElement {
 		return Boolean(material?.color && material.color instanceof Color);
 	}
 
+	private isLocked(object: Object3D | null = this.selectedObject): object is DTObject {
+		return object instanceof DTObject && object.locked;
+	}
+
 	/**
 	 *
 	 */
@@ -52,7 +57,7 @@ export class DT3DObjectInspector extends LitElement {
 	}
 
 	private handleNameChange(event: Event) {
-		if (!this.selectedObject) return;
+		if (!this.selectedObject || this.isLocked()) return;
 
 		const value = (event.target as HTMLInputElement).value;
 		this.selectedObject.name = value;
@@ -71,7 +76,7 @@ export class DT3DObjectInspector extends LitElement {
 		axis: "x" | "y" | "z",
 		event: Event,
 	) {
-		if (!this.selectedObject) return;
+		if (!this.selectedObject || this.isLocked()) return;
 
 		const value = parseFloat((event.target as HTMLInputElement).value);
 		if (Number.isNaN(value)) return;
@@ -87,7 +92,7 @@ export class DT3DObjectInspector extends LitElement {
 	}
 
 	private handleRotationChange(axis: "x" | "y" | "z", event: Event) {
-		if (!this.selectedObject) return;
+		if (!this.selectedObject || this.isLocked()) return;
 
 		const value = parseFloat((event.target as HTMLInputElement).value);
 		if (Number.isNaN(value)) return;
@@ -98,7 +103,7 @@ export class DT3DObjectInspector extends LitElement {
 	}
 
 	private handleColorChange(event: Event) {
-		if (!this.hasEditableColor(this.selectedObject)) {
+		if (!this.hasEditableColor(this.selectedObject) || this.isLocked()) {
 			return;
 		}
 
@@ -112,6 +117,16 @@ export class DT3DObjectInspector extends LitElement {
 		this.requestUpdate();
 	}
 
+	private handleLockChange(event: Event) {
+		if (!this.selectedObject || !(this.selectedObject instanceof DTObject)) {
+			return;
+		}
+
+		this.selectedObject.locked = (event.target as HTMLInputElement).checked;
+		this.dispatchUpdated();
+		this.requestUpdate();
+	}
+
 	/**
 	 * Render a vector control element.
 	 *
@@ -119,7 +134,11 @@ export class DT3DObjectInspector extends LitElement {
 	 * @param type - Type (position or scale)
 	 * @returns Rendered element.
 	 */
-	private renderVectorControls(label: string, type: "position" | "scale") {
+	private renderVectorControls(
+		label: string,
+		type: "position" | "scale",
+		locked: boolean,
+	) {
 		if (!this.selectedObject) return null;
 
 		const source =
@@ -139,6 +158,7 @@ export class DT3DObjectInspector extends LitElement {
 									type="number"
 									step="0.01"
 									.value=${source[axis].toFixed(2)}
+									?disabled=${locked}
 									@change=${(event: Event) =>
 										this.handleVectorChange(type, axis, event)}
 								/>
@@ -155,7 +175,7 @@ export class DT3DObjectInspector extends LitElement {
 	 *
 	 * @returns - Renderer element for rotation controls.
 	 */
-	private renderRotationControls() {
+	private renderRotationControls(locked: boolean) {
 		if (!this.selectedObject) {
 			return null;
 		}
@@ -175,6 +195,7 @@ export class DT3DObjectInspector extends LitElement {
 										(this.selectedObject!.rotation[axis] * 180) /
 										Math.PI
 									).toFixed(1)}
+									?disabled=${locked}
 									@change=${(event: Event) =>
 										this.handleRotationChange(axis, event)}
 								/>
@@ -186,7 +207,7 @@ export class DT3DObjectInspector extends LitElement {
 		`;
 	}
 
-	private renderMaterialControls() {
+	private renderMaterialControls(locked: boolean) {
 		if (!this.hasEditableColor(this.selectedObject)) {
 			return null;
 		}
@@ -200,6 +221,7 @@ export class DT3DObjectInspector extends LitElement {
 					type="color"
 					class="color-input"
 					.value=${`#${color.getHexString()}`}
+					?disabled=${locked}
 					@input=${(event: Event) => this.handleColorChange(event)}
 				/>
 			</div>
@@ -255,6 +277,9 @@ export class DT3DObjectInspector extends LitElement {
 	}
 
 	public render() {
+		const locked = this.isLocked();
+		const isDTObject = this.selectedObject instanceof DTObject;
+
 		return html`
 			<h4>Selected Object</h4>
 			${this.selectedObject
@@ -264,16 +289,35 @@ export class DT3DObjectInspector extends LitElement {
 							<input
 								type="text"
 								.value=${this.selectedObject.name || ""}
+								?disabled=${locked}
 								@input=${(event: Event) => this.handleNameChange(event)}
 							/>
 						</div>
+						${isDTObject
+							? html`<div class="field">
+									<label>
+										<input
+											type="checkbox"
+											.checked=${locked}
+											@change=${(event: Event) => this.handleLockChange(event)}
+										/>
+										Locked
+									</label>
+								</div>`
+							: null}
 						<div class="field">
 							<label>UUID</label>
 							<input type="text" .value=${this.selectedObject.uuid} readonly />
 						</div>
-						${this.renderVectorControls("Position", "position")}
-						${this.renderVectorControls("Scale", "scale")}
-						${this.renderRotationControls()} ${this.renderMaterialControls()}
+						${locked
+							? html`<div class="placeholder">
+									This object is locked and cannot be edited.
+								</div>`
+							: null}
+						${this.renderVectorControls("Position", "position", locked)}
+						${this.renderVectorControls("Scale", "scale", locked)}
+						${this.renderRotationControls(locked)}
+						${this.renderMaterialControls(locked)}
 						${this.renderEntityDetails()}
 					`
 				: html`<div class="placeholder">
