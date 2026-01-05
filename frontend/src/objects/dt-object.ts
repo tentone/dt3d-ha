@@ -38,6 +38,11 @@ export class DTObject extends Group {
 	public isDTObject: boolean = true;
 
 	/**
+	 * When true, the object cannot be edited via controls or the inspector.
+	 */
+	public locked: boolean = false;
+
+	/**
 	 * Called once when the object is first added to the scene.
 	 */
 	// eslint-disable-next-line @typescript-eslint/no-empty-function
@@ -70,5 +75,14 @@ export class DTObject extends Group {
 
 		this.initialized = true;
 		this.initialize();
+	}
+
+	/**
+	 * Copy the object data from another DTObject, including lock state.
+	 */
+	public override copy(source: this, recursive: boolean = true): this {
+		super.copy(source, recursive);
+		this.locked = source.locked;
+		return this;
 	}
 }
