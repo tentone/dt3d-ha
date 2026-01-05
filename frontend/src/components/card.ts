@@ -1,4 +1,4 @@
-import type { PerspectiveCamera, Scene } from "three";
+import type { Intersection, PerspectiveCamera, Scene } from "three";
 import {
 	Mesh,
 	BoxGeometry,
@@ -10,7 +10,6 @@ import {
 	Group,
 	Vector3,
 	Object3D,
-	Intersection,
 	MeshStandardMaterial,
 } from "three";
 import type { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
@@ -24,6 +23,7 @@ import { DT3DSidebar } from "./side-bar/side-bar.js";
 import { DT3DTree } from "./object-tree/object-tree.js";
 import { Locale } from "../locale/locale.js";
 import { EntityLight } from "../objects/entity-light.js";
+import { EntityBinary } from "../objects/entity-binary.js";
 import { EntitySensor } from "../objects/entity-sensor.js";
 import { EntitySwitch } from "../objects/entity-switch.js";
 import { EntityObject } from "../objects/entity-object.js";
@@ -880,6 +880,8 @@ export class DT3DCard extends LitElement {
 
 		if (domain === "sensor") {
 			object = new EntitySensor(entityId, entity);
+		} else if (domain === "binary_sensor") {
+			object = new EntityBinary(entityId, entity);
 		} else if (domain === "light") {
 			object = new EntityLight(entityId, entity);
 		} else if (domain === "switch") {
