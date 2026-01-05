@@ -283,7 +283,7 @@ export class DT3DCard extends LitElement {
 		}
 
 		this.space.add(object);
-		this.transform?.attach(object);
+		this.attachTransform(object);
 
 		this.tree.updateTreeFromScene(this.space, true);
 	}
@@ -376,6 +376,31 @@ export class DT3DCard extends LitElement {
 	}
 
 	/**
+	 * Attach transform controls to the target object if it is editable.
+	 *
+	 * Locked DTObjects cannot be edited and will detach the transform helper.
+	 *
+	 * @param target - Object to attach to.
+	 */
+	private attachTransform(target: Object3D | null): void {
+		if (!this.transform) {
+			return;
+		}
+
+		if (!target) {
+			this.transform.detach();
+			return;
+		}
+
+		if (target instanceof DTObject && target.locked) {
+			this.transform.detach();
+			return;
+		}
+
+		this.transform.attach(target);
+	}
+
+	/**
 	 * Delete object from space.
 	 * 
 	 * @param objectId - ID of the object to be delete from the space.
@@ -428,7 +453,7 @@ export class DT3DCard extends LitElement {
 
 		parent.add(clone);
 
-		this.transform?.attach(clone);
+		this.attachTransform(clone);
 		this.tree.updateTreeFromScene(this.space);
 	}
 
@@ -753,7 +778,7 @@ export class DT3DCard extends LitElement {
 			const id = e.detail.id;
 			const object = this.space.getObjectByProperty("uuid", id);
 			if (object) {
-				this.transform.attach(object);
+				this.attachTransform(object);
 			}
 		});
 
@@ -776,11 +801,29 @@ export class DT3DCard extends LitElement {
 			this.cloneObject(id);
 		});
 
+		this.tree.addEventListener("object-updated", (e: any) => {
+			const updatedObject = e.detail?.object as Object3D | null;
+			if (!updatedObject) {
+				return;
+			}
+
+			if (updatedObject instanceof DTObject && updatedObject.locked) {
+				if (this.transform?.object === updatedObject) {
+					this.attachTransform(null);
+				}
+			} else if (this.transform?.object === updatedObject) {
+				this.attachTransform(updatedObject);
+			}
+
+			this.tree.refreshSelectedObject();
+		});
+
 		this.canvas.addEventListener("dblclick", (event: MouseEvent) => {
 			const { object, intersection } = this.pickObjectFromEvent(event);
 			if (intersection) {
-				this.transform.attach(intersection.object as Mesh);
-				this.tree.selectObject(intersection.object.uuid);
+				const target = object ?? (intersection.object as Object3D);
+				this.attachTransform(target);
+				this.tree.selectObject(target.uuid);
 			}
 
 			object?.onInteraction({
