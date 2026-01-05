@@ -9,7 +9,14 @@ const DEFAULT_ICON = mdiIcons.mdiHelpCircleOutline;
  * Home Assistant binary entity representation.
  */
 export class EntityBinary extends EntityObject {
-	private iconSprite: IconSprite;
+	/**
+	 * Icon of the binary entity.
+	 */
+	private icon: IconSprite;
+	
+	/**
+	 * Label of the entity.
+	 */
 	private label: TextSprite;
 
 	public constructor(entityId: string, entity: any) {
@@ -18,9 +25,9 @@ export class EntityBinary extends EntityObject {
 		const iconPath = EntityBinary.getIconPath(entity?.attributes?.icon);
 		const color = EntityBinary.getStateColor(entity?.state);
 
-		this.iconSprite = new IconSprite(iconPath, color, 0.32);
-		this.iconSprite.position.y = 0.1;
-		this.add(this.iconSprite);
+		this.icon = new IconSprite(iconPath, color, 0.32);
+		this.icon.position.y = 0.1;
+		this.add(this.icon);
 
 		const friendlyName = entity.attributes?.friendly_name ?? this.name;
 		this.label = new TextSprite(`${friendlyName}\n${entity.state ?? "unknown"}`);
@@ -34,8 +41,10 @@ export class EntityBinary extends EntityObject {
 		const friendlyName = entity.attributes?.friendly_name ?? this.name;
 		this.label.setText(`${friendlyName}\n${entity.state ?? "unknown"}`);
 
-		this.iconSprite.setColor(EntityBinary.getStateColor(entity.state));
-		this.iconSprite.setIcon(EntityBinary.getIconPath(entity.attributes?.icon));
+		console.log('Entity data', entity);
+
+		this.icon.setColor(EntityBinary.getStateColor(entity.state));
+		this.icon.setIcon(EntityBinary.getIconPath(entity.attributes?.icon));
 	}
 
 	/**

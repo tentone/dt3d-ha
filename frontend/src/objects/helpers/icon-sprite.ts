@@ -4,7 +4,14 @@ import { CanvasTexture, Color, Sprite, SpriteMaterial } from "three";
  * Sprite that renders an icon centered in a colored circle.
  */
 export class IconSprite extends Sprite {
+	/**
+	 * Path of the icon.
+	 */
 	private iconPath: string;
+
+	/**
+	 * Background color.
+	 */
 	private backgroundColor: Color;
 
 	/**
@@ -30,8 +37,7 @@ export class IconSprite extends Sprite {
 	 * @param color - New circle color.
 	 */
 	public setColor(color: Color | number): void {
-		this.backgroundColor =
-			color instanceof Color ? color : new Color(color);
+		this.backgroundColor = color instanceof Color ? color : new Color(color);
 		this.refreshTexture();
 	}
 
@@ -45,6 +51,9 @@ export class IconSprite extends Sprite {
 		this.refreshTexture();
 	}
 
+	/**
+	 * Refresh the texture of the sprite after changes.
+	 */
 	private refreshTexture(): void {
 		const texture = IconSprite.createTexture(this.iconPath, this.backgroundColor);
 		const spriteMaterial = this.material as SpriteMaterial;
