@@ -43,6 +43,11 @@ export class DTObject extends Group {
 	public locked: boolean = false;
 
 	/**
+	 * Internal objects are hidden from the object tree and ignored by pointer events.
+	 */
+	public internal: boolean = false;
+
+	/**
 	 * Called once when the object is first added to the scene.
 	 */
 	// eslint-disable-next-line @typescript-eslint/no-empty-function
@@ -83,6 +88,7 @@ export class DTObject extends Group {
 	public override copy(source: this, recursive: boolean = true): this {
 		super.copy(source, recursive);
 		this.locked = source.locked;
+		this.internal = source.internal;
 		return this;
 	}
 }
