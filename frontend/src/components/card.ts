@@ -584,6 +584,7 @@ export class DT3DCard extends LitElement {
 			if (internalHit) {
 				continue;
 			}
+			return { object: null, intersection };
 		}
 
 		return { object: null, intersection: null };
