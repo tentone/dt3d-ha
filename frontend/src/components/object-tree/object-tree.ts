@@ -198,15 +198,28 @@ export class DT3DTree extends LitElement {
 
 		console.log("DT3d: Updating tree from scene", scene, reset);
 
-		const toTreeNode = (obj: Object3D): TreeNode => ({
-			id: obj.uuid,
-			name: obj.name || obj.type,
-			locked: obj instanceof DTObject ? obj.locked : false,
-			children:
-				obj.children.length > 0 ? obj.children.map(toTreeNode) : undefined,
-		});
+		const toTreeNode = (obj: Object3D): TreeNode | null => {
+			if (obj.internal) {
+				return null;
+			}
 
-		this.tree = [toTreeNode(scene)];
+			const children =
+				obj.children.length > 0
+					? obj.children
+							.map(toTreeNode)
+							.filter((child): child is TreeNode => child !== null)
+					: [];
+
+			return {
+				id: obj.uuid,
+				name: obj.name || obj.type,
+				locked: obj instanceof DTObject ? obj.locked : false,
+				children: children.length > 0 ? children : undefined,
+			};
+		};
+
+		const root = toTreeNode(scene);
+		this.tree = root ? [root] : [];
 
 		if (this.selectedId) {
 			this.selectedObject =

@@ -565,18 +565,30 @@ export class DT3DCard extends LitElement {
 			true,
 		);
 
-		const intersection = intersects[0] ?? null;
-		let current = intersection?.object ?? null;
+		for (const intersection of intersects) {
+			let current: Object3D | null = intersection.object;
+			let internalHit = false;
 
-		while (current) {
-			if (current instanceof DTObject) {
-				return { object: current, intersection };
+			while (current) {
+				if (current instanceof DTObject && !current.internal) {
+					return { object: current, intersection };
+				}
+
+				if (current.internal) {
+					internalHit = true;
+				}
+
+				current = current.parent;
 			}
 
-			current = current.parent;
+			if (internalHit) {
+				continue;
+			}
+
+			return { object: null, intersection };
 		}
 
-		return { object: null, intersection };
+		return { object: null, intersection: null };
 	}
 
 
