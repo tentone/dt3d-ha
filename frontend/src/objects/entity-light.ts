@@ -9,7 +9,7 @@ export class EntityLight extends EntityObject {
 	/**
 	 * Point light to represent the light.
 	 */
-	private pointLight: PointLight;
+	private light: PointLight;
 
 	/**
 	 * Label with name of the entity.
@@ -20,15 +20,20 @@ export class EntityLight extends EntityObject {
 		super(entityId);
 
 		this.icon = new CircleIconSprite(0x555555, 0.25);
+		this.icon.internal = true;
 		this.icon.position.y = 0.1;
 		this.add(this.icon);
 
-		this.pointLight = new PointLight(0x555555, 0, 6, 2);
-		this.pointLight.castShadow = true;
-		this.pointLight.position.y = 0.4;
-		this.add(this.pointLight);
+		this.light = new PointLight(0x555555, 0, 6, 2);
+		this.light.internal = true;
+		this.light.castShadow = true;
+		this.light.position.y = 0.4;
+		this.add(this.light);
 
-		this.label = new TextSprite(entity.attributes?.friendly_name ?? entityId);
+		const friendlyName = this.friendlyName(entity);
+
+		this.label = new TextSprite(friendlyName);
+		this.label.internal = true;
 		this.label.position.y = 0.6;
 		this.add(this.label);
 
@@ -44,8 +49,8 @@ export class EntityLight extends EntityObject {
 		const color = EntityLight.getLightColor(entity);
 		this.icon.setColor(color.getHex());
 
-		this.pointLight.color = color;
-		this.pointLight.intensity = entity.state === "on" ? 1 : 0;
+		this.light.color = color;
+		this.light.intensity = entity.state === "on" ? 1 : 0;
 
 		const friendlyName = entity.attributes?.friendly_name ?? this.name;
 		this.label.setText(friendlyName);

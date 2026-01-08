@@ -25,6 +25,10 @@ export abstract class EntityObject extends DTObject {
 		}
 	}
 
+	public friendlyName(entity: any): string {
+		return entity.attributes?.friendly_name ?? this.name;
+	}
+
 	/**
 	 * Update the entity data and refresh the visual representation.
 	 */

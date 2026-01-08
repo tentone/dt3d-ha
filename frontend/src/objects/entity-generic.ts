@@ -10,12 +10,14 @@ export class EntityGeneric extends EntityObject {
 		super(entityId);
 
 		const icon = new CircleIconSprite(0x1e90ff, 0.2);
+		icon.internal = true;
 		icon.position.y = 0.1;
 		this.add(icon);
 
-		const friendlyName = entity.attributes?.friendly_name ?? this.name;
+		const friendlyName = this.friendlyName(entity);
 
 		const label = new TextSprite(friendlyName);
+		label.internal = true;
 		label.position.y = 0.45;
 		this.add(label);
 

@@ -12,10 +12,12 @@ export class EntitySwitch extends EntityObject {
 		super(entityId);
 
 		this.icon = this.createIcon(false);
+		this.icon.internal = true;
 		this.icon.position.y = 0.1;
 		this.add(this.icon);
 
 		this.label = new TextSprite("Loading\n...");
+		this.label.internal = true;
 		this.label.position.y = 0.45;
 		this.add(this.label);
 
@@ -23,7 +25,7 @@ export class EntitySwitch extends EntityObject {
 	}
 
 	protected updateFromEntity(entity: any): void {
-		const friendlyName = entity.attributes?.friendly_name ?? this.name;
+		const friendlyName = this.friendlyName(entity);
 		const labelText = `${friendlyName}\n${entity.state}`;
 		this.label.setText(labelText);
 

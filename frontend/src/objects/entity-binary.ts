@@ -26,11 +26,13 @@ export class EntityBinary extends EntityObject {
 		const color = EntityBinary.getStateColor(entity?.state);
 
 		this.icon = new IconSprite(iconPath, color, 0.32);
+		this.icon.internal = true;
 		this.icon.position.y = 0.1;
 		this.add(this.icon);
 
-		const friendlyName = entity.attributes?.friendly_name ?? this.name;
+		const friendlyName = this.friendlyName(entity);
 		this.label = new TextSprite(`${friendlyName}\n${entity.state ?? "unknown"}`);
+		this.label.internal = true;
 		this.label.position.y = 0.5;
 		this.add(this.label);
 
@@ -38,10 +40,8 @@ export class EntityBinary extends EntityObject {
 	}
 
 	protected updateFromEntity(entity: any): void {
-		const friendlyName = entity.attributes?.friendly_name ?? this.name;
+		const friendlyName = this.friendlyName(entity);
 		this.label.setText(`${friendlyName}\n${entity.state ?? "unknown"}`);
-
-		console.log('Entity data', entity);
 
 		this.icon.setColor(EntityBinary.getStateColor(entity.state));
 		this.icon.setIcon(EntityBinary.getIconPath(entity.attributes?.icon));
