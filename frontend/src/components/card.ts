@@ -570,11 +570,11 @@ export class DT3DCard extends LitElement {
 			let internalHit = false;
 
 			while (current) {
-				if (current instanceof DTObject && !current.internal) {
+				if (current instanceof DTObject && current?.internal !== true) {
 					return { object: current, intersection };
 				}
 
-				if (current.internal) {
+				if (current?.internal === true) {
 					internalHit = true;
 				}
 

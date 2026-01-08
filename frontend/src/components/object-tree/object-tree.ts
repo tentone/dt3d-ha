@@ -199,7 +199,7 @@ export class DT3DTree extends LitElement {
 		console.log("DT3d: Updating tree from scene", scene, reset);
 
 		const toTreeNode = (obj: Object3D): TreeNode | null => {
-			if (obj.internal) {
+			if (obj?.internal === true) {
 				return null;
 			}
 
