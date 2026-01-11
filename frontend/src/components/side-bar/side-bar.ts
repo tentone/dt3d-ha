@@ -4,6 +4,7 @@ import tippy, { type Instance, type Props } from "tippy.js";
 import componentStyles from "./side-bar.css?inline";
 import tippyStyles from  "tippy.js/dist/tippy.css?inline";
 import {LocalStorage} from "../../utils/local-storage.js";
+import { MESH_OPTIONS } from "../mesh-options.js";
 
 export type TransformOptions = "translate" | "rotate" | "scale";
 
@@ -180,24 +181,26 @@ export class DT3DSidebar extends LitElement {
 			</div>
 			<div class="sidebar-section">
 				<div class="sidebar-title">Add</div>
-				<button
-					@click=${() => this.handleAddObject("cube")}
-					data-tooltip="Add cube"
-					aria-label="Add cube">
-					<ha-icon icon="mdi:cube-outline"></ha-icon>
-				</button>
-				<button
-					@click=${() => this.handleAddObject("sphere")}
-					data-tooltip="Add sphere"
-					aria-label="Add sphere">
-					<ha-icon icon="mdi:sphere"></ha-icon>
-				</button>
-				<button
-					@click=${() => this.handleAddObject("plane")}
-					data-tooltip="Add plane"
-					aria-label="Add plane">
-					<ha-icon icon="mdi:square-outline"></ha-icon>
-				</button>
+				<details class="mesh-submenu">
+					<summary
+						data-tooltip="Add mesh"
+						aria-label="Add mesh">
+						<ha-icon icon="mdi:shape-outline"></ha-icon>
+						<span>Mesh</span>
+					</summary>
+					<div class="mesh-submenu-items">
+						${MESH_OPTIONS.map(
+							(option) => html`
+								<button
+									@click=${() => this.handleAddObject(option.type)}
+									data-tooltip=${`Add ${option.label}`}
+									aria-label=${`Add ${option.label}`}>
+									${option.label}
+								</button>
+							`,
+						)}
+					</div>
+				</details>
 				<button
 					@click=${() => this.handleAddObject("upload")}
 					data-tooltip="Upload model"
