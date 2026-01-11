@@ -2,15 +2,33 @@ import type { Intersection, PerspectiveCamera, Scene } from "three";
 import {
 	Mesh,
 	BoxGeometry,
+	CapsuleGeometry,
+	CatmullRomCurve3,
+	CircleGeometry,
+	ConeGeometry,
+	CylinderGeometry,
+	DodecahedronGeometry,
+	ExtrudeGeometry,
+	IcosahedronGeometry,
+	LatheGeometry,
 	MeshBasicMaterial,
-	Raycaster,
-	Vector2,
+	MeshStandardMaterial,
+	Object3D,
+	OctahedronGeometry,
 	PlaneGeometry,
+	PolyhedronGeometry,
+	Raycaster,
+	RingGeometry,
+	Shape,
+	ShapeGeometry,
 	SphereGeometry,
+	Vector2,
 	Group,
 	Vector3,
-	Object3D,
-	MeshStandardMaterial,
+	TetrahedronGeometry,
+	TorusGeometry,
+	TorusKnotGeometry,
+	TubeGeometry,
 } from "three";
 import type { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 import type { TransformControls } from "three/examples/jsm/controls/TransformControls";
@@ -750,20 +768,137 @@ export class DT3DCard extends LitElement {
 				wireframe: false,
 			});
 
-			if (type === "cube") {
-				const geometry = new BoxGeometry();
-				object = new Mesh(geometry, material);
-				object.name = "Cube";
-			} else if (type === "plane") {
-				const geometry = new PlaneGeometry(1, 1, 1);
-				object = new Mesh(geometry, material);
-				object.rotation.x = -Math.PI / 2;
-				object.position.y = -1;
-				object.name = "Plane";
-			} else if (type === "sphere") {
-				const geometry = new SphereGeometry();
-				object = new Mesh(geometry, material);
-				object.name = "Sphere";
+			const shape = new Shape();
+			shape.moveTo(0, 0);
+			shape.lineTo(0.6, 0);
+			shape.lineTo(0.6, 0.6);
+			shape.lineTo(0, 0.6);
+			shape.lineTo(0, 0);
+
+			switch (type) {
+				case "cube": {
+					object = new Mesh(new BoxGeometry(), material);
+					object.name = "Cube";
+					break;
+				}
+				case "sphere": {
+					object = new Mesh(new SphereGeometry(0.6, 32, 16), material);
+					object.name = "Sphere";
+					break;
+				}
+				case "plane": {
+					object = new Mesh(new PlaneGeometry(1, 1, 1), material);
+					object.rotation.x = -Math.PI / 2;
+					object.position.y = -1;
+					object.name = "Plane";
+					break;
+				}
+				case "capsule": {
+					object = new Mesh(new CapsuleGeometry(0.4, 1, 6, 12), material);
+					object.name = "Capsule";
+					break;
+				}
+				case "circle": {
+					object = new Mesh(new CircleGeometry(0.6, 32), material);
+					object.name = "Circle";
+					break;
+				}
+				case "cone": {
+					object = new Mesh(new ConeGeometry(0.5, 1, 32), material);
+					object.name = "Cone";
+					break;
+				}
+				case "cylinder": {
+					object = new Mesh(new CylinderGeometry(0.4, 0.4, 1, 32), material);
+					object.name = "Cylinder";
+					break;
+				}
+				case "dodecahedron": {
+					object = new Mesh(new DodecahedronGeometry(0.6), material);
+					object.name = "Dodecahedron";
+					break;
+				}
+				case "icosahedron": {
+					object = new Mesh(new IcosahedronGeometry(0.6), material);
+					object.name = "Icosahedron";
+					break;
+				}
+				case "lathe": {
+					const points = [
+						new Vector2(0.0, 0),
+						new Vector2(0.4, 0.2),
+						new Vector2(0.2, 0.6),
+						new Vector2(0.3, 1),
+					];
+					object = new Mesh(new LatheGeometry(points, 24), material);
+					object.name = "Lathe";
+					break;
+				}
+				case "octahedron": {
+					object = new Mesh(new OctahedronGeometry(0.6), material);
+					object.name = "Octahedron";
+					break;
+				}
+				case "polyhedron": {
+					const vertices = [
+						1, 1, 1,
+						-1, -1, 1,
+						-1, 1, -1,
+						1, -1, -1,
+					];
+					const indices = [
+						2, 1, 0,
+						0, 3, 2,
+						1, 3, 0,
+						2, 3, 1,
+					];
+					object = new Mesh(new PolyhedronGeometry(vertices, indices, 0.6, 0), material);
+					object.name = "Polyhedron";
+					break;
+				}
+				case "ring": {
+					object = new Mesh(new RingGeometry(0.3, 0.6, 32), material);
+					object.name = "Ring";
+					break;
+				}
+				case "shape": {
+					object = new Mesh(new ShapeGeometry(shape), material);
+					object.name = "Shape";
+					break;
+				}
+				case "extrude": {
+					object = new Mesh(new ExtrudeGeometry(shape, { depth: 0.2, bevelEnabled: true }), material);
+					object.name = "Extrude";
+					break;
+				}
+				case "tetrahedron": {
+					object = new Mesh(new TetrahedronGeometry(0.6), material);
+					object.name = "Tetrahedron";
+					break;
+				}
+				case "torus": {
+					object = new Mesh(new TorusGeometry(0.5, 0.2, 16, 60), material);
+					object.name = "Torus";
+					break;
+				}
+				case "torusKnot": {
+					object = new Mesh(new TorusKnotGeometry(0.4, 0.15, 80, 12), material);
+					object.name = "Torus Knot";
+					break;
+				}
+				case "tube": {
+					const curve = new CatmullRomCurve3([
+						new Vector3(-0.5, 0, 0),
+						new Vector3(-0.2, 0.5, 0.2),
+						new Vector3(0.2, 0.2, -0.2),
+						new Vector3(0.5, 0.4, 0),
+					]);
+					object = new Mesh(new TubeGeometry(curve, 20, 0.15, 8, false), material);
+					object.name = "Tube";
+					break;
+				}
+				default:
+					break;
 			}
 
 			if (object) {

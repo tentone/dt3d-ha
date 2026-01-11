@@ -82,3 +82,52 @@ button:hover {
 button:active {
 	background: var(--ha-color-primary-40);
 }
+
+.mesh-submenu {
+	margin-bottom: 8px;
+}
+
+.mesh-submenu summary {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 6px;
+	width: 100%;
+	padding: 10px 0;
+	background: var(--ha-color-primary-60);
+	color: var(--ha-color-neutral-95);
+	border-radius: 4px;
+	cursor: pointer;
+	font-size: 1em;
+	transition:
+		background 0.2s,
+		transform 0.2s;
+	box-shadow: 0 2px 4px
+		color-mix(in srgb, var(--ha-color-neutral-10) 20%, transparent);
+}
+
+.mesh-submenu summary:hover {
+	background: var(--ha-color-primary-40);
+}
+
+.mesh-submenu[open] summary {
+	background: var(--ha-color-primary-30);
+}
+
+.mesh-submenu summary::-webkit-details-marker {
+	display: none;
+}
+
+.mesh-submenu-items {
+	margin-top: 8px;
+}
+
+.mesh-submenu-items button {
+	font-size: 0.9em;
+	background: var(--ha-color-primary-50);
+}
+
+.mesh-submenu-items button:hover,
+.mesh-submenu-items button:active {
+	background: var(--ha-color-primary-40);
+}
