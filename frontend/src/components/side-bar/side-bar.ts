@@ -186,7 +186,6 @@ export class DT3DSidebar extends LitElement {
 						data-tooltip="Add mesh"
 						aria-label="Add mesh">
 						<ha-icon icon="mdi:shape-outline"></ha-icon>
-						<span>Mesh</span>
 					</summary>
 					<div class="mesh-submenu-items">
 						${MESH_OPTIONS.map(

@@ -775,6 +775,8 @@ export class DT3DCard extends LitElement {
 			shape.lineTo(0, 0.6);
 			shape.lineTo(0, 0);
 
+			// TODO <MOVE TO DEDICATED FUNCTION>
+			
 			switch (type) {
 				case "cube": {
 					object = new Mesh(new BoxGeometry(), material);
