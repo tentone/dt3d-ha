@@ -753,6 +753,14 @@ export class DT3DCard extends LitElement {
 
 		this.sidebar.addEventListener("transform-tool-selected", (e: any) => {
 			const tool = e.detail.tool;
+			if (tool === "none") {
+				this.transform.enabled = false;
+				this.transform.getHelper().visible = false;
+				return;
+			}
+
+			this.transform.enabled = true;
+			this.transform.getHelper().visible = true;
 			this.transform.setMode(tool);
 		});
 
