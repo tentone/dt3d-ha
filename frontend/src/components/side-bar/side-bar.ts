@@ -6,7 +6,7 @@ import tippyStyles from  "tippy.js/dist/tippy.css?inline";
 import {LocalStorage} from "../../utils/local-storage.js";
 import { MESH_OPTIONS } from "../mesh-options.js";
 
-export type TransformOptions = "translate" | "rotate" | "scale";
+export type TransformOptions = "translate" | "rotate" | "scale" | "none";
 
 export type MeasurementOptions = "distance" | "angle" | "none";
 
@@ -70,7 +70,7 @@ export class DT3DSidebar extends LitElement {
 	 * Change v bnnnn
 	 * @param tool
 	 */
-	private handleTransformSelect(tool: "translate" | "rotate" | "scale") {
+	private handleTransformSelect(tool: TransformOptions) {
 		this.transformTool = tool;
 
 		this.dispatchEvent(
@@ -177,6 +177,13 @@ export class DT3DSidebar extends LitElement {
 					data-tooltip="Scale object"
 					aria-label="Scale object">
 					<ha-icon icon="mdi:resize"></ha-icon>
+				</button>
+				<button
+          class=${`transform-btn ${this.transformTool === "none" ? "selected" : ""}`.trim()}
+					@click=${() => this.handleTransformSelect("none")}
+					data-tooltip="Disable transform controls"
+					aria-label="Disable transform controls">
+					<ha-icon icon="mdi:cursor-default-outline"></ha-icon>
 				</button>
 			</div>
 			<div class="sidebar-section">
