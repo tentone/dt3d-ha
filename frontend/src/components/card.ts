@@ -54,6 +54,8 @@ import { DistanceMeasurement } from "../objects/measurement/distance.js";
 import { ConnectionStatus } from "./connection-status/connection-status.js";
 import { SceneManager } from "./scene.js";
 import { RendererManager } from "./renderer.js";
+import { createMeshObject } from "./mesh-options.js";
+import { EntityGeneric } from "../objects/entity-generic.js";
 
 @customElement("dt3d-card")
 export class DT3DCard extends LitElement {
@@ -768,141 +770,9 @@ export class DT3DCard extends LitElement {
 				wireframe: false,
 			});
 
-			const shape = new Shape();
-			shape.moveTo(0, 0);
-			shape.lineTo(0.6, 0);
-			shape.lineTo(0.6, 0.6);
-			shape.lineTo(0, 0.6);
-			shape.lineTo(0, 0);
-
-			// TODO <MOVE TO DEDICATED FUNCTION>
+		
+			object = createMeshObject(type, material);
 			
-			switch (type) {
-				case "cube": {
-					object = new Mesh(new BoxGeometry(), material);
-					object.name = "Cube";
-					break;
-				}
-				case "sphere": {
-					object = new Mesh(new SphereGeometry(0.6, 32, 16), material);
-					object.name = "Sphere";
-					break;
-				}
-				case "plane": {
-					object = new Mesh(new PlaneGeometry(1, 1, 1), material);
-					object.rotation.x = -Math.PI / 2;
-					object.position.y = -1;
-					object.name = "Plane";
-					break;
-				}
-				case "capsule": {
-					object = new Mesh(new CapsuleGeometry(0.4, 1, 6, 12), material);
-					object.name = "Capsule";
-					break;
-				}
-				case "circle": {
-					object = new Mesh(new CircleGeometry(0.6, 32), material);
-					object.name = "Circle";
-					break;
-				}
-				case "cone": {
-					object = new Mesh(new ConeGeometry(0.5, 1, 32), material);
-					object.name = "Cone";
-					break;
-				}
-				case "cylinder": {
-					object = new Mesh(new CylinderGeometry(0.4, 0.4, 1, 32), material);
-					object.name = "Cylinder";
-					break;
-				}
-				case "dodecahedron": {
-					object = new Mesh(new DodecahedronGeometry(0.6), material);
-					object.name = "Dodecahedron";
-					break;
-				}
-				case "icosahedron": {
-					object = new Mesh(new IcosahedronGeometry(0.6), material);
-					object.name = "Icosahedron";
-					break;
-				}
-				case "lathe": {
-					const points = [
-						new Vector2(0.0, 0),
-						new Vector2(0.4, 0.2),
-						new Vector2(0.2, 0.6),
-						new Vector2(0.3, 1),
-					];
-					object = new Mesh(new LatheGeometry(points, 24), material);
-					object.name = "Lathe";
-					break;
-				}
-				case "octahedron": {
-					object = new Mesh(new OctahedronGeometry(0.6), material);
-					object.name = "Octahedron";
-					break;
-				}
-				case "polyhedron": {
-					const vertices = [
-						1, 1, 1,
-						-1, -1, 1,
-						-1, 1, -1,
-						1, -1, -1,
-					];
-					const indices = [
-						2, 1, 0,
-						0, 3, 2,
-						1, 3, 0,
-						2, 3, 1,
-					];
-					object = new Mesh(new PolyhedronGeometry(vertices, indices, 0.6, 0), material);
-					object.name = "Polyhedron";
-					break;
-				}
-				case "ring": {
-					object = new Mesh(new RingGeometry(0.3, 0.6, 32), material);
-					object.name = "Ring";
-					break;
-				}
-				case "shape": {
-					object = new Mesh(new ShapeGeometry(shape), material);
-					object.name = "Shape";
-					break;
-				}
-				case "extrude": {
-					object = new Mesh(new ExtrudeGeometry(shape, { depth: 0.2, bevelEnabled: true }), material);
-					object.name = "Extrude";
-					break;
-				}
-				case "tetrahedron": {
-					object = new Mesh(new TetrahedronGeometry(0.6), material);
-					object.name = "Tetrahedron";
-					break;
-				}
-				case "torus": {
-					object = new Mesh(new TorusGeometry(0.5, 0.2, 16, 60), material);
-					object.name = "Torus";
-					break;
-				}
-				case "torusKnot": {
-					object = new Mesh(new TorusKnotGeometry(0.4, 0.15, 80, 12), material);
-					object.name = "Torus Knot";
-					break;
-				}
-				case "tube": {
-					const curve = new CatmullRomCurve3([
-						new Vector3(-0.5, 0, 0),
-						new Vector3(-0.2, 0.5, 0.2),
-						new Vector3(0.2, 0.2, -0.2),
-						new Vector3(0.5, 0.4, 0),
-					]);
-					object = new Mesh(new TubeGeometry(curve, 20, 0.15, 8, false), material);
-					object.name = "Tube";
-					break;
-				}
-				default:
-					break;
-			}
-
 			if (object) {
 				this.addToScene(object);
 			}
@@ -1043,8 +913,7 @@ export class DT3DCard extends LitElement {
 
 		const removeModal = () => modal.remove();
 		modal.addEventListener("entity-selected", (event: Event) => {
-			const { entityId } = (event as CustomEvent<{ entityId: string }>)
-				.detail;
+			const { entityId } = (event as CustomEvent<{ entityId: string }>).detail;
 			this.addEntityToScene(entityId);
 			removeModal();
 		});
@@ -1057,28 +926,28 @@ export class DT3DCard extends LitElement {
 	/**
 	 * Adds a Home Assistant entity representation to the 3D scene.
 	 *
-	 * @param entityId - The ID of the entity to add.
+	 * @param id - The ID of the entity to add.
 	 */
-	private addEntityToScene(entityId: string): void {
-		const entity = this.hassInstance.states[entityId];
+	private addEntityToScene(id: string): void {
+		const entity = this.hassInstance.states[id];
 		if (!entity) {
-			console.warn("DT3D: Entity not found:", entityId);
+			console.warn("DT3D: Entity not found:", id);
 			return;
 		}
 
-		const domain = entityId.split(".")[0];
+		const domain = id.split(".")[0];
 		let object: Object3D | null = null;
 
 		if (domain === "sensor") {
-			object = new EntitySensor(entityId, entity);
+			object = new EntitySensor(id, entity);
 		} else if (domain === "binary_sensor") {
-			object = new EntityBinary(entityId, entity);
+			object = new EntityBinary(id, entity);
 		} else if (domain === "light") {
-			object = new EntityLight(entityId, entity);
+			object = new EntityLight(id, entity);
 		} else if (domain === "switch") {
-			object = new EntitySwitch(entityId, entity);
+			object = new EntitySwitch(id, entity);
 		} else {
-			object = this.createDefaultEntityRepresentation(entityId);
+			object = new EntityGeneric(id, entity);
 		}
 
 		if (!object) {
@@ -1086,7 +955,7 @@ export class DT3DCard extends LitElement {
 		}
 
 		object.position.set(Math.random() * 2 - 1, 0, Math.random() * 2 - 1);
-		this.addToScene(object, entityId);
+		this.addToScene(object, id);
 	}
 
 	private updateEntityObjects(): void {
@@ -1102,20 +971,6 @@ export class DT3DCard extends LitElement {
 				}
 			}
 		});
-	}
-
-	/**
-	 * Default placeholder for unsupported entity domains.
-	 */
-	private createDefaultEntityRepresentation(entityId: string): Object3D {
-		const material = new MeshBasicMaterial({
-			color: 0x0000ff,
-			wireframe: true,
-		});
-		const geometry = new BoxGeometry(0.5, 0.5, 0.5);
-		const entityMesh = new Mesh(geometry, material);
-		entityMesh.name = entityId;
-		return entityMesh;
 	}
 
 	/**

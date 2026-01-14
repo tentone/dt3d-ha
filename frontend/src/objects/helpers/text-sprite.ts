@@ -45,7 +45,7 @@ export class TextSprite extends Sprite {
 	 */
 	private options: Required<TextSpriteOptions>;
 
-	public constructor(text: string,resolution: number = 64,options: TextSpriteOptions = {},) {
+	public constructor(text: string, resolution: number = 64, options: TextSpriteOptions = {},) {
 		const canvas = document.createElement("canvas");
 		const ctx = canvas.getContext("2d");
 		if (!ctx) {
@@ -209,7 +209,7 @@ export class TextSprite extends Sprite {
 
 		// Sprite scale in world units
 		this.scale.set(cssW, cssH, 1);
-		this.scale.multiplyScalar(0.001);
+		this.scale.multiplyScalar(0.0007);
 	}
 
     /**
