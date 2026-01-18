@@ -403,21 +403,23 @@ export class DT3DCard extends LitElement {
 	 * @param target - Object to attach to.
 	 */
 	private attachTransform(target: Object3D | null): void {
+		const enabled = this.transform?.enabled;
+
 		if (!this.transform) {
 			return;
 		}
 
-		if (!target) {
-			this.transform.detach();
-			return;
-		}
-
-		if (target instanceof DTObject && target.locked) {
+		// Detach if no target or target is locked
+		if (!target || target instanceof DTObject && target.locked) {
 			this.transform.detach();
 			return;
 		}
 
 		this.transform.attach(target);
+		
+		// Restore previous enabled state (in case it was disabled)
+		this.transform.enabled = enabled;
+		this.transform.getHelper().visible = enabled;
 	}
 
 	/**
@@ -467,9 +469,6 @@ export class DT3DCard extends LitElement {
 
 		const parent = original.parent ?? this.space;
 		const clone = original.clone(true);
-
-		clone.position.x += 0.1;
-		clone.position.z += 0.1;
 
 		parent.add(clone);
 
@@ -523,14 +522,20 @@ export class DT3DCard extends LitElement {
 		this.addMeasurementPoint(point);
 	}
 
+	/**
+	 * Handle canvas click events.
+	 * 
+	 * @param event - Mouse event
+	 */
 	private handleCanvasClick(event: MouseEvent): void {
+		// If measrement mode is active, process measurement click
 		if (this.measurementMode !== "none") {
 			this.processMeasurementClick(event);
 			return;
 		}
 
+		// Pick object and trigger click interaction
 		const { object } = this.pickObjectFromEvent(event);
-
 		object?.onInteraction({
 			type: "click",
 			event: event,
@@ -538,13 +543,18 @@ export class DT3DCard extends LitElement {
 		});
 	}
 
+	/**
+	 * Handle pointer move events.
+	 * 
+	 * @param event - Mouse event 
+	 */
 	private handlePointerMove(event: MouseEvent): void {
 		const { object } = this.pickObjectFromEvent(event);
-
 		if (object === this.hoveredObject) {
 			return;
 		}
 
+		// If there is a previously hovered object, send pointerleave
 		if (this.hoveredObject) {
 			this.hoveredObject.onInteraction({
 				type: "pointerleave",
@@ -555,6 +565,7 @@ export class DT3DCard extends LitElement {
 
 		this.hoveredObject = object;
 
+		// If there is a new hovered object, send pointerenter
 		if (this.hoveredObject) {
 			this.hoveredObject.onInteraction({
 				type: "pointerenter",
@@ -777,18 +788,14 @@ export class DT3DCard extends LitElement {
 				color: Math.floor(Math.random() * 0xffffff),
 				wireframe: false,
 			});
-
 		
 			object = createMeshObject(type, material);
 			
 			if (object) {
 				this.addToScene(object);
-			}
-
-			if (type === "upload") {
+			} else if (type === "upload") {
 				this.selectFile();
-			}
-			if (type === "entity") {
+			} else if (type === "entity") {
 				this.addEntityModal();
 			}
 		});
