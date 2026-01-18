@@ -1,4 +1,4 @@
-import type { Intersection, PerspectiveCamera, Scene } from "three";
+import type { Camera, Intersection, Scene } from "three";
 import {
 	Mesh,
 	BoxGeometry,
@@ -53,9 +53,11 @@ import { AngleMeasurement } from "../objects/measurement/angle.js";
 import { DistanceMeasurement } from "../objects/measurement/distance.js";
 import { ConnectionStatus } from "./connection-status/connection-status.js";
 import { SceneManager } from "./scene.js";
+import type { CameraMode } from "./scene.js";
 import { RendererManager } from "./renderer.js";
 import { createMeshObject } from "./mesh-options.js";
 import { EntityGeneric } from "../objects/entity-generic.js";
+import { DT3DCameraToggle } from "./camera-toggle.js";
 
 @customElement("dt3d-card")
 export class DT3DCard extends LitElement {
@@ -82,7 +84,7 @@ export class DT3DCard extends LitElement {
 	/**
 	 * Viewport into the 3D space.
 	 */
-	private camera: PerspectiveCamera = null;
+	private camera: Camera = null;
 
 	/**
 	 * Renderer for the 3D content.
@@ -750,6 +752,18 @@ export class DT3DCard extends LitElement {
 			this.scene,
 			width,
 		);
+
+		const cameraToggle = document.createElement(
+			"dt3d-camera-toggle",
+		) as DT3DCameraToggle;
+		cameraToggle.mode = this.sceneManager.getCameraMode();
+		cameraToggle.addEventListener("camera-mode-change", (event: Event) => {
+			const { mode } = (event as CustomEvent<{ mode: CameraMode }>).detail;
+			this.sceneManager.setCameraMode(mode);
+			this.camera = this.sceneManager.camera;
+			this.rendererManager.setCamera(this.camera);
+		});
+		this.content.appendChild(cameraToggle);
 
 		this.sidebar.addEventListener("transform-tool-selected", (e: any) => {
 			const tool = e.detail.tool;
