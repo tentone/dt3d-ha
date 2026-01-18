@@ -153,7 +153,12 @@ export class SceneManager {
 		this.camera.updateMatrixWorld();
 
 		this.controls.object = this.camera;
+		this.controls.enabled = true;
+		this.controls.enableRotate = true;
+		this.controls.enablePan = true;
+		this.controls.enableZoom = true;
 		this.controls.update();
+		this.controls.saveState();
 
 		this.transform.camera = this.camera;
 		this.transform.updateMatrixWorld();
