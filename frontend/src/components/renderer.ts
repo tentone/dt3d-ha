@@ -1,4 +1,4 @@
-import type { PerspectiveCamera, Scene } from "three";
+import type { Camera, Scene } from "three";
 import { WebGLRenderer } from "three";
 import type { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 import { CSS3DRenderer } from "three/examples/jsm/renderers/CSS3DRenderer.js";
@@ -25,7 +25,7 @@ export class RendererManager {
 	/**
 	 * Camera to view into the scene.
 	 */
-	public camera: PerspectiveCamera;
+	public camera: Camera;
 
 	/**
 	 * Control object used to move around the scene.
@@ -37,7 +37,7 @@ export class RendererManager {
 	 */
 	private running: boolean = false;
 
-	constructor(camera: PerspectiveCamera, canvas: HTMLCanvasElement, controls: OrbitControls, cssElement: HTMLElement, height: number, scene: Scene, width: number) {
+	constructor(camera: Camera, canvas: HTMLCanvasElement, controls: OrbitControls, cssElement: HTMLElement, height: number, scene: Scene, width: number) {
 		this.scene = scene;
 		this.camera = camera;
 		this.controls = controls;
@@ -92,5 +92,9 @@ export class RendererManager {
 	public resize(width: number, height: number): void {
 		this.renderer.setSize(width, height, false);
 		this.cssRenderer.setSize(width, height);
+	}
+
+	public setCamera(camera: Camera): void {
+		this.camera = camera;
 	}
 }

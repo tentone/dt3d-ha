@@ -3,6 +3,7 @@ import {
 	BoxGeometry,
 	DirectionalLight,
 	Group,
+	OrthographicCamera,
 	MathUtils,
 	Mesh,
 	MeshStandardMaterial,
@@ -14,9 +15,9 @@ import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 import { TransformControls } from "three/examples/jsm/controls/TransformControls";
 import { Sky } from "three/examples/jsm/Addons.js";
 
-interface SceneManagerOptions {
+export type CameraMode = "perspective" | "orthographic";
 
-}
+interface SceneManagerOptions {}
 
 /**
  * SceneManager handles scene creation and camera/controls setup.
@@ -30,7 +31,22 @@ export class SceneManager {
 	/**
 	 * Camera used to visualize content.
 	 */
-	public camera: PerspectiveCamera;
+	public camera: PerspectiveCamera | OrthographicCamera;
+
+	/**
+	 * Current camera mode.
+	 */
+	private cameraMode: CameraMode = "perspective";
+
+	private perspectiveCamera: PerspectiveCamera;
+
+	private orthographicCamera: OrthographicCamera;
+
+	private width: number;
+
+	private height: number;
+
+	private orthographicFrustumSize = 6;
 
 	/**
 	 * Space being visualized currently.
@@ -57,8 +73,17 @@ export class SceneManager {
 	constructor(canvas: HTMLCanvasElement, height: number, width: number,) {
 		this.scene = new Scene();
 
-		this.camera = new PerspectiveCamera(75, width / height, 0.1, 10000);
-		this.camera.position.z = 3;
+		this.width = width;
+		this.height = height;
+
+		this.perspectiveCamera = new PerspectiveCamera(75, width / height, 0.1, 10000);
+		this.perspectiveCamera.position.z = 3;
+
+		this.orthographicCamera = new OrthographicCamera(-1, 1, 1, -1, 0.1, 10000);
+		this.updateOrthographicCameraSize(width, height);
+		this.orthographicCamera.position.copy(this.perspectiveCamera.position);
+
+		this.camera = this.perspectiveCamera;
 
 		this.measurements = new Group();
 		this.scene.add(this.measurements);
@@ -105,8 +130,61 @@ export class SceneManager {
 	 * @param height - Height in px
 	 */
 	public updateSize(width: number, height: number): void {
-		this.camera.aspect = width / height;
-		this.camera.updateProjectionMatrix();
+		this.width = width;
+		this.height = height;
+
+		this.perspectiveCamera.aspect = width / height;
+		this.perspectiveCamera.updateProjectionMatrix();
+		this.updateOrthographicCameraSize(width, height);
+	}
+
+	public setCameraMode(mode: CameraMode): void {
+		if (mode === this.cameraMode) {
+			return;
+		}
+
+		const previousCamera = this.camera;
+		this.cameraMode = mode;
+		this.camera =
+			mode === "perspective" ? this.perspectiveCamera : this.orthographicCamera;
+
+		this.camera.position.copy(previousCamera.position);
+		this.camera.quaternion.copy(previousCamera.quaternion);
+		this.camera.updateMatrixWorld();
+
+		this.controls.object = this.camera;
+		this.controls.enabled = true;
+		this.controls.enableRotate = true;
+		this.controls.enablePan = true;
+		this.controls.enableZoom = true;
+		this.controls.update();
+		this.controls.saveState();
+
+		this.transform.camera = this.camera;
+		this.transform.updateMatrixWorld();
+	}
+
+	public toggleCameraMode(): CameraMode {
+		const nextMode: CameraMode =
+			this.cameraMode === "perspective" ? "orthographic" : "perspective";
+		this.setCameraMode(nextMode);
+		return this.cameraMode;
+	}
+
+	public getCameraMode(): CameraMode {
+		return this.cameraMode;
+	}
+
+	private updateOrthographicCameraSize(width: number, height: number): void {
+		const aspect = width / height;
+		const halfHeight = this.orthographicFrustumSize / 2;
+		const halfWidth = halfHeight * aspect;
+
+		this.orthographicCamera.left = -halfWidth;
+		this.orthographicCamera.right = halfWidth;
+		this.orthographicCamera.top = halfHeight;
+		this.orthographicCamera.bottom = -halfHeight;
+		this.orthographicCamera.updateProjectionMatrix();
 	}
 
 	/**
