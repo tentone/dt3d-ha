@@ -16,9 +16,10 @@ import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 import { TransformControls } from "three/examples/jsm/controls/TransformControls";
 import { Sky } from "three/examples/jsm/Addons.js";
 
+/**
+ * Editor camera mode (2D or 3D)
+ */
 export type CameraMode = "perspective" | "orthographic";
-
-interface SceneManagerOptions {}
 
 /**
  * SceneManager handles scene creation and camera/controls setup.
@@ -39,52 +40,58 @@ export class SceneManager {
 	 */
 	private cameraMode: CameraMode = "perspective";
 
-	private perspectiveCamera: PerspectiveCamera;
+	/**
+	 * Orthographic camera frustum size.
+	 */
+	private orthographicFrustumSize: number = 6;
 
-	private orthographicCamera: OrthographicCamera;
+	/**
+	 * Width of the viewport
+	 */
+	private width: number = null;
 
-	private width: number;
+	/**
+	 * Height of the viewporrt
+	 */
+	private height: number = null;
 
-	private height: number;
-
-	private orthographicFrustumSize = 6;
+	/**
+	 * Canvas where the content is being rendered.
+	 */
+	public canvas: HTMLCanvasElement = null;
 
 	/**
 	 * Space being visualized currently.
 	 * 
 	 * Spaces are like end-user scenes.
 	 */
-	public space: Group;
+	public space: Group = null;
 
 	/**
 	 * Group to display measurements.
 	 */
-	public measurements: Group;
+	public measurements: Group = null;
 
 	/**
 	 * Orbit controls to navigate the scene.
 	 */
-	public controls: OrbitControls;
+	public controls: OrbitControls = null;
 
 	/**
 	 * Transform controls for object manipulation.
 	 */
-	public transform: TransformControls;
+	public transform: TransformControls = null;
 
 	constructor(canvas: HTMLCanvasElement, height: number, width: number,) {
 		this.scene = new Scene();
 
+		this.canvas = canvas;
 		this.width = width;
 		this.height = height;
 
-		this.perspectiveCamera = new PerspectiveCamera(75, width / height, 0.1, 10000);
-		this.perspectiveCamera.position.z = 3;
-
-		this.orthographicCamera = new OrthographicCamera(-1, 1, 1, -1, 0.1, 10000);
-		this.updateOrthographicCameraSize(width, height);
-		this.orthographicCamera.position.copy(this.perspectiveCamera.position);
-
-		this.camera = this.perspectiveCamera;
+		this.camera = new PerspectiveCamera(75, width / height, 0.1, 10000);
+		this.camera.position.z = 3;
+		this.scene.add(this.camera);
 
 		this.measurements = new Group();
 		this.scene.add(this.measurements);
@@ -102,7 +109,6 @@ export class SceneManager {
 		this.transform.addEventListener("dragging-changed", (event: any) => {
 			this.controls.enabled = !event.value;
 		});
-
 		this.scene.add(this.transform.getHelper());
 	}
 
@@ -134,63 +140,77 @@ export class SceneManager {
 		this.width = width;
 		this.height = height;
 
-		this.perspectiveCamera.aspect = width / height;
-		this.perspectiveCamera.updateProjectionMatrix();
-		this.updateOrthographicCameraSize(width, height);
+		if (this.camera instanceof PerspectiveCamera) {
+			this.camera.aspect = width / height;
+			this.camera.updateProjectionMatrix();
+		} else if (this.camera instanceof OrthographicCamera) {
+			const aspect = width / height;
+			const halfHeight = this.orthographicFrustumSize / 2;
+			const halfWidth = halfHeight * aspect;
+
+			this.camera.left = -halfWidth;
+			this.camera.right = halfWidth;
+			this.camera.top = halfHeight;
+			this.camera.bottom = -halfHeight;
+			this.camera.updateProjectionMatrix();
+		} else {
+			throw new Error('Camera type is unknown');
+		}
 	}
 
+	/**
+	 * Camera mode.
+	 * 
+	 * @param mode - Camera mode to use.
+	 */
 	public setCameraMode(mode: CameraMode): void {
 		if (mode === this.cameraMode) {
 			return;
 		}
 
-		const previousCamera = this.camera;
-		this.cameraMode = mode;
-		this.camera =
-			mode === "perspective" ? this.perspectiveCamera : this.orthographicCamera;
+		this.scene.remove(this.camera);
 
-		this.camera.position.copy(previousCamera.position);
-		this.camera.quaternion.copy(previousCamera.quaternion);
+		const previous = this.camera;
+
+		this.cameraMode = mode;
+
+		if (this.cameraMode === "perspective") {
+			this.camera = new PerspectiveCamera(75, this.width / this.height, 0.1, 10000);
+			this.camera.position.z = 3;
+			this.scene.add(this.camera);
+		} else {
+			this.camera = new OrthographicCamera(-1, 1, 1, -1, 0.1, 1e5);
+			this.scene.add(this.camera);
+		}
+
+
+		// Copy camera position
+		this.camera.position.copy(previous.position);
+		this.camera.quaternion.copy(previous.quaternion);
 		this.camera.updateMatrixWorld();
 
 		this.controls.object = this.camera;
-		this.controls.enabled = true;
-		this.controls.enableRotate = true;
-		this.controls.enablePan = true;
-		this.controls.enableZoom = true;
-		this.controls.mouseButtons = {
-			LEFT: MOUSE.ROTATE,
-			MIDDLE: MOUSE.DOLLY,
-			RIGHT: MOUSE.PAN,
-		};
 		this.controls.update();
-		this.controls.saveState();
 
 		this.transform.camera = this.camera;
-		this.transform.updateMatrixWorld();
+		
+		this.updateSize(this.width, this.height);
 	}
 
+	/**
+	 * Toggle camera mode between perspective and orthographic.
+	 */
 	public toggleCameraMode(): CameraMode {
-		const nextMode: CameraMode =
-			this.cameraMode === "perspective" ? "orthographic" : "perspective";
+		const nextMode: CameraMode = this.cameraMode === "perspective" ? "orthographic" : "perspective";
 		this.setCameraMode(nextMode);
 		return this.cameraMode;
 	}
 
+	/**
+	 * Get camera mode
+	 */
 	public getCameraMode(): CameraMode {
 		return this.cameraMode;
-	}
-
-	private updateOrthographicCameraSize(width: number, height: number): void {
-		const aspect = width / height;
-		const halfHeight = this.orthographicFrustumSize / 2;
-		const halfWidth = halfHeight * aspect;
-
-		this.orthographicCamera.left = -halfWidth;
-		this.orthographicCamera.right = halfWidth;
-		this.orthographicCamera.top = halfHeight;
-		this.orthographicCamera.bottom = -halfHeight;
-		this.orthographicCamera.updateProjectionMatrix();
 	}
 
 	/**

@@ -764,16 +764,16 @@ export class DT3DCard extends LitElement {
 			width,
 		);
 
-		const cameraToggle = document.createElement(
-			"dt3d-camera-toggle",
-		) as DT3DCameraToggle;
+		const cameraToggle = document.createElement("dt3d-camera-toggle",) as DT3DCameraToggle;
 		cameraToggle.mode = this.sceneManager.getCameraMode();
 		cameraToggle.addEventListener("camera-mode-change", (event: Event) => {
 			const { mode } = (event as CustomEvent<{ mode: CameraMode }>).detail;
+
 			this.sceneManager.setCameraMode(mode);
 			this.camera = this.sceneManager.camera;
 			this.rendererManager.setCamera(this.camera);
 		});
+		
 		this.content.appendChild(cameraToggle);
 
 		this.sidebar.addEventListener("transform-tool-selected", (e: any) => {
