@@ -3,6 +3,7 @@ import {
 	BoxGeometry,
 	DirectionalLight,
 	Group,
+	MOUSE,
 	OrthographicCamera,
 	MathUtils,
 	Mesh,
@@ -157,6 +158,11 @@ export class SceneManager {
 		this.controls.enableRotate = true;
 		this.controls.enablePan = true;
 		this.controls.enableZoom = true;
+		this.controls.mouseButtons = {
+			LEFT: MOUSE.ROTATE,
+			MIDDLE: MOUSE.DOLLY,
+			RIGHT: MOUSE.PAN,
+		};
 		this.controls.update();
 		this.controls.saveState();
 
