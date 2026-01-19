@@ -485,7 +485,6 @@ export class DT3DTree extends LitElement {
 	 * Must be called when changes are applied.
 	 */
 	public refreshSelectedObject() {
-		console.log("refreshSelectedObject", this.selectedId, this.scene);
 		if (!this.selectedId || !this.scene) {
 			return;
 		}
@@ -603,7 +602,7 @@ export class DT3DTree extends LitElement {
 								this.dropTarget.position === "inside"
 									? "drop-target"
 									: ""}"
-								?draggable=${depth > 0}
+								draggable=true
 								@dragstart=${(dragEvent: DragEvent) =>
 									this.handleDragStart(dragEvent, node.id)}
 								@dragend=${(dragEvent: DragEvent) =>
