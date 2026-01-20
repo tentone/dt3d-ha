@@ -58,12 +58,8 @@ import { RendererManager } from "./renderer.js";
 import { createMeshObject } from "./mesh-options.js";
 import { EntityGeneric } from "../objects/entity-generic.js";
 import { DT3DCameraToggle } from "./camera-toggle.js";
-import {
-	SpaceApi,
-	type SpaceResponse,
-	type ObjectInstancePayload,
-	type ObjectInstanceResponse,
-} from "../utils/space-api.js";
+import { SpaceApi } from "../utils/space-api.js";
+import { SpaceSync } from "../utils/space-sync.js";
 
 @customElement("dt3d-card")
 export class DT3DCard extends LitElement {
@@ -145,24 +141,14 @@ export class DT3DCard extends LitElement {
 	private raycaster: Raycaster = new Raycaster();
 
 	/**
-	 * Active space ID loaded from the API.
-	 */
-	private activeSpaceId: string | null = null;
-
-	/**
 	 * API client for fetching/saving spaces and objects.
 	 */
 	private apiClient: SpaceApi | null = null;
 
 	/**
-	 * Map of three.js object UUIDs to API object IDs.
+	 * API sync helper for spaces and objects.
 	 */
-	private objectApiIds: Map<string, string> = new Map();
-
-	/**
-	 * Flag to avoid syncing while loading from API.
-	 */
-	private isSyncingFromApi: boolean = false;
+	private spaceSync: SpaceSync | null = null;
 
 	/**
 	 * Normalized pointer position.
@@ -335,7 +321,7 @@ export class DT3DCard extends LitElement {
 
 		this.tree.updateTreeFromScene(this.space, true);
 
-		void this.syncObjectHierarchyCreate(object);
+		void this.spaceSync?.syncObjectHierarchyCreate(object);
 	}
 
 	/**
@@ -424,7 +410,7 @@ export class DT3DCard extends LitElement {
 
 		this.tree.updateTreeFromScene();
 
-		void this.syncObjectUpdate(source);
+		void this.spaceSync?.syncObjectUpdate(source);
 	}
 
 	/**
@@ -482,7 +468,7 @@ export class DT3DCard extends LitElement {
 
 		this.tree.updateTreeFromScene(this.space, true);
 
-		void this.syncObjectDelete(target);
+		void this.spaceSync?.syncObjectDelete(target);
 	}
 
 	/**
@@ -509,7 +495,7 @@ export class DT3DCard extends LitElement {
 		this.attachTransform(clone);
 		this.tree.updateTreeFromScene(this.space);
 
-		void this.syncObjectHierarchyCreate(clone);
+		void this.spaceSync?.syncObjectHierarchyCreate(clone);
 	}
 
 	/**
@@ -781,7 +767,7 @@ export class DT3DCard extends LitElement {
 		this.sceneManager.transform.addEventListener("objectChange", () => {
 			this.tree.refreshSelectedObject();
 			if (this.transform?.object) {
-				void this.syncObjectUpdate(this.transform.object);
+				void this.spaceSync?.syncObjectUpdate(this.transform.object);
 			}
 		});
 
@@ -855,7 +841,15 @@ export class DT3DCard extends LitElement {
 
 
 		this.tree.scene = this.space;
-		void this.initializeSpaceFromApi();
+		this.spaceSync = new SpaceSync({
+			apiClient: this.getApiClient(),
+			sceneManager: this.sceneManager,
+			space: this.space,
+			tree: this.tree,
+			resolveMeshType: (object) => this.resolveMeshType(object),
+			createEntityObject: (entityId) => this.createEntityObject(entityId),
+		});
+		void this.spaceSync.initializeSpaceFromApi();
 
 		// Listen for selection events from the tree
 		this.tree.addEventListener("object-selected", (e: any) => {
@@ -900,7 +894,7 @@ export class DT3DCard extends LitElement {
 			}
 
 			this.tree.refreshSelectedObject();
-			void this.syncObjectUpdate(updatedObject);
+			void this.spaceSync?.syncObjectUpdate(updatedObject);
 		});
 
 		this.canvas.addEventListener("dblclick", (event: MouseEvent) => {
@@ -1041,152 +1035,6 @@ export class DT3DCard extends LitElement {
 		return this.apiClient;
 	}
 
-	private clearSpace(): void {
-		if (!this.space) {
-			return;
-		}
-
-		this.space.clear();
-		this.objectApiIds.clear();
-	}
-
-	private async initializeSpaceFromApi(): Promise<void> {
-		this.isSyncingFromApi = true;
-
-		try {
-			const apiClient = this.getApiClient();
-			const spaces = await apiClient.listSpaces();
-			let space = spaces[0];
-
-			if (!space) {
-				space = await apiClient.createSpace(
-					"Default Space",
-					"Auto-created space",
-				);
-			}
-
-			this.activeSpaceId = space.id;
-
-			const instances = await apiClient.listObjects(space.id);
-
-			if (instances.length === 0) {
-				this.clearSpace();
-				this.sceneManager.createDefaultScene();
-				this.tree.updateTreeFromScene(this.space, true);
-				this.isSyncingFromApi = false;
-				await this.syncAllObjectsToApi();
-				return;
-			}
-
-			this.loadObjectsFromApi(instances);
-			this.tree.updateTreeFromScene(this.space, true);
-		} catch (error) {
-			console.error("DT3D: Failed to load spaces from API", error);
-			this.clearSpace();
-			this.sceneManager.createDefaultScene();
-			this.tree.updateTreeFromScene(this.space, true);
-		} finally {
-			this.isSyncingFromApi = false;
-		}
-	}
-
-	private loadObjectsFromApi(instances: ObjectInstanceResponse[]): void {
-		this.clearSpace();
-
-		const objectsById = new Map<string, Object3D>();
-
-		for (const instance of instances) {
-			const object = this.createObjectFromInstance(instance);
-			if (!object) {
-				continue;
-			}
-
-			object.userData.apiId = instance.id;
-			this.objectApiIds.set(object.uuid, instance.id);
-			objectsById.set(instance.id, object);
-		}
-
-		for (const instance of instances) {
-			const object = objectsById.get(instance.id);
-			if (!object) {
-				continue;
-			}
-
-			const parentId = instance.parent_id;
-			const parent = parentId ? objectsById.get(parentId) : null;
-			if (parent) {
-				parent.add(object);
-			} else {
-				this.space.add(object);
-			}
-
-			if (object instanceof DTObject) {
-				object.init();
-			}
-		}
-	}
-
-	private createObjectFromInstance(instance: ObjectInstanceResponse): Object3D | null {
-		const data = instance.data ?? {};
-		let object: Object3D | null = null;
-
-		if (instance.type === "mesh") {
-			const meshType = data.meshType as string | undefined;
-			if (!meshType) {
-				return null;
-			}
-
-			const color = typeof data.color === "string" ? parseInt(data.color, 16) : 0xffffff;
-			const material = new MeshStandardMaterial({ color });
-			object = createMeshObject(meshType, material);
-			if (object) {
-				object.userData.meshType = meshType;
-			}
-		} else if (instance.type === "entity") {
-			const entityId = data.entityId as string | undefined;
-			if (!entityId) {
-				return null;
-			}
-
-			object = this.createEntityObject(entityId);
-			if (object) {
-				object.userData.entityId = entityId;
-			}
-		} else if (instance.type === "group") {
-			object = new Group();
-		}
-
-		if (!object) {
-			return null;
-		}
-
-		object.name = instance.name || object.name;
-		this.applyObjectTransform(object, data);
-
-		if (object instanceof DTObject && typeof data.locked === "boolean") {
-			object.locked = data.locked;
-		}
-
-		return object;
-	}
-
-	private applyObjectTransform(object: Object3D, data: Record<string, any>): void {
-		const position = data.position as { x?: number; y?: number; z?: number } | undefined;
-		if (position) {
-			object.position.set(position.x ?? 0, position.y ?? 0, position.z ?? 0);
-		}
-
-		const rotation = data.rotation as { x?: number; y?: number; z?: number } | undefined;
-		if (rotation) {
-			object.rotation.set(rotation.x ?? 0, rotation.y ?? 0, rotation.z ?? 0);
-		}
-
-		const scale = data.scale as { x?: number; y?: number; z?: number } | undefined;
-		if (scale) {
-			object.scale.set(scale.x ?? 1, scale.y ?? 1, scale.z ?? 1);
-		}
-	}
-
 	private resolveMeshType(object: Object3D): string | null {
 		const meshType = object.userData.meshType as string | undefined;
 		if (meshType) {
@@ -1196,32 +1044,46 @@ export class DT3DCard extends LitElement {
 		if (object instanceof Mesh) {
 			switch (object.geometry?.type) {
 				case "BoxGeometry":
+				case "BoxBufferGeometry":
 					return "cube";
 				case "SphereGeometry":
+				case "SphereBufferGeometry":
 					return "sphere";
 				case "PlaneGeometry":
+				case "PlaneBufferGeometry":
 					return "plane";
 				case "CapsuleGeometry":
+				case "CapsuleBufferGeometry":
 					return "capsule";
 				case "CircleGeometry":
+				case "CircleBufferGeometry":
 					return "circle";
 				case "ConeGeometry":
+				case "ConeBufferGeometry":
 					return "cone";
 				case "CylinderGeometry":
+				case "CylinderBufferGeometry":
 					return "cylinder";
 				case "DodecahedronGeometry":
+				case "DodecahedronBufferGeometry":
 					return "dodecahedron";
 				case "IcosahedronGeometry":
+				case "IcosahedronBufferGeometry":
 					return "icosahedron";
 				case "OctahedronGeometry":
+				case "OctahedronBufferGeometry":
 					return "octahedron";
 				case "RingGeometry":
+				case "RingBufferGeometry":
 					return "ring";
 				case "TetrahedronGeometry":
+				case "TetrahedronBufferGeometry":
 					return "tetrahedron";
 				case "TorusGeometry":
+				case "TorusBufferGeometry":
 					return "torus";
 				case "TorusKnotGeometry":
+				case "TorusKnotBufferGeometry":
 					return "torusKnot";
 				default:
 					return null;
@@ -1229,182 +1091,6 @@ export class DT3DCard extends LitElement {
 		}
 
 		return null;
-	}
-
-	private async syncAllObjectsToApi(): Promise<void> {
-		if (!this.space) {
-			return;
-		}
-
-		for (const child of this.space.children) {
-			await this.syncObjectHierarchyCreate(child);
-		}
-	}
-
-	private shouldPersistObject(object: Object3D): boolean {
-		if (!this.space || object === this.space) {
-			return false;
-		}
-
-		if ((object as any).internal === true) {
-			return false;
-		}
-
-		return object.parent === this.space || this.isDescendant(object, this.space);
-	}
-
-	private buildObjectPayload(object: Object3D): ObjectInstancePayload | null {
-		if (!this.activeSpaceId || !this.shouldPersistObject(object)) {
-			return null;
-		}
-
-		let type = "group";
-		const data: Record<string, any> = {
-			position: {
-				x: object.position.x,
-				y: object.position.y,
-				z: object.position.z,
-			},
-			rotation: {
-				x: object.rotation.x,
-				y: object.rotation.y,
-				z: object.rotation.z,
-			},
-			scale: {
-				x: object.scale.x,
-				y: object.scale.y,
-				z: object.scale.z,
-			},
-		};
-
-		if (object instanceof EntityObject) {
-			type = "entity";
-			data.entityId = object.entityId;
-		} else {
-			const meshType = this.resolveMeshType(object);
-			if (meshType) {
-				type = "mesh";
-				data.meshType = meshType;
-
-				const material = (object as any).material;
-				if (material?.color?.getHexString) {
-					data.color = material.color.getHexString();
-				}
-			}
-		}
-
-		if (object instanceof DTObject) {
-			data.locked = object.locked;
-		}
-
-		const parent = object.parent && object.parent !== this.space ? object.parent : null;
-		const parentId = parent ? this.getObjectApiId(parent) : null;
-
-		return {
-			name: object.name || "Object",
-			type,
-			data,
-			parent_id: parentId ?? null,
-		};
-	}
-
-	private getObjectApiId(object: Object3D): string | undefined {
-		return this.objectApiIds.get(object.uuid) ?? object.userData.apiId;
-	}
-
-	private setObjectApiId(object: Object3D, id: string): void {
-		this.objectApiIds.set(object.uuid, id);
-		object.userData.apiId = id;
-	}
-
-	private async syncObjectHierarchyCreate(object: Object3D): Promise<void> {
-		if (this.isSyncingFromApi) {
-			return;
-		}
-
-		if (!this.shouldPersistObject(object)) {
-			return;
-		}
-
-		await this.syncObjectCreate(object);
-
-		for (const child of object.children) {
-			await this.syncObjectHierarchyCreate(child);
-		}
-	}
-
-	private async syncObjectCreate(object: Object3D): Promise<void> {
-		if (!this.activeSpaceId || this.isSyncingFromApi) {
-			return;
-		}
-
-		if (this.getObjectApiId(object)) {
-			await this.syncObjectUpdate(object);
-			return;
-		}
-
-		const payload = this.buildObjectPayload(object);
-		if (!payload) {
-			return;
-		}
-
-		const response = await this.getApiClient().createObject(
-			this.activeSpaceId,
-			payload,
-		);
-
-		this.setObjectApiId(object, response.id);
-	}
-
-	private async syncObjectUpdate(object: Object3D): Promise<void> {
-		if (!this.activeSpaceId || this.isSyncingFromApi) {
-			return;
-		}
-
-		if (!this.shouldPersistObject(object)) {
-			return;
-		}
-
-		const objectId = this.getObjectApiId(object);
-		if (!objectId) {
-			await this.syncObjectCreate(object);
-			return;
-		}
-
-		const payload = this.buildObjectPayload(object);
-		if (!payload) {
-			return;
-		}
-
-		await this.getApiClient().updateObject(
-			this.activeSpaceId,
-			objectId,
-			payload,
-		);
-	}
-
-	private async syncObjectDelete(object: Object3D): Promise<void> {
-		if (!this.activeSpaceId || this.isSyncingFromApi) {
-			return;
-		}
-
-		const objectId = this.getObjectApiId(object);
-		if (!objectId) {
-			return;
-		}
-
-		await this.getApiClient().deleteObject(this.activeSpaceId, objectId);
-
-		this.clearObjectMapping(object);
-	}
-
-	private clearObjectMapping(object: Object3D): void {
-		this.objectApiIds.delete(object.uuid);
-		delete object.userData.apiId;
-
-		for (const child of object.children) {
-			this.clearObjectMapping(child);
-		}
 	}
 
 	private updateEntityObjects(): void {
