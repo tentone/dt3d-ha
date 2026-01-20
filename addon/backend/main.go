@@ -48,14 +48,21 @@ func main() {
 	if err := db.AutoMigrate(&models.Space{}, &models.ObjectInstance{}); err != nil {
 		log.Fatalf("failed to migrate database: %v", err)
 	}
+	if err := db.AutoMigrate(&models.StoredFile{}); err != nil {
+		log.Fatalf("failed to migrate database: %v", err)
+	}
 
 	spaceRepo := repository.NewSpaceRepository(db)
 	objectRepo := repository.NewObjectInstanceRepository(db)
 	spaceService := service.NewSpaceService(spaceRepo, objectRepo)
+	fileRepo := repository.NewStoredFileRepository(db)
+	fileService := service.NewStoredFileService(fileRepo, "data")
 
 	router := gin.Default()
+	router.Static("/data", "./data")
 	spaceHandler := handlers.NewSpaceHandler(spaceService)
-	handlers.RegisterRoutes(router, spaceHandler)
+	fileHandler := handlers.NewFileHandler(fileService)
+	handlers.RegisterRoutes(router, spaceHandler, fileHandler)
 
 	log.Printf("Listening on :%d", port)
 	if err := router.Run(fmt.Sprintf(":%d", port)); err != nil {

@@ -58,6 +58,14 @@ type objectTreeNodeResponse struct {
 	Children []objectTreeNodeResponse `json:"children,omitempty"`
 }
 
+type storedFileResponse struct {
+	ID        string `json:"id"`
+	Filename  string `json:"filename"`
+	Format    string `json:"format"`
+	CreatedAt int64  `json:"created_at"`
+	UpdatedAt int64  `json:"updated_at"`
+}
+
 func toObjectInstanceResponse(instance models.ObjectInstance) objectInstanceResponse {
 	data := json.RawMessage(instance.Data)
 	if len(data) == 0 {
@@ -107,6 +115,16 @@ func toObjectTreeNodeResponse(node *service.ObjectTreeNode) objectTreeNodeRespon
 		Type:     node.Type,
 		Data:     data,
 		Children: children,
+	}
+}
+
+func toStoredFileResponse(file models.StoredFile) storedFileResponse {
+	return storedFileResponse{
+		ID:        file.ID,
+		Filename:  file.Filename,
+		Format:    file.Format,
+		CreatedAt: file.CreatedAt,
+		UpdatedAt: file.UpdatedAt,
 	}
 }
 
