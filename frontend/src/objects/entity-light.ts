@@ -2,6 +2,7 @@ import { Color, PointLight } from "three";
 import { CircleIconSprite } from "./helpers/circle-icon-sprite.js";
 import { EntityObject } from "./entity-object.js";
 import { TextSprite } from "./helpers/text-sprite.js";
+import type { DTInteractionEvent } from "./dt-object.js";
 
 export class EntityLight extends EntityObject {
 	private icon: CircleIconSprite;
@@ -76,5 +77,31 @@ export class EntityLight extends EntityObject {
 		}
 
 		return new Color(entity.state === "on" ? 0xffffaa : 0x555555);
+	}
+
+	public onInteraction(event: DTInteractionEvent): void {
+		if (event.type === "click") {
+			this.toggle((event as any).hass ?? null);
+		}
+	}
+
+	/**
+	 * Toggle the switch, called on click.
+	 * 
+	 * @param hass - HA data
+	 */
+	public async toggle(hass: any): Promise<void> {
+		if (!hass?.callService) {
+			console.warn("DT3D: Unable to toggle light; hass instance not available",);
+			return;
+		}
+
+		try {
+			await hass.callService("light", "toggle", {
+				entity_id: this.entityId,
+			});
+		} catch (error) {
+			console.error(`DT3D: Failed to toggle light ${this.entityId}`, error);
+		}
 	}
 }
