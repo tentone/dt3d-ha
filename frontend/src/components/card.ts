@@ -58,6 +58,8 @@ import { RendererManager } from "./renderer.js";
 import { createMeshObject } from "./mesh-options.js";
 import { EntityGeneric } from "../objects/entity-generic.js";
 import { DT3DCameraToggle } from "./camera-toggle.js";
+import { SpaceApi } from "../utils/space-api.js";
+import { SpaceSync } from "../utils/space-sync.js";
 
 @customElement("dt3d-card")
 export class DT3DCard extends LitElement {
@@ -137,6 +139,16 @@ export class DT3DCard extends LitElement {
 	 * Raycaster for interaction with the scene.
 	 */
 	private raycaster: Raycaster = new Raycaster();
+
+	/**
+	 * API client for fetching/saving spaces and objects.
+	 */
+	private apiClient: SpaceApi | null = null;
+
+	/**
+	 * API sync helper for spaces and objects.
+	 */
+	private spaceSync: SpaceSync | null = null;
 
 	/**
 	 * Normalized pointer position.
@@ -308,6 +320,8 @@ export class DT3DCard extends LitElement {
 		this.attachTransform(object);
 
 		this.tree.updateTreeFromScene(this.space, true);
+
+		void this.spaceSync?.syncObjectHierarchyCreate(object);
 	}
 
 	/**
@@ -395,6 +409,8 @@ export class DT3DCard extends LitElement {
 		}
 
 		this.tree.updateTreeFromScene();
+
+		void this.spaceSync?.syncObjectUpdate(source);
 	}
 
 	/**
@@ -451,6 +467,8 @@ export class DT3DCard extends LitElement {
 		}
 
 		this.tree.updateTreeFromScene(this.space, true);
+
+		void this.spaceSync?.syncObjectDelete(target);
 	}
 
 	/**
@@ -476,6 +494,8 @@ export class DT3DCard extends LitElement {
 
 		this.attachTransform(clone);
 		this.tree.updateTreeFromScene(this.space);
+
+		void this.spaceSync?.syncObjectHierarchyCreate(clone);
 	}
 
 	/**
@@ -670,6 +690,7 @@ export class DT3DCard extends LitElement {
 		const port = this.config?.port || 8080;
 		const width = 300;
 		const height = 300;
+		this.apiClient = new SpaceApi(port);
 
 		this.style.cssText = `
 			overflow: hidden;
@@ -745,6 +766,9 @@ export class DT3DCard extends LitElement {
 		this.sceneManager = new SceneManager(this.canvas, height, width);
 		this.sceneManager.transform.addEventListener("objectChange", () => {
 			this.tree.refreshSelectedObject();
+			if (this.transform?.object) {
+				void this.spaceSync?.syncObjectUpdate(this.transform.object);
+			}
 		});
 
 		this.scene = this.sceneManager.scene;
@@ -806,6 +830,7 @@ export class DT3DCard extends LitElement {
 			object = createMeshObject(type, material);
 			
 			if (object) {
+				object.userData.meshType = type;
 				this.addToScene(object);
 			} else if (type === "upload") {
 				this.selectFile();
@@ -815,10 +840,16 @@ export class DT3DCard extends LitElement {
 		});
 
 
-		// Set base scene and update three
-		this.sceneManager.createDefaultScene();
 		this.tree.scene = this.space;
-		this.tree.updateTreeFromScene(this.space, true);
+		this.spaceSync = new SpaceSync({
+			apiClient: this.getApiClient(),
+			sceneManager: this.sceneManager,
+			space: this.space,
+			tree: this.tree,
+			resolveMeshType: (object) => this.resolveMeshType(object),
+			createEntityObject: (entityId) => this.createEntityObject(entityId),
+		});
+		void this.spaceSync.initializeSpaceFromApi();
 
 		// Listen for selection events from the tree
 		this.tree.addEventListener("object-selected", (e: any) => {
@@ -863,6 +894,7 @@ export class DT3DCard extends LitElement {
 			}
 
 			this.tree.refreshSelectedObject();
+			void this.spaceSync?.syncObjectUpdate(updatedObject);
 		});
 
 		this.canvas.addEventListener("dblclick", (event: MouseEvent) => {
@@ -958,33 +990,107 @@ export class DT3DCard extends LitElement {
 	 * @param id - The ID of the entity to add.
 	 */
 	private addEntityToScene(id: string): void {
-		const entity = this.hassInstance.states[id];
-		if (!entity) {
-			console.warn("DT3D: Entity not found:", id);
-			return;
-		}
-
-		const domain = id.split(".")[0];
-		let object: Object3D | null = null;
-
-		if (domain === "sensor") {
-			object = new EntitySensor(id, entity);
-		} else if (domain === "binary_sensor") {
-			object = new EntityBinary(id, entity);
-		} else if (domain === "light") {
-			object = new EntityLight(id, entity);
-		} else if (domain === "switch") {
-			object = new EntitySwitch(id, entity);
-		} else {
-			object = new EntityGeneric(id, entity);
-		}
-
+		const object = this.createEntityObject(id);
 		if (!object) {
 			return;
 		}
 
+		object.userData.entityId = id;
 		object.position.set(Math.random() * 2 - 1, 0, Math.random() * 2 - 1);
 		this.addToScene(object, id);
+	}
+
+	private createEntityObject(id: string): Object3D | null {
+		const entity = this.hassInstance?.states?.[id];
+		if (!entity) {
+			console.warn("DT3D: Entity not found:", id);
+			return null;
+		}
+
+		const domain = id.split(".")[0];
+
+		if (domain === "sensor") {
+			return new EntitySensor(id, entity);
+		}
+
+		if (domain === "binary_sensor") {
+			return new EntityBinary(id, entity);
+		}
+
+		if (domain === "light") {
+			return new EntityLight(id, entity);
+		}
+
+		if (domain === "switch") {
+			return new EntitySwitch(id, entity);
+		}
+
+		return new EntityGeneric(id, entity);
+	}
+
+	private getApiClient(): SpaceApi {
+		if (!this.apiClient) {
+			throw new Error("DT3D: API client not initialized");
+		}
+		return this.apiClient;
+	}
+
+	private resolveMeshType(object: Object3D): string | null {
+		const meshType = object.userData.meshType as string | undefined;
+		if (meshType) {
+			return meshType;
+		}
+
+		if (object instanceof Mesh) {
+			switch (object.geometry?.type) {
+				case "BoxGeometry":
+				case "BoxBufferGeometry":
+					return "cube";
+				case "SphereGeometry":
+				case "SphereBufferGeometry":
+					return "sphere";
+				case "PlaneGeometry":
+				case "PlaneBufferGeometry":
+					return "plane";
+				case "CapsuleGeometry":
+				case "CapsuleBufferGeometry":
+					return "capsule";
+				case "CircleGeometry":
+				case "CircleBufferGeometry":
+					return "circle";
+				case "ConeGeometry":
+				case "ConeBufferGeometry":
+					return "cone";
+				case "CylinderGeometry":
+				case "CylinderBufferGeometry":
+					return "cylinder";
+				case "DodecahedronGeometry":
+				case "DodecahedronBufferGeometry":
+					return "dodecahedron";
+				case "IcosahedronGeometry":
+				case "IcosahedronBufferGeometry":
+					return "icosahedron";
+				case "OctahedronGeometry":
+				case "OctahedronBufferGeometry":
+					return "octahedron";
+				case "RingGeometry":
+				case "RingBufferGeometry":
+					return "ring";
+				case "TetrahedronGeometry":
+				case "TetrahedronBufferGeometry":
+					return "tetrahedron";
+				case "TorusGeometry":
+				case "TorusBufferGeometry":
+					return "torus";
+				case "TorusKnotGeometry":
+				case "TorusKnotBufferGeometry":
+					return "torusKnot";
+				default:
+					return null;
+			}
+		}
+
+		return null;
 	}
 
 	private updateEntityObjects(): void {

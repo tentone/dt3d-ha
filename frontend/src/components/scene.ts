@@ -117,6 +117,8 @@ export class SceneManager {
 		const geometry = new BoxGeometry();
 		const material = new MeshStandardMaterial({ color: 0xffff00 });
 		const cube = new Mesh(geometry, material);
+		cube.name = "Cube";
+		cube.userData.meshType = "cube";
 		this.transform.attach(cube);
 		this.space.add(cube);
 
@@ -126,6 +128,8 @@ export class SceneManager {
 		const plane = new Mesh(planeGeometry, planeMaterial);
 		plane.rotation.x = -Math.PI / 2; // Rotate to make it horizontal
 		plane.position.y = -1; // Position it below the cube
+		plane.name = "Plane";
+		plane.userData.meshType = "plane";
 		this.space.add(plane);
 
 	}
