@@ -85,6 +85,7 @@ button:active {
 
 .mesh-submenu {
 	margin-bottom: 8px;
+	position: relative;
 }
 
 .mesh-submenu summary {
@@ -119,12 +120,25 @@ button:active {
 }
 
 .mesh-submenu-items {
-	margin-top: 8px;
+	position: absolute;
+	top: 0;
+	left: calc(100% + 8px);
+	display: grid;
+	grid-template-columns: repeat(2, minmax(90px, 1fr));
+	gap: 8px;
+	padding: 10px;
+	background: color-mix(in srgb, var(--ha-color-neutral-10) 85%, transparent);
+	border-radius: 8px;
+	box-shadow: 0 8px 16px
+		color-mix(in srgb, var(--ha-color-neutral-10) 30%, transparent);
+	z-index: 5;
 }
 
 .mesh-submenu-items button {
 	font-size: 0.9em;
 	background: var(--ha-color-primary-50);
+	width: 100%;
+	margin: 0;
 }
 
 .mesh-submenu-items button:hover,
