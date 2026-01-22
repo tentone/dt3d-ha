@@ -325,95 +325,6 @@ export class DT3DCard extends LitElement {
 	}
 
 	/**
-	 * Check if a object is descendant of another.
-	 * 
-	 * @param object - Object to check
-	 * @param ancestor - Possible object to be tested as ancestor.
-	 * @returns True of object is descendant of ancestor.
-	 */
-	private isDescendant(object: Object3D, ancestor: Object3D): boolean {
-		let current = object.parent;
-		while (current) {
-			if (current === ancestor) {
-				return true;
-			}
-			current = current.parent;
-		}
-
-		return false;
-	}
-
-	/**
-	 * 
-	 * @param sourceId 
-	 * @param targetId 
-	 * @param position 
-	 * @returns 
-	 */
-	private handleTreeDrop(sourceId: string, targetId: string, position: "before" | "after" | "inside"): void {
-		if (!this.space) {
-			return;
-		}
-
-		const source = this.space.getObjectByProperty(
-			"uuid",
-			sourceId,
-		) as Object3D | null;
-		const target = this.space.getObjectByProperty(
-			"uuid",
-			targetId,
-		) as Object3D | null;
-
-		if (!source || !target || source === target) {
-			return;
-		}
-
-		if (this.isDescendant(target, source)) {
-			return;
-		}
-
-		if (position === "inside") {
-			if (source.parent !== target) {
-				target.attach(source);
-			} else {
-				const index = target.children.indexOf(source);
-				if (index > -1) {
-					target.children.splice(index, 1);
-					target.children.push(source);
-				}
-			}
-		} else {
-			const parent = target.parent;
-			if (!parent || parent === source) {
-				return;
-			}
-
-			if (source.parent !== parent) {
-				parent.attach(source);
-			}
-
-			const currentIndex = parent.children.indexOf(source);
-			if (currentIndex === -1) {
-				return;
-			}
-
-			parent.children.splice(currentIndex, 1);
-
-			const targetIndex = parent.children.indexOf(target);
-			let newIndex = position === "before" ? targetIndex : targetIndex + 1;
-			if (newIndex > parent.children.length) {
-				newIndex = parent.children.length;
-			}
-
-			parent.children.splice(newIndex, 0, source);
-		}
-
-		this.tree.updateTreeFromScene();
-
-		void this.spaceSync?.syncObjectUpdate(source);
-	}
-
-	/**
 	 * Attach transform controls to the target object if it is editable.
 	 *
 	 * Locked DTObjects cannot be edited and will detach the transform helper.
@@ -860,14 +771,6 @@ export class DT3DCard extends LitElement {
 			}
 		});
 
-		this.tree.addEventListener("object-dropped", (e: any) => {
-			const { sourceId, targetId, position } = e.detail as {
-				sourceId: string;
-				targetId: string;
-				position: "before" | "after" | "inside";
-			};
-			this.handleTreeDrop(sourceId, targetId, position);
-		});
 
 		this.tree.addEventListener("object-delete", (e: any) => {
 			const id = e.detail.id as string;
