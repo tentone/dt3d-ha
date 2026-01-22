@@ -24,7 +24,6 @@ import {
 	SphereGeometry,
 	Vector2,
 	Group,
-	Vector3,
 	TetrahedronGeometry,
 	TorusGeometry,
 	TorusKnotGeometry,
@@ -48,9 +47,6 @@ import { EntityObject } from "../objects/entity-object.js";
 import { DT3DAddEntityModal } from "./add-entity-modal.js";
 import { DTObject } from "../objects/dt-object.js";
 import en from "../locale/en.json";
-import { Marker } from "../objects/measurement/marker.js";
-import { AngleMeasurement } from "../objects/measurement/angle.js";
-import { DistanceMeasurement } from "../objects/measurement/distance.js";
 import { ConnectionStatus } from "./connection-status/connection-status.js";
 import { SceneManager } from "./scene.js";
 import type { CameraMode } from "./scene.js";
@@ -60,6 +56,7 @@ import { EntityGeneric } from "../objects/entity-generic.js";
 import { DT3DCameraToggle } from "./camera-toggle.js";
 import { SpaceApi } from "../utils/space-api.js";
 import { SpaceSync } from "../utils/space-sync.js";
+import { MeasurementManager } from "./measurement-manager.js";
 
 @customElement("dt3d-card")
 export class DT3DCard extends LitElement {
@@ -121,19 +118,9 @@ export class DT3DCard extends LitElement {
 	public tree: DT3DTree;
 
 	/**
-	 * Tracks which measurement tool is currently active.
+	 * Handles measurement interactions and helper rendering.
 	 */
-	private measurementMode: "none" | "distance" | "angle" = "none";
-
-	/**
-	 * Points selected for the current measurement operation.
-	 */
-	private measurementPoints: Vector3[] = [];
-
-	/**
-	 * Helper group that renders measurement visuals (markers, lines, labels).
-	 */
-	private measurementHelpers: Group = null;
+	private measurementManager: MeasurementManager | null = null;
 
 	/**
 	 * Raycaster for interaction with the scene.
@@ -410,60 +397,12 @@ export class DT3DCard extends LitElement {
 	}
 
 	/**
-	 * Change the measurement mode.
-	 * 
-	 * @param mode - Measurement mode to be used.
-	 */
-	private setMeasurementMode(mode: "distance" | "angle" | "none"): void {
-		this.measurementMode = mode;
-		this.clearMeasurements();
-	}
-
-	/**
-	 * Clear the measurements.
-	 */
-	private clearMeasurements(): void {
-		this.measurementPoints = [];
-		this.measurementHelpers.clear();
-	}
-
-	/**
-	 * Add a new measurement point.
-	 * 
-	 * @param event - Mouse event.
-	 */
-	private processMeasurementClick(event: MouseEvent): void {
-		if (this.measurementMode === "none" || !this.canvas || !this.camera || !this.space) {
-			return;
-		}
-
-		const rect = this.canvas.getBoundingClientRect();
-		this.pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-		this.pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
-		this.raycaster.setFromCamera(this.pointer, this.camera);
-
-		const intersects = this.raycaster.intersectObjects(
-			this.space.children,
-			true,
-		);
-		const point = intersects[0]?.point;
-
-		if (!point) {
-			return;
-		}
-
-		this.addMeasurementPoint(point);
-	}
-
-	/**
 	 * Handle canvas click events.
 	 * 
 	 * @param event - Mouse event
 	 */
 	private handleCanvasClick(event: MouseEvent): void {
-		// If measrement mode is active, process measurement click
-		if (this.measurementMode !== "none") {
-			this.processMeasurementClick(event);
+		if (this.measurementManager?.handleClick(event)) {
 			return;
 		}
 
@@ -555,38 +494,6 @@ export class DT3DCard extends LitElement {
 	}
 
 
-
-	/**
-	 * Add a measurement point based on the current measurement mode.
-	 *
-	 * @param point - Position of the measurement point.
-	 */
-	private addMeasurementPoint(point: Vector3): void {
-		this.measurementPoints.push(point.clone());
-
-		if (
-			this.measurementMode === "distance" &&
-			this.measurementPoints.length === 2
-		) {
-			const points = [...this.measurementPoints];
-			this.measurementHelpers.clear();
-			this.measurementHelpers.add(new DistanceMeasurement(points));
-			this.measurementPoints = [];
-		} else if (
-			this.measurementMode === "angle" &&
-			this.measurementPoints.length === 3
-		) {
-			const points = [...this.measurementPoints];
-			this.measurementHelpers.clear();
-			this.measurementHelpers.add(new AngleMeasurement(points));
-			this.measurementPoints = [];
-		} else {
-			this.measurementHelpers.clear();
-			this.measurementPoints.forEach((point) => {
-				this.measurementHelpers.add(new Marker(point));
-			});
-		}
-	}
 
 	/**
 	 * Method called when the element is added to the DOM.
@@ -687,7 +594,14 @@ export class DT3DCard extends LitElement {
 		this.controls = this.sceneManager.controls;
 		this.transform = this.sceneManager.transform;
 		this.space = this.sceneManager.space;
-		this.measurementHelpers = this.sceneManager.measurements;
+		this.measurementManager = new MeasurementManager(
+			this.sceneManager.measurements,
+			() => ({
+				canvas: this.canvas,
+				camera: this.camera,
+				space: this.space,
+			}),
+		);
 
 		this.rendererManager = new RendererManager(
 			this.camera,
@@ -726,7 +640,7 @@ export class DT3DCard extends LitElement {
 
 		this.sidebar.addEventListener("measurement-mode-selected", (e: any) => {
 			const mode = e.detail.mode as "distance" | "angle" | "none";
-			this.setMeasurementMode(mode);
+			this.measurementManager?.setMode(mode);
 		});
 
 		this.sidebar.addEventListener("add-object", (e: any) => {
