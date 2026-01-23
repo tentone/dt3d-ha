@@ -34,14 +34,6 @@
 	color: var(--ha-color-neutral-95);
 }
 
-.tree-node.dragging {
-	opacity: 0.6;
-}
-
-.tree-node.drop-target {
-	background: color-mix(in srgb, var(--ha-color-primary-60) 35%, transparent);
-}
-
 .toggle {
 	cursor: pointer;
 	margin-right: 4px;
@@ -60,21 +52,6 @@
 	height: 14px;
 	font-size: 14px;
 	line-height: 1;
-}
-
-.drop-zone {
-	height: 6px;
-	margin: 2px 0;
-	border: 1px dashed transparent;
-}
-
-.drop-zone.visible {
-	border-color: color-mix(in srgb, var(--ha-color-primary-60) 30%, transparent);
-}
-
-.drop-zone.active {
-	border-color: var(--ha-color-primary-60);
-	background: color-mix(in srgb, var(--ha-color-primary-60) 35%, transparent);
 }
 
 .tree-section {
