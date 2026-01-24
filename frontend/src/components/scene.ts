@@ -3,6 +3,7 @@ import {
 	BoxGeometry,
 	DirectionalLight,
 	Group,
+	GridHelper,
 	MOUSE,
 	OrthographicCamera,
 	MathUtils,
@@ -82,6 +83,21 @@ export class SceneManager {
 	 */
 	public transform: TransformControls = null;
 
+	/**
+	 * Helper grid for alignment.
+	 */
+	private grid: GridHelper | null = null;
+
+	/**
+	 * Snap size for grid-aligned transforms.
+	 */
+	private gridSnapSize = 0.5;
+
+	/**
+	 * Grid visibility toggle.
+	 */
+	private gridEnabled = true;
+
 	constructor(canvas: HTMLCanvasElement, height: number, width: number,) {
 		this.scene = new Scene();
 
@@ -104,12 +120,70 @@ export class SceneManager {
 		this.controls = new OrbitControls(this.camera, canvas);
 		this.controls.enableDamping = true;
 		this.controls.dampingFactor = 0.05;
+		this.controls.addEventListener("change", () => {
+			this.updateGridPosition();
+		});
 
 		this.transform = new TransformControls(this.camera, canvas);
 		this.transform.addEventListener("dragging-changed", (event: any) => {
 			this.controls.enabled = !event.value;
 		});
 		this.scene.add(this.transform.getHelper());
+
+		this.createGrid();
+	}
+
+	/**
+	 * Enable or disable the grid helper.
+	 */
+	public setGridEnabled(enabled: boolean): void {
+		this.gridEnabled = enabled;
+		if (this.grid) {
+			this.grid.visible = enabled;
+			if (enabled) {
+				this.updateGridPosition();
+			}
+		}
+	}
+
+	/**
+	 * Enable or disable snapping for transform controls.
+	 */
+	public setTransformSnapEnabled(enabled: boolean): void {
+		if (enabled) {
+			this.transform.setTranslationSnap(this.gridSnapSize);
+			this.transform.setRotationSnap(MathUtils.degToRad(15));
+			this.transform.setScaleSnap(0.1);
+		} else {
+			this.transform.setTranslationSnap(null);
+			this.transform.setRotationSnap(null);
+			this.transform.setScaleSnap(null);
+		}
+	}
+
+	/**
+	 * Create the grid helper and add it to the scene.
+	 */
+	private createGrid(): void {
+		if (this.grid) {
+			return;
+		}
+
+		this.grid = new GridHelper(200, 200, 0x7d7d7d, 0x4a4a4a);
+		this.grid.visible = this.gridEnabled;
+		this.scene.add(this.grid);
+		this.updateGridPosition();
+	}
+
+	/**
+	 * Keep the grid centered on the camera to simulate infinite plane.
+	 */
+	private updateGridPosition(): void {
+		if (!this.grid || !this.gridEnabled) {
+			return;
+		}
+
+		this.grid.position.set(this.camera.position.x, 0, this.camera.position.z);
 	}
 
 	public createDefaultScene(): void {
@@ -197,6 +271,7 @@ export class SceneManager {
 		this.controls.update();
 
 		this.transform.camera = this.camera;
+		this.updateGridPosition();
 		
 		this.updateSize(this.width, this.height);
 	}

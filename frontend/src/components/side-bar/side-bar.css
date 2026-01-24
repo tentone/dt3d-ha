@@ -71,7 +71,8 @@ button {
 		color-mix(in srgb, var(--ha-color-neutral-10) 20%, transparent);
 }
 
-.transform-btn.selected {
+.transform-btn.selected,
+.toggle-btn.selected {
 	background: var(--ha-color-primary-30);
 }
 

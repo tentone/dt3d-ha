@@ -24,6 +24,8 @@ export class DT3DSidebar extends LitElement {
 	static properties = {
 		collapsed: { type: Boolean, reflect: true },
 		transformTool: { type: String },
+		gridEnabled: { type: Boolean },
+		gridSnapEnabled: { type: Boolean },
 	};
 
 	/**
@@ -42,6 +44,16 @@ export class DT3DSidebar extends LitElement {
 	 * The selected transform tool.
 	 */
 	public transformTool: TransformOptions = "translate";
+
+	/**
+	 * Toggle grid visibility.
+	 */
+	public gridEnabled = true;
+
+	/**
+	 * Toggle snapping transforms to the grid.
+	 */
+	public gridSnapEnabled = false;
 
 	public disconnectedCallback(): void {
 		this.destroyTooltips();
@@ -129,6 +141,34 @@ export class DT3DSidebar extends LitElement {
 		);
 	}
 
+  /*
+	 * Toggle grid visibility.
+	 */
+	private handleGridToggle() {
+		this.gridEnabled = !this.gridEnabled;
+		this.dispatchEvent(
+			new CustomEvent("grid-visibility-toggle", {
+				detail: { enabled: this.gridEnabled },
+				bubbles: true,
+				composed: true,
+			}),
+		);
+	}
+
+	/**
+	 * Toggle grid snapping for transform controls.
+	 */
+	private handleGridSnapToggle() {
+		this.gridSnapEnabled = !this.gridSnapEnabled;
+		this.dispatchEvent(
+			new CustomEvent("grid-snap-toggle", {
+				detail: { enabled: this.gridSnapEnabled },
+				bubbles: true,
+				composed: true,
+			}),
+		);
+	}
+
 	/**
 	 * Create the tooltip element for each of the options.
 	 */
@@ -201,6 +241,20 @@ export class DT3DSidebar extends LitElement {
 					data-tooltip="Disable transform controls"
 					aria-label="Disable transform controls">
 					<ha-icon icon="mdi:cursor-default-outline"></ha-icon>
+				</button>
+				<button
+					@click=${() => this.handleGridSnapToggle()}
+					class=${`toggle-btn ${this.gridSnapEnabled ? "selected" : ""}`.trim()}
+					data-tooltip="Snap transforms to grid"
+					aria-label="Snap transforms to grid">
+					<ha-icon icon="mdi:magnet"></ha-icon>
+				</button>
+				<button
+					@click=${() => this.handleGridToggle()}
+					class=${`toggle-btn ${this.gridEnabled ? "selected" : ""}`.trim()}
+					data-tooltip="Toggle grid"
+					aria-label="Toggle grid">
+					<ha-icon icon="mdi:grid"></ha-icon>
 				</button>
 			</div>
 			<div class="sidebar-section">
