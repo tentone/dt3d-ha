@@ -588,6 +588,8 @@ export class DT3DCard extends LitElement {
 				void this.spaceSync?.syncObjectUpdate(this.transform.object);
 			}
 		});
+		this.sceneManager.setGridEnabled(this.sidebar.gridEnabled);
+		this.sceneManager.setTransformSnapEnabled(this.sidebar.gridSnapEnabled);
 
 		this.scene = this.sceneManager.scene;
 		this.camera = this.sceneManager.camera;
@@ -641,6 +643,16 @@ export class DT3DCard extends LitElement {
 		this.sidebar.addEventListener("measurement-mode-selected", (e: any) => {
 			const mode = e.detail.mode as "distance" | "angle" | "none";
 			this.measurementManager?.setMode(mode);
+		});
+
+		this.sidebar.addEventListener("grid-visibility-toggle", (e: any) => {
+			const enabled = e.detail.enabled as boolean;
+			this.sceneManager.setGridEnabled(enabled);
+		});
+
+		this.sidebar.addEventListener("grid-snap-toggle", (e: any) => {
+			const enabled = e.detail.enabled as boolean;
+			this.sceneManager.setTransformSnapEnabled(enabled);
 		});
 
 		this.sidebar.addEventListener("add-object", (e: any) => {
