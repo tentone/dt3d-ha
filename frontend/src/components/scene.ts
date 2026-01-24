@@ -4,7 +4,6 @@ import {
 	DirectionalLight,
 	Group,
 	GridHelper,
-	MOUSE,
 	OrthographicCamera,
 	MathUtils,
 	Mesh,
@@ -169,7 +168,9 @@ export class SceneManager {
 			return;
 		}
 
-		this.grid = new GridHelper(200, 200, 0x7d7d7d, 0x4a4a4a);
+		this.grid = new GridHelper(200, 200, 0x7d7d7d, 0x7d7d7d);
+		this.grid.material.opacity = 0.5;
+		this.grid.material.transparent = true;
 		this.grid.visible = this.gridEnabled;
 		this.scene.add(this.grid);
 		this.updateGridPosition();
@@ -183,7 +184,7 @@ export class SceneManager {
 			return;
 		}
 
-		this.grid.position.set(this.camera.position.x, 0, this.camera.position.z);
+		this.grid.position.set(Math.round(this.camera.position.x), 0, Math.round(this.camera.position.z));
 	}
 
 	public createDefaultScene(): void {
