@@ -1,9 +1,11 @@
-import { Group, MeshStandardMaterial, Object3D } from "three";
-import type { Mesh } from "three";
+import { BoxGeometry, Group, Mesh, MeshStandardMaterial, Object3D } from "three";
 import type { SceneManager } from "../components/scene.js";
 import type { DT3DTree } from "../components/object-tree/object-tree.js";
 import { createMeshObject } from "../components/mesh-options.js";
 import { DTObject } from "../objects/dt-object.js";
+import { WallObject } from "../objects/wall.js";
+import { DoorObject } from "../objects/door.js";
+import { WindowObject } from "../objects/window.js";
 import { EntityObject } from "../objects/entity-object.js";
 import {
 	SpaceApi,
@@ -157,8 +159,46 @@ export class SpaceSync {
 			}
 
 			const color = typeof data.color === "string" ? parseInt(data.color, 16) : 0xffffff;
-			const material = new MeshStandardMaterial({ color });
-			object = createMeshObject(meshType, material);
+			if (meshType === "wall") {
+				const wallData = data.wall as { length?: number; height?: number; thickness?: number } | undefined;
+				object = new WallObject(
+					{
+						length: wallData?.length,
+						height: wallData?.height,
+						thickness: wallData?.thickness,
+					},
+					color,
+				);
+			} else if (meshType === "door" || meshType === "window") {
+				const dims = data.dimensions as { width?: number; height?: number; thickness?: number } | undefined;
+				const openState = data.open === true;
+				if (meshType === "door") {
+					const door = new DoorObject(
+						{
+							width: dims?.width,
+							height: dims?.height,
+							thickness: dims?.thickness,
+						},
+						color,
+					);
+					door.setOpen(openState);
+					object = door;
+				} else {
+					const windowObj = new WindowObject(
+						{
+							width: dims?.width,
+							height: dims?.height,
+							thickness: dims?.thickness,
+						},
+						color,
+					);
+					windowObj.setOpen(openState);
+					object = windowObj;
+				}
+			} else {
+				const material = new MeshStandardMaterial({ color });
+				object = createMeshObject(meshType, material);
+			}
 			if (object) {
 				object.userData.meshType = meshType;
 			}
@@ -220,6 +260,44 @@ export class SpaceSync {
 		if (object instanceof EntityObject) {
 			type = "entity";
 			data.entityId = object.entityId;
+		} else if (object instanceof WallObject) {
+			type = "mesh";
+			data.meshType = "wall";
+			data.wall = {
+				length: object.length,
+				height: object.height,
+				thickness: object.thickness,
+			};
+			const material = object.getWallMaterial();
+			if (material?.color?.getHexString) {
+				data.color = material.color.getHexString();
+			}
+		} else if (object instanceof DoorObject) {
+			type = "mesh";
+			data.meshType = "door";
+			data.open = object.open;
+			data.dimensions = {
+				width: object.width,
+				height: object.height,
+				thickness: object.thickness,
+			};
+			const material = object.getDoorMaterial();
+			if (material?.color?.getHexString) {
+				data.color = material.color.getHexString();
+			}
+		} else if (object instanceof WindowObject) {
+			type = "mesh";
+			data.meshType = "window";
+			data.open = object.open;
+			data.dimensions = {
+				width: object.width,
+				height: object.height,
+				thickness: object.thickness,
+			};
+			const material = object.getWindowMaterial();
+			if (material?.color?.getHexString) {
+				data.color = material.color.getHexString();
+			}
 		} else {
 			const meshType = this.resolveMeshType(object);
 			if (meshType) {
@@ -229,6 +307,15 @@ export class SpaceSync {
 				const material = (object as Mesh).material as any;
 				if (material?.color?.getHexString) {
 					data.color = material.color.getHexString();
+				}
+
+				if (object instanceof Mesh && object.geometry instanceof BoxGeometry) {
+					const params = object.geometry.parameters as { width?: number; height?: number; depth?: number };
+					data.dimensions = {
+						width: params?.width,
+						height: params?.height,
+						depth: params?.depth,
+					};
 				}
 			}
 		}

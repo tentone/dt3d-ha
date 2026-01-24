@@ -3,6 +3,9 @@ import { customElement, property } from "lit/decorators.js";
 import { Color, Object3D } from "three";
 import { EntityObject } from "../../objects/entity-object.js";
 import { DTObject } from "../../objects/dt-object.js";
+import { WallObject } from "../../objects/wall.js";
+import { DoorObject } from "../../objects/door.js";
+import { WindowObject } from "../../objects/window.js";
 import componentStyles from "./object-inspector.css?inline";
 
 @customElement("dt3d-object-inspector")
@@ -22,6 +25,17 @@ export class DT3DObjectInspector extends LitElement {
 		return object instanceof EntityObject;
 	}
 
+	private isWallObject(object: Object3D | null): object is WallObject {
+		return object instanceof WallObject;
+	}
+
+	private isDoorObject(object: Object3D | null): object is DoorObject {
+		return object instanceof DoorObject;
+	}
+
+	private isWindowObject(object: Object3D | null): object is WindowObject {
+		return object instanceof WindowObject;
+	}
 	/**
 	 * Check if object has a material with a color.
 	 *
@@ -123,6 +137,45 @@ export class DT3DObjectInspector extends LitElement {
 		}
 
 		this.selectedObject.locked = (event.target as HTMLInputElement).checked;
+		this.dispatchUpdated();
+		this.requestUpdate();
+	}
+
+	private handleWallValueChange(
+		type: "height" | "thickness",
+		event: Event,
+	) {
+		if (!this.isWallObject(this.selectedObject) || this.isLocked()) {
+			return;
+		}
+
+		const value = parseFloat((event.target as HTMLInputElement).value);
+		if (Number.isNaN(value)) return;
+
+		if (type === "height") {
+			this.selectedObject.setHeight(value);
+		} else {
+			this.selectedObject.setThickness(value);
+		}
+
+		this.dispatchUpdated();
+		this.requestUpdate();
+	}
+
+	private handleOpenStateChange(event: Event) {
+		if (this.isLocked()) {
+			return;
+		}
+
+		const isOpen = (event.target as HTMLInputElement).checked;
+		if (this.isDoorObject(this.selectedObject)) {
+			this.selectedObject.setOpen(isOpen);
+		} else if (this.isWindowObject(this.selectedObject)) {
+			this.selectedObject.setOpen(isOpen);
+		} else {
+			return;
+		}
+
 		this.dispatchUpdated();
 		this.requestUpdate();
 	}
@@ -276,6 +329,63 @@ export class DT3DObjectInspector extends LitElement {
 		`;
 	}
 
+	private renderWallControls(locked: boolean) {
+		if (!this.isWallObject(this.selectedObject)) {
+			return null;
+		}
+
+		return html`
+			<h4>Wall</h4>
+			<div class="field">
+				<label>Height (m)</label>
+				<input
+					type="number"
+					step="0.1"
+					min="0.1"
+					.value=${this.selectedObject.height.toFixed(2)}
+					?disabled=${locked}
+					@change=${(event: Event) => this.handleWallValueChange("height", event)}
+				/>
+			</div>
+			<div class="field">
+				<label>Thickness (m)</label>
+				<input
+					type="number"
+					step="0.05"
+					min="0.05"
+					.value=${this.selectedObject.thickness.toFixed(2)}
+					?disabled=${locked}
+					@change=${(event: Event) =>
+						this.handleWallValueChange("thickness", event)}
+				/>
+			</div>
+		`;
+	}
+
+	private renderOpeningControls(locked: boolean) {
+		if (!this.isDoorObject(this.selectedObject) && !this.isWindowObject(this.selectedObject)) {
+			return null;
+		}
+
+		const isOpen = this.selectedObject?.open ?? false;
+		const label = this.isDoorObject(this.selectedObject) ? "Door" : "Window";
+
+		return html`
+			<h4>${label}</h4>
+			<div class="field">
+				<label>
+					<input
+						type="checkbox"
+						.checked=${isOpen}
+						?disabled=${locked}
+						@change=${(event: Event) => this.handleOpenStateChange(event)}
+					/>
+					Open
+				</label>
+			</div>
+		`;
+	}
+
 	public render() {
 		const locked = this.isLocked();
 		const isDTObject = this.selectedObject instanceof DTObject;
@@ -318,6 +428,8 @@ export class DT3DObjectInspector extends LitElement {
 						${this.renderVectorControls("Scale", "scale", locked)}
 						${this.renderRotationControls(locked)}
 						${this.renderMaterialControls(locked)}
+						${this.renderWallControls(locked)}
+						${this.renderOpeningControls(locked)}
 						${this.renderEntityDetails()}
 					`
 				: html`<div class="placeholder">
