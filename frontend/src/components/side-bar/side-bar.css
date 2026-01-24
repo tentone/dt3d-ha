@@ -83,6 +83,10 @@ button:active {
 	background: var(--ha-color-primary-40);
 }
 
+button.selected {
+	background: var(--ha-color-primary-30);
+}
+
 .mesh-submenu {
 	margin-bottom: 8px;
 	position: relative;

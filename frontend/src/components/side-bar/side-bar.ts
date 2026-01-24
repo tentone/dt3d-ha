@@ -10,6 +10,8 @@ export type TransformOptions = "translate" | "rotate" | "scale" | "none";
 
 export type MeasurementOptions = "distance" | "angle" | "none";
 
+export type WallOptions = "wall" | "door" | "window" | "none";
+
 const SIDEBAR_COLLAPSED_STORAGE_KEY = "sidebar-collapsed";
 
 /**
@@ -105,6 +107,21 @@ export class DT3DSidebar extends LitElement {
 	private handleMeasurementSelect(mode: MeasurementOptions) {
 		this.dispatchEvent(
 			new CustomEvent("measurement-mode-selected", {
+				detail: { mode },
+				bubbles: true,
+				composed: true,
+			}),
+		);
+	}
+
+	/**
+	 * Select wall drawing tool.
+	 *
+	 * @param mode - Wall tool to use.
+	 */
+	private handleWallSelect(mode: WallOptions) {
+		this.dispatchEvent(
+			new CustomEvent("wall-tool-selected", {
 				detail: { mode },
 				bubbles: true,
 				composed: true,
@@ -239,6 +256,33 @@ export class DT3DSidebar extends LitElement {
 					@click=${() => this.handleMeasurementSelect("none")}
 					data-tooltip="Clear measurements"
 					aria-label="Clear measurements">
+					<ha-icon icon="mdi:cancel"></ha-icon>
+				</button>
+			</div>
+			<div class="sidebar-section">
+				<div class="sidebar-title">Walls</div>
+				<button
+					@click=${() => this.handleWallSelect("wall")}
+					data-tooltip="Draw wall"
+					aria-label="Draw wall">
+					<ha-icon icon="mdi:vector-line"></ha-icon>
+				</button>
+				<button
+					@click=${() => this.handleWallSelect("door")}
+					data-tooltip="Add door to selected wall"
+					aria-label="Add door to selected wall">
+					<ha-icon icon="mdi:door"></ha-icon>
+				</button>
+				<button
+					@click=${() => this.handleWallSelect("window")}
+					data-tooltip="Add window to selected wall"
+					aria-label="Add window to selected wall">
+					<ha-icon icon="mdi:window-closed-variant"></ha-icon>
+				</button>
+				<button
+					@click=${() => this.handleWallSelect("none")}
+					data-tooltip="Exit wall tools"
+					aria-label="Exit wall tools">
 					<ha-icon icon="mdi:cancel"></ha-icon>
 				</button>
 			</div>

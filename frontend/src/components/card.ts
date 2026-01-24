@@ -23,6 +23,7 @@ import {
 	ShapeGeometry,
 	SphereGeometry,
 	Vector2,
+	Vector3,
 	Group,
 	TetrahedronGeometry,
 	TorusGeometry,
@@ -57,6 +58,7 @@ import { DT3DCameraToggle } from "./camera-toggle.js";
 import { SpaceApi } from "../utils/space-api.js";
 import { SpaceSync } from "../utils/space-sync.js";
 import { MeasurementManager } from "./measurement-manager.js";
+import { WallObject } from "../objects/wall.js";
 
 @customElement("dt3d-card")
 export class DT3DCard extends LitElement {
@@ -121,6 +123,14 @@ export class DT3DCard extends LitElement {
 	 * Handles measurement interactions and helper rendering.
 	 */
 	private measurementManager: MeasurementManager | null = null;
+
+	/**
+	 * Wall tool state.
+	 */
+	private wallToolMode: "none" | "wall" | "door" | "window" = "none";
+	private wallDraftStart: Vector3 | null = null;
+	private wallDraft: WallObject | null = null;
+	private lastSelectedObject: Object3D | null = null;
 
 	/**
 	 * Raycaster for interaction with the scene.
@@ -406,8 +416,13 @@ export class DT3DCard extends LitElement {
 			return;
 		}
 
+		if (this.handleWallClick(event)) {
+			return;
+		}
+
 		// Pick object and trigger click interaction
 		const { object } = this.pickObjectFromEvent(event);
+		this.lastSelectedObject = object;
 		object?.onInteraction({
 			type: "click",
 			event: event,
@@ -421,6 +436,10 @@ export class DT3DCard extends LitElement {
 	 * @param event - Mouse event 
 	 */
 	private handlePointerMove(event: MouseEvent): void {
+		if (this.wallToolMode === "wall") {
+			this.handleWallPointerMove(event);
+		}
+
 		const { object } = this.pickObjectFromEvent(event);
 		if (object === this.hoveredObject) {
 			return;
@@ -491,6 +510,124 @@ export class DT3DCard extends LitElement {
 		}
 
 		return { object: null, intersection: null };
+	}
+
+	private handleWallClick(event: MouseEvent): boolean {
+		if (this.wallToolMode === "door" || this.wallToolMode === "window") {
+			const selectedWall = this.resolveSelectedWall();
+			if (!selectedWall) {
+				return false;
+			}
+
+			const added = this.wallToolMode === "door"
+				? selectedWall.addDoor()
+				: selectedWall.addWindow();
+			this.attachTransform(added);
+			this.tree.updateTreeFromScene(this.space);
+			void this.spaceSync?.syncObjectHierarchyCreate(added);
+			return true;
+		}
+
+		if (this.wallToolMode !== "wall") {
+			return false;
+		}
+
+		const intersection = this.pickPointFromEvent(event);
+		if (!intersection) {
+			return true;
+		}
+
+		if (!this.wallDraftStart) {
+			this.wallDraftStart = intersection.clone();
+			this.createWallDraft(this.wallDraftStart);
+			return true;
+		}
+
+		this.finalizeWall(intersection);
+		return true;
+	}
+
+	private handleWallPointerMove(event: MouseEvent): void {
+		if (!this.wallDraftStart || !this.wallDraft) {
+			return;
+		}
+
+		const intersection = this.pickPointFromEvent(event);
+		if (!intersection) {
+			return;
+		}
+
+		this.wallDraft.setFromPoints(this.wallDraftStart, intersection);
+		this.wallDraft.updateWallLabel();
+	}
+
+	private createWallDraft(start: Vector3): void {
+		this.wallDraft = new WallObject();
+		this.wallDraft.internal = true;
+		this.wallDraft.name = "Wall Draft";
+		this.wallDraft.setFromPoints(start, start.clone().add(new Vector3(1, 0, 0)));
+		this.wallDraft.updateWallLabel();
+		this.sceneManager.measurements.add(this.wallDraft);
+	}
+
+	private finalizeWall(end: Vector3): void {
+		if (!this.wallDraftStart || !this.wallDraft) {
+			return;
+		}
+
+		const wall = new WallObject({
+			length: this.wallDraft.length,
+			height: this.wallDraft.height,
+			thickness: this.wallDraft.thickness,
+		});
+		wall.position.copy(this.wallDraft.position);
+		wall.rotation.copy(this.wallDraft.rotation);
+
+		this.sceneManager.measurements.remove(this.wallDraft);
+		this.clearWallDraft();
+
+		this.addToScene(wall);
+		this.lastSelectedObject = wall;
+	}
+
+	private clearWallDraft(): void {
+		if (this.wallDraft) {
+			this.sceneManager.measurements.remove(this.wallDraft);
+		}
+		this.wallDraft = null;
+		this.wallDraftStart = null;
+	}
+
+	private resolveSelectedWall(): WallObject | null {
+		if (this.lastSelectedObject instanceof WallObject) {
+			return this.lastSelectedObject;
+		}
+
+		if (this.lastSelectedObject) {
+			const parentWall = this.lastSelectedObject.parent;
+			if (parentWall instanceof WallObject) {
+				return parentWall;
+			}
+		}
+
+		return null;
+	}
+
+	private pickPointFromEvent(event: MouseEvent): Vector3 | null {
+		if (!this.canvas || !this.camera || !this.space) {
+			return null;
+		}
+
+		const rect = this.canvas.getBoundingClientRect();
+		this.pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+		this.pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+		this.raycaster.setFromCamera(this.pointer, this.camera);
+
+		const intersects = this.raycaster.intersectObjects(
+			this.space.children,
+			true,
+		);
+		return intersects[0]?.point ?? null;
 	}
 
 
@@ -643,6 +780,14 @@ export class DT3DCard extends LitElement {
 			this.measurementManager?.setMode(mode);
 		});
 
+		this.sidebar.addEventListener("wall-tool-selected", (e: any) => {
+			const mode = e.detail.mode as "wall" | "door" | "window" | "none";
+			this.wallToolMode = mode;
+			if (mode !== "wall") {
+				this.clearWallDraft();
+			}
+		});
+
 		this.sidebar.addEventListener("add-object", (e: any) => {
 			const type = e.detail.type;
 
@@ -682,6 +827,7 @@ export class DT3DCard extends LitElement {
 			const object = this.space.getObjectByProperty("uuid", id);
 			if (object) {
 				this.attachTransform(object);
+				this.lastSelectedObject = object;
 			}
 		});
 
@@ -720,6 +866,7 @@ export class DT3DCard extends LitElement {
 				const target = object ?? (intersection.object as Object3D);
 				this.attachTransform(target);
 				this.tree.selectObject(target.uuid);
+				this.lastSelectedObject = target;
 			}
 
 			object?.onInteraction({
