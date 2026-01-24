@@ -1,34 +1,12 @@
 import type { Camera, Intersection, Scene } from "three";
 import {
 	Mesh,
-	BoxGeometry,
-	CapsuleGeometry,
-	CatmullRomCurve3,
-	CircleGeometry,
-	ConeGeometry,
-	CylinderGeometry,
-	DodecahedronGeometry,
-	ExtrudeGeometry,
-	IcosahedronGeometry,
-	LatheGeometry,
-	MeshBasicMaterial,
 	MeshStandardMaterial,
 	Object3D,
-	OctahedronGeometry,
-	PlaneGeometry,
-	PolyhedronGeometry,
 	Raycaster,
-	RingGeometry,
-	Shape,
-	ShapeGeometry,
-	SphereGeometry,
 	Vector2,
 	Vector3,
 	Group,
-	TetrahedronGeometry,
-	TorusGeometry,
-	TorusKnotGeometry,
-	TubeGeometry,
 } from "three";
 import type { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 import type { TransformControls } from "three/examples/jsm/controls/TransformControls";
@@ -543,7 +521,7 @@ export class DT3DCard extends LitElement {
 			return true;
 		}
 
-		this.finalizeWall(intersection);
+		this.finalizeWall();
 		return true;
 	}
 
@@ -570,7 +548,7 @@ export class DT3DCard extends LitElement {
 		this.sceneManager.measurements.add(this.wallDraft);
 	}
 
-	private finalizeWall(end: Vector3): void {
+	private finalizeWall(): void {
 		if (!this.wallDraftStart || !this.wallDraft) {
 			return;
 		}
@@ -623,10 +601,7 @@ export class DT3DCard extends LitElement {
 		this.pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
 		this.raycaster.setFromCamera(this.pointer, this.camera);
 
-		const intersects = this.raycaster.intersectObjects(
-			this.space.children,
-			true,
-		);
+		const intersects = this.raycaster.intersectObjects(this.space.children,true);
 		return intersects[0]?.point ?? null;
 	}
 
@@ -752,7 +727,7 @@ export class DT3DCard extends LitElement {
 			width,
 		);
 
-		const cameraToggle = document.createElement("dt3d-camera-toggle",) as DT3DCameraToggle;
+		const cameraToggle = document.createElement("dt3d-camera-toggle") as DT3DCameraToggle;
 		cameraToggle.mode = this.sceneManager.getCameraMode();
 		cameraToggle.addEventListener("camera-mode-change", (event: Event) => {
 			const { mode } = (event as CustomEvent<{ mode: CameraMode }>).detail;
@@ -788,6 +763,7 @@ export class DT3DCard extends LitElement {
 			if (mode !== "wall") {
 				this.clearWallDraft();
 			}
+		});
 
 		this.sidebar.addEventListener("grid-visibility-toggle", (e: any) => {
 			const enabled = e.detail.enabled as boolean;
@@ -831,7 +807,8 @@ export class DT3DCard extends LitElement {
 			resolveMeshType: (object) => this.resolveMeshType(object),
 			createEntityObject: (entityId) => this.createEntityObject(entityId),
 		});
-		void this.spaceSync.initializeSpaceFromApi();
+
+		this.spaceSync.initializeSpaceFromApi();
 
 		// Listen for selection events from the tree
 		this.tree.addEventListener("object-selected", (e: any) => {
@@ -888,13 +865,13 @@ export class DT3DCard extends LitElement {
 			});
 		});
 
-		this.canvas.addEventListener("click", (event: MouseEvent) =>
-			this.handleCanvasClick(event),
-		);
+		this.canvas.addEventListener("click", (event: MouseEvent) => {
+			this.handleCanvasClick(event);
+		});
 
-		this.canvas.addEventListener("mousemove", (event: MouseEvent) =>
-			this.handlePointerMove(event),
-		);
+		this.canvas.addEventListener("mousemove", (event: MouseEvent) => {
+			this.handlePointerMove(event)
+		});
 
 		this.canvas.addEventListener("mouseleave", (event: MouseEvent) => {
 			if (!this.hoveredObject) {
@@ -945,7 +922,7 @@ export class DT3DCard extends LitElement {
 	 * The entities list is fetched from Home Assistant.
 	 */
 	public addEntityModal(): void {
-		const modal = document.createElement("dt3d-add-entity-modal",) as DT3DAddEntityModal;
+		const modal = document.createElement("dt3d-add-entity-modal") as DT3DAddEntityModal;
 		modal.states = this.hassInstance?.states ?? {};
 
 		const removeModal = () => modal.remove();
