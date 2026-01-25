@@ -1,0 +1,63 @@
+:host {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+
+.field {
+	display: flex;
+	flex-direction: column;
+	margin-bottom: 8px;
+	gap: 4px;
+}
+
+.field label {
+	font-size: 12px;
+	color: var(--ha-color-neutral-80);
+}
+
+.field input {
+	background: color-mix(in srgb, var(--ha-color-neutral-10) 95%, transparent);
+	border: 1px solid
+		color-mix(in srgb, var(--ha-color-neutral-30) 80%, transparent);
+	border-radius: 4px;
+	padding: 6px 8px;
+	color: var(--ha-color-neutral-90);
+}
+
+.group-row {
+	display: grid;
+	grid-template-columns: repeat(3, 1fr);
+	gap: 6px;
+}
+
+.group-row label {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	font-size: 12px;
+	color: var(--ha-color-neutral-80);
+}
+
+.group-row input {
+	width: 100%;
+	padding: 6px 8px;
+	box-sizing: border-box;
+	border-radius: 4px;
+	border: 1px solid
+		color-mix(in srgb, var(--ha-color-neutral-30) 80%, transparent);
+	background: color-mix(in srgb, var(--ha-color-neutral-10) 95%, transparent);
+	color: var(--ha-color-neutral-90);
+}
+
+.color-input {
+	width: 100%;
+	height: 36px;
+	padding: 0 6px;
+	box-sizing: border-box;
+	cursor: pointer;
+}
+
+.info-input {
+	opacity: 0.7;
+}
