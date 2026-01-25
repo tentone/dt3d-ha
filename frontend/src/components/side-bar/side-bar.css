@@ -9,6 +9,8 @@
 	transition: width 0.2s;
 	overflow: visible;
 	position: relative;
+	display: flex;
+	flex-direction: column;
 }
 
 :host([collapsed]) {
@@ -29,6 +31,11 @@
 	height: 24px;
 	padding: 0;
 	z-index: 10;
+}
+
+.sidebar-content {
+	flex: 1;
+	overflow-y: auto;
 }
 
 .sidebar-section {

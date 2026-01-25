@@ -212,133 +212,135 @@ export class DT3DSidebar extends LitElement {
 				title="Collapse sidebar">
 			${this.collapsed ?  html`<ha-icon icon="mdi:arrow-right-drop-circle-outline"></ha-icon>` :  html`<ha-icon icon="mdi:arrow-left-drop-circle-outline"></ha-icon>`}
 			</button>
-			<div class="sidebar-section">
-				<div class="sidebar-title">Controls</div>
-				<button
-					@click=${() => this.handleTransformSelect("translate")}
+			<div class="sidebar-content">
+				<div class="sidebar-section">
+					<div class="sidebar-title">Controls</div>
+					<button
+						@click=${() => this.handleTransformSelect("translate")}
           class=${`transform-btn ${this.transformTool === "translate" ? "selected" : ""}`.trim()}
-					data-tooltip="Translate object"
-					aria-label="Translate object">
-					<ha-icon icon="mdi:cursor-move"></ha-icon>
-				</button>
-				<button
-					@click=${() => this.handleTransformSelect("rotate")}
+						data-tooltip="Translate object"
+						aria-label="Translate object">
+						<ha-icon icon="mdi:cursor-move"></ha-icon>
+					</button>
+					<button
+						@click=${() => this.handleTransformSelect("rotate")}
           	class=${`transform-btn ${this.transformTool === "rotate" ? "selected" : ""}`.trim()}
-					data-tooltip="Rotate object"
-					aria-label="Rotate object">
-					<ha-icon icon="mdi:rotate-right"></ha-icon>
-				</button>
-				<button
+						data-tooltip="Rotate object"
+						aria-label="Rotate object">
+						<ha-icon icon="mdi:rotate-right"></ha-icon>
+					</button>
+					<button
           class=${`transform-btn ${this.transformTool === "scale" ? "selected" : ""}`.trim()}
-					@click=${() => this.handleTransformSelect("scale")}
-					data-tooltip="Scale object"
-					aria-label="Scale object">
-					<ha-icon icon="mdi:resize"></ha-icon>
-				</button>
-				<button
+						@click=${() => this.handleTransformSelect("scale")}
+						data-tooltip="Scale object"
+						aria-label="Scale object">
+						<ha-icon icon="mdi:resize"></ha-icon>
+					</button>
+					<button
           class=${`transform-btn ${this.transformTool === "none" ? "selected" : ""}`.trim()}
-					@click=${() => this.handleTransformSelect("none")}
-					data-tooltip="Disable transform controls"
-					aria-label="Disable transform controls">
-					<ha-icon icon="mdi:cursor-default-outline"></ha-icon>
-				</button>
-				<button
-					@click=${() => this.handleGridSnapToggle()}
-					class=${`toggle-btn ${this.gridSnapEnabled ? "selected" : ""}`.trim()}
-					data-tooltip="Snap transforms to grid"
-					aria-label="Snap transforms to grid">
-					<ha-icon icon="mdi:magnet"></ha-icon>
-				</button>
-				<button
-					@click=${() => this.handleGridToggle()}
-					class=${`toggle-btn ${this.gridEnabled ? "selected" : ""}`.trim()}
-					data-tooltip="Toggle grid"
-					aria-label="Toggle grid">
-					<ha-icon icon="mdi:grid"></ha-icon>
-				</button>
-			</div>
-			<div class="sidebar-section">
-				<div class="sidebar-title">Add</div>
-				<details class="mesh-submenu">
-					<summary
-						data-tooltip="Add mesh"
-						aria-label="Add mesh">
-						<ha-icon icon="mdi:shape-outline"></ha-icon>
-					</summary>
-					<div class="mesh-submenu-items">
-						${MESH_OPTIONS.map(
-							(option) => html`
-								<button
-									@click=${() => this.handleAddObject(option.type)}
-									data-tooltip=${`Add ${option.label}`}
-									aria-label=${`Add ${option.label}`}>
-									${option.label}
-								</button>
-							`,
-						)}
-					</div>
-				</details>
-				<button
-					@click=${() => this.handleAddObject("upload")}
-					data-tooltip="Upload model"
-					aria-label="Upload model">
-					<ha-icon icon="mdi:upload-box-outline"></ha-icon>
-				</button>
-				<button
-					@click=${() => this.handleAddObject("entity")}
-					data-tooltip="Add entity"
-					aria-label="Add entity">
-					<ha-icon icon="mdi:state-machine"></ha-icon>
-				</button>
-			</div>
-			<!-- --ha-color-primary-30) -->
-			<div class="sidebar-section">
-				<div class="sidebar-title">Measure</div>
-				<button
-					@click=${() => this.handleMeasurementSelect("distance")}
-					data-tooltip="Measure distance"
-					aria-label="Measure distance">
-					<ha-icon icon="mdi:social-distance-2-meters"></ha-icon>
-				</button>
-				<button
-					@click=${() => this.handleMeasurementSelect("angle")}
-					data-tooltip="Measure angle"
-					aria-label="Measure angle">
-					<ha-icon icon="mdi:angle-acute"></ha-icon>
-				</button>
-				<button
-					@click=${() => this.handleMeasurementSelect("none")}
-					data-tooltip="Clear measurements"
-					aria-label="Clear measurements">
-					<ha-icon icon="mdi:cancel"></ha-icon>
-				</button>
-			</div>
-			<div class="sidebar-section">
-				<div class="sidebar-title">Walls</div>
-				<button
-					@click=${() => this.handleWallSelect("wall")}
-					data-tooltip="Draw wall"
-					aria-label="Draw wall">
-					<ha-icon icon="mdi:vector-line"></ha-icon>
-				</button>
-				<button
-					@click=${() => this.handleWallSelect("door")}
-					data-tooltip="Add door to selected wall"
-					aria-label="Add door to selected wall">
-					<ha-icon icon="mdi:door"></ha-icon>
-				</button>
-				<button
-					@click=${() => this.handleWallSelect("window")}
-					data-tooltip="Add window to selected wall"
-					aria-label="Add window to selected wall">
-					<ha-icon icon="mdi:window-closed-variant"></ha-icon>
-				</button>
-				<button
-					@click=${() => this.handleWallSelect("none")}
-					data-tooltip="Exit wall tools"
-					aria-label="Exit wall tools">
-					<ha-icon icon="mdi:cancel"></ha-icon>
-				</button>
+						@click=${() => this.handleTransformSelect("none")}
+						data-tooltip="Disable transform controls"
+						aria-label="Disable transform controls">
+						<ha-icon icon="mdi:cursor-default-outline"></ha-icon>
+					</button>
+					<button
+						@click=${() => this.handleGridSnapToggle()}
+						class=${`toggle-btn ${this.gridSnapEnabled ? "selected" : ""}`.trim()}
+						data-tooltip="Snap transforms to grid"
+						aria-label="Snap transforms to grid">
+						<ha-icon icon="mdi:magnet"></ha-icon>
+					</button>
+					<button
+						@click=${() => this.handleGridToggle()}
+						class=${`toggle-btn ${this.gridEnabled ? "selected" : ""}`.trim()}
+						data-tooltip="Toggle grid"
+						aria-label="Toggle grid">
+						<ha-icon icon="mdi:grid"></ha-icon>
+					</button>
+				</div>
+				<div class="sidebar-section">
+					<div class="sidebar-title">Add</div>
+					<details class="mesh-submenu">
+						<summary
+							data-tooltip="Add mesh"
+							aria-label="Add mesh">
+							<ha-icon icon="mdi:shape-outline"></ha-icon>
+						</summary>
+						<div class="mesh-submenu-items">
+							${MESH_OPTIONS.map(
+								(option) => html`
+									<button
+										@click=${() => this.handleAddObject(option.type)}
+										data-tooltip=${`Add ${option.label}`}
+										aria-label=${`Add ${option.label}`}>
+										${option.label}
+									</button>
+								`,
+							)}
+						</div>
+					</details>
+					<button
+						@click=${() => this.handleAddObject("upload")}
+						data-tooltip="Upload model"
+						aria-label="Upload model">
+						<ha-icon icon="mdi:upload-box-outline"></ha-icon>
+					</button>
+					<button
+						@click=${() => this.handleAddObject("entity")}
+						data-tooltip="Add entity"
+						aria-label="Add entity">
+						<ha-icon icon="mdi:state-machine"></ha-icon>
+					</button>
+				</div>
+				<!-- --ha-color-primary-30) -->
+				<div class="sidebar-section">
+					<div class="sidebar-title">Measure</div>
+					<button
+						@click=${() => this.handleMeasurementSelect("distance")}
+						data-tooltip="Measure distance"
+						aria-label="Measure distance">
+						<ha-icon icon="mdi:social-distance-2-meters"></ha-icon>
+					</button>
+					<button
+						@click=${() => this.handleMeasurementSelect("angle")}
+						data-tooltip="Measure angle"
+						aria-label="Measure angle">
+						<ha-icon icon="mdi:angle-acute"></ha-icon>
+					</button>
+					<button
+						@click=${() => this.handleMeasurementSelect("none")}
+						data-tooltip="Clear measurements"
+						aria-label="Clear measurements">
+						<ha-icon icon="mdi:cancel"></ha-icon>
+					</button>
+				</div>
+				<div class="sidebar-section">
+					<div class="sidebar-title">Walls</div>
+					<button
+						@click=${() => this.handleWallSelect("wall")}
+						data-tooltip="Draw wall"
+						aria-label="Draw wall">
+						<ha-icon icon="mdi:vector-line"></ha-icon>
+					</button>
+					<button
+						@click=${() => this.handleWallSelect("door")}
+						data-tooltip="Add door to selected wall"
+						aria-label="Add door to selected wall">
+						<ha-icon icon="mdi:door"></ha-icon>
+					</button>
+					<button
+						@click=${() => this.handleWallSelect("window")}
+						data-tooltip="Add window to selected wall"
+						aria-label="Add window to selected wall">
+						<ha-icon icon="mdi:window-closed-variant"></ha-icon>
+					</button>
+					<button
+						@click=${() => this.handleWallSelect("none")}
+						data-tooltip="Exit wall tools"
+						aria-label="Exit wall tools">
+						<ha-icon icon="mdi:cancel"></ha-icon>
+					</button>
+				</div>
 			</div>
 		`;
 	}
