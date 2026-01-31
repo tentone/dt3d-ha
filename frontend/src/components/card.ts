@@ -11,6 +11,7 @@ import {
 import type { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 import type { TransformControls } from "three/examples/jsm/controls/TransformControls";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
+import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader.js";
 import { OBJLoader } from "three/examples/jsm/loaders/OBJLoader.js";
 import { FBXLoader } from "three/examples/jsm/loaders/FBXLoader.js";
 import { LitElement } from "lit";
@@ -212,14 +213,21 @@ export class DT3DCard extends LitElement {
 
 		if (extension === "gltf" || extension === "glb") {
 			const loader = new GLTFLoader();
+			const dracoLoader = new DRACOLoader();
+			dracoLoader.setDecoderPath("https://www.gstatic.com/draco/v1/decoders/");
+			loader.setDRACOLoader(dracoLoader);
 			loader.load(
 				url,
 				(gltf: any) => {
+					dracoLoader.dispose();
 					cleanup();
 					this.addToScene(gltf.scene ?? gltf.scenes?.[0], file.name);
 				},
 				undefined,
-				onError,
+				(error: any) => {
+					onError(error);
+					dracoLoader.dispose();
+				},
 			);
 			return;
 		} else if (extension === "obj") {
