@@ -7,11 +7,12 @@ import {
 	Shape,
 	Vector3,
 } from "three";
-import { DTObject } from "./dt-object.js";
-import { CSSText } from "./helpers/css-text.js";
-import { getCSSVar } from "../utils/css-utils.js";
+import { DTObject } from "../dt-object.js";
+import { CSSText } from "../helpers/css-text.js";
+import { getCSSVar } from "../../utils/css-utils.js";
 import { DoorObject } from "./door.js";
 import { WindowObject } from "./window.js";
+import { TextSprite } from "../helpers/text-sprite.js";
 
 type WallDimensions = {
 	length: number;
@@ -28,14 +29,48 @@ const DEFAULT_WALL_DIMENSIONS: WallDimensions = {
 const DEFAULT_WALL_COLOR = 0xc9c7c2;
 
 export class WallObject extends DTObject {
+	/**
+	 * Length of the wall in meters.
+	 */
 	public length: number;
+
+	/**
+	 * Height of the wall in meters.
+	 */
 	public height: number;
+
+	/**
+	 * Thickness of the wall in meters.
+	 */
 	public thickness: number;
 
+	/**
+	 * Mesh to represent the wall.
+	 * 
+	 * This mesh's geometry is updated when doors/windows are added/removed.
+	 */
 	private wallMesh: Mesh;
+	
+	/**
+	 * Count of doors added to this wall.
+	 */
 	private doorCount = 0;
+
+	/**
+	 * Count of windows added to this wall.
+	 */
 	private windowCount = 0;
-	private lengthLabel: CSSText | null = null;
+
+	/**
+	 * Label with the length of the wall.
+	 */
+	private lengthLabel: TextSprite | null = null;
+
+	/**
+	 * Signature of the last openings configuration.
+	 * 
+	 * Used to track changes and update geometry only when needed.
+	 */
 	private lastOpeningsSignature = "";
 
 	constructor(dimensions: Partial<WallDimensions> = {}, color = DEFAULT_WALL_COLOR) {
@@ -57,9 +92,16 @@ export class WallObject extends DTObject {
 		this.updateGeometry();
 	}
 
+	/**
+	 * Change wall to fit between two points.
+	 * 
+	 * These points must ideally be at the same height (y coordinate).
+	 * 
+	 * @param start - Starting point
+	 * @param end - Ending point
+	 */
 	public setFromPoints(start: Vector3, end: Vector3): void {
 		const length = start.distanceTo(end);
-		this.setLength(length);
 
 		const midpoint = start.clone().add(end).multiplyScalar(0.5);
 		this.position.set(midpoint.x, start.y, midpoint.z);
@@ -67,8 +109,16 @@ export class WallObject extends DTObject {
 		const direction = end.clone().sub(start);
 		const angle = Math.atan2(direction.z, direction.x);
 		this.rotation.set(0, angle, 0);
+
+		this.length = length;
+		this.updateGeometry();
 	}
 
+	/**
+	 * Change the height of the wall.
+	 * 
+	 * @param height - New height in meters 
+	 */
 	public setHeight(height: number): void {
 		if (!Number.isFinite(height) || height <= 0) {
 			return;
@@ -78,6 +128,11 @@ export class WallObject extends DTObject {
 		this.updateGeometry();
 	}
 
+	/**
+	 * Change the thickness of the wall.
+	 * 
+	 * @param thickness - New thickness in meters 
+	 */
 	public setThickness(thickness: number): void {
 		if (!Number.isFinite(thickness) || thickness <= 0) {
 			return;
@@ -87,26 +142,13 @@ export class WallObject extends DTObject {
 		this.updateGeometry();
 	}
 
-	public setLength(length: number): void {
-		if (!Number.isFinite(length) || length <= 0) {
-			return;
-		}
-
-		this.length = length;
-		this.updateGeometry();
-	}
-
-	public updateWallLabel(): void {
+	/**
+	 * Update label with the length of the wall.
+	 */
+	public updateLabel(): void {
 		const labelText = `${this.length.toFixed(2)}m`;
 		if (!this.lengthLabel) {
-			this.lengthLabel = new CSSText(labelText, {
-				style: {
-					color: getCSSVar("--ha-color-primary-95"),
-					backgroundColor: getCSSVar("--ha-color-neutral-20"),
-					padding: "2px 6px",
-					borderRadius: "6px",
-				},
-			});
+			this.lengthLabel = new TextSprite(labelText);
 			this.lengthLabel.scale.setScalar(0.25);
 			(this.lengthLabel as any).internal = true;
 			this.add(this.lengthLabel);
@@ -117,6 +159,9 @@ export class WallObject extends DTObject {
 		this.lengthLabel.position.set(0, this.height + 0.2, 0);
 	}
 
+	/**
+	 * Add a door to the wall.
+	 */
 	public addDoor(): DoorObject {
 		this.doorCount += 1;
 		const door = new DoorObject();
@@ -127,6 +172,9 @@ export class WallObject extends DTObject {
 		return door;
 	}
 
+	/**
+	 * Add a window to the wall.
+	 */
 	public addWindow(): WindowObject {
 		this.windowCount += 1;
 		const window = new WindowObject();
@@ -235,6 +283,13 @@ export class WallObject extends DTObject {
 		return openings;
 	}
 
+	/**
+	 * Signature of the opening configuration (doors, windows, etc)
+	 * 
+	 * Used to easily trackn changes to the wall config.
+	 * 
+	 * @returns - Signature
+	 */
 	private getOpeningsSignature(): string {
 		const parts = this.getOpenings().map((opening) =>
 			[opening.width, opening.height, opening.x, opening.y].join(","),

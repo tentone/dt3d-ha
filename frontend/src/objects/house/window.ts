@@ -1,5 +1,5 @@
 import { Mesh, MeshStandardMaterial, BoxGeometry } from "three";
-import { DTObject } from "./dt-object.js";
+import { DTObject } from "../dt-object.js";
 
 type WindowDimensions = {
 	width: number;
@@ -17,8 +17,11 @@ const DEFAULT_WINDOW_COLOR = 0x6aa6ff;
 
 export class WindowObject extends DTObject {
 	public width: number;
+	
 	public height: number;
+
 	public thickness: number;
+
 	public open = false;
 
 	private windowMesh: Mesh;

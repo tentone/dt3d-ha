@@ -3,9 +3,9 @@ import type { SceneManager } from "../components/scene.js";
 import type { DT3DTree } from "../components/object-tree/object-tree.js";
 import { createMeshObject } from "../components/mesh-options.js";
 import { DTObject } from "../objects/dt-object.js";
-import { WallObject } from "../objects/wall.js";
-import { DoorObject } from "../objects/door.js";
-import { WindowObject } from "../objects/window.js";
+import { WallObject } from "../objects/house/wall.js";
+import { DoorObject } from "../objects/house/door.js";
+import { WindowObject } from "../objects/house/window.js";
 import { EntityObject } from "../objects/entity-object.js";
 import {
 	SpaceApi,

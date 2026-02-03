@@ -37,7 +37,7 @@ import { DT3DCameraToggle } from "./camera-toggle.js";
 import { SpaceApi } from "../utils/space-api.js";
 import { SpaceSync } from "../utils/space-sync.js";
 import { MeasurementManager } from "./measurement-manager.js";
-import { WallObject } from "../objects/wall.js";
+import { WallObject } from "../objects/house/wall.js";
 
 @customElement("dt3d-card")
 export class DT3DCard extends LitElement {
@@ -544,7 +544,7 @@ export class DT3DCard extends LitElement {
 		}
 
 		this.wallDraft.setFromPoints(this.wallDraftStart, intersection);
-		this.wallDraft.updateWallLabel();
+		this.wallDraft.updateLabel();
 	}
 
 	private createWallDraft(start: Vector3): void {
@@ -552,7 +552,7 @@ export class DT3DCard extends LitElement {
 		this.wallDraft.internal = true;
 		this.wallDraft.name = "Wall Draft";
 		this.wallDraft.setFromPoints(start, start.clone().add(new Vector3(1, 0, 0)));
-		this.wallDraft.updateWallLabel();
+		this.wallDraft.updateLabel();
 		this.sceneManager.measurements.add(this.wallDraft);
 	}
 

@@ -3,9 +3,9 @@ import { customElement, property } from "lit/decorators.js";
 import { Color, Object3D } from "three";
 import { EntityObject } from "../../objects/entity-object.js";
 import { DTObject } from "../../objects/dt-object.js";
-import { WallObject } from "../../objects/wall.js";
-import { DoorObject } from "../../objects/door.js";
-import { WindowObject } from "../../objects/window.js";
+import { WallObject } from "../../objects/house/wall.js";
+import { DoorObject } from "../../objects/house/door.js";
+import { WindowObject } from "../../objects/house/window.js";
 import componentStyles from "./object-inspector.css?inline";
 import "../dynamic-form.js";
 import type {

@@ -1,5 +1,5 @@
 import { Group, Mesh, MeshStandardMaterial, BoxGeometry } from "three";
-import { DTObject } from "./dt-object.js";
+import { DTObject } from "../dt-object.js";
 
 type DoorDimensions = {
 	width: number;
@@ -17,11 +17,15 @@ const DEFAULT_DOOR_COLOR = 0x7a4e2f;
 
 export class DoorObject extends DTObject {
 	public width: number;
+	
 	public height: number;
+
 	public thickness: number;
+
 	public open = false;
 
 	private hingeGroup: Group;
+
 	private doorMesh: Mesh;
 
 	constructor(
