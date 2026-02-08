@@ -2,7 +2,7 @@ import { html, LitElement, unsafeCSS } from "lit";
 import { customElement, property } from "lit/decorators.js";
 import componentStyles from "./connection-status.css?inline";
 
-@customElement("connection-status")
+@customElement("dt3d-connection-status")
 export class ConnectionStatus extends LitElement {
     static properties = {
         port: { type: Number, reflect: true },

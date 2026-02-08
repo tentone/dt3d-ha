@@ -7,11 +7,11 @@ import { WallObject } from "../../objects/house/wall.js";
 import { DoorObject } from "../../objects/house/door.js";
 import { WindowObject } from "../../objects/house/window.js";
 import componentStyles from "./object-inspector.css?inline";
-import "../dynamic-form.js";
+import "../dynamic-form/dynamic-form.js";
 import type {
 	DynamicFormChangeDetail,
 	DynamicFormField,
-} from "../dynamic-form.js";
+} from "../dynamic-form/dynamic-form.js";
 
 @customElement("dt3d-object-inspector")
 export class DT3DObjectInspector extends LitElement {
@@ -344,12 +344,12 @@ export class DT3DObjectInspector extends LitElement {
 			<h4>Selected Object</h4>
 			${this.selectedObject
 				? html`
-						<dynamic-form
+						<dt3d-dynamic-form
 							.fields=${baseFields}
 							.data=${this.selectedObject}
 							@field-change=${(event: CustomEvent<DynamicFormChangeDetail>) =>
 								this.handleFormFieldChange(event)}
-						></dynamic-form>
+						></dt3d-dynamic-form>
 						${locked
 							? html`<div class="placeholder">
 									This object is locked and cannot be edited.
@@ -358,13 +358,13 @@ export class DT3DObjectInspector extends LitElement {
 						${wallFields.length
 							? html`
 									<h4>Wall</h4>
-									<dynamic-form
+									<dt3d-dynamic-form
 										.fields=${wallFields}
 										.data=${this.selectedObject}
 										@field-change=${(
 											event: CustomEvent<DynamicFormChangeDetail>,
 										) => this.handleFormFieldChange(event)}
-									></dynamic-form>
+									></dt3d-dynamic-form>
 								`
 							: null}
 						${openingFields.length
@@ -374,22 +374,22 @@ export class DT3DObjectInspector extends LitElement {
 											? "Door"
 											: "Window"}
 									</h4>
-									<dynamic-form
+									<dt3d-dynamic-form
 										.fields=${openingFields}
 										.data=${this.selectedObject}
 										@field-change=${(
 											event: CustomEvent<DynamicFormChangeDetail>,
 										) => this.handleFormFieldChange(event)}
-									></dynamic-form>
+									></dt3d-dynamic-form>
 								`
 							: null}
 						${entityFields.length
 							? html`
 									<h4>Entity</h4>
-									<dynamic-form
+									<dt3d-dynamic-form
 										.fields=${entityFields}
 										.data=${entityData}
-									></dynamic-form>
+									></dt3d-dynamic-form>
 								`
 							: null}
 						${this.renderEntityDetails()}

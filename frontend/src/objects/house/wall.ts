@@ -184,11 +184,21 @@ export class WallObject extends DTObject {
 		this.updateGeometry();
 		return window;
 	}
-
+	
+	/**
+	 * Get the material used for the wall mesh.
+	 */
 	public getWallMaterial(): MeshStandardMaterial {
 		return this.wallMesh.material as MeshStandardMaterial;
 	}
 
+	/**
+	 * Update the wall geometry if the openings configuration has changed.
+	 * 
+	 * Check the signature of the current openings and compare it to the last known signature.
+	 * 
+	 * @param _time - Frame time (not used).
+	 */
 	public override update(_time: number): void {
 		const signature = this.getOpeningsSignature();
 		if (signature !== this.lastOpeningsSignature) {

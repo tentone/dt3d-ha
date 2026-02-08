@@ -4,6 +4,9 @@ import { AngleMeasurement } from "../objects/measurement/angle.js";
 import { DistanceMeasurement } from "../objects/measurement/distance.js";
 import { Marker } from "../objects/measurement/marker.js";
 
+/**
+ * Measurement modes possible in the MeasurementManager.
+ */
 type MeasurementMode = "none" | "distance" | "angle";
 
 type MeasurementContext = {
@@ -14,28 +17,47 @@ type MeasurementContext = {
 
 export class MeasurementManager {
 	private mode: MeasurementMode = "none";
+
 	private points: Vector3[] = [];
+
 	private helpers: Group;
+
 	private raycaster = new Raycaster();
+
 	private pointer = new Vector2();
+
 	private getContext: () => MeasurementContext;
 
-	constructor(helpers: Group, getContext: () => MeasurementContext) {
+	public constructor(helpers: Group, getContext: () => MeasurementContext) {
 		this.helpers = helpers;
 		this.getContext = getContext;
 	}
 
-	setMode(mode: MeasurementMode): void {
+	/**
+	 * Set the current measurement mode.
+	 */
+	public setMode(mode: MeasurementMode): void {
 		this.mode = mode;
 		this.clear();
 	}
 
-	clear(): void {
+	/**
+	 * Clear the current measurement points and helpers.
+	 */
+	public clear(): void {
 		this.points = [];
 		this.helpers.clear();
 	}
 
-	handleClick(event: MouseEvent): boolean {
+	/**
+	 * Handle click events on the canvas to add measurement points.
+	 * 
+	 * Depending on the current mode and the number of points, this can create distance or angle measurements, or just add marker points.
+	 * 
+	 * @param event - Mouse event from the canvas click.
+	 * @returns True if the event was handled, false otherwise.
+	 */
+	public handleClick(event: MouseEvent): boolean {
 		if (this.mode === "none") {
 			return false;
 		}
@@ -61,6 +83,13 @@ export class MeasurementManager {
 		return true;
 	}
 
+	/**
+	 * Add a point to the current measurement.
+	 * 
+	 * If the required number of points for the current mode is reached, create the corresponding measurement helper and reset the points.
+	 * 
+	 * @param point - The point to add.
+	 */
 	private addPoint(point: Vector3): void {
 		this.points.push(point.clone());
 
@@ -69,6 +98,8 @@ export class MeasurementManager {
 			this.helpers.clear();
 			this.helpers.add(new DistanceMeasurement(points));
 			this.points = [];
+
+			this.mode = "none";
 			return;
 		}
 
@@ -77,6 +108,8 @@ export class MeasurementManager {
 			this.helpers.clear();
 			this.helpers.add(new AngleMeasurement(points));
 			this.points = [];
+
+			this.mode = "none";
 			return;
 		}
 

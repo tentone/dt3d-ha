@@ -20,8 +20,6 @@ interface TreeNode {
 	children?: TreeNode[];
 }
 
-type DropPosition = "before" | "after" | "inside";
-
 const TREE_WIDTH_STORAGE_KEY = "object-tree-width";
 
 @customElement("dt3d-tree")
