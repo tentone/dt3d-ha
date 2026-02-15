@@ -763,11 +763,24 @@ export class DT3DCard extends LitElement {
 		this.sidebar.addEventListener("measurement-mode-selected", (e: any) => {
 			const mode = e.detail.mode as "distance" | "angle" | "none";
 			this.measurementManager?.setMode(mode);
+			this.sidebar.measurementTool = mode;
+
+			if (mode !== "none") {
+				this.wallToolMode = "none";
+				this.sidebar.wallTool = "none";
+				this.clearWallDraft();
+			}
 		});
 
 		this.sidebar.addEventListener("wall-tool-selected", (e: any) => {
 			const mode = e.detail.mode as "wall" | "door" | "window" | "none";
 			this.wallToolMode = mode;
+			this.sidebar.wallTool = mode;
+			if (mode !== "none") {
+				this.measurementManager?.setMode("none");
+				this.sidebar.measurementTool = "none";
+			}
+
 			if (mode !== "wall") {
 				this.clearWallDraft();
 			}
