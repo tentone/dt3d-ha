@@ -420,6 +420,7 @@ export class DT3DTree extends LitElement {
 							<!-- Node -->
 							<div
 								class="tree-node ${this.selectedId === node.id ? "selected" : ""}"
+								style=${`--tree-depth: ${depth};`}
 								@click=${() => this.selectObject(node.id, true)}
 								@contextmenu=${(event: MouseEvent) =>
 									this.handleContextMenu(event, node.id)}
