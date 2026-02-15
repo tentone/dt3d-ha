@@ -14,15 +14,15 @@
 }
 
 :host([collapsed]) {
-	width: 40px;
+	width: 0px;
 	padding: 16px 0 16px 0;
 }
 
 .collapse-btn {
 	position: absolute;
 	top: 12px;
-	right: 8px;
-	background: none;
+	right: -24px;
+	background: color-mix(in srgb, var(--ha-color-neutral-10) 90%, transparent);
 	border: none;
 	color: var(--ha-color-neutral-95);
 	cursor: pointer;

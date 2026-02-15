@@ -1,7 +1,7 @@
 import { BoxGeometry, Group, Mesh, MeshStandardMaterial, Object3D } from "three";
-import type { SceneManager } from "../components/scene.js";
+import type { SceneManager } from "../scene.js";
 import type { DT3DTree } from "../components/object-tree/object-tree.js";
-import { createMeshObject } from "../components/mesh-options.js";
+import { createMeshObject } from "../mesh-options.js";
 import { DTObject } from "../objects/dt-object.js";
 import { WallObject } from "../objects/house/wall.js";
 import { DoorObject } from "../objects/house/door.js";

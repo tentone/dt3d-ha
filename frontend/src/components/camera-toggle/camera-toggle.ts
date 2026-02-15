@@ -1,7 +1,7 @@
 import { html, LitElement } from "lit";
 import { customElement, property } from "lit/decorators.js";
-import type { CameraMode } from "./scene.js";
-import "./floating-button.js";
+import type { CameraMode } from "../../scene.js";
+import "../floating-button/floating-button.js";
 
 @customElement("dt3d-camera-toggle")
 export class DT3DCameraToggle extends LitElement {

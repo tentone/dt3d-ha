@@ -1,80 +1,26 @@
-import { css, html, LitElement } from "lit";
+import { html, LitElement, unsafeCSS } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
+import componentStyles from "./add-entity-modal.css?inline";
 
 /**
  * Modal component to select an entity to add to the scene.
  */
 @customElement("dt3d-add-entity-modal")
 export class DT3DAddEntityModal extends LitElement {
-	static styles = css`
-		:host {
-			position: absolute;
-			inset: 0;
-			display: flex;
-			align-items: center;
-			justify-content: center;
-			background: rgba(0, 0, 0, 0.3);
-			z-index: 1000;
-		}
+	static styles = unsafeCSS(componentStyles);
 
-		.dialog {
-			width: min(420px, 90%);
-			background: var(--ha-color-neutral-10);
-			padding: 20px;
-			border-radius: 10px;
-			box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
-		}
-
-		h3 {
-			margin: 0 0 10px 0;
-		}
-
-		input {
-			width: 100%;
-			padding: 6px 8px;
-			margin: 8px 0 12px 0;
-			border-radius: 6px;
-			border: 1px solid var(--ha-color-border);
-			background: var(--ha-color-neutral-05);
-			color: var(--ha-color-neutral-95);
-			box-sizing: border-box;
-		}
-
-		ul {
-			list-style: none;
-			padding: 0;
-			margin: 10px 0;
-			max-height: 240px;
-			overflow-y: auto;
-		}
-
-		li {
-			padding: 6px;
-			cursor: pointer;
-			border-bottom: 1px solid var(--ha-color-border);
-		}
-
-		li:hover {
-			background: var(--ha-color-primary-10);
-		}
-
-		button {
-			margin-top: 10px;
-			padding: 5px 10px;
-			background: var(--ha-color-red-40);
-			color: white;
-			border: none;
-			border-radius: 5px;
-			cursor: pointer;
-		}
-	`;
-
+	/**
+	 * States of the entities in the system, where the key is the entity ID and the value is the state object.
+	 */
 	@property({ attribute: false })
 	public states: Record<string, unknown> = {};
 
 	@state()
 	private query = "";
 
+	/**
+	 * Get the list of entity IDs filtered by the search query.
+	 */
 	private get filteredEntityIds(): string[] {
 		const query = this.query.trim().toLowerCase();
 
@@ -83,6 +29,19 @@ export class DT3DAddEntityModal extends LitElement {
 		);
 	}
 
+
+	/**
+	 * Apply search filter to the entity list.
+	 * 
+	 * @param event The input event from the search field.
+	 */
+	private handleSearch(event: Event): void {
+		this.query = (event.target as HTMLInputElement)?.value ?? "";
+	}
+
+	/**
+	 * Close the list of entities without selecting any.
+	 */
 	private handleClose(): void {
 		this.dispatchEvent(
 			new CustomEvent("modal-close", {
@@ -92,10 +51,11 @@ export class DT3DAddEntityModal extends LitElement {
 		);
 	}
 
-	private handleSearch(event: Event): void {
-		this.query = (event.target as HTMLInputElement)?.value ?? "";
-	}
-
+	/**
+	 * Handle the selection of an entity from the list and dispatch an event with the selected entity ID.
+	 * 
+	 * @param entityId - ID of the entity selected.
+	 */
 	private handleEntitySelect(entityId: string): void {
 		this.dispatchEvent(
 			new CustomEvent("entity-selected", {

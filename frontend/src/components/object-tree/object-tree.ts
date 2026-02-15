@@ -5,7 +5,7 @@ import type { Object3D } from "three";
 import { DTObject } from "../../objects/dt-object.js";
 
 import {LocalStorage} from "../../utils/local-storage.js";
-import "./object-inspector.js";
+import "../object-inspector/object-inspector.js";
 
 type UUID = string;
 

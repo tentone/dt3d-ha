@@ -4,7 +4,7 @@ import tippy, { type Instance, type Props } from "tippy.js";
 import componentStyles from "./side-bar.css?inline";
 import tippyStyles from  "tippy.js/dist/tippy.css?inline";
 import {LocalStorage} from "../../utils/local-storage.js";
-import { MESH_OPTIONS } from "../mesh-options.js";
+import { MESH_OPTIONS } from "../../mesh-options.js";
 
 /**
  * Transform options.

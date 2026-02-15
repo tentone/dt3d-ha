@@ -24,19 +24,19 @@ import { EntityBinary } from "../objects/entity-binary.js";
 import { EntitySensor } from "../objects/entity-sensor.js";
 import { EntitySwitch } from "../objects/entity-switch.js";
 import { EntityObject } from "../objects/entity-object.js";
-import { DT3DAddEntityModal } from "./add-entity-modal.js";
+import { DT3DAddEntityModal } from "./add-entity-modal/add-entity-modal.js";
 import { DTObject } from "../objects/dt-object.js";
 import en from "../locale/en.json";
 import { ConnectionStatus } from "./connection-status/connection-status.js";
-import { SceneManager } from "./scene.js";
-import type { CameraMode } from "./scene.js";
-import { RendererManager } from "./renderer.js";
-import { createMeshObject } from "./mesh-options.js";
+import { SceneManager } from "../scene.js";
+import type { CameraMode } from "../scene.js";
+import { RendererManager } from "../renderer.js";
+import { createMeshObject } from "../mesh-options.js";
 import { EntityGeneric } from "../objects/entity-generic.js";
-import { DT3DCameraToggle } from "./camera-toggle.js";
+import { DT3DCameraToggle } from "./camera-toggle/camera-toggle.js";
 import { SpaceApi } from "../utils/space-api.js";
 import { SpaceSync } from "../utils/space-sync.js";
-import { MeasurementManager } from "./measurement-manager.js";
+import { MeasurementManager } from "../measurement-manager.js";
 import { WallObject } from "../objects/house/wall.js";
 
 @customElement("dt3d-card")
@@ -498,6 +498,12 @@ export class DT3DCard extends LitElement {
 		return { object: null, intersection: null };
 	}
 
+	/**
+	 * Handle clics on wall to add doors or windows.
+	 * 
+	 * @param event - Mouse event 
+	 * @returns True if the click was handled, false otherwise.
+	 */
 	private handleWallClick(event: MouseEvent): boolean {
 		if (this.wallToolMode === "door" || this.wallToolMode === "window") {
 			const selectedWall = this.resolveSelectedWall();
@@ -613,8 +619,6 @@ export class DT3DCard extends LitElement {
 		return intersects[0]?.point ?? null;
 	}
 
-
-
 	/**
 	 * Method called when the element is added to the DOM.
 	 *
@@ -685,7 +689,7 @@ export class DT3DCard extends LitElement {
 		`;
 		this.content.appendChild(this.tree);
 
-		const connection = document.createElement("connection-status") as ConnectionStatus;
+		const connection = document.createElement("dt3d-connection-status") as ConnectionStatus;
 		connection.port = port;
 		this.content.appendChild(connection);
 
@@ -945,15 +949,14 @@ export class DT3DCard extends LitElement {
 	public addEntityModal(): void {
 		const modal = document.createElement("dt3d-add-entity-modal") as DT3DAddEntityModal;
 		modal.states = this.hassInstance?.states ?? {};
-
-		const removeModal = () => modal.remove();
+		
 		modal.addEventListener("entity-selected", (event: Event) => {
 			const { entityId } = (event as CustomEvent<{ entityId: string }>).detail;
 			this.addEntityToScene(entityId);
-			removeModal();
+			modal.remove();
 		});
 
-		modal.addEventListener("modal-close", removeModal);
+		modal.addEventListener("modal-close", () => modal.remove());
 
 		this.content.appendChild(modal);
 	}
@@ -973,7 +976,13 @@ export class DT3DCard extends LitElement {
 		object.position.set(Math.random() * 2 - 1, 0, Math.random() * 2 - 1);
 		this.addToScene(object, id);
 	}
-
+	
+	/**
+	 * Create object to represent a Home Assistant entity based on its domain.
+	 * 
+	 * @param id - ID of the entity.
+	 * @returns Object created to visually represent the entity.
+	 */
 	private createEntityObject(id: string): Object3D | null {
 		const entity = this.hassInstance?.states?.[id];
 		if (!entity) {
@@ -1002,6 +1011,26 @@ export class DT3DCard extends LitElement {
 		return new EntityGeneric(id, entity);
 	}
 
+	private updateEntityObjects(): void {
+		if (!this.space || !this.hassInstance?.states) {
+			return;
+		}
+
+		this.space.traverse((child) => {
+			if (child instanceof EntityObject) {
+				const entityState = this.hassInstance.states[child.entityId];
+				if (entityState) {
+					child.setEntity(entityState);
+				}
+			}
+		});
+	}
+
+	/**
+	 * Get the API client instance for communicating with the backend.
+	 * 
+	 * @returns api client instance or throws an error if it is not initialized.
+	 */
 	private getApiClient(): SpaceApi {
 		if (!this.apiClient) {
 			throw new Error("DT3D: API client not initialized");
@@ -1065,21 +1094,6 @@ export class DT3DCard extends LitElement {
 		}
 
 		return null;
-	}
-
-	private updateEntityObjects(): void {
-		if (!this.space || !this.hassInstance?.states) {
-			return;
-		}
-
-		this.space.traverse((child) => {
-			if (child instanceof EntityObject) {
-				const entityState = this.hassInstance.states[child.entityId];
-				if (entityState) {
-					child.setEntity(entityState);
-				}
-			}
-		});
 	}
 
 	/**
