@@ -6,10 +6,19 @@ import tippyStyles from  "tippy.js/dist/tippy.css?inline";
 import {LocalStorage} from "../../utils/local-storage.js";
 import { MESH_OPTIONS } from "../mesh-options.js";
 
+/**
+ * Transform options.
+ */
 export type TransformOptions = "translate" | "rotate" | "scale" | "none";
 
+/**
+ * Measurement options.
+ */
 export type MeasurementOptions = "distance" | "angle" | "none";
 
+/**
+ * Wall placement options.
+ */
 export type WallOptions = "wall" | "door" | "window" | "none";
 
 const SIDEBAR_COLLAPSED_STORAGE_KEY = "sidebar-collapsed";
@@ -175,7 +184,8 @@ export class DT3DSidebar extends LitElement {
 	private createTooltips() {
 		this.destroyTooltips();
 
-		const tooltipTargets: any[] = this.renderRoot?.querySelectorAll<HTMLElement>("[data-tooltip]") ?? [];
+		
+		const tooltipTargets: NodeListOf<HTMLElement> = this.renderRoot?.querySelectorAll<HTMLElement>("[data-tooltip]") ?? [];
 
 		tooltipTargets.forEach((element) => {
 			const content = element.dataset.tooltip;
