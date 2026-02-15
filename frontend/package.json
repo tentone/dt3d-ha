@@ -18,11 +18,11 @@
 		"troika-three-text": "0.52.4"
 	},
 	"devDependencies": {
-		"@eslint/js": "~10.0.1",
-		"@types/three": "~0.180.0",
+		"@eslint/js": "~9.0.0",
+		"@types/three": "~0.182.0",
 		"@typescript-eslint/eslint-plugin": "~8.55.0",
 		"@typescript-eslint/parser": "~8.55.0",
-		"eslint": "~10.0.0",
+		"eslint": "~9.39.2",
 		"eslint-plugin-import": "~2.32.0",
 		"eslint-plugin-lit": "~2.2.1",
 		"eslint-plugin-simple-import-sort": "~12.1.1",

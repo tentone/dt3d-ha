@@ -27,6 +27,8 @@ export default [
 		rules:{
 			"@typescript-eslint/no-explicit-any":"off",
 			"no-case-declarations": "off",
+			"@typescript-eslint/no-unused-expressions": "off",
+			"no-undef": "off",
 			
 			// Tabs indentation
 			indent:["error","tab",{
