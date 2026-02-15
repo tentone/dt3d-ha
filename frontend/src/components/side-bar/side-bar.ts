@@ -33,6 +33,8 @@ export class DT3DSidebar extends LitElement {
 	static properties = {
 		collapsed: { type: Boolean, reflect: true },
 		transformTool: { type: String },
+		measurementTool: { type: String },
+		wallTool: { type: String },
 		gridEnabled: { type: Boolean },
 		gridSnapEnabled: { type: Boolean },
 	};
@@ -58,6 +60,16 @@ export class DT3DSidebar extends LitElement {
 	 * Toggle grid visibility.
 	 */
 	public gridEnabled = true;
+
+	/**
+	 * Selected measurement tool.
+	 */
+	public measurementTool: MeasurementOptions = "none";
+
+	/**
+	 * Selected wall tool.
+	 */
+	public wallTool: WallOptions = "none";
 
 	/**
 	 * Toggle snapping transforms to the grid.
@@ -126,6 +138,7 @@ export class DT3DSidebar extends LitElement {
 	 * @param mode - Measuremente tool to use.
 	 */
 	private handleMeasurementSelect(mode: MeasurementOptions) {
+		this.measurementTool = mode;
 		this.dispatchEvent(
 			new CustomEvent("measurement-mode-selected", {
 				detail: { mode },
@@ -141,6 +154,7 @@ export class DT3DSidebar extends LitElement {
 	 * @param mode - Wall tool to use.
 	 */
 	private handleWallSelect(mode: WallOptions) {
+		this.wallTool = mode;
 		this.dispatchEvent(
 			new CustomEvent("wall-tool-selected", {
 				detail: { mode },
@@ -307,18 +321,21 @@ export class DT3DSidebar extends LitElement {
 					<div class="sidebar-title">Measure</div>
 					<button
 						@click=${() => this.handleMeasurementSelect("distance")}
+						class=${this.measurementTool === "distance" ? "selected" : ""}
 						data-tooltip="Measure distance"
 						aria-label="Measure distance">
 						<ha-icon icon="mdi:social-distance-2-meters"></ha-icon>
 					</button>
 					<button
 						@click=${() => this.handleMeasurementSelect("angle")}
+						class=${this.measurementTool === "angle" ? "selected" : ""}
 						data-tooltip="Measure angle"
 						aria-label="Measure angle">
 						<ha-icon icon="mdi:angle-acute"></ha-icon>
 					</button>
 					<button
 						@click=${() => this.handleMeasurementSelect("none")}
+						class=${this.measurementTool === "none" && this.wallTool === "none" ? "selected" : ""}
 						data-tooltip="Clear measurements"
 						aria-label="Clear measurements">
 						<ha-icon icon="mdi:cancel"></ha-icon>
@@ -328,24 +345,28 @@ export class DT3DSidebar extends LitElement {
 					<div class="sidebar-title">Walls</div>
 					<button
 						@click=${() => this.handleWallSelect("wall")}
+						class=${this.wallTool === "wall" ? "selected" : ""}
 						data-tooltip="Draw wall"
 						aria-label="Draw wall">
 						<ha-icon icon="mdi:vector-line"></ha-icon>
 					</button>
 					<button
 						@click=${() => this.handleWallSelect("door")}
+						class=${this.wallTool === "door" ? "selected" : ""}
 						data-tooltip="Add door to selected wall"
 						aria-label="Add door to selected wall">
 						<ha-icon icon="mdi:door"></ha-icon>
 					</button>
 					<button
 						@click=${() => this.handleWallSelect("window")}
+						class=${this.wallTool === "window" ? "selected" : ""}
 						data-tooltip="Add window to selected wall"
 						aria-label="Add window to selected wall">
 						<ha-icon icon="mdi:window-closed-variant"></ha-icon>
 					</button>
 					<button
 						@click=${() => this.handleWallSelect("none")}
+						class=${this.measurementTool === "none" && this.wallTool === "none" ? "selected" : ""}
 						data-tooltip="Exit wall tools"
 						aria-label="Exit wall tools">
 						<ha-icon icon="mdi:cancel"></ha-icon>
