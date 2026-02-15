@@ -17,7 +17,7 @@
 }
 
 .tree-node {
-	padding-left: 16px;
+	padding-left: calc(8px + (var(--tree-depth, 0) * 16px));
 	cursor: pointer;
 	user-select: none;
 	text-overflow: ellipsis;

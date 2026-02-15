@@ -101,12 +101,15 @@ export class WallObject extends DTObject {
 	 * @param end - Ending point
 	 */
 	public setFromPoints(start: Vector3, end: Vector3): void {
-		const length = start.distanceTo(end);
+		const direction = end.clone().sub(start);
+		const length = Math.hypot(direction.x, direction.z);
+		if (length <= 0) {
+			return;
+		}
 
 		const midpoint = start.clone().add(end).multiplyScalar(0.5);
 		this.position.set(midpoint.x, start.y, midpoint.z);
 
-		const direction = end.clone().sub(start);
 		const angle = Math.atan2(direction.z, direction.x);
 		this.rotation.set(0, angle, 0);
 
@@ -166,7 +169,7 @@ export class WallObject extends DTObject {
 		this.doorCount += 1;
 		const door = new DoorObject();
 		door.name = `Door ${this.doorCount}`;
-		door.position.y = door.height / 2;
+		door.position.y = 0;
 		this.add(door);
 		this.updateGeometry();
 		return door;
@@ -179,7 +182,7 @@ export class WallObject extends DTObject {
 		this.windowCount += 1;
 		const window = new WindowObject();
 		window.name = `Window ${this.windowCount}`;
-		window.position.y = 1.2 + window.height / 2;
+		window.position.y = 1.2;
 		this.add(window);
 		this.updateGeometry();
 		return window;
@@ -278,7 +281,7 @@ export class WallObject extends DTObject {
 					width: child.width,
 					height: child.height,
 					x: child.position.x,
-					y: child.position.y,
+					y: child.position.y + child.height / 2,
 				});
 			}
 			if (child instanceof WindowObject) {
@@ -286,7 +289,7 @@ export class WallObject extends DTObject {
 					width: child.width,
 					height: child.height,
 					x: child.position.x,
-					y: child.position.y,
+					y: child.position.y + child.height / 2,
 				});
 			}
 		}
