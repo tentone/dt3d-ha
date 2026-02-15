@@ -1,19 +1,20 @@
-import { html, LitElement, unsafeCSS } from "lit";
-import { customElement, property } from "lit/decorators.js";
+import {html, LitElement, unsafeCSS} from "lit";
+import {customElement, property} from "lit/decorators.js";
+
 import componentStyles from "./connection-status.css?inline";
 
 @customElement("dt3d-connection-status")
 export class ConnectionStatus extends LitElement {
-    static properties = {
-        port: { type: Number, reflect: true },
-    };
+	static properties = {
+		port: {type: Number, reflect: true},
+	};
 
 	static styles = unsafeCSS(componentStyles);
 
-    public port: number = 8080;
+	public port: number = 8080;
 
 	@property()
-	public msg: string = 'Waiting...';
+	public msg: string = "Waiting...";
 
 	/**
 	 * Flag to define if the comunication was successfull or not.
@@ -21,8 +22,8 @@ export class ConnectionStatus extends LitElement {
 	@property()
 	public success: boolean = true;
 
-    public connectedCallback(): void {
-        super.connectedCallback();
+	public connectedCallback(): void {
+		super.connectedCallback();
 
 		fetch(`http://localhost:${this.port}/api/hello`)
 			.then((r) => r.text())
@@ -33,12 +34,11 @@ export class ConnectionStatus extends LitElement {
 			.catch(() => {
 				this.msg = `Failed to reach backend on port ${this.port}`;
 				this.success = false;
-
 			});
-    }
+	}
 
 	public render() {
-		return html`<div style="margin: 5px;" class="${this.success ? 'connection-status-success' : 'connection-status-error'}">
+		return html`<div style="margin: 5px;" class="${this.success ? "connection-status-success" : "connection-status-error"}">
 			${this.msg}<br>${BUILD_TIMESTAMP}
 		</div>`;
 	}

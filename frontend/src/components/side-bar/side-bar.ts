@@ -1,10 +1,11 @@
-import { LitElement, html, unsafeCSS, type PropertyValues } from "lit";
-import { customElement } from "lit/decorators.js";
-import tippy, { type Instance, type Props } from "tippy.js";
-import componentStyles from "./side-bar.css?inline";
+import {html, LitElement, type PropertyValues,unsafeCSS} from "lit";
+import {customElement} from "lit/decorators.js";
+import tippy, {type Instance, type Props} from "tippy.js";
 import tippyStyles from  "tippy.js/dist/tippy.css?inline";
+
+import {MESH_OPTIONS} from "../../mesh-options.js";
 import {LocalStorage} from "../../utils/local-storage.js";
-import { MESH_OPTIONS } from "../../mesh-options.js";
+import componentStyles from "./side-bar.css?inline";
 
 /**
  * Transform options.
@@ -31,12 +32,12 @@ export class DT3DSidebar extends LitElement {
 	static styles = unsafeCSS(componentStyles + tippyStyles);
 
 	static properties = {
-		collapsed: { type: Boolean, reflect: true },
-		transformTool: { type: String },
-		measurementTool: { type: String },
-		wallTool: { type: String },
-		gridEnabled: { type: Boolean },
-		gridSnapEnabled: { type: Boolean },
+		collapsed: {type: Boolean, reflect: true},
+		transformTool: {type: String},
+		measurementTool: {type: String},
+		wallTool: {type: String},
+		gridEnabled: {type: Boolean},
+		gridSnapEnabled: {type: Boolean},
 	};
 
 	/**
@@ -45,7 +46,7 @@ export class DT3DSidebar extends LitElement {
 	public collapsed =
 		LocalStorage.read(SIDEBAR_COLLAPSED_STORAGE_KEY, true) ??
 		true;
-	
+
 	/**
 	 * Tooltip instances to preview the option name.
 	 */
@@ -110,22 +111,22 @@ export class DT3DSidebar extends LitElement {
 
 		this.dispatchEvent(
 			new CustomEvent("transform-tool-selected", {
-				detail: { tool },
+				detail: {tool},
 				bubbles: true,
 				composed: true,
 			}),
 		);
 	}
 
-	/** 
+	/**
 	 * Dispatch a new add object event.
-	 * 
+	 *
 	 * @param type - Type of object to be created.
 	 */
 	private handleAddObject(type: string) {
 		this.dispatchEvent(
 			new CustomEvent("add-object", {
-				detail: { type },
+				detail: {type},
 				bubbles: true,
 				composed: true,
 			}),
@@ -141,7 +142,7 @@ export class DT3DSidebar extends LitElement {
 		this.measurementTool = mode;
 		this.dispatchEvent(
 			new CustomEvent("measurement-mode-selected", {
-				detail: { mode },
+				detail: {mode},
 				bubbles: true,
 				composed: true,
 			}),
@@ -157,21 +158,21 @@ export class DT3DSidebar extends LitElement {
 		this.wallTool = mode;
 		this.dispatchEvent(
 			new CustomEvent("wall-tool-selected", {
-				detail: { mode },
+				detail: {mode},
 				bubbles: true,
 				composed: true,
 			}),
 		);
 	}
 
-  /*
+	/*
 	 * Toggle grid visibility.
 	 */
 	private handleGridToggle() {
 		this.gridEnabled = !this.gridEnabled;
 		this.dispatchEvent(
 			new CustomEvent("grid-visibility-toggle", {
-				detail: { enabled: this.gridEnabled },
+				detail: {enabled: this.gridEnabled},
 				bubbles: true,
 				composed: true,
 			}),
@@ -185,7 +186,7 @@ export class DT3DSidebar extends LitElement {
 		this.gridSnapEnabled = !this.gridSnapEnabled;
 		this.dispatchEvent(
 			new CustomEvent("grid-snap-toggle", {
-				detail: { enabled: this.gridSnapEnabled },
+				detail: {enabled: this.gridSnapEnabled},
 				bubbles: true,
 				composed: true,
 			}),
@@ -198,7 +199,7 @@ export class DT3DSidebar extends LitElement {
 	private createTooltips() {
 		this.destroyTooltips();
 
-		
+
 		const tooltipTargets: NodeListOf<HTMLElement> = this.renderRoot?.querySelectorAll<HTMLElement>("[data-tooltip]") ?? [];
 
 		tooltipTargets.forEach((element) => {
@@ -292,7 +293,7 @@ export class DT3DSidebar extends LitElement {
 						</summary>
 						<div class="mesh-submenu-items">
 							${MESH_OPTIONS.map(
-								(option) => html`
+		(option) => html`
 									<button
 										@click=${() => this.handleAddObject(option.type)}
 										data-tooltip=${`Add ${option.label}`}
@@ -300,7 +301,7 @@ export class DT3DSidebar extends LitElement {
 										${option.label}
 									</button>
 								`,
-							)}
+	)}
 						</div>
 					</details>
 					<button

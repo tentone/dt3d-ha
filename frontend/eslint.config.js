@@ -25,9 +25,20 @@ export default [
 			import:importPlugin
 		},
 		rules:{
+			"@typescript-eslint/no-explicit-any":"off",
+			"no-case-declarations": "off",
+			
 			// Tabs indentation
-			indent:["error","tab",{SwitchCase:1}],
+			indent:["error","tab",{
+				SwitchCase:1,
+				ignoredNodes:[
+					"TemplateLiteral",
+					"TaggedTemplateExpression",
+					"TaggedTemplateExpression *"
+				]
+			}],
 			"no-mixed-spaces-and-tabs":["error","smart-tabs"],
+
 
 			// Remove unnecessary spaces
 			"no-trailing-spaces":"error",

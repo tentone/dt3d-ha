@@ -1,6 +1,6 @@
-import { CircleIconSprite } from "./helpers/circle-icon-sprite.js";
-import { EntityObject } from "./entity-object.js";
-import { TextSprite } from "./helpers/text-sprite.js";
+import {EntityObject} from "./entity-object.js";
+import {CircleIconSprite} from "./helpers/circle-icon-sprite.js";
+import {TextSprite} from "./helpers/text-sprite.js";
 
 /**
  * Creates a entity sensor representation.

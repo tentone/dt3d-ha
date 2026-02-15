@@ -1,8 +1,9 @@
-import { Object3D } from "three";
-import { CircleIconSprite } from "./helpers/circle-icon-sprite.js";
-import { EntityObject } from "./entity-object.js";
-import type { DTInteractionEvent } from "./dt-object.js";
-import { TextSprite } from "./helpers/text-sprite.js";
+import type {Object3D} from "three";
+
+import type {DTInteractionEvent} from "./dt-object.js";
+import {EntityObject} from "./entity-object.js";
+import {CircleIconSprite} from "./helpers/circle-icon-sprite.js";
+import {TextSprite} from "./helpers/text-sprite.js";
 
 export class EntitySwitch extends EntityObject {
 	public label: TextSprite;
@@ -40,7 +41,7 @@ export class EntitySwitch extends EntityObject {
 
 	/**
 	 * Toggle the switch, called on click.
-	 * 
+	 *
 	 * @param hass - HA data
 	 */
 	public async toggle(hass: any): Promise<void> {
@@ -60,8 +61,8 @@ export class EntitySwitch extends EntityObject {
 
 	/**
 	 * Refresh the icon of the switch after its state has been changed.
-	 * 
-	 * 
+	 *
+	 *
 	 * @param isOn - State of the switch.
 	 */
 	private refreshIcon(isOn: boolean): void {

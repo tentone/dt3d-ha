@@ -1,11 +1,13 @@
-import { html, LitElement } from "lit";
-import { customElement, property } from "lit/decorators.js";
-import type { CameraMode } from "../../scene.js";
 import "../floating-button/floating-button.js";
+
+import {html, LitElement} from "lit";
+import {customElement, property} from "lit/decorators.js";
+
+import type {CameraMode} from "../../scene.js";
 
 @customElement("dt3d-camera-toggle")
 export class DT3DCameraToggle extends LitElement {
-	@property({ type: String })
+	@property({type: String})
 	public mode: CameraMode = "perspective";
 
 	private handleToggle(): void {
@@ -14,7 +16,7 @@ export class DT3DCameraToggle extends LitElement {
 		this.mode = nextMode;
 		this.dispatchEvent(
 			new CustomEvent("camera-mode-change", {
-				detail: { mode: nextMode },
+				detail: {mode: nextMode},
 				bubbles: true,
 				composed: true,
 			}),

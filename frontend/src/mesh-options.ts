@@ -1,4 +1,5 @@
-import { Mesh, BoxGeometry, SphereGeometry, PlaneGeometry, CapsuleGeometry, CircleGeometry, ConeGeometry, CylinderGeometry, DodecahedronGeometry, IcosahedronGeometry, Vector2, LatheGeometry, OctahedronGeometry, PolyhedronGeometry, RingGeometry, ShapeGeometry, ExtrudeGeometry, TetrahedronGeometry, TorusGeometry, TorusKnotGeometry, CatmullRomCurve3, Vector3, TubeGeometry, Material } from "three";
+import type {Material} from "three";
+import {BoxGeometry, CapsuleGeometry, CircleGeometry, ConeGeometry, CylinderGeometry, DodecahedronGeometry, IcosahedronGeometry, Mesh, OctahedronGeometry, PlaneGeometry, RingGeometry, SphereGeometry, TetrahedronGeometry, TorusGeometry, TorusKnotGeometry} from "three";
 
 export type MeshOption = {
 	type: string;
@@ -6,20 +7,20 @@ export type MeshOption = {
 };
 
 export const MESH_OPTIONS: MeshOption[] = [
-	{ type: "cube", label: "Cube" },
-	{ type: "sphere", label: "Sphere" },
-	{ type: "plane", label: "Plane" },
-	{ type: "capsule", label: "Capsule" },
-	{ type: "circle", label: "Circle" },
-	{ type: "cone", label: "Cone" },
-	{ type: "cylinder", label: "Cylinder" },
-	{ type: "dodecahedron", label: "Dodecahedron" },
-	{ type: "icosahedron", label: "Icosahedron" },
-	{ type: "octahedron", label: "Octahedron" },
-	{ type: "ring", label: "Ring" },
-	{ type: "tetrahedron", label: "Tetrahedron" },
-	{ type: "torus", label: "Torus" },
-	{ type: "torusKnot", label: "Torus Knot" },
+	{type: "cube", label: "Cube"},
+	{type: "sphere", label: "Sphere"},
+	{type: "plane", label: "Plane"},
+	{type: "capsule", label: "Capsule"},
+	{type: "circle", label: "Circle"},
+	{type: "cone", label: "Cone"},
+	{type: "cylinder", label: "Cylinder"},
+	{type: "dodecahedron", label: "Dodecahedron"},
+	{type: "icosahedron", label: "Icosahedron"},
+	{type: "octahedron", label: "Octahedron"},
+	{type: "ring", label: "Ring"},
+	{type: "tetrahedron", label: "Tetrahedron"},
+	{type: "torus", label: "Torus"},
+	{type: "torusKnot", label: "Torus Knot"},
 ];
 
 

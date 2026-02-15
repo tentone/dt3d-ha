@@ -1,5 +1,5 @@
-import type { Scene, Camera, WebGLRenderer } from "three";
-import { CSS3DSprite } from "three/examples/jsm/renderers/CSS3DRenderer.js";
+import type {Camera, Scene, WebGLRenderer} from "three";
+import {CSS3DSprite} from "three/examples/jsm/renderers/CSS3DRenderer.js";
 
 export type CSSTextOptions = {
 	className?: string;

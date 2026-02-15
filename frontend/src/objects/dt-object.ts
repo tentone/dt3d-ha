@@ -1,4 +1,4 @@
-import { Group } from "three";
+import {Group} from "three";
 
 /**
  * Possible types of interaction with 3D objects.
@@ -50,13 +50,13 @@ export class DTObject extends Group {
 	/**
 	 * Called once when the object is first added to the scene.
 	 */
-	// eslint-disable-next-line @typescript-eslint/no-empty-function
+
 	public initialize(): void {}
 
 	/**
 	 * Called before each render with the current time.
 	 */
-	// eslint-disable-next-line @typescript-eslint/no-unused-vars, @typescript-eslint/no-empty-function
+
 	public update(_time: number): void {}
 
 	/**
@@ -67,7 +67,7 @@ export class DTObject extends Group {
 	/**
 	 * Called when the pointer interacts with the object (enter, leave, click, or double click).
 	 */
-	// eslint-disable-next-line @typescript-eslint/no-unused-vars, @typescript-eslint/no-empty-function
+
 	public onInteraction(_event: DTInteractionEvent): void {}
 
 	/**

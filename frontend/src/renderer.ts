@@ -1,7 +1,7 @@
-import type { Camera, Scene } from "three";
-import { WebGLRenderer } from "three";
-import type { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
-import { CSS3DRenderer } from "three/examples/jsm/renderers/CSS3DRenderer.js";
+import type {Camera, Scene} from "three";
+import {WebGLRenderer} from "three";
+import type {OrbitControls} from "three/examples/jsm/controls/OrbitControls";
+import {CSS3DRenderer} from "three/examples/jsm/renderers/CSS3DRenderer.js";
 
 /**
  * RendererManager handles WebGL and CSS renderers along with the render loop.
@@ -42,17 +42,17 @@ export class RendererManager {
 		this.camera = camera;
 		this.controls = controls;
 
-		this.cssRenderer = new CSS3DRenderer({ element: cssElement });
+		this.cssRenderer = new CSS3DRenderer({element: cssElement});
 		this.cssRenderer.setSize(width, height);
 
-		this.renderer = new WebGLRenderer({ alpha: true, canvas });
+		this.renderer = new WebGLRenderer({alpha: true, canvas});
 		this.renderer.setSize(width, height, false);
 		this.renderer.setClearColor(0x446644, 1);
 	}
 
 	/**
 	 * Start the rendering loop.
-	 * 
+	 *
 	 * @param onUpdate - Callback called before rendering.
 	 */
 	public start(onUpdate?: (time: number) => void): void {
@@ -85,7 +85,7 @@ export class RendererManager {
 
 	/**
 	 * Resize the renderer.
-	 * 
+	 *
 	 * @param width - Width in px
 	 * @param height - Height in px
 	 */

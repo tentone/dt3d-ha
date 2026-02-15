@@ -1,5 +1,6 @@
-import { html, LitElement, unsafeCSS } from "lit";
-import { customElement, property, state } from "lit/decorators.js";
+import {html, LitElement, unsafeCSS} from "lit";
+import {customElement, property, state} from "lit/decorators.js";
+
 import componentStyles from "./add-entity-modal.css?inline";
 
 /**
@@ -12,7 +13,7 @@ export class DT3DAddEntityModal extends LitElement {
 	/**
 	 * States of the entities in the system, where the key is the entity ID and the value is the state object.
 	 */
-	@property({ attribute: false })
+	@property({attribute: false})
 	public states: Record<string, unknown> = {};
 
 	@state()
@@ -32,7 +33,7 @@ export class DT3DAddEntityModal extends LitElement {
 
 	/**
 	 * Apply search filter to the entity list.
-	 * 
+	 *
 	 * @param event The input event from the search field.
 	 */
 	private handleSearch(event: Event): void {
@@ -53,13 +54,13 @@ export class DT3DAddEntityModal extends LitElement {
 
 	/**
 	 * Handle the selection of an entity from the list and dispatch an event with the selected entity ID.
-	 * 
+	 *
 	 * @param entityId - ID of the entity selected.
 	 */
 	private handleEntitySelect(entityId: string): void {
 		this.dispatchEvent(
 			new CustomEvent("entity-selected", {
-				detail: { entityId },
+				detail: {entityId},
 				bubbles: true,
 				composed: true,
 			}),
@@ -77,11 +78,11 @@ export class DT3DAddEntityModal extends LitElement {
 					@input=${this.handleSearch} />
 				<ul>
 					${this.filteredEntityIds.map(
-						(entityId) =>
-							html`<li @click=${() => this.handleEntitySelect(entityId)}>
+		(entityId) =>
+			html`<li @click=${() => this.handleEntitySelect(entityId)}>
 								${entityId}
 							</li>`,
-					)}
+	)}
 				</ul>
 				<button @click=${this.handleClose}>Cancel</button>
 			</div>

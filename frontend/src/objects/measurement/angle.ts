@@ -1,26 +1,28 @@
+import type {
+	Vector3} from "three";
 import {
-	Group,
-	Vector3,
-	Color,
-	Line,
 	BufferGeometry,
+	Color,
+	Group,
+	Line,
 	LineBasicMaterial,
 	MathUtils,
 } from "three";
-import { getCSSVar } from "../../utils/css-utils";
-import { CSSText } from "../helpers/css-text";
-import { Marker } from "./marker";
+
+import {getCSSVar} from "../../utils/css-utils";
+import {CSSText} from "../helpers/css-text";
+import {Marker} from "./marker";
 
 /**
  * Create and display the angle measurement between three points.
  */
 export class AngleMeasurement extends Group {
-    public constructor(points: Vector3[]) {
-        if (points.length !== 3) {
+	public constructor(points: Vector3[]) {
+		if (points.length !== 3) {
 			throw new Error("Points must have length 3");
 		}
 
-        super();
+		super();
 
 		const [first, vertex, last] = points;
 
@@ -34,11 +36,11 @@ export class AngleMeasurement extends Group {
 		// Lines
 		const line1 = new Line(
 			new BufferGeometry().setFromPoints([vertex, first]),
-			new LineBasicMaterial({ color: color }),
+			new LineBasicMaterial({color: color}),
 		);
 		const line2 = new Line(
 			new BufferGeometry().setFromPoints([vertex, last]),
-			new LineBasicMaterial({ color: color }),
+			new LineBasicMaterial({color: color}),
 		);
 
 		this.add(line1);
@@ -58,5 +60,5 @@ export class AngleMeasurement extends Group {
 		label.position.copy(vertex);
 		label.position.y += 0.5;
 		this.add(label);
-    }
+	}
 }

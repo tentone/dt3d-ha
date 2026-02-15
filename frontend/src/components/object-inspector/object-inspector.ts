@@ -1,23 +1,26 @@
-import { LitElement, html, unsafeCSS } from "lit";
-import { customElement, property } from "lit/decorators.js";
-import { Color, Object3D } from "three";
-import { EntityObject } from "../../objects/entity-object.js";
-import { DTObject } from "../../objects/dt-object.js";
-import { WallObject } from "../../objects/house/wall.js";
-import { DoorObject } from "../../objects/house/door.js";
-import { WindowObject } from "../../objects/house/window.js";
-import componentStyles from "./object-inspector.css?inline";
 import "../dynamic-form/dynamic-form.js";
+
+import {html, LitElement, unsafeCSS} from "lit";
+import {customElement, property} from "lit/decorators.js";
+import type {Object3D} from "three";
+import {Color} from "three";
+
+import {DTObject} from "../../objects/dt-object.js";
+import {EntityObject} from "../../objects/entity-object.js";
+import {DoorObject} from "../../objects/house/door.js";
+import {WallObject} from "../../objects/house/wall.js";
+import {WindowObject} from "../../objects/house/window.js";
 import type {
 	DynamicFormChangeDetail,
 	DynamicFormField,
 } from "../dynamic-form/dynamic-form.js";
+import componentStyles from "./object-inspector.css?inline";
 
 @customElement("dt3d-object-inspector")
 export class DT3DObjectInspector extends LitElement {
 	static styles = unsafeCSS(componentStyles);
 
-	@property({ attribute: false })
+	@property({attribute: false})
 	public selectedObject: Object3D | null = null;
 
 	/**
@@ -68,7 +71,7 @@ export class DT3DObjectInspector extends LitElement {
 	private dispatchUpdated() {
 		this.dispatchEvent(
 			new CustomEvent("object-updated", {
-				detail: { object: this.selectedObject },
+				detail: {object: this.selectedObject},
 				bubbles: true,
 				composed: true,
 			}),
@@ -90,7 +93,7 @@ export class DT3DObjectInspector extends LitElement {
 	private handleFormFieldChange(event: CustomEvent<DynamicFormChangeDetail>) {
 		if (!this.selectedObject) return;
 
-		const { attribute, value } = event.detail;
+		const {attribute, value} = event.detail;
 		if (this.isLocked() && attribute !== "locked") {
 			return;
 		}
@@ -225,20 +228,20 @@ export class DT3DObjectInspector extends LitElement {
 			<div class="field">
 				<label>Attributes</label>
 				${attributeEntries.length
-					? html`<div class="attribute-list">
+		? html`<div class="attribute-list">
 							${attributeEntries.map(
-								([key, value]) =>
-									html`<div class="attribute-row">
+		([key, value]) =>
+			html`<div class="attribute-row">
 										<span class="attr-key">${key}</span>
 										<span class="attr-value">
 											${typeof value === "object"
-												? JSON.stringify(value)
-												: String(value)}
+		? JSON.stringify(value)
+		: String(value)}
 										</span>
 									</div>`,
-							)}
+	)}
 						</div>`
-					: html`<div class="placeholder">No attributes available.</div>`}
+		: html`<div class="placeholder">No attributes available.</div>`}
 			</div>
 		`;
 	}
@@ -343,58 +346,58 @@ export class DT3DObjectInspector extends LitElement {
 		return html`
 			<h4>Selected Object</h4>
 			${this.selectedObject
-				? html`
+		? html`
 						<dt3d-dynamic-form
 							.fields=${baseFields}
 							.data=${this.selectedObject}
 							@field-change=${(event: CustomEvent<DynamicFormChangeDetail>) =>
-								this.handleFormFieldChange(event)}
+		this.handleFormFieldChange(event)}
 						></dt3d-dynamic-form>
 						${locked
-							? html`<div class="placeholder">
+		? html`<div class="placeholder">
 									This object is locked and cannot be edited.
 								</div>`
-							: null}
+		: null}
 						${wallFields.length
-							? html`
+		? html`
 									<h4>Wall</h4>
 									<dt3d-dynamic-form
 										.fields=${wallFields}
 										.data=${this.selectedObject}
 										@field-change=${(
-											event: CustomEvent<DynamicFormChangeDetail>,
-										) => this.handleFormFieldChange(event)}
+		event: CustomEvent<DynamicFormChangeDetail>,
+	) => this.handleFormFieldChange(event)}
 									></dt3d-dynamic-form>
 								`
-							: null}
+		: null}
 						${openingFields.length
-							? html`
+		? html`
 									<h4>
 										${this.isDoorObject(this.selectedObject)
-											? "Door"
-											: "Window"}
+		? "Door"
+		: "Window"}
 									</h4>
 									<dt3d-dynamic-form
 										.fields=${openingFields}
 										.data=${this.selectedObject}
 										@field-change=${(
-											event: CustomEvent<DynamicFormChangeDetail>,
-										) => this.handleFormFieldChange(event)}
+		event: CustomEvent<DynamicFormChangeDetail>,
+	) => this.handleFormFieldChange(event)}
 									></dt3d-dynamic-form>
 								`
-							: null}
+		: null}
 						${entityFields.length
-							? html`
+		? html`
 									<h4>Entity</h4>
 									<dt3d-dynamic-form
 										.fields=${entityFields}
 										.data=${entityData}
 									></dt3d-dynamic-form>
 								`
-							: null}
+		: null}
 						${this.renderEntityDetails()}
 					`
-				: html`<div class="placeholder">
+		: html`<div class="placeholder">
 						Select an object from the tree to edit its properties.
 					</div>`}
 		`;

@@ -86,13 +86,13 @@ export class TextSprite extends Sprite {
 			align: options.align ?? "left",
 			baseline: options.baseline ?? "top",
 		};
-        
+
 		this.setText(text);
 	}
 
-    /**
+	/**
      * Change text on the sprite.
-     * 
+     *
      * @param text - New text to be presented.
      */
 	public setText(text: string) {
@@ -100,7 +100,7 @@ export class TextSprite extends Sprite {
 		this.redraw();
 	}
 
-    /**
+	/**
      * Redraw the content of the sprite.
      */
 	private redraw() {
@@ -195,7 +195,7 @@ export class TextSprite extends Sprite {
 					: baseline === "bottom"
 						? cssH - (pad + bw)
 						: // common default if someone sets baseline="alphabetic"
-							pad + bw + ascent;
+						pad + bw + ascent;
 
 		// Draw text
 		ctx.font = font;
@@ -212,9 +212,9 @@ export class TextSprite extends Sprite {
 		this.scale.multiplyScalar(0.0007);
 	}
 
-    /**
+	/**
      * Draw a rounded rectangle into the canvas.
-     * 
+     *
      * @param ctx - Canvas context
      * @param x - x
      * @param y - y

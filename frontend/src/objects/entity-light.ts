@@ -1,12 +1,13 @@
-import { Color, PointLight } from "three";
-import { CircleIconSprite } from "./helpers/circle-icon-sprite.js";
-import { EntityObject } from "./entity-object.js";
-import { TextSprite } from "./helpers/text-sprite.js";
-import type { DTInteractionEvent } from "./dt-object.js";
+import {Color, PointLight} from "three";
+
+import type {DTInteractionEvent} from "./dt-object.js";
+import {EntityObject} from "./entity-object.js";
+import {CircleIconSprite} from "./helpers/circle-icon-sprite.js";
+import {TextSprite} from "./helpers/text-sprite.js";
 
 export class EntityLight extends EntityObject {
 	private icon: CircleIconSprite;
-	
+
 	/**
 	 * Point light to represent the light.
 	 */
@@ -43,8 +44,8 @@ export class EntityLight extends EntityObject {
 
 	/**
 	 * Update the color of the light based on entity value.
-	 * 
-	 * @param entity 
+	 *
+	 * @param entity
 	 */
 	protected updateFromEntity(entity: any): void {
 		const color = EntityLight.getLightColor(entity);
@@ -87,7 +88,7 @@ export class EntityLight extends EntityObject {
 
 	/**
 	 * Toggle the switch, called on click.
-	 * 
+	 *
 	 * @param hass - HA data
 	 */
 	public async toggle(hass: any): Promise<void> {

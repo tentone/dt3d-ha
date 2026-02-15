@@ -1,12 +1,13 @@
-import { LitElement, html, unsafeCSS } from "lit";
-import { customElement } from "lit/decorators.js";
+import {html, LitElement, unsafeCSS} from "lit";
+import {customElement} from "lit/decorators.js";
+
 import componentStyles from "./config-editor.css?inline";
 
 @customElement("dt3d-config-editor")
 export class DT3DConfigEditor extends LitElement {
 	static styles = unsafeCSS(componentStyles);
 	static properties = {
-		_config: { state: true },
+		_config: {state: true},
 	};
 	private _config: any;
 
@@ -30,10 +31,10 @@ export class DT3DConfigEditor extends LitElement {
 	 * @param {*} patch
 	 */
 	public updateConfig(patch: any) {
-		this._config = { ...this._config, ...patch };
+		this._config = {...this._config, ...patch};
 		this.dispatchEvent(
 			new CustomEvent("config-changed", {
-				detail: { config: this._config },
+				detail: {config: this._config},
 				bubbles: true,
 				composed: true,
 			}),
@@ -51,7 +52,7 @@ export class DT3DConfigEditor extends LitElement {
 
 		console.log("DT3d: Updating config", key, value);
 
-		this.updateConfig({ [key]: value });
+		this.updateConfig({[key]: value});
 	}
 
 	/**

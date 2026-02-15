@@ -1,5 +1,5 @@
 declare module "troika-three-text" {
-	import type { BufferGeometry, ColorRepresentation, Material, Mesh } from "three";
+	import type {BufferGeometry, ColorRepresentation, Material, Mesh} from "three";
 
 	export type TroikaTextAlign = "left" | "right" | "center" | "justify";
 	export type TroikaTextAnchorX = number | "left" | "center" | "right";

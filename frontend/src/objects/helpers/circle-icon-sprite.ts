@@ -1,4 +1,5 @@
-import { Sprite, Color, CanvasTexture, SpriteMaterial } from "three";
+import type {Color} from "three";
+import {CanvasTexture, Sprite, SpriteMaterial} from "three";
 
 /**
  * Icon with a gradient circle of a specific color.
@@ -29,7 +30,7 @@ export class CircleIconSprite extends Sprite {
 		}
 
 		const texture = new CanvasTexture(canvas);
-		const material = new SpriteMaterial({ map: texture, transparent: true });
+		const material = new SpriteMaterial({map: texture, transparent: true});
 
 		super(material);
 		this.scale.set(size, size, size);

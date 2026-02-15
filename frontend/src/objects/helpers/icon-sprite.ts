@@ -1,4 +1,4 @@
-import { CanvasTexture, Color, Sprite, SpriteMaterial } from "three";
+import {CanvasTexture, Color, Sprite, SpriteMaterial} from "three";
 
 /**
  * Sprite that renders an icon centered in a colored circle.
@@ -22,7 +22,7 @@ export class IconSprite extends Sprite {
 	public constructor(iconPath: string, backgroundColor: Color | number, size = 0.35) {
 		const color = new Color(backgroundColor);
 		const texture = IconSprite.createTexture(iconPath, color);
-		const material = new SpriteMaterial({ map: texture, transparent: true });
+		const material = new SpriteMaterial({map: texture, transparent: true});
 
 		super(material);
 

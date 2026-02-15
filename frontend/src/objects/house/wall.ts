@@ -1,18 +1,20 @@
+import type {
+	Vector3} from "three";
 import {
 	BoxGeometry,
 	ExtrudeGeometry,
 	Mesh,
 	MeshStandardMaterial,
 	Path,
-	Shape,
-	Vector3,
+	Shape
 } from "three";
-import { DTObject } from "../dt-object.js";
-import { CSSText } from "../helpers/css-text.js";
-import { getCSSVar } from "../../utils/css-utils.js";
-import { DoorObject } from "./door.js";
-import { WindowObject } from "./window.js";
-import { TextSprite } from "../helpers/text-sprite.js";
+
+import {getCSSVar} from "../../utils/css-utils.js";
+import {DTObject} from "../dt-object.js";
+import {CSSText} from "../helpers/css-text.js";
+import {TextSprite} from "../helpers/text-sprite.js";
+import {DoorObject} from "./door.js";
+import {WindowObject} from "./window.js";
 
 type WallDimensions = {
 	length: number;
@@ -46,11 +48,11 @@ export class WallObject extends DTObject {
 
 	/**
 	 * Mesh to represent the wall.
-	 * 
+	 *
 	 * This mesh's geometry is updated when doors/windows are added/removed.
 	 */
 	private wallMesh: Mesh;
-	
+
 	/**
 	 * Count of doors added to this wall.
 	 */
@@ -68,7 +70,7 @@ export class WallObject extends DTObject {
 
 	/**
 	 * Signature of the last openings configuration.
-	 * 
+	 *
 	 * Used to track changes and update geometry only when needed.
 	 */
 	private lastOpeningsSignature = "";
@@ -83,7 +85,7 @@ export class WallObject extends DTObject {
 		this.name = "Wall";
 		this.userData.meshType = "wall";
 
-		const material = new MeshStandardMaterial({ color });
+		const material = new MeshStandardMaterial({color});
 		this.wallMesh = new Mesh(new BoxGeometry(1, 1, 1), material);
 		this.wallMesh.name = "Wall Body";
 		this.wallMesh.userData.wallPart = "body";
@@ -94,9 +96,9 @@ export class WallObject extends DTObject {
 
 	/**
 	 * Change wall to fit between two points.
-	 * 
+	 *
 	 * These points must ideally be at the same height (y coordinate).
-	 * 
+	 *
 	 * @param start - Starting point
 	 * @param end - Ending point
 	 */
@@ -119,8 +121,8 @@ export class WallObject extends DTObject {
 
 	/**
 	 * Change the height of the wall.
-	 * 
-	 * @param height - New height in meters 
+	 *
+	 * @param height - New height in meters
 	 */
 	public setHeight(height: number): void {
 		if (!Number.isFinite(height) || height <= 0) {
@@ -133,8 +135,8 @@ export class WallObject extends DTObject {
 
 	/**
 	 * Change the thickness of the wall.
-	 * 
-	 * @param thickness - New thickness in meters 
+	 *
+	 * @param thickness - New thickness in meters
 	 */
 	public setThickness(thickness: number): void {
 		if (!Number.isFinite(thickness) || thickness <= 0) {
@@ -187,7 +189,7 @@ export class WallObject extends DTObject {
 		this.updateGeometry();
 		return window;
 	}
-	
+
 	/**
 	 * Get the material used for the wall mesh.
 	 */
@@ -197,9 +199,9 @@ export class WallObject extends DTObject {
 
 	/**
 	 * Update the wall geometry if the openings configuration has changed.
-	 * 
+	 *
 	 * Check the signature of the current openings and compare it to the last known signature.
-	 * 
+	 *
 	 * @param _time - Frame time (not used).
 	 */
 	public override update(_time: number): void {
@@ -256,7 +258,7 @@ export class WallObject extends DTObject {
 		shape.lineTo(-halfLength, 0);
 
 		for (const opening of this.getOpenings()) {
-			const { width, height, x, y } = opening;
+			const {width, height, x, y} = opening;
 			const left = x - width / 2;
 			const right = x + width / 2;
 			const bottom = y - height / 2;
@@ -298,9 +300,9 @@ export class WallObject extends DTObject {
 
 	/**
 	 * Signature of the opening configuration (doors, windows, etc)
-	 * 
+	 *
 	 * Used to easily trackn changes to the wall config.
-	 * 
+	 *
 	 * @returns - Signature
 	 */
 	private getOpeningsSignature(): string {

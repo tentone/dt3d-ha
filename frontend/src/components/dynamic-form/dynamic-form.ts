@@ -1,5 +1,6 @@
-import { LitElement, html, unsafeCSS } from "lit";
-import { customElement, property } from "lit/decorators.js";
+import {html, LitElement, unsafeCSS} from "lit";
+import {customElement, property} from "lit/decorators.js";
+
 import componentStyles from "./dynamic-form.css?inline";
 
 /**
@@ -36,7 +37,7 @@ export type DynamicFormChangeDetail = {
 
 /**
  * Type to represent a 3D vector value.
- * 
+ *
  * Optional flag to indicate if it's an Euler angle (for display purposes).
  */
 type VectorValue = {
@@ -50,10 +51,10 @@ type VectorValue = {
 export class DynamicForm extends LitElement {
 	static styles = unsafeCSS(componentStyles);
 
-	@property({ attribute: false })
+	@property({attribute: false})
 	public fields: DynamicFormField[] = [];
 
-	@property({ attribute: false })
+	@property({attribute: false})
 	public data: Record<string, unknown> | null = null;
 
 	private getFieldValue(field: DynamicFormField): unknown {
@@ -86,7 +87,7 @@ export class DynamicForm extends LitElement {
 		if (!value || typeof value !== "object") {
 			return null;
 		}
-		
+
 		const vector = value as VectorValue;
 		if (typeof vector.x !== "number") {
 			return null;
@@ -104,9 +105,9 @@ export class DynamicForm extends LitElement {
 	}
 
 	/**
-	 * 
-	 * @param field 
-	 * @returns 
+	 *
+	 * @param field
+	 * @returns
 	 */
 	private getColorValue(field: DynamicFormField): string {
 		const value = this.getFieldValue(field);
@@ -122,7 +123,7 @@ export class DynamicForm extends LitElement {
 
 	/**
 	 * Dispatch a "field-change" event when a field value is changed by the user.
-	 * 
+	 *
 	 * @param attribute - The attribute path of the changed field.
 	 * @param type - The type of the changed field.
 	 * @param value - The new value of the changed field.
@@ -130,7 +131,7 @@ export class DynamicForm extends LitElement {
 	private dispatchFieldChange(attribute: string,type: DynamicFieldType,value: unknown,) {
 		this.dispatchEvent(
 			new CustomEvent<DynamicFormChangeDetail>("field-change", {
-				detail: { attribute, value, type },
+				detail: {attribute, value, type},
 				bubbles: true,
 				composed: true,
 			}),
@@ -139,7 +140,7 @@ export class DynamicForm extends LitElement {
 
 	/**
 	 * Render a field of the form.
-	 * 
+	 *
 	 * @param field - Field description to render.
 	 * @returns Rendered template for the field, or null if the field type is not supported or the field is disabled.
 	 */
@@ -151,14 +152,16 @@ export class DynamicForm extends LitElement {
 		switch (field.type) {
 			case "Vector3":
 				const vector = this.getVectorDisplayValue(field);
-				if (!vector) return null;
+				if (!vector) {
+					return null;
+				}
+
 
 				return html`
 					<div class="field">
 						<label title=${field.tooltip ?? ""}>${field.label}</label>
 						<div class="group-row">
-							${(["x", "y", "z"] as const).map(
-								(axis) => html`
+							${(["x", "y", "z"] as const).map((axis) => html`
 									<label>
 										${axis.toUpperCase()}
 										<input
@@ -180,7 +183,7 @@ export class DynamicForm extends LitElement {
 										/>
 									</label>
 								`,
-							)}
+	)}
 						</div>
 					</div>
 				`;
@@ -194,11 +197,11 @@ export class DynamicForm extends LitElement {
 								.checked=${value}
 								?disabled=${!field.editable}
 								@change=${(event: Event) =>
-									this.dispatchFieldChange(
-										field.attribute,
-										field.type,
-										(event.target as HTMLInputElement).checked,
-									)}
+								this.dispatchFieldChange(
+									field.attribute,
+									field.type,
+									(event.target as HTMLInputElement).checked,
+								)}
 							/>
 							${field.label}
 						</label>
@@ -216,11 +219,11 @@ export class DynamicForm extends LitElement {
 							.value=${value}
 							?disabled=${!field.editable}
 							@input=${(event: Event) =>
-								this.dispatchFieldChange(
-									field.attribute,
-									field.type,
-									(event.target as HTMLInputElement).value,
-								)}
+							this.dispatchFieldChange(
+								field.attribute,
+								field.type,
+								(event.target as HTMLInputElement).value,
+							)}
 						/>
 					</div>
 				`;
@@ -291,7 +294,7 @@ export class DynamicForm extends LitElement {
 
 	/**
 	 * Render the component.
-	 * 
+	 *
 	 * @returns Rendered template for the component.
 	 */
 	public render() {

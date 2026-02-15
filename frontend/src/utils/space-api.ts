@@ -49,7 +49,7 @@ export class SpaceApi {
 	public createSpace(name: string, description: string): Promise<SpaceResponse> {
 		return this.fetchJson<SpaceResponse>("/spaces", {
 			method: "POST",
-			body: JSON.stringify({ name, description }),
+			body: JSON.stringify({name, description}),
 		});
 	}
 

@@ -1,17 +1,20 @@
-import { BoxGeometry, Group, Mesh, MeshStandardMaterial, Object3D } from "three";
-import type { SceneManager } from "../scene.js";
-import type { DT3DTree } from "../components/object-tree/object-tree.js";
-import { createMeshObject } from "../mesh-options.js";
-import { DTObject } from "../objects/dt-object.js";
-import { WallObject } from "../objects/house/wall.js";
-import { DoorObject } from "../objects/house/door.js";
-import { WindowObject } from "../objects/house/window.js";
-import { EntityObject } from "../objects/entity-object.js";
-import {
-	SpaceApi,
+import type {Object3D} from "three";
+import {BoxGeometry, Group, Mesh, MeshStandardMaterial} from "three";
+
+import type {DT3DTree} from "../components/object-tree/object-tree.js";
+import {createMeshObject} from "../mesh-options.js";
+import {DTObject} from "../objects/dt-object.js";
+import {EntityObject} from "../objects/entity-object.js";
+import {DoorObject} from "../objects/house/door.js";
+import {WallObject} from "../objects/house/wall.js";
+import {WindowObject} from "../objects/house/window.js";
+import type {SceneManager} from "../scene.js";
+import type {
 	type ObjectInstancePayload,
 	type ObjectInstanceResponse,
+	SpaceApi,
 } from "./space-api.js";
+
 
 type SpaceSyncDependencies = {
 	apiClient: SpaceApi;
@@ -196,7 +199,7 @@ export class SpaceSync {
 					object = windowObj;
 				}
 			} else {
-				const material = new MeshStandardMaterial({ color });
+				const material = new MeshStandardMaterial({color});
 				object = createMeshObject(meshType, material);
 			}
 			if (object) {

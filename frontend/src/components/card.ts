@@ -1,43 +1,43 @@
-import type { Camera, Intersection, Scene } from "three";
+import {LitElement} from "lit";
+import {customElement} from "lit/decorators.js";
+import type {Camera, 	Group,
+	Intersection, 	Object3D,Scene} from "three";
 import {
 	Mesh,
 	MeshStandardMaterial,
-	Object3D,
 	Raycaster,
 	Vector2,
 	Vector3,
-	Group,
 } from "three";
-import type { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
-import type { TransformControls } from "three/examples/jsm/controls/TransformControls";
-import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
-import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader.js";
-import { OBJLoader } from "three/examples/jsm/loaders/OBJLoader.js";
-import { FBXLoader } from "three/examples/jsm/loaders/FBXLoader.js";
-import { LitElement } from "lit";
-import { customElement } from "lit/decorators.js";
-import { DT3DSidebar } from "./side-bar/side-bar.js";
-import { DT3DTree } from "./object-tree/object-tree.js";
-import { Locale } from "../locale/locale.js";
-import { EntityLight } from "../objects/entity-light.js";
-import { EntityBinary } from "../objects/entity-binary.js";
-import { EntitySensor } from "../objects/entity-sensor.js";
-import { EntitySwitch } from "../objects/entity-switch.js";
-import { EntityObject } from "../objects/entity-object.js";
-import { DT3DAddEntityModal } from "./add-entity-modal/add-entity-modal.js";
-import { DTObject } from "../objects/dt-object.js";
+import type {OrbitControls} from "three/examples/jsm/controls/OrbitControls";
+import type {TransformControls} from "three/examples/jsm/controls/TransformControls";
+import {DRACOLoader} from "three/examples/jsm/loaders/DRACOLoader.js";
+import {FBXLoader} from "three/examples/jsm/loaders/FBXLoader.js";
+import {GLTFLoader} from "three/examples/jsm/loaders/GLTFLoader.js";
+import {OBJLoader} from "three/examples/jsm/loaders/OBJLoader.js";
+
 import en from "../locale/en.json";
-import { ConnectionStatus } from "./connection-status/connection-status.js";
-import { SceneManager } from "../scene.js";
-import type { CameraMode } from "../scene.js";
-import { RendererManager } from "../renderer.js";
-import { createMeshObject } from "../mesh-options.js";
-import { EntityGeneric } from "../objects/entity-generic.js";
-import { DT3DCameraToggle } from "./camera-toggle/camera-toggle.js";
-import { SpaceApi } from "../utils/space-api.js";
-import { SpaceSync } from "../utils/space-sync.js";
-import { MeasurementManager } from "../measurement-manager.js";
-import { WallObject } from "../objects/house/wall.js";
+import {Locale} from "../locale/locale.js";
+import {MeasurementManager} from "../measurement-manager.js";
+import {createMeshObject} from "../mesh-options.js";
+import {DTObject} from "../objects/dt-object.js";
+import {EntityBinary} from "../objects/entity-binary.js";
+import {EntityGeneric} from "../objects/entity-generic.js";
+import {EntityLight} from "../objects/entity-light.js";
+import {EntityObject} from "../objects/entity-object.js";
+import {EntitySensor} from "../objects/entity-sensor.js";
+import {EntitySwitch} from "../objects/entity-switch.js";
+import {WallObject} from "../objects/house/wall.js";
+import {RendererManager} from "../renderer.js";
+import type {CameraMode} from "../scene.js";
+import {SceneManager} from "../scene.js";
+import {SpaceApi} from "../utils/space-api.js";
+import {SpaceSync} from "../utils/space-sync.js";
+import type {DT3DAddEntityModal} from "./add-entity-modal/add-entity-modal.js";
+import type {DT3DCameraToggle} from "./camera-toggle/camera-toggle.js";
+import type {ConnectionStatus} from "./connection-status/connection-status.js";
+import type {DT3DTree} from "./object-tree/object-tree.js";
+import type {DT3DSidebar} from "./side-bar/side-bar.js";
 
 @customElement("dt3d-card")
 export class DT3DCard extends LitElement {
@@ -137,8 +137,8 @@ export class DT3DCard extends LitElement {
 	private hoveredObject: DTObject | null = null;
 
 	static properties = {
-		hass: { attribute: false },
-		_config: { state: true },
+		hass: {attribute: false},
+		_config: {state: true},
 	};
 	public locale: Locale;
 
@@ -328,7 +328,7 @@ export class DT3DCard extends LitElement {
 		}
 
 		this.transform.attach(target);
-		
+
 		// Restore previous enabled state (in case it was disabled)
 		this.transform.enabled = enabled;
 		this.transform.getHelper().visible = enabled;
@@ -336,7 +336,7 @@ export class DT3DCard extends LitElement {
 
 	/**
 	 * Delete object from space.
-	 * 
+	 *
 	 * @param objectId - ID of the object to be delete from the space.
 	 */
 	private deleteObject(objectId: string): void {
@@ -367,7 +367,7 @@ export class DT3DCard extends LitElement {
 
 	/**
 	 * Clone a object in the space.
-	 * 
+	 *
 	 * @param objectId - Object ID to clone
 	 */
 	private cloneObject(objectId: string): void {
@@ -394,7 +394,7 @@ export class DT3DCard extends LitElement {
 
 	/**
 	 * Handle canvas click events.
-	 * 
+	 *
 	 * @param event - Mouse event
 	 */
 	private handleCanvasClick(event: MouseEvent): void {
@@ -407,7 +407,7 @@ export class DT3DCard extends LitElement {
 		}
 
 		// Pick object and trigger click interaction
-		const { object } = this.pickObjectFromEvent(event);
+		const {object} = this.pickObjectFromEvent(event);
 		this.lastSelectedObject = object;
 		object?.onInteraction({
 			type: "click",
@@ -418,15 +418,15 @@ export class DT3DCard extends LitElement {
 
 	/**
 	 * Handle pointer move events.
-	 * 
-	 * @param event - Mouse event 
+	 *
+	 * @param event - Mouse event
 	 */
 	private handlePointerMove(event: MouseEvent): void {
 		if (this.wallToolMode === "wall") {
 			this.handleWallPointerMove(event);
 		}
 
-		const { object } = this.pickObjectFromEvent(event);
+		const {object} = this.pickObjectFromEvent(event);
 		if (object === this.hoveredObject) {
 			return;
 		}
@@ -460,7 +460,7 @@ export class DT3DCard extends LitElement {
 	 */
 	private pickObjectFromEvent(event: MouseEvent): {object: DTObject | null; intersection: Intersection<Object3D> | null;} {
 		if (!this.canvas || !this.camera || !this.space) {
-			return { object: null, intersection: null };
+			return {object: null, intersection: null};
 		}
 
 		const rect = this.canvas.getBoundingClientRect();
@@ -479,7 +479,7 @@ export class DT3DCard extends LitElement {
 
 			while (current) {
 				if (current instanceof DTObject && current?.internal !== true) {
-					return { object: current, intersection };
+					return {object: current, intersection};
 				}
 
 				if (current?.internal === true) {
@@ -492,16 +492,16 @@ export class DT3DCard extends LitElement {
 			if (internalHit) {
 				continue;
 			}
-			return { object: null, intersection };
+			return {object: null, intersection};
 		}
 
-		return { object: null, intersection: null };
+		return {object: null, intersection: null};
 	}
 
 	/**
 	 * Handle clics on wall to add doors or windows.
-	 * 
-	 * @param event - Mouse event 
+	 *
+	 * @param event - Mouse event
 	 * @returns True if the click was handled, false otherwise.
 	 */
 	private handleWallClick(event: MouseEvent): boolean {
@@ -742,13 +742,13 @@ export class DT3DCard extends LitElement {
 		const cameraToggle = document.createElement("dt3d-camera-toggle") as DT3DCameraToggle;
 		cameraToggle.mode = this.sceneManager.getCameraMode();
 		cameraToggle.addEventListener("camera-mode-change", (event: Event) => {
-			const { mode } = (event as CustomEvent<{ mode: CameraMode }>).detail;
+			const {mode} = (event as CustomEvent<{ mode: CameraMode }>).detail;
 
 			this.sceneManager.setCameraMode(mode);
 			this.camera = this.sceneManager.camera;
 			this.rendererManager.setCamera(this.camera);
 		});
-		
+
 		this.content.appendChild(cameraToggle);
 
 		this.sidebar.addEventListener("transform-tool-selected", (e: any) => {
@@ -798,7 +798,6 @@ export class DT3DCard extends LitElement {
 		this.sidebar.addEventListener("grid-snap-toggle", (e: any) => {
 			const enabled = e.detail.enabled as boolean;
 			this.sceneManager.setTransformSnapEnabled(enabled);
-
 		});
 
 		this.sidebar.addEventListener("add-object", (e: any) => {
@@ -809,9 +808,9 @@ export class DT3DCard extends LitElement {
 				color: Math.floor(Math.random() * 0xffffff),
 				wireframe: false,
 			});
-		
+
 			object = createMeshObject(type, material);
-			
+
 			if (object) {
 				object.userData.meshType = type;
 				this.addToScene(object);
@@ -875,7 +874,7 @@ export class DT3DCard extends LitElement {
 		});
 
 		this.canvas.addEventListener("dblclick", (event: MouseEvent) => {
-			const { object, intersection } = this.pickObjectFromEvent(event);
+			const {object, intersection} = this.pickObjectFromEvent(event);
 			if (intersection) {
 				const target = object ?? (intersection.object as Object3D);
 				this.attachTransform(target);
@@ -895,7 +894,7 @@ export class DT3DCard extends LitElement {
 		});
 
 		this.canvas.addEventListener("mousemove", (event: MouseEvent) => {
-			this.handlePointerMove(event)
+			this.handlePointerMove(event);
 		});
 
 		this.canvas.addEventListener("mouseleave", (event: MouseEvent) => {
@@ -935,8 +934,8 @@ export class DT3DCard extends LitElement {
 			this.sceneManager.updateSize(width, height);
 			this.rendererManager.resize(width, height);
 		});
-		
-		resizeDetector.observe(this.container, { box: "border-box" });
+
+		resizeDetector.observe(this.container, {box: "border-box"});
 	}
 
 	/**
@@ -949,9 +948,9 @@ export class DT3DCard extends LitElement {
 	public addEntityModal(): void {
 		const modal = document.createElement("dt3d-add-entity-modal") as DT3DAddEntityModal;
 		modal.states = this.hassInstance?.states ?? {};
-		
+
 		modal.addEventListener("entity-selected", (event: Event) => {
-			const { entityId } = (event as CustomEvent<{ entityId: string }>).detail;
+			const {entityId} = (event as CustomEvent<{ entityId: string }>).detail;
 			this.addEntityToScene(entityId);
 			modal.remove();
 		});
@@ -976,10 +975,10 @@ export class DT3DCard extends LitElement {
 		object.position.set(Math.random() * 2 - 1, 0, Math.random() * 2 - 1);
 		this.addToScene(object, id);
 	}
-	
+
 	/**
 	 * Create object to represent a Home Assistant entity based on its domain.
-	 * 
+	 *
 	 * @param id - ID of the entity.
 	 * @returns Object created to visually represent the entity.
 	 */
@@ -1028,7 +1027,7 @@ export class DT3DCard extends LitElement {
 
 	/**
 	 * Get the API client instance for communicating with the backend.
-	 * 
+	 *
 	 * @returns api client instance or throws an error if it is not initialized.
 	 */
 	private getApiClient(): SpaceApi {

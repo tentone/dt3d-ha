@@ -1,11 +1,12 @@
-import { LitElement, html, unsafeCSS } from "lit";
-import { customElement, property, state } from "lit/decorators.js";
-import componentStyles from "./object-tree.css?inline";
-import type { Object3D } from "three";
-import { DTObject } from "../../objects/dt-object.js";
-
-import {LocalStorage} from "../../utils/local-storage.js";
 import "../object-inspector/object-inspector.js";
+
+import {html, LitElement, unsafeCSS} from "lit";
+import {customElement, property, state} from "lit/decorators.js";
+import type {Object3D} from "three";
+
+import {DTObject} from "../../objects/dt-object.js";
+import {LocalStorage} from "../../utils/local-storage.js";
+import componentStyles from "./object-tree.css?inline";
 
 type UUID = string;
 
@@ -29,7 +30,7 @@ export class DT3DTree extends LitElement {
 	/**
 	 * The 3D scene to visualize.
 	 */
-	@property({ type: Array })
+	@property({type: Array})
 	public scene: Object3D = null;
 
 	/**
@@ -192,8 +193,8 @@ export class DT3DTree extends LitElement {
 			const children =
 				obj.children.length > 0
 					? obj.children
-							.map(toTreeNode)
-							.filter((child): child is TreeNode => child !== null)
+						.map(toTreeNode)
+						.filter((child): child is TreeNode => child !== null)
 					: [];
 
 			return {
@@ -285,13 +286,12 @@ export class DT3DTree extends LitElement {
 		if (event) {
 			this.dispatchEvent(
 				new CustomEvent("object-selected", {
-					detail: { id },
+					detail: {id},
 					bubbles: true,
 					composed: true,
 				}),
 			);
 		}
-
 	}
 
 	/**
@@ -303,7 +303,7 @@ export class DT3DTree extends LitElement {
 	private handleContextMenu(event: MouseEvent, id: UUID) {
 		event.preventDefault();
 		event.stopPropagation();
-		this.contextMenu = { id, x: event.clientX, y: event.clientY };
+		this.contextMenu = {id, x: event.clientX, y: event.clientY};
 	}
 
 	/**
@@ -314,13 +314,13 @@ export class DT3DTree extends LitElement {
 	}
 
 	/**
-	 * Dispatch a object delete event. 
+	 * Dispatch a object delete event.
 	 * @param id - UUID of the object to be clones.
 	 */
 	private dispatchDelete(id: UUID) {
 		this.dispatchEvent(
 			new CustomEvent("object-delete", {
-				detail: { id },
+				detail: {id},
 				bubbles: true,
 				composed: true,
 			}),
@@ -330,13 +330,13 @@ export class DT3DTree extends LitElement {
 
 	/**
 	 * Dispatch clone event.
-	 * 
+	 *
 	 * @param id - ID of the object to be cloned.
 	 */
 	private dispatchClone(id: UUID) {
 		this.dispatchEvent(
 			new CustomEvent("object-clone", {
-				detail: { id },
+				detail: {id},
 				bubbles: true,
 				composed: true,
 			}),
@@ -377,7 +377,7 @@ export class DT3DTree extends LitElement {
 			return null;
 		}
 
-		const { id, x, y } = this.contextMenu;
+		const {id, x, y} = this.contextMenu;
 
 		return html`
 			<div
@@ -387,17 +387,17 @@ export class DT3DTree extends LitElement {
 			<div class="context-menu" style="top:${y}px; left:${x}px;">
 				<button
 					@click=${(event: MouseEvent) => {
-						event.stopPropagation();
-						this.dispatchDelete(id);
-					}}
+		event.stopPropagation();
+		this.dispatchDelete(id);
+	}}
 				>
 					${"Delete"}
 				</button>
 				<button
 					@click=${(event: MouseEvent) => {
-						event.stopPropagation();
-						this.dispatchClone(id);
-					}}
+		event.stopPropagation();
+		this.dispatchClone(id);
+	}}
 				>
 					${"Clone"}
 				</button>
@@ -415,7 +415,7 @@ export class DT3DTree extends LitElement {
 		return html`
 			<ul style="list-style: none; margin: 0; padding: 0;">
 				${nodes.map(
-					(node) => html`
+		(node) => html`
 						<li>
 							<!-- Node -->
 							<div
@@ -423,30 +423,30 @@ export class DT3DTree extends LitElement {
 								style=${`--tree-depth: ${depth};`}
 								@click=${() => this.selectObject(node.id, true)}
 								@contextmenu=${(event: MouseEvent) =>
-									this.handleContextMenu(event, node.id)}
+		this.handleContextMenu(event, node.id)}
 							>
 								${node.children && node.children.length
-									? html`
+		? html`
 											<span
 												class="toggle"
 												@click=${(e: Event) => {
-													e.stopPropagation();
-													this.toggleNode(node.id);
-												}}
+		e.stopPropagation();
+		this.toggleNode(node.id);
+	}}
 											>
 												${this.expanded.has(node.id) ? "▼" : "▶"}
 											</span>
 										`
-									: html`<span style="display:inline-block;width:16px"></span>`}
+		: html`<span style="display:inline-block;width:16px"></span>`}
 								<span class="node-label">
 									${node.name}
 									${node.locked
-										? html`<ha-icon
+		? html`<ha-icon
 												class="lock-icon"
 												icon="mdi:lock"
 												title="Locked"
 											></ha-icon>`
-										: null}
+		: null}
 								</span>
 							</div>
 							${node.children &&
@@ -454,7 +454,7 @@ export class DT3DTree extends LitElement {
 							this.expanded.has(node.id) ? this.renderTree(node.children, depth + 1) : null}
 						</li>
 					`,
-				)}
+	)}
 			</ul>
 		`;
 	}

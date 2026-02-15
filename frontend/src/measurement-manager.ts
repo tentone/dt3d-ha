@@ -1,8 +1,9 @@
-import type { Camera } from "three";
-import { Group, Raycaster, Vector2, Vector3 } from "three";
-import { AngleMeasurement } from "./objects/measurement/angle.js";
-import { DistanceMeasurement } from "./objects/measurement/distance.js";
-import { Marker } from "./objects/measurement/marker.js";
+import type {Camera,Group, Vector3} from "three";
+import {Raycaster, Vector2} from "three";
+
+import {AngleMeasurement} from "./objects/measurement/angle.js";
+import {DistanceMeasurement} from "./objects/measurement/distance.js";
+import {Marker} from "./objects/measurement/marker.js";
 
 /**
  * Measurement modes possible in the MeasurementManager.
@@ -51,9 +52,9 @@ export class MeasurementManager {
 
 	/**
 	 * Handle click events on the canvas to add measurement points.
-	 * 
+	 *
 	 * Depending on the current mode and the number of points, this can create distance or angle measurements, or just add marker points.
-	 * 
+	 *
 	 * @param event - Mouse event from the canvas click.
 	 * @returns True if the event was handled, false otherwise.
 	 */
@@ -62,7 +63,7 @@ export class MeasurementManager {
 			return false;
 		}
 
-		const { canvas, camera, space } = this.getContext();
+		const {canvas, camera, space} = this.getContext();
 		if (!canvas || !camera || !space) {
 			return true;
 		}
@@ -85,9 +86,9 @@ export class MeasurementManager {
 
 	/**
 	 * Add a point to the current measurement.
-	 * 
+	 *
 	 * If the required number of points for the current mode is reached, create the corresponding measurement helper and reset the points.
-	 * 
+	 *
 	 * @param point - The point to add.
 	 */
 	private addPoint(point: Vector3): void {

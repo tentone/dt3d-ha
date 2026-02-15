@@ -1,7 +1,8 @@
 import * as mdiIcons from "@mdi/js";
-import { IconSprite } from "./helpers/icon-sprite.js";
-import { EntityObject } from "./entity-object.js";
-import { TextSprite } from "./helpers/text-sprite.js";
+
+import {EntityObject} from "./entity-object.js";
+import {IconSprite} from "./helpers/icon-sprite.js";
+import {TextSprite} from "./helpers/text-sprite.js";
 
 const DEFAULT_ICON = mdiIcons.mdiHelpCircleOutline;
 
@@ -13,7 +14,7 @@ export class EntityBinary extends EntityObject {
 	 * Icon of the binary entity.
 	 */
 	private icon: IconSprite;
-	
+
 	/**
 	 * Label of the entity.
 	 */

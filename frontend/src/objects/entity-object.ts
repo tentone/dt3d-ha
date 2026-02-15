@@ -1,4 +1,4 @@
-import { DTObject } from "./dt-object.js";
+import {DTObject} from "./dt-object.js";
 
 /**
  * Base 3D representation for Home Assistant entities.
@@ -8,7 +8,7 @@ export abstract class EntityObject extends DTObject {
 	 * ID of the HA entity associated.
 	 */
 	public readonly entityId: string;
-	
+
 	/**
 	 * Entity data.
 	 */

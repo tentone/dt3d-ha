@@ -18,7 +18,7 @@ export class LocalStorage {
 
 	/**
 	 * Add prefix to a key before read/write to storage.
-	 * 
+	 *
 	 * @param key - Key to store value
 	 * @returns - Key with prefix
 	 */
@@ -26,7 +26,7 @@ export class LocalStorage {
 
 	/**
 	 * Write a value to local storage.
-	 * 
+	 *
 	 * @param key - Key to store value
 	 * @param value - Value to store.
 	 */
@@ -46,6 +46,5 @@ export class LocalStorage {
 		const value = storage.getItem(this.prefix(key));
 		return value ? (JSON.parse(value)) : defaultValue;
 	};
-
 }
 

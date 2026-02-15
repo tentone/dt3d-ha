@@ -1,12 +1,12 @@
-import { css, html, LitElement } from "lit";
-import { customElement, property } from "lit/decorators.js";
+import {css, html, LitElement} from "lit";
+import {customElement, property} from "lit/decorators.js";
 
 @customElement("dt3d-floating-button")
 export class DT3DFloatingButton extends LitElement {
-	@property({ type: String })
+	@property({type: String})
 	public ariaLabel = "";
 
-	@property({ type: String })
+	@property({type: String})
 	public titleText = "";
 
 	static styles = css`
@@ -54,7 +54,7 @@ export class DT3DFloatingButton extends LitElement {
 	private handleClick(event: MouseEvent): void {
 		this.dispatchEvent(
 			new CustomEvent("floating-button-click", {
-				detail: { event },
+				detail: {event},
 				bubbles: true,
 				composed: true,
 			}),

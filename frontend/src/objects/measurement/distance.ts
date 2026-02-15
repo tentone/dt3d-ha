@@ -1,24 +1,26 @@
+import type {
+	Vector3} from "three";
 import {
-	Group,
-	Vector3,
-	Color,
-	Line,
 	BufferGeometry,
+	Color,
+	Group,
+	Line,
 	LineBasicMaterial,
 } from "three";
-import { getCSSVar } from "../../utils/css-utils";
-import { CSSText } from "../helpers/css-text";
-import { Marker } from "./marker";
+
+import {getCSSVar} from "../../utils/css-utils";
+import {CSSText} from "../helpers/css-text";
+import {Marker} from "./marker";
 
 /**
  * Display the distance measurement between two points.
  */
 export class DistanceMeasurement extends Group {
-    public constructor(points: Vector3[]) {
+	public constructor(points: Vector3[]) {
 		if (points.length !== 2) {
 			throw new Error("Points must have length 2");
 		}
-		
+
 		super();
 
 		const color = new Color(getCSSVar("--ha-color-primary-60"));
@@ -30,7 +32,7 @@ export class DistanceMeasurement extends Group {
 		const geometry = new BufferGeometry().setFromPoints([start, end]);
 		const line = new Line(
 			geometry,
-			new LineBasicMaterial({ color: color, linewidth: 10 }),
+			new LineBasicMaterial({color: color, linewidth: 10}),
 		);
 		this.add(line);
 
@@ -46,5 +48,5 @@ export class DistanceMeasurement extends Group {
 		label.position.y += 0.2;
 
 		this.add(label);
-    }
+	}
 }

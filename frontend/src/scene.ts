@@ -2,19 +2,19 @@ import {
 	AmbientLight,
 	BoxGeometry,
 	DirectionalLight,
-	Group,
 	GridHelper,
-	OrthographicCamera,
+	Group,
 	MathUtils,
 	Mesh,
 	MeshStandardMaterial,
+	OrthographicCamera,
 	PerspectiveCamera,
 	Scene,
 	Vector3,
 } from "three";
-import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
-import { TransformControls } from "three/examples/jsm/controls/TransformControls";
-import { Sky } from "three/examples/jsm/Addons.js";
+import {Sky} from "three/examples/jsm/Addons.js";
+import {OrbitControls} from "three/examples/jsm/controls/OrbitControls";
+import {TransformControls} from "three/examples/jsm/controls/TransformControls";
 
 /**
  * Editor camera mode (2D or 3D)
@@ -62,7 +62,7 @@ export class SceneManager {
 
 	/**
 	 * Space being visualized currently.
-	 * 
+	 *
 	 * Spaces are like end-user scenes.
 	 */
 	public space: Group = null;
@@ -190,7 +190,7 @@ export class SceneManager {
 	public createDefaultScene(): void {
 		// Add a cube
 		const geometry = new BoxGeometry();
-		const material = new MeshStandardMaterial({ color: 0xffff00 });
+		const material = new MeshStandardMaterial({color: 0xffff00});
 		const cube = new Mesh(geometry, material);
 		cube.name = "Cube";
 		cube.userData.meshType = "cube";
@@ -198,7 +198,7 @@ export class SceneManager {
 		this.space.add(cube);
 
 		const planeGeometry = new BoxGeometry(5, 5, 0.1);
-		const planeMaterial = new MeshStandardMaterial({ color: 0xffffff });
+		const planeMaterial = new MeshStandardMaterial({color: 0xffffff});
 
 		const plane = new Mesh(planeGeometry, planeMaterial);
 		plane.rotation.x = -Math.PI / 2; // Rotate to make it horizontal
@@ -206,12 +206,11 @@ export class SceneManager {
 		plane.name = "Plane";
 		plane.userData.meshType = "plane";
 		this.space.add(plane);
-
 	}
 
 	/**
 	 * Update the size of the camera.
-	 * 
+	 *
 	 * @param width - Width in px
 	 * @param height - Height in px
 	 */
@@ -233,13 +232,13 @@ export class SceneManager {
 			this.camera.bottom = -halfHeight;
 			this.camera.updateProjectionMatrix();
 		} else {
-			throw new Error('Camera type is unknown');
+			throw new Error("Camera type is unknown");
 		}
 	}
 
 	/**
 	 * Camera mode.
-	 * 
+	 *
 	 * @param mode - Camera mode to use.
 	 */
 	public setCameraMode(mode: CameraMode): void {
@@ -273,7 +272,7 @@ export class SceneManager {
 
 		this.transform.camera = this.camera;
 		this.updateGridPosition();
-		
+
 		this.updateSize(this.width, this.height);
 	}
 

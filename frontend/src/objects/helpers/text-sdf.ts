@@ -1,5 +1,5 @@
-import type { ColorRepresentation } from "three";
-import {Text} from 'troika-three-text'
+import type {ColorRepresentation} from "three";
+import {Text} from "troika-three-text";
 
 export type TextSDFOptions = {
 	font?: string;
