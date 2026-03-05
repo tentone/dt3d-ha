@@ -6,6 +6,7 @@ import componentStyles from "./config-editor.css?inline";
 @customElement("dt3d-config-editor")
 export class DT3DConfigEditor extends LitElement {
 	static styles = unsafeCSS(componentStyles);
+	
 	static properties = {
 		_config: {state: true},
 	};
@@ -18,6 +19,7 @@ export class DT3DConfigEditor extends LitElement {
 	 */
 	public setConfig(config: any) {
 		this._config = {
+			address: "localhost",
 			port: 8080,
 			...config,
 		};
@@ -64,6 +66,7 @@ export class DT3DConfigEditor extends LitElement {
 		}
 
 		const port = this._config.port;
+		const address = this._config.address;
 
 		const content = html`
 			<div>
@@ -75,6 +78,16 @@ export class DT3DConfigEditor extends LitElement {
 						.value=${port ?? ""}
 						@input=${this.onValueChanged}
 						placeholder="8080"
+					/>
+				</div>
+				<div>
+					<label>Address</label>
+					<input
+						type="text"
+						data-key="address"
+						.value=${address ?? ""}
+						@input=${this.onValueChanged}
+						placeholder="localhost"
 					/>
 				</div>
 			</div>

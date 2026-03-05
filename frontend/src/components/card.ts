@@ -630,9 +630,11 @@ export class DT3DCard extends LitElement {
 		}
 
 		const port = this.config?.port || 8080;
+		const address = this.config?.address || "http://localhost";
+		
 		const width = 300;
 		const height = 300;
-		this.apiClient = new SpaceApi(port);
+		this.apiClient = new SpaceApi(address, port);
 
 		this.style.cssText = `
 			overflow: hidden;
@@ -1125,6 +1127,7 @@ export class DT3DCard extends LitElement {
 	 */
 	static getStubConfig(): any {
 		return {
+			address: "http://localhost",
 			port: 8080,
 		};
 	}

@@ -32,8 +32,14 @@ export type ObjectInstancePayload = {
 export class SpaceApi {
 	private baseUrl: string;
 
-	constructor(port: number) {
-		this.baseUrl = `http://localhost:${port}/api`;
+	/**
+	 * Constructor for space API.
+	 *
+	 * @param address - The address of the backend server
+	 * @param port - The port of the backend server
+	 */
+	constructor(address: string,port: number) {
+		this.baseUrl = `${address}:${port}/api`;
 	}
 
 	/**
