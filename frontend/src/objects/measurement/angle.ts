@@ -51,10 +51,9 @@ export class AngleMeasurement extends Group {
 		const angle = Math.acos(MathUtils.clamp(v1.dot(v2), -1, 1));
 		const degrees = MathUtils.radToDeg(angle);
 
-		const label = new TextSprite(`${degrees.toFixed(1)}°`);
-		label.scale.setScalar(0.25);
+		const label = new TextSprite(`${degrees.toFixed(2)}°`);
 		label.position.copy(vertex);
-		label.position.y += 0.5;
+		label.position.y += 1.0;
 		this.add(label);
 	}
 }
