@@ -15,7 +15,9 @@ export class Marker extends Mesh {
 
 		const geometry = new SphereGeometry(0.02, 16, 16);
 		const material = new MeshBasicMaterial({color: color});
-		super (geometry, material);
+
+		super(geometry, material);
+
 		this.position.copy(position);
 	}
 }

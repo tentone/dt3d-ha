@@ -9,7 +9,7 @@ import {
 } from "three";
 
 import {getCSSVar} from "../../utils/css-utils";
-import {CSSText} from "../helpers/css-text";
+import {TextSprite} from "../helpers/text-sprite";
 import {Marker} from "./marker";
 
 /**
@@ -38,12 +38,9 @@ export class DistanceMeasurement extends Group {
 
 		const distance = start.distanceTo(end);
 
-		const label = new CSSText(`${distance.toFixed(2)}m`, {
-			style: {
-				color: getCSSVar("--ha-color-primary-95")
-			},
-		});
-		label.scale.setScalar(0.2);
+
+		const label = new TextSprite(`${distance.toFixed(2)}°`);
+		label.scale.setScalar(0.25);
 		label.position.copy(start.clone().add(end).multiplyScalar(0.5));
 		label.position.y += 0.2;
 

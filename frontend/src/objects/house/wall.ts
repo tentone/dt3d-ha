@@ -9,9 +9,7 @@ import {
 	Shape
 } from "three";
 
-import {getCSSVar} from "../../utils/css-utils.js";
 import {DTObject} from "../dt-object.js";
-import {CSSText} from "../helpers/css-text.js";
 import {TextSprite} from "../helpers/text-sprite.js";
 import {DoorObject} from "./door.js";
 import {WindowObject} from "./window.js";

@@ -10,7 +10,7 @@ import {
 } from "three";
 
 import {getCSSVar} from "../../utils/css-utils";
-import {CSSText} from "../helpers/css-text";
+import {TextSprite} from "../helpers/text-sprite";
 import {Marker} from "./marker";
 
 /**
@@ -51,12 +51,8 @@ export class AngleMeasurement extends Group {
 		const angle = Math.acos(MathUtils.clamp(v1.dot(v2), -1, 1));
 		const degrees = MathUtils.radToDeg(angle);
 
-		const label = new CSSText(`${degrees.toFixed(1)}°`, {
-			style: {
-				color: getCSSVar("--ha-color-primary-95")
-			},
-		});
-		label.scale.setScalar(0.2);
+		const label = new TextSprite(`${degrees.toFixed(1)}°`);
+		label.scale.setScalar(0.25);
 		label.position.copy(vertex);
 		label.position.y += 0.5;
 		this.add(label);

@@ -1,3 +1,9 @@
+import "./add-entity-modal/add-entity-modal.js";
+import "./camera-toggle/camera-toggle.js";
+import "./connection-status/connection-status.js";
+import "./object-tree/object-tree.js";
+import "./side-bar/side-bar.js";
+
 import {LitElement} from "lit";
 import {customElement} from "lit/decorators.js";
 import type {Camera, 	Group,
@@ -33,11 +39,6 @@ import type {CameraMode} from "../scene.js";
 import {SceneManager} from "../scene.js";
 import {SpaceApi} from "../utils/space-api.js";
 import {SpaceSync} from "../utils/space-sync.js";
-import "./add-entity-modal/add-entity-modal.js";
-import "./camera-toggle/camera-toggle.js";
-import "./connection-status/connection-status.js";
-import "./object-tree/object-tree.js";
-import "./side-bar/side-bar.js";
 import type {DT3DAddEntityModal} from "./add-entity-modal/add-entity-modal.js";
 import type {DT3DCameraToggle} from "./camera-toggle/camera-toggle.js";
 import type {ConnectionStatus} from "./connection-status/connection-status.js";
@@ -636,7 +637,7 @@ export class DT3DCard extends LitElement {
 
 		const port = this.config?.port || 8080;
 		const address = this.config?.address || "http://localhost";
-		
+
 		const width = 300;
 		const height = 300;
 		this.apiClient = new SpaceApi(address, port);
