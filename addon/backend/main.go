@@ -40,6 +40,7 @@ func loadPort() int {
 func main() {
 	port := loadPort()
 
+	// Initialize database
 	db, err := gorm.Open(sqlite.Open("data.db"), &gorm.Config{})
 	if err != nil {
 		log.Fatalf("failed to connect database: %v", err)
@@ -49,10 +50,14 @@ func main() {
 		log.Fatalf("failed to migrate database: %v", err)
 	}
 
+	// Repositories
 	spaceRepo := repository.NewSpaceRepository(db)
 	objectRepo := repository.NewObjectInstanceRepository(db)
+
+	// Services
 	spaceService := service.NewSpaceService(spaceRepo, objectRepo)
 
+	// Create router and register handlers
 	router := gin.Default()
 	spaceHandler := handlers.NewSpaceHandler(spaceService)
 	handlers.RegisterRoutes(router, spaceHandler)

@@ -7,6 +7,7 @@ import (
 )
 
 type ObjectInstanceRepository struct {
+	// Database connection
 	db *gorm.DB
 }
 
