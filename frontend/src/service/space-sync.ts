@@ -2,7 +2,7 @@ import type {Object3D} from "three";
 import {BoxGeometry, Group, Mesh, MeshStandardMaterial} from "three";
 
 import type {DT3DTree} from "../components/object-tree/object-tree.js";
-import {createMeshObject} from "../mesh-options.js";
+import {createMeshObject} from "../utils/mesh-options.js";
 import {DTObject} from "../objects/dt-object.js";
 import {EntityObject} from "../objects/entity-object.js";
 import {DoorObject} from "../objects/house/door.js";

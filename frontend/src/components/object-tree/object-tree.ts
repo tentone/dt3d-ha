@@ -454,7 +454,7 @@ export class DT3DTree extends LitElement {
 								this.dispatchOpenEntity(node.entityId!);
 							}}
 						>
-							${localManager.get("openInHA")}
+							${localManager.get("viewEntity")}
 						</button>`
 					: null}
 			</div>

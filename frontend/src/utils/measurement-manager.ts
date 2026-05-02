@@ -1,9 +1,9 @@
 import type {Camera,Group, Vector3} from "three";
 import {Raycaster, Vector2} from "three";
 
-import {AngleMeasurement} from "./objects/measurement/angle.js";
-import {DistanceMeasurement} from "./objects/measurement/distance.js";
-import {Marker} from "./objects/measurement/marker.js";
+import {AngleMeasurement} from "../objects/measurement/angle.js";
+import {DistanceMeasurement} from "../objects/measurement/distance.js";
+import {Marker} from "../objects/measurement/marker.js";
 
 /**
  * Measurement modes possible in the MeasurementManager.
