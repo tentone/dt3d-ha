@@ -903,6 +903,17 @@ export class DT3DCard extends LitElement {
 			this.cloneObject(id);
 		});
 
+		this.tree.addEventListener("entity-open", (e: any) => {
+			const entityId = e.detail.entityId as string;
+			this.dispatchEvent(
+				new CustomEvent("hass-more-info", {
+					detail: {entityId},
+					bubbles: true,
+					composed: true,
+				}),
+			);
+		});
+
 		this.tree.addEventListener("object-updated", (e: any) => {
 			const updatedObject = e.detail?.object as Object3D | null;
 			if (!updatedObject) {
