@@ -1,6 +1,7 @@
 import "./add-entity-modal/add-entity-modal.js";
 import "./camera-toggle/camera-toggle.js";
 import "./connection-status/connection-status.js";
+import "./hint-box/hint-box.js";
 import "./object-tree/object-tree.js";
 import "./side-bar/side-bar.js";
 
@@ -42,6 +43,7 @@ import {SpaceSync} from "../utils/space-sync.js";
 import type {DT3DAddEntityModal} from "./add-entity-modal/add-entity-modal.js";
 import type {DT3DCameraToggle} from "./camera-toggle/camera-toggle.js";
 import type {ConnectionStatus} from "./connection-status/connection-status.js";
+import type {DT3DHintBox} from "./hint-box/hint-box.js";
 import type {DT3DTree} from "./object-tree/object-tree.js";
 import type {DT3DSidebar} from "./side-bar/side-bar.js";
 
@@ -98,6 +100,11 @@ export class DT3DCard extends LitElement {
 	 * Sidebar element for tools and options.
 	 */
 	public sidebar: DT3DSidebar;
+
+	/**
+	 * Hint box element that shows contextual instructions to the user.
+	 */
+	private hintBox: DT3DHintBox;
 
 	/**
 	 * Tree element for displaying the 3D object hierarchy.
@@ -566,6 +573,7 @@ export class DT3DCard extends LitElement {
 		this.wallDraft.setFromPoints(start, start.clone().add(new Vector3(1, 0, 0)));
 		this.wallDraft.updateLabel();
 		this.sceneManager.measurements.add(this.wallDraft);
+		this.updateHintMessage();
 	}
 
 	private finalizeWall(): void {
@@ -586,6 +594,7 @@ export class DT3DCard extends LitElement {
 
 		this.addToScene(wall);
 		this.lastSelectedObject = wall;
+		this.updateHintMessage();
 	}
 
 	private clearWallDraft(): void {
@@ -623,6 +632,31 @@ export class DT3DCard extends LitElement {
 
 		const intersects = this.raycaster.intersectObjects(this.space.children,true);
 		return intersects[0]?.point ?? null;
+	}
+
+	/**
+	 * Update the hint box message based on the currently active tool state.
+	 */
+	private updateHintMessage(): void {
+		if (!this.hintBox) {
+			return;
+		}
+
+		if (this.sidebar?.measurementTool === "distance") {
+			this.hintBox.message = "Click on 2 points to measure distance";
+		} else if (this.sidebar?.measurementTool === "angle") {
+			this.hintBox.message = "Click on 3 points to measure angle";
+		} else if (this.wallToolMode === "wall") {
+			this.hintBox.message = this.wallDraftStart
+				? "Click to set the end point of the wall"
+				: "Click to set the start point of the wall";
+		} else if (this.wallToolMode === "door") {
+			this.hintBox.message = "Select a wall, then click to add a door";
+		} else if (this.wallToolMode === "window") {
+			this.hintBox.message = "Select a wall, then click to add a window";
+		} else {
+			this.hintBox.message = "";
+		}
 	}
 
 	/**
@@ -687,6 +721,9 @@ export class DT3DCard extends LitElement {
 			height: 100%;
 		`;
 		this.content.appendChild(this.sidebar);
+
+		this.hintBox = document.createElement("dt3d-hint-box") as DT3DHintBox;
+		this.content.appendChild(this.hintBox);
 
 		this.tree = document.createElement("dt3d-tree") as DT3DTree;
 		this.tree.style.cssText = `
@@ -782,6 +819,8 @@ export class DT3DCard extends LitElement {
 				this.sidebar.wallTool = "none";
 				this.clearWallDraft();
 			}
+
+			this.updateHintMessage();
 		});
 
 		this.sidebar.addEventListener("wall-tool-selected", (e: any) => {
@@ -796,6 +835,8 @@ export class DT3DCard extends LitElement {
 			if (mode !== "wall") {
 				this.clearWallDraft();
 			}
+
+			this.updateHintMessage();
 		});
 
 		this.sidebar.addEventListener("grid-visibility-toggle", (e: any) => {
