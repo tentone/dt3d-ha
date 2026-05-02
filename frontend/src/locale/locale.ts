@@ -1,3 +1,5 @@
+import en from "./en.json";
+
 export class Locale {
 	/**
 	 * Translations storage
@@ -61,3 +63,9 @@ export class Locale {
 		}
 	}
 }
+
+/**
+ * Shared locale manager instance, pre-loaded with English translations.
+ */
+export const localManager = new Locale();
+localManager.load("en", en);

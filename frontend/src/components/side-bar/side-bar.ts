@@ -3,6 +3,7 @@ import {customElement} from "lit/decorators.js";
 import tippy, {type Instance, type Props} from "tippy.js";
 import tippyStyles from  "tippy.js/dist/tippy.css?inline";
 
+import {localManager} from "../../locale/locale.js";
 import {MESH_OPTIONS} from "../../mesh-options.js";
 import {LocalStorage} from "../../utils/local-storage.js";
 import componentStyles from "./side-bar.css?inline";
@@ -232,63 +233,63 @@ export class DT3DSidebar extends LitElement {
 			<button
 				class="collapse-btn"
 				@click=${this.toggleCollapse}
-				data-tooltip="Collapse sidebar"
-				aria-label="Collapse sidebar"
-				title="Collapse sidebar">
+				data-tooltip=${localManager.get("collapseSidebar")}
+				aria-label=${localManager.get("collapseSidebar")}
+				title=${localManager.get("collapseSidebar")}>
 			${this.collapsed ?  html`<ha-icon icon="mdi:arrow-right-drop-circle-outline"></ha-icon>` :  html`<ha-icon icon="mdi:arrow-left-drop-circle-outline"></ha-icon>`}
 			</button>
 			<div class="sidebar-content">
 				<div class="sidebar-section">
-					<div class="sidebar-title">Controls</div>
+					<div class="sidebar-title">${localManager.get("controls")}</div>
 					<button
 						@click=${() => this.handleTransformSelect("translate")}
           class=${`transform-btn ${this.transformTool === "translate" ? "selected" : ""}`.trim()}
-						data-tooltip="Translate object"
-						aria-label="Translate object">
+						data-tooltip=${localManager.get("translateObject")}
+						aria-label=${localManager.get("translateObject")}>
 						<ha-icon icon="mdi:cursor-move"></ha-icon>
 					</button>
 					<button
 						@click=${() => this.handleTransformSelect("rotate")}
           	class=${`transform-btn ${this.transformTool === "rotate" ? "selected" : ""}`.trim()}
-						data-tooltip="Rotate object"
-						aria-label="Rotate object">
+						data-tooltip=${localManager.get("rotateObject")}
+						aria-label=${localManager.get("rotateObject")}>
 						<ha-icon icon="mdi:rotate-right"></ha-icon>
 					</button>
 					<button
           class=${`transform-btn ${this.transformTool === "scale" ? "selected" : ""}`.trim()}
 						@click=${() => this.handleTransformSelect("scale")}
-						data-tooltip="Scale object"
-						aria-label="Scale object">
+						data-tooltip=${localManager.get("scaleObject")}
+						aria-label=${localManager.get("scaleObject")}>
 						<ha-icon icon="mdi:resize"></ha-icon>
 					</button>
 					<button
           class=${`transform-btn ${this.transformTool === "none" ? "selected" : ""}`.trim()}
 						@click=${() => this.handleTransformSelect("none")}
-						data-tooltip="Disable transform controls"
-						aria-label="Disable transform controls">
+						data-tooltip=${localManager.get("disableTransformControls")}
+						aria-label=${localManager.get("disableTransformControls")}>
 						<ha-icon icon="mdi:cursor-default-outline"></ha-icon>
 					</button>
 					<button
 						@click=${() => this.handleGridSnapToggle()}
 						class=${`toggle-btn ${this.gridSnapEnabled ? "selected" : ""}`.trim()}
-						data-tooltip="Snap transforms to grid"
-						aria-label="Snap transforms to grid">
+						data-tooltip=${localManager.get("snapToGrid")}
+						aria-label=${localManager.get("snapToGrid")}>
 						<ha-icon icon="mdi:magnet"></ha-icon>
 					</button>
 					<button
 						@click=${() => this.handleGridToggle()}
 						class=${`toggle-btn ${this.gridEnabled ? "selected" : ""}`.trim()}
-						data-tooltip="Toggle grid"
-						aria-label="Toggle grid">
+						data-tooltip=${localManager.get("toggleGrid")}
+						aria-label=${localManager.get("toggleGrid")}>
 						<ha-icon icon="mdi:grid"></ha-icon>
 					</button>
 				</div>
 				<div class="sidebar-section">
-					<div class="sidebar-title">Add</div>
+					<div class="sidebar-title">${localManager.get("add")}</div>
 					<details class="mesh-submenu">
 						<summary
-							data-tooltip="Add mesh"
-							aria-label="Add mesh">
+							data-tooltip=${localManager.get("addMesh")}
+							aria-label=${localManager.get("addMesh")}>
 							<ha-icon icon="mdi:shape-outline"></ha-icon>
 						</summary>
 						<div class="mesh-submenu-items">
@@ -296,8 +297,8 @@ export class DT3DSidebar extends LitElement {
 		(option) => html`
 									<button
 										@click=${() => this.handleAddObject(option.type)}
-										data-tooltip=${`Add ${option.label}`}
-										aria-label=${`Add ${option.label}`}>
+										data-tooltip=${`${localManager.get("add")} ${option.label}`}
+										aria-label=${`${localManager.get("add")} ${option.label}`}>
 										${option.label}
 									</button>
 								`,
@@ -306,70 +307,70 @@ export class DT3DSidebar extends LitElement {
 					</details>
 					<button
 						@click=${() => this.handleAddObject("upload")}
-						data-tooltip="Upload model"
-						aria-label="Upload model">
+						data-tooltip=${localManager.get("uploadModel")}
+						aria-label=${localManager.get("uploadModel")}>
 						<ha-icon icon="mdi:upload-box-outline"></ha-icon>
 					</button>
 					<button
 						@click=${() => this.handleAddObject("entity")}
-						data-tooltip="Add entity"
-						aria-label="Add entity">
+						data-tooltip=${localManager.get("addEntity")}
+						aria-label=${localManager.get("addEntity")}>
 						<ha-icon icon="mdi:state-machine"></ha-icon>
 					</button>
 				</div>
 				<!-- --ha-color-primary-30) -->
 				<div class="sidebar-section">
-					<div class="sidebar-title">Measure</div>
+					<div class="sidebar-title">${localManager.get("measure")}</div>
 					<button
 						@click=${() => this.handleMeasurementSelect("distance")}
 						class=${this.measurementTool === "distance" ? "selected" : ""}
-						data-tooltip="Measure distance"
-						aria-label="Measure distance">
+						data-tooltip=${localManager.get("measureDistance")}
+						aria-label=${localManager.get("measureDistance")}>
 						<ha-icon icon="mdi:social-distance-2-meters"></ha-icon>
 					</button>
 					<button
 						@click=${() => this.handleMeasurementSelect("angle")}
 						class=${this.measurementTool === "angle" ? "selected" : ""}
-						data-tooltip="Measure angle"
-						aria-label="Measure angle">
+						data-tooltip=${localManager.get("measureAngle")}
+						aria-label=${localManager.get("measureAngle")}>
 						<ha-icon icon="mdi:angle-acute"></ha-icon>
 					</button>
 					<button
 						@click=${() => this.handleMeasurementSelect("none")}
 						class=${this.measurementTool === "none" && this.wallTool === "none" ? "selected" : ""}
-						data-tooltip="Clear measurements"
-						aria-label="Clear measurements">
+						data-tooltip=${localManager.get("clearMeasurements")}
+						aria-label=${localManager.get("clearMeasurements")}>
 						<ha-icon icon="mdi:cancel"></ha-icon>
 					</button>
 				</div>
 				<div class="sidebar-section">
-					<div class="sidebar-title">Walls</div>
+					<div class="sidebar-title">${localManager.get("walls")}</div>
 					<button
 						@click=${() => this.handleWallSelect("wall")}
 						class=${this.wallTool === "wall" ? "selected" : ""}
-						data-tooltip="Draw wall"
-						aria-label="Draw wall">
+						data-tooltip=${localManager.get("drawWall")}
+						aria-label=${localManager.get("drawWall")}>
 						<ha-icon icon="mdi:vector-line"></ha-icon>
 					</button>
 					<button
 						@click=${() => this.handleWallSelect("door")}
 						class=${this.wallTool === "door" ? "selected" : ""}
-						data-tooltip="Add door to selected wall"
-						aria-label="Add door to selected wall">
+						data-tooltip=${localManager.get("addDoor")}
+						aria-label=${localManager.get("addDoor")}>
 						<ha-icon icon="mdi:door"></ha-icon>
 					</button>
 					<button
 						@click=${() => this.handleWallSelect("window")}
 						class=${this.wallTool === "window" ? "selected" : ""}
-						data-tooltip="Add window to selected wall"
-						aria-label="Add window to selected wall">
+						data-tooltip=${localManager.get("addWindow")}
+						aria-label=${localManager.get("addWindow")}>
 						<ha-icon icon="mdi:window-closed-variant"></ha-icon>
 					</button>
 					<button
 						@click=${() => this.handleWallSelect("none")}
 						class=${this.measurementTool === "none" && this.wallTool === "none" ? "selected" : ""}
-						data-tooltip="Exit wall tools"
-						aria-label="Exit wall tools">
+						data-tooltip=${localManager.get("exitWallTools")}
+						aria-label=${localManager.get("exitWallTools")}>
 						<ha-icon icon="mdi:cancel"></ha-icon>
 					</button>
 				</div>

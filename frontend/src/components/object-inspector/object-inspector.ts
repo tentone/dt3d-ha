@@ -5,6 +5,7 @@ import {customElement, property} from "lit/decorators.js";
 import type {Object3D} from "three";
 import {Color} from "three";
 
+import {localManager} from "../../locale/locale.js";
 import {DTObject} from "../../objects/dt-object.js";
 import {EntityObject} from "../../objects/entity-object.js";
 import {DoorObject} from "../../objects/house/door.js";
@@ -146,10 +147,10 @@ export class DT3DObjectInspector extends LitElement {
 
 		const fields: DynamicFormField[] = [
 			{
-				label: "Name",
+				label: localManager.get("objectName"),
 				attribute: "name",
 				type: "string",
-				tooltip: "Display name for the selected object.",
+				tooltip: localManager.get("objectNameTooltip"),
 				editable: !locked,
 				enabled: true,
 			},
@@ -157,10 +158,10 @@ export class DT3DObjectInspector extends LitElement {
 
 		if (this.selectedObject instanceof DTObject) {
 			fields.push({
-				label: "Locked",
+				label: localManager.get("locked"),
 				attribute: "locked",
 				type: "boolean",
-				tooltip: "Prevent editing the object in the scene.",
+				tooltip: localManager.get("lockedTooltip"),
 				editable: true,
 				enabled: true,
 			});
@@ -168,34 +169,34 @@ export class DT3DObjectInspector extends LitElement {
 
 		fields.push(
 			{
-				label: "UUID",
+				label: localManager.get("objectUUID"),
 				attribute: "uuid",
 				type: "info",
-				tooltip: "Immutable identifier for the object instance.",
+				tooltip: localManager.get("objectUUIDTooltip"),
 				editable: false,
 				enabled: true,
 			},
 			{
-				label: "Position",
+				label: localManager.get("position"),
 				attribute: "position",
 				type: "Vector3",
-				tooltip: "Location of the object in meters.",
+				tooltip: localManager.get("positionTooltip"),
 				editable: !locked,
 				enabled: true,
 			},
 			{
-				label: "Scale",
+				label: localManager.get("scale"),
 				attribute: "scale",
 				type: "Vector3",
-				tooltip: "Scale of the object along each axis.",
+				tooltip: localManager.get("scaleTooltip"),
 				editable: !locked,
 				enabled: true,
 			},
 			{
-				label: "Rotation (degrees)",
+				label: localManager.get("rotation"),
 				attribute: "rotation",
 				type: "Vector3",
-				tooltip: "Rotation of the object in degrees.",
+				tooltip: localManager.get("rotationTooltip"),
 				editable: !locked,
 				enabled: true,
 			},
@@ -203,10 +204,10 @@ export class DT3DObjectInspector extends LitElement {
 
 		if (this.hasEditableColor(this.selectedObject)) {
 			fields.push({
-				label: "Material Color",
+				label: localManager.get("materialColor"),
 				attribute: "material.color",
 				type: "color",
-				tooltip: "Material base color.",
+				tooltip: localManager.get("materialColorTooltip"),
 				editable: !locked,
 				enabled: true,
 			});
@@ -226,7 +227,7 @@ export class DT3DObjectInspector extends LitElement {
 
 		return html`
 			<div class="field">
-				<label>Attributes</label>
+				<label>${localManager.get("attributes")}</label>
 				${attributeEntries.length
 		? html`<div class="attribute-list">
 							${attributeEntries.map(
@@ -241,7 +242,7 @@ export class DT3DObjectInspector extends LitElement {
 									</div>`,
 	)}
 						</div>`
-		: html`<div class="placeholder">No attributes available.</div>`}
+		: html`<div class="placeholder">${localManager.get("noAttributes")}</div>`}
 			</div>
 		`;
 	}
@@ -253,18 +254,18 @@ export class DT3DObjectInspector extends LitElement {
 
 		return [
 			{
-				label: "Height (m)",
+				label: localManager.get("wallHeight"),
 				attribute: "height",
 				type: "number",
-				tooltip: "Wall height in meters.",
+				tooltip: localManager.get("wallHeightTooltip"),
 				editable: !locked,
 				enabled: true,
 			},
 			{
-				label: "Thickness (m)",
+				label: localManager.get("wallThickness"),
 				attribute: "thickness",
 				type: "number",
-				tooltip: "Wall thickness in meters.",
+				tooltip: localManager.get("wallThicknessTooltip"),
 				editable: !locked,
 				enabled: true,
 			},
@@ -278,10 +279,10 @@ export class DT3DObjectInspector extends LitElement {
 
 		return [
 			{
-				label: "Open",
+				label: localManager.get("open"),
 				attribute: "open",
 				type: "boolean",
-				tooltip: "Toggle the open state.",
+				tooltip: localManager.get("openTooltip"),
 				editable: !locked,
 				enabled: true,
 			},
@@ -295,21 +296,21 @@ export class DT3DObjectInspector extends LitElement {
 
 		return [
 			{
-				label: "Entity ID",
+				label: localManager.get("entityId"),
 				attribute: "entityId",
 				type: "info",
 				editable: false,
 				enabled: true,
 			},
 			{
-				label: "Entity Name",
+				label: localManager.get("entityName"),
 				attribute: "entityName",
 				type: "info",
 				editable: false,
 				enabled: true,
 			},
 			{
-				label: "State",
+				label: localManager.get("entityState"),
 				attribute: "entityState",
 				type: "info",
 				editable: false,
@@ -344,7 +345,7 @@ export class DT3DObjectInspector extends LitElement {
 		const entityData = this.getEntityData();
 
 		return html`
-			<h4>Selected Object</h4>
+			<h4>${localManager.get("selectedObject")}</h4>
 			${this.selectedObject
 		? html`
 						<dt3d-dynamic-form
@@ -355,12 +356,12 @@ export class DT3DObjectInspector extends LitElement {
 						></dt3d-dynamic-form>
 						${locked
 		? html`<div class="placeholder">
-									This object is locked and cannot be edited.
+									${localManager.get("objectLocked")}
 								</div>`
 		: null}
 						${wallFields.length
 		? html`
-									<h4>Wall</h4>
+									<h4>${localManager.get("wall")}</h4>
 									<dt3d-dynamic-form
 										.fields=${wallFields}
 										.data=${this.selectedObject}
@@ -374,8 +375,8 @@ export class DT3DObjectInspector extends LitElement {
 		? html`
 									<h4>
 										${this.isDoorObject(this.selectedObject)
-		? "Door"
-		: "Window"}
+		? localManager.get("door")
+		: localManager.get("window")}
 									</h4>
 									<dt3d-dynamic-form
 										.fields=${openingFields}
@@ -388,7 +389,7 @@ export class DT3DObjectInspector extends LitElement {
 		: null}
 						${entityFields.length
 		? html`
-									<h4>Entity</h4>
+									<h4>${localManager.get("entity")}</h4>
 									<dt3d-dynamic-form
 										.fields=${entityFields}
 										.data=${entityData}
@@ -398,7 +399,7 @@ export class DT3DObjectInspector extends LitElement {
 						${this.renderEntityDetails()}
 					`
 		: html`<div class="placeholder">
-						Select an object from the tree to edit its properties.
+						${localManager.get("selectObjectPrompt")}
 					</div>`}
 		`;
 	}

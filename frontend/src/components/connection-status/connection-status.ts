@@ -1,6 +1,7 @@
 import {html, LitElement, unsafeCSS} from "lit";
 import {customElement, property} from "lit/decorators.js";
 
+import {localManager} from "../../locale/locale.js";
 import componentStyles from "./connection-status.css?inline";
 
 @customElement("dt3d-connection-status")
@@ -14,7 +15,7 @@ export class ConnectionStatus extends LitElement {
 	public port: number = 8080;
 
 	@property()
-	public msg: string = "Waiting...";
+	public msg: string = localManager.get("waiting");
 
 	/**
 	 * Flag to define if the comunication was successfull or not.
@@ -32,7 +33,7 @@ export class ConnectionStatus extends LitElement {
 				this.success = true;
 			})
 			.catch(() => {
-				this.msg = `Failed to reach backend on port ${this.port}`;
+				this.msg = `${localManager.get("failedToReachBackend")} ${this.port}`;
 				this.success = false;
 			});
 	}
