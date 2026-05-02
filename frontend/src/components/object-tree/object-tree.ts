@@ -387,20 +387,23 @@ export class DT3DTree extends LitElement {
 			<div class="context-menu" style="top:${y}px; left:${x}px;">
 				<button
 					@click=${(event: MouseEvent) => {
-		event.stopPropagation();
-		this.dispatchDelete(id);
-	}}
+						event.stopPropagation();
+						this.dispatchDelete(id);
+					}}
 				>
 					${"Delete"}
 				</button>
 				<button
 					@click=${(event: MouseEvent) => {
-		event.stopPropagation();
-		this.dispatchClone(id);
-	}}
+						event.stopPropagation();
+						this.dispatchClone(id);
+					}}
 				>
 					${"Clone"}
 				</button>
+				`+
+				
+				`
 			</div>
 		`;
 	}
