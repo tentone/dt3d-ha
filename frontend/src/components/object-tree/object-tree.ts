@@ -6,6 +6,7 @@ import type {Object3D} from "three";
 
 import {localManager} from "../../locale/locale.js";
 import {DTObject} from "../../objects/dt-object.js";
+import {EntityObject} from "../../objects/entity-object.js";
 import {LocalStorage} from "../../utils/local-storage.js";
 import componentStyles from "./object-tree.css?inline";
 
@@ -18,6 +19,8 @@ interface TreeNode {
 	name: string;
 	// Locked state for DTObjects
 	locked?: boolean;
+	// Entity ID if the node represents an EntityObject
+	entityId?: string;
 	// Children nodes
 	children?: TreeNode[];
 }
@@ -202,6 +205,7 @@ export class DT3DTree extends LitElement {
 				id: obj.uuid,
 				name: obj.name || obj.type,
 				locked: obj instanceof DTObject ? obj.locked : false,
+				entityId: obj instanceof EntityObject ? obj.entityId : undefined,
 				children: children.length > 0 ? children : undefined,
 			};
 		};
@@ -346,6 +350,45 @@ export class DT3DTree extends LitElement {
 	}
 
 	/**
+	 * Dispatch open-entity event for the given entity ID.
+	 *
+	 * @param entityId - Home Assistant entity ID to open.
+	 */
+	private dispatchOpenEntity(entityId: string) {
+		this.dispatchEvent(
+			new CustomEvent("entity-open", {
+				detail: {entityId},
+				bubbles: true,
+				composed: true,
+			}),
+		);
+		this.closeContextMenu();
+	}
+
+	/**
+	 * Find a tree node by its ID.
+	 *
+	 * @param nodes - Tree nodes to search.
+	 * @param id - UUID to look for.
+	 */
+	private findNodeById(nodes: TreeNode[], id: UUID): TreeNode | null {
+		for (const node of nodes) {
+			if (node.id === id) {
+				return node;
+			}
+
+			if (node.children) {
+				const found = this.findNodeById(node.children, id);
+				if (found) {
+					return found;
+				}
+			}
+		}
+
+		return null;
+	}
+
+	/**
 	 * Refresh the inspector panel when the selected object changes externally.
 	 *
 	 * Must be called when changes are applied.
@@ -379,6 +422,7 @@ export class DT3DTree extends LitElement {
 		}
 
 		const {id, x, y} = this.contextMenu;
+		const node = this.findNodeById(this.tree, id);
 
 		return html`
 			<div
@@ -402,9 +446,17 @@ export class DT3DTree extends LitElement {
 				>
 					${localManager.get("clone")}
 				</button>
-				`+
-				
-				`
+				${node?.entityId
+					? html`
+						<button
+							@click=${(event: MouseEvent) => {
+								event.stopPropagation();
+								this.dispatchOpenEntity(node.entityId!);
+							}}
+						>
+							${localManager.get("openInHA")}
+						</button>`
+					: null}
 			</div>
 		`;
 	}
