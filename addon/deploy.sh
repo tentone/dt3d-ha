@@ -8,7 +8,7 @@
 #   HA_HOST   - IP address or hostname of the HA instance      (default: homeassistant.local)
 #   HA_TOKEN  - Long-lived access token for the Supervisor API
 #   SSH_USER  - SSH username                                    (default: root)
-#   SSH_PORT  - SSH port used by the Terminal & SSH add-on      (default: 22222)
+#   SSH_PORT  - SSH port used by the Terminal & SSH add-on      (default: 22)
 #
 # The script copies the addon files to /addons/local/dt3d_backend on the HA
 # filesystem via SCP, then rebuilds and restarts the addon through the
@@ -23,7 +23,7 @@ set -euo pipefail
 HA_HOST="${1:-${HA_HOST:-homeassistant.local}}"
 HA_TOKEN="${2:-${HA_TOKEN:-}}"
 SSH_USER="${SSH_USER:-root}"
-SSH_PORT="${SSH_PORT:-22222}"
+SSH_PORT="${SSH_PORT:-22}"
 
 ADDON_SLUG="dt3d_backend"
 REMOTE_ADDON_DIR="/addons/local/${ADDON_SLUG}"

@@ -58,7 +58,7 @@ instance and triggers a rebuild and restart, allowing a fast edit→deploy cycle
 **Prerequisites**
 
 - The **Terminal & SSH** add-on is installed and running on Home Assistant
-  (it exposes SSH on port 22222 by default).
+  (it exposes SSH on port 22 by default).
 - A [long-lived access token](https://developers.home-assistant.io/docs/auth_api/#long-lived-access-token)
   generated from your HA profile page.
 
@@ -79,4 +79,4 @@ Optional environment variables:
 | `HA_HOST`  | `homeassistant.local`| IP or hostname of HA                 |
 | `HA_TOKEN` | *(required)*         | Long-lived access token              |
 | `SSH_USER` | `root`               | SSH username                         |
-| `SSH_PORT` | `22222`              | SSH port of the Terminal & SSH add-on|
+| `SSH_PORT` | `22`                 | SSH port of the Terminal & SSH add-on|
