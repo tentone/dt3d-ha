@@ -1,6 +1,7 @@
 import {html, LitElement, unsafeCSS} from "lit";
 import {customElement} from "lit/decorators.js";
 
+import {localManager} from "../locale/locale.js";
 import componentStyles from "./config-editor.css?inline";
 
 @customElement("dt3d-config-editor")
@@ -71,7 +72,7 @@ export class DT3DConfigEditor extends LitElement {
 		const content = html`
 			<div>
 				<div>
-					<label>Configuration</label>
+					<label>${localManager.get("configuration")}</label>
 					<input
 						type="number"
 						data-key="port"
@@ -81,7 +82,7 @@ export class DT3DConfigEditor extends LitElement {
 					/>
 				</div>
 				<div>
-					<label>Address</label>
+					<label>${localManager.get("address")}</label>
 					<input
 						type="text"
 						data-key="address"

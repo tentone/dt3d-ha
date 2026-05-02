@@ -1,6 +1,7 @@
 import {html, LitElement, unsafeCSS} from "lit";
 import {customElement, property, state} from "lit/decorators.js";
 
+import {localManager} from "../../locale/locale.js";
 import componentStyles from "./add-entity-modal.css?inline";
 
 /**
@@ -70,10 +71,10 @@ export class DT3DAddEntityModal extends LitElement {
 	protected render() {
 		return html`
 			<div class="dialog" @click=${(event: Event) => event.stopPropagation()}>
-				<h3>Select an Entity</h3>
+				<h3>${localManager.get("selectAnEntity")}</h3>
 				<input
 					type="search"
-					placeholder="Search entities..."
+					placeholder=${localManager.get("searchEntities")}
 					.value=${this.query}
 					@input=${this.handleSearch} />
 				<ul>
@@ -84,7 +85,7 @@ export class DT3DAddEntityModal extends LitElement {
 							</li>`,
 	)}
 				</ul>
-				<button @click=${this.handleClose}>Cancel</button>
+				<button @click=${this.handleClose}>${localManager.get("cancel")}</button>
 			</div>
 		`;
 	}

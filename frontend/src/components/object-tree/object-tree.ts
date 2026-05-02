@@ -4,6 +4,7 @@ import {html, LitElement, unsafeCSS} from "lit";
 import {customElement, property, state} from "lit/decorators.js";
 import type {Object3D} from "three";
 
+import {localManager} from "../../locale/locale.js";
 import {DTObject} from "../../objects/dt-object.js";
 import {LocalStorage} from "../../utils/local-storage.js";
 import componentStyles from "./object-tree.css?inline";
@@ -391,7 +392,7 @@ export class DT3DTree extends LitElement {
 		this.dispatchDelete(id);
 	}}
 				>
-					${"Delete"}
+					${localManager.get("delete")}
 				</button>
 				<button
 					@click=${(event: MouseEvent) => {
@@ -399,7 +400,7 @@ export class DT3DTree extends LitElement {
 		this.dispatchClone(id);
 	}}
 				>
-					${"Clone"}
+					${localManager.get("clone")}
 				</button>
 			</div>
 		`;
@@ -444,7 +445,7 @@ export class DT3DTree extends LitElement {
 		? html`<ha-icon
 												class="lock-icon"
 												icon="mdi:lock"
-												title="Locked"
+												title=${localManager.get("lockedTitle")}
 											></ha-icon>`
 		: null}
 								</span>

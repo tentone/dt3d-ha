@@ -23,8 +23,8 @@ import {FBXLoader} from "three/examples/jsm/loaders/FBXLoader.js";
 import {GLTFLoader} from "three/examples/jsm/loaders/GLTFLoader.js";
 import {OBJLoader} from "three/examples/jsm/loaders/OBJLoader.js";
 
-import en from "../locale/en.json";
-import {Locale} from "../locale/locale.js";
+import type {Locale} from "../locale/locale.js";
+import {localManager} from "../locale/locale.js";
 import {MeasurementManager} from "../measurement-manager.js";
 import {createMeshObject} from "../mesh-options.js";
 import {DTObject} from "../objects/dt-object.js";
@@ -160,8 +160,7 @@ export class DT3DCard extends LitElement {
 			console.log("DT3D: Entity states", this, DT3DCard.styles, hass.states);
 		}
 
-		this.locale = new Locale();
-		this.locale.load("en", en);
+		this.locale = localManager;
 
 		this.hassInstance = hass;
 
@@ -643,17 +642,17 @@ export class DT3DCard extends LitElement {
 		}
 
 		if (this.sidebar?.measurementTool === "distance") {
-			this.hintBox.message = "Click on 2 points to measure distance";
+			this.hintBox.message = localManager.get("hintMeasureDistance");
 		} else if (this.sidebar?.measurementTool === "angle") {
-			this.hintBox.message = "Click on 3 points to measure angle";
+			this.hintBox.message = localManager.get("hintMeasureAngle");
 		} else if (this.wallToolMode === "wall") {
 			this.hintBox.message = this.wallDraftStart
-				? "Click to set the end point of the wall"
-				: "Click to set the start point of the wall";
+				? localManager.get("hintWallEnd")
+				: localManager.get("hintWallStart");
 		} else if (this.wallToolMode === "door") {
-			this.hintBox.message = "Select a wall, then click to add a door";
+			this.hintBox.message = localManager.get("hintAddDoor");
 		} else if (this.wallToolMode === "window") {
-			this.hintBox.message = "Select a wall, then click to add a window";
+			this.hintBox.message = localManager.get("hintAddWindow");
 		} else {
 			this.hintBox.message = "";
 		}
