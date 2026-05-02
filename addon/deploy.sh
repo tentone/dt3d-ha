@@ -61,13 +61,20 @@ scp -P "${SSH_PORT}" \
 
 supervisor_post() {
   local endpoint="$1"
-  curl -sf \
-    -o /dev/null \
-    -w "%{http_code}" \
+  local response_body
+  local http_status
+  response_body=$(curl -s \
     -X POST \
     -H "Authorization: Bearer ${HA_TOKEN}" \
     -H "Content-Type: application/json" \
-    "http://${HA_HOST}/api/hassio/addons/local_${ADDON_SLUG}/${endpoint}"
+    --write-out "\n%{http_code}" \
+    "https://${HA_HOST}/api/hassio/addons/local_${ADDON_SLUG}/${endpoint}")
+  http_status=$(tail -n1 <<< "${response_body}")
+  response_body=$(sed '$ d' <<< "${response_body}")
+  if [[ "${http_status}" != "200" ]]; then
+    echo "  Response body: ${response_body}"
+  fi
+  echo "${http_status}"
 }
 
 # ---- Rebuild & restart ------------------------------------------------
@@ -75,7 +82,8 @@ supervisor_post() {
 echo "--> Rebuilding addon (this may take a few minutes) ..."
 REBUILD_STATUS=$(supervisor_post "rebuild")
 if [[ "${REBUILD_STATUS}" != "200" ]]; then
-  echo "Warning: rebuild returned HTTP ${REBUILD_STATUS}."
+  echo "Error: rebuild returned HTTP ${REBUILD_STATUS}. Aborting."
+  exit 1
 fi
 
 echo "--> Restarting addon ..."
