@@ -1,7 +1,7 @@
 :host {
 	position: absolute;
 	top: 12px;
-	left: 146px;
+	left: calc(50% - 130px);
 	z-index: 10;
 	pointer-events: none;
 	transition: opacity 0.2s;
@@ -21,7 +21,9 @@
 	max-width: 260px;
 	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
 	display: flex;
-	align-items: flex-start;
+	align-items: center;
+	flex-direction: row;
+	flex-wrap: nowrap;
 	gap: 8px;
 	line-height: 1.4;
 }
