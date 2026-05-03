@@ -43,6 +43,13 @@ export class MeasurementManager {
 	}
 
 	/**
+	 * Check if a measurement mode is currently active.
+	 */
+	public isActive(): boolean {
+		return this.mode !== "none";
+	}
+
+	/**
 	 * Clear the current measurement points and helpers.
 	 */
 	public clear(): void {
@@ -55,7 +62,7 @@ export class MeasurementManager {
 	 *
 	 * Depending on the current mode and the number of points, this can create distance or angle measurements, or just add marker points.
 	 *
-	 * @param event - Mouse event from the canvas click.
+	 * @param event - Mouse event from the canvas double-click.
 	 * @returns True if the event was handled, false otherwise.
 	 */
 	public handleClick(event: MouseEvent): boolean {
@@ -100,7 +107,6 @@ export class MeasurementManager {
 			this.helpers.add(new DistanceMeasurement(points));
 			this.points = [];
 
-			this.mode = "none";
 			return;
 		}
 
@@ -110,7 +116,6 @@ export class MeasurementManager {
 			this.helpers.add(new AngleMeasurement(points));
 			this.points = [];
 
-			this.mode = "none";
 			return;
 		}
 
