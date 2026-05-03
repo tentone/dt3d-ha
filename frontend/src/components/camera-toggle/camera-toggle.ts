@@ -4,7 +4,7 @@ import {html, LitElement} from "lit";
 import {customElement, property} from "lit/decorators.js";
 
 import {localManager} from "../../locale/locale.js";
-import type {CameraMode} from "../../scene.js";
+import type {CameraMode} from "../../editor/scene.js";
 
 @customElement("dt3d-camera-toggle")
 export class DT3DCameraToggle extends LitElement {

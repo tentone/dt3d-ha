@@ -4,7 +4,7 @@ import tippy, {type Instance, type Props} from "tippy.js";
 import tippyStyles from  "tippy.js/dist/tippy.css?inline";
 
 import {localManager} from "../../locale/locale.js";
-import {MESH_OPTIONS} from "../../utils/mesh-options.js";
+import {MESH_OPTIONS} from "../../editor/mesh-handler.js";
 import {LocalStorage} from "../../utils/local-storage.js";
 import componentStyles from "./side-bar.css?inline";
 

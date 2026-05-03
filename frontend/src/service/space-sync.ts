@@ -2,13 +2,15 @@ import type {Object3D} from "three";
 import {BoxGeometry, Group, Mesh, MeshStandardMaterial} from "three";
 
 import type {DT3DTree} from "../components/object-tree/object-tree.js";
-import {createMeshObject} from "../utils/mesh-options.js";
+import {createMeshObject} from "../editor/mesh-handler.js";
 import {DTObject} from "../objects/dt-object.js";
 import {EntityObject} from "../objects/entity-object.js";
 import {DoorObject} from "../objects/house/door.js";
 import {WallObject} from "../objects/house/wall.js";
 import {WindowObject} from "../objects/house/window.js";
-import type {SceneManager} from "../scene.js";
+
+import type {SceneManager} from "../editor/scene.js";
+
 import type {
 	type ObjectInstancePayload,
 	type ObjectInstanceResponse,

@@ -1,4 +1,4 @@
-import type {Material} from "three";
+import type {Material, Object3D} from "three";
 import {BoxGeometry, CapsuleGeometry, CircleGeometry, ConeGeometry, CylinderGeometry, DodecahedronGeometry, IcosahedronGeometry, Mesh, OctahedronGeometry, PlaneGeometry, RingGeometry, SphereGeometry, TetrahedronGeometry, TorusGeometry, TorusKnotGeometry} from "three";
 
 export type MeshOption = {
@@ -6,6 +6,9 @@ export type MeshOption = {
 	label: string;
 };
 
+/**
+ * List of possible mesh options to present on the GUI.
+ */
 export const MESH_OPTIONS: MeshOption[] = [
 	{type: "cube", label: "Cube"},
 	{type: "sphere", label: "Sphere"},
@@ -24,6 +27,77 @@ export const MESH_OPTIONS: MeshOption[] = [
 ];
 
 
+/**
+ * Resolve the mesh type of an object based on its geometry or user data.
+ * 
+ * @param object - The object to resolve the mesh type for.
+ * @returns The resolved mesh type, or null if it cannot be determined.
+ */
+export function resolveMeshType(object: Object3D): string | null {
+	const meshType = object.userData.meshType as string | undefined;
+	if (meshType) {
+		return meshType;
+	}
+
+	if (object instanceof Mesh) {
+		switch (object.geometry?.type) {
+			case "BoxGeometry":
+			case "BoxBufferGeometry":
+				return "cube";
+			case "SphereGeometry":
+			case "SphereBufferGeometry":
+				return "sphere";
+			case "PlaneGeometry":
+			case "PlaneBufferGeometry":
+				return "plane";
+			case "CapsuleGeometry":
+			case "CapsuleBufferGeometry":
+				return "capsule";
+			case "CircleGeometry":
+			case "CircleBufferGeometry":
+				return "circle";
+			case "ConeGeometry":
+			case "ConeBufferGeometry":
+				return "cone";
+			case "CylinderGeometry":
+			case "CylinderBufferGeometry":
+				return "cylinder";
+			case "DodecahedronGeometry":
+			case "DodecahedronBufferGeometry":
+				return "dodecahedron";
+			case "IcosahedronGeometry":
+			case "IcosahedronBufferGeometry":
+				return "icosahedron";
+			case "OctahedronGeometry":
+			case "OctahedronBufferGeometry":
+				return "octahedron";
+			case "RingGeometry":
+			case "RingBufferGeometry":
+				return "ring";
+			case "TetrahedronGeometry":
+			case "TetrahedronBufferGeometry":
+				return "tetrahedron";
+			case "TorusGeometry":
+			case "TorusBufferGeometry":
+				return "torus";
+			case "TorusKnotGeometry":
+			case "TorusKnotBufferGeometry":
+				return "torusKnot";
+			default:
+				return null;
+		}
+	}
+
+	return null;
+}
+
+/**
+ * Create a mesh object of the specified type with the given material.
+ * 
+ * @param type - The type of mesh to create (e.g. "cube", "sphere", etc.). 
+ * @param material - The material to apply to the mesh.
+ * @returns Mesh object of the specified type, or null if the type is not recognized.
+ */
 export function createMeshObject(type: string, material: Material): Mesh {
 	let object: Mesh = null;
 

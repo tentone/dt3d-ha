@@ -25,8 +25,8 @@ import {OBJLoader} from "three/examples/jsm/loaders/OBJLoader.js";
 
 import type {Locale} from "../locale/locale.js";
 import {localManager} from "../locale/locale.js";
-import {MeasurementManager} from "../utils/measurement-manager.js";
-import {createMeshObject} from "../utils/mesh-options.js";
+import {MeasurementManager} from "../editor/measurements.js";
+import {createMeshObject, resolveMeshType} from "../editor/mesh-handler.js";
 import {DTObject} from "../objects/dt-object.js";
 import {EntityBinary} from "../objects/entity-binary.js";
 import {EntityGeneric} from "../objects/entity-generic.js";
@@ -35,9 +35,9 @@ import {EntityObject} from "../objects/entity-object.js";
 import {EntitySensor} from "../objects/entity-sensor.js";
 import {EntitySwitch} from "../objects/entity-switch.js";
 import {WallObject} from "../objects/house/wall.js";
-import {RendererManager} from "../renderer.js";
-import type {CameraMode} from "../scene.js";
-import {SceneManager} from "../scene.js";
+import {RendererManager} from "../editor/renderer.js";
+import type {CameraMode} from "../editor/scene.js";
+import {SceneManager} from "../editor/scene.js";
 import {SpaceApi} from "../service/space-api.js";
 import {SpaceSync} from "../service/space-sync.js";
 import type {DT3DAddEntityModal} from "./add-entity-modal/add-entity-modal.js";
@@ -876,7 +876,7 @@ export class DT3DCard extends LitElement {
 			sceneManager: this.sceneManager,
 			space: this.space,
 			tree: this.tree,
-			resolveMeshType: (object) => this.resolveMeshType(object),
+			resolveMeshType: (object) => resolveMeshType(object),
 			createEntityObject: (entityId) => this.createEntityObject(entityId),
 		});
 
@@ -1052,23 +1052,20 @@ export class DT3DCard extends LitElement {
 
 		if (domain === "sensor") {
 			return new EntitySensor(id, entity);
-		}
-
-		if (domain === "binary_sensor") {
+		} else if (domain === "binary_sensor") {
 			return new EntityBinary(id, entity);
-		}
-
-		if (domain === "light") {
+		} else if (domain === "light") {
 			return new EntityLight(id, entity);
-		}
-
-		if (domain === "switch") {
+		} else if (domain === "switch") {
 			return new EntitySwitch(id, entity);
 		}
 
 		return new EntityGeneric(id, entity);
 	}
 
+	/**
+	 * Update all entity objects in the scene with the latest state from HA. 
+	 */
 	private updateEntityObjects(): void {
 		if (!this.space || !this.hassInstance?.states) {
 			return;
@@ -1094,64 +1091,6 @@ export class DT3DCard extends LitElement {
 			throw new Error("DT3D: API client not initialized");
 		}
 		return this.apiClient;
-	}
-
-	private resolveMeshType(object: Object3D): string | null {
-		const meshType = object.userData.meshType as string | undefined;
-		if (meshType) {
-			return meshType;
-		}
-
-		if (object instanceof Mesh) {
-			switch (object.geometry?.type) {
-				case "BoxGeometry":
-				case "BoxBufferGeometry":
-					return "cube";
-				case "SphereGeometry":
-				case "SphereBufferGeometry":
-					return "sphere";
-				case "PlaneGeometry":
-				case "PlaneBufferGeometry":
-					return "plane";
-				case "CapsuleGeometry":
-				case "CapsuleBufferGeometry":
-					return "capsule";
-				case "CircleGeometry":
-				case "CircleBufferGeometry":
-					return "circle";
-				case "ConeGeometry":
-				case "ConeBufferGeometry":
-					return "cone";
-				case "CylinderGeometry":
-				case "CylinderBufferGeometry":
-					return "cylinder";
-				case "DodecahedronGeometry":
-				case "DodecahedronBufferGeometry":
-					return "dodecahedron";
-				case "IcosahedronGeometry":
-				case "IcosahedronBufferGeometry":
-					return "icosahedron";
-				case "OctahedronGeometry":
-				case "OctahedronBufferGeometry":
-					return "octahedron";
-				case "RingGeometry":
-				case "RingBufferGeometry":
-					return "ring";
-				case "TetrahedronGeometry":
-				case "TetrahedronBufferGeometry":
-					return "tetrahedron";
-				case "TorusGeometry":
-				case "TorusBufferGeometry":
-					return "torus";
-				case "TorusKnotGeometry":
-				case "TorusKnotBufferGeometry":
-					return "torusKnot";
-				default:
-					return null;
-			}
-		}
-
-		return null;
 	}
 
 	/**
