@@ -8,13 +8,11 @@ import "./side-bar/side-bar.js";
 import {LitElement} from "lit";
 import {customElement} from "lit/decorators.js";
 import type {Camera, 	Group,
-	Intersection, 	Object3D,Scene} from "three";
+	Intersection, 		Mesh,Object3D,Scene} from "three";
 import {
-	Mesh,
 	MeshStandardMaterial,
 	Raycaster,
 	Vector2,
-	Vector3,
 } from "three";
 import type {OrbitControls} from "three/examples/jsm/controls/OrbitControls";
 import type {TransformControls} from "three/examples/jsm/controls/TransformControls";
@@ -23,10 +21,14 @@ import {FBXLoader} from "three/examples/jsm/loaders/FBXLoader.js";
 import {GLTFLoader} from "three/examples/jsm/loaders/GLTFLoader.js";
 import {OBJLoader} from "three/examples/jsm/loaders/OBJLoader.js";
 
-import type {Locale} from "../locale/locale.js";
-import {localManager} from "../locale/locale.js";
 import {MeasurementManager} from "../editor/measurements.js";
 import {createMeshObject, resolveMeshType} from "../editor/mesh-handler.js";
+import {RendererManager} from "../editor/renderer.js";
+import type {CameraMode} from "../editor/scene.js";
+import {SceneManager} from "../editor/scene.js";
+import {WallManager} from "../editor/walls.js";
+import type {Locale} from "../locale/locale.js";
+import {localManager} from "../locale/locale.js";
 import {DTObject} from "../objects/dt-object.js";
 import {EntityBinary} from "../objects/entity-binary.js";
 import {EntityGeneric} from "../objects/entity-generic.js";
@@ -34,10 +36,6 @@ import {EntityLight} from "../objects/entity-light.js";
 import {EntityObject} from "../objects/entity-object.js";
 import {EntitySensor} from "../objects/entity-sensor.js";
 import {EntitySwitch} from "../objects/entity-switch.js";
-import {WallObject} from "../objects/house/wall.js";
-import {RendererManager} from "../editor/renderer.js";
-import type {CameraMode} from "../editor/scene.js";
-import {SceneManager} from "../editor/scene.js";
 import {SpaceApi} from "../service/space-api.js";
 import {SpaceSync} from "../service/space-sync.js";
 import type {DT3DAddEntityModal} from "./add-entity-modal/add-entity-modal.js";
@@ -117,11 +115,10 @@ export class DT3DCard extends LitElement {
 	private measurementManager: MeasurementManager | null = null;
 
 	/**
-	 * Wall tool state.
+	 * Wall tool manager that handles wall/door/window placement.
 	 */
-	private wallToolMode: "none" | "wall" | "door" | "window" = "none";
-	private wallDraftStart: Vector3 | null = null;
-	private wallDraft: WallObject | null = null;
+	private wallManager: WallManager | null = null;
+
 	private lastSelectedObject: Object3D | null = null;
 
 	/**
@@ -414,7 +411,7 @@ export class DT3DCard extends LitElement {
 			return;
 		}
 
-		if (this.handleWallClick(event)) {
+		if (this.wallManager?.handleClick(event)) {
 			return;
 		}
 
@@ -434,9 +431,7 @@ export class DT3DCard extends LitElement {
 	 * @param event - Mouse event
 	 */
 	private handlePointerMove(event: MouseEvent): void {
-		if (this.wallToolMode === "wall") {
-			this.handleWallPointerMove(event);
-		}
+		this.wallManager?.handlePointerMove(event);
 
 		const {object} = this.pickObjectFromEvent(event);
 		if (object === this.hoveredObject) {
@@ -511,129 +506,6 @@ export class DT3DCard extends LitElement {
 	}
 
 	/**
-	 * Handle clics on wall to add doors or windows.
-	 *
-	 * @param event - Mouse event
-	 * @returns True if the click was handled, false otherwise.
-	 */
-	private handleWallClick(event: MouseEvent): boolean {
-		if (this.wallToolMode === "door" || this.wallToolMode === "window") {
-			const selectedWall = this.resolveSelectedWall();
-			if (!selectedWall) {
-				return false;
-			}
-
-			const added = this.wallToolMode === "door"
-				? selectedWall.addDoor()
-				: selectedWall.addWindow();
-			this.attachTransform(added);
-			this.tree.updateTreeFromScene(this.space);
-			void this.spaceSync?.syncObjectHierarchyCreate(added);
-			return true;
-		}
-
-		if (this.wallToolMode !== "wall") {
-			return false;
-		}
-
-		const intersection = this.pickPointFromEvent(event);
-		if (!intersection) {
-			return true;
-		}
-
-		if (!this.wallDraftStart) {
-			this.wallDraftStart = intersection.clone();
-			this.createWallDraft(this.wallDraftStart);
-			return true;
-		}
-
-		this.finalizeWall();
-		return true;
-	}
-
-	private handleWallPointerMove(event: MouseEvent): void {
-		if (!this.wallDraftStart || !this.wallDraft) {
-			return;
-		}
-
-		const intersection = this.pickPointFromEvent(event);
-		if (!intersection) {
-			return;
-		}
-
-		this.wallDraft.setFromPoints(this.wallDraftStart, intersection);
-		this.wallDraft.updateLabel();
-	}
-
-	private createWallDraft(start: Vector3): void {
-		this.wallDraft = new WallObject();
-		this.wallDraft.internal = true;
-		this.wallDraft.name = "Wall Draft";
-		this.wallDraft.setFromPoints(start, start.clone().add(new Vector3(1, 0, 0)));
-		this.wallDraft.updateLabel();
-		this.sceneManager.measurements.add(this.wallDraft);
-		this.updateHintMessage();
-	}
-
-	private finalizeWall(): void {
-		if (!this.wallDraftStart || !this.wallDraft) {
-			return;
-		}
-
-		const wall = new WallObject({
-			length: this.wallDraft.length,
-			height: this.wallDraft.height,
-			thickness: this.wallDraft.thickness,
-		});
-		wall.position.copy(this.wallDraft.position);
-		wall.rotation.copy(this.wallDraft.rotation);
-
-		this.sceneManager.measurements.remove(this.wallDraft);
-		this.clearWallDraft();
-
-		this.addToScene(wall);
-		this.lastSelectedObject = wall;
-		this.updateHintMessage();
-	}
-
-	private clearWallDraft(): void {
-		if (this.wallDraft) {
-			this.sceneManager.measurements.remove(this.wallDraft);
-		}
-		this.wallDraft = null;
-		this.wallDraftStart = null;
-	}
-
-	private resolveSelectedWall(): WallObject | null {
-		if (this.lastSelectedObject instanceof WallObject) {
-			return this.lastSelectedObject;
-		}
-
-		if (this.lastSelectedObject) {
-			const parentWall = this.lastSelectedObject.parent;
-			if (parentWall instanceof WallObject) {
-				return parentWall;
-			}
-		}
-
-		return null;
-	}
-
-	private pickPointFromEvent(event: MouseEvent): Vector3 | null {
-		if (!this.canvas || !this.camera || !this.space) {
-			return null;
-		}
-
-		const rect = this.canvas.getBoundingClientRect();
-		this.pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-		this.pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
-		this.raycaster.setFromCamera(this.pointer, this.camera);
-
-		const intersects = this.raycaster.intersectObjects(this.space.children,true);
-		return intersects[0]?.point ?? null;
-	}
-
-	/**
 	 * Update the hint box message based on the currently active tool state.
 	 */
 	private updateHintMessage(): void {
@@ -645,13 +517,13 @@ export class DT3DCard extends LitElement {
 			this.hintBox.message = localManager.get("hintMeasureDistance");
 		} else if (this.sidebar?.measurementTool === "angle") {
 			this.hintBox.message = localManager.get("hintMeasureAngle");
-		} else if (this.wallToolMode === "wall") {
-			this.hintBox.message = this.wallDraftStart
+		} else if (this.wallManager?.mode === "wall") {
+			this.hintBox.message = this.wallManager.wallDraftStart
 				? localManager.get("hintWallEnd")
 				: localManager.get("hintWallStart");
-		} else if (this.wallToolMode === "door") {
+		} else if (this.wallManager?.mode === "door") {
 			this.hintBox.message = localManager.get("hintAddDoor");
-		} else if (this.wallToolMode === "window") {
+		} else if (this.wallManager?.mode === "window") {
 			this.hintBox.message = localManager.get("hintAddWindow");
 		} else {
 			this.hintBox.message = "";
@@ -772,6 +644,23 @@ export class DT3DCard extends LitElement {
 				space: this.space,
 			}),
 		);
+		this.wallManager = new WallManager(
+			this.sceneManager.measurements,
+			() => ({
+				canvas: this.canvas,
+				camera: this.camera,
+				space: this.space,
+				lastSelectedObject: this.lastSelectedObject,
+			}),
+			{
+				addToScene: (object) => this.addToScene(object),
+				attachTransform: (object) => this.attachTransform(object),
+				updateTree: () => this.tree.updateTreeFromScene(this.space),
+				syncCreate: (object) => {void this.spaceSync?.syncObjectHierarchyCreate(object);},
+				updateHintMessage: () => this.updateHintMessage(),
+				setLastSelectedObject: (object) => {this.lastSelectedObject = object;},
+			},
+		);
 
 		this.rendererManager = new RendererManager(
 			this.camera,
@@ -814,9 +703,8 @@ export class DT3DCard extends LitElement {
 			this.sidebar.measurementTool = mode;
 
 			if (mode !== "none") {
-				this.wallToolMode = "none";
+				this.wallManager?.setMode("none");
 				this.sidebar.wallTool = "none";
-				this.clearWallDraft();
 			}
 
 			this.updateHintMessage();
@@ -824,15 +712,11 @@ export class DT3DCard extends LitElement {
 
 		this.sidebar.addEventListener("wall-tool-selected", (e: any) => {
 			const mode = e.detail.mode as "wall" | "door" | "window" | "none";
-			this.wallToolMode = mode;
+			this.wallManager?.setMode(mode);
 			this.sidebar.wallTool = mode;
 			if (mode !== "none") {
 				this.measurementManager?.setMode("none");
 				this.sidebar.measurementTool = "none";
-			}
-
-			if (mode !== "wall") {
-				this.clearWallDraft();
 			}
 
 			this.updateHintMessage();
@@ -1064,7 +948,7 @@ export class DT3DCard extends LitElement {
 	}
 
 	/**
-	 * Update all entity objects in the scene with the latest state from HA. 
+	 * Update all entity objects in the scene with the latest state from HA.
 	 */
 	private updateEntityObjects(): void {
 		if (!this.space || !this.hassInstance?.states) {
