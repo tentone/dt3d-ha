@@ -407,7 +407,8 @@ export class DT3DCard extends LitElement {
 	 * @param event - Mouse event
 	 */
 	private handleCanvasClick(event: MouseEvent): void {
-		if (this.measurementManager?.handleClick(event)) {
+		// In measurement mode, single clicks are consumed to prevent misclicks
+		if (this.measurementManager?.isActive()) {
 			return;
 		}
 
@@ -817,6 +818,11 @@ export class DT3DCard extends LitElement {
 		});
 
 		this.canvas.addEventListener("dblclick", (event: MouseEvent) => {
+			// Handle measurement points on double click
+			if (this.measurementManager?.handleClick(event)) {
+				return;
+			}
+
 			const {object, intersection} = this.pickObjectFromEvent(event);
 			if (intersection) {
 				const target = object ?? (intersection.object as Object3D);
