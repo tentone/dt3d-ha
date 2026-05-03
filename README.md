@@ -49,3 +49,34 @@ addon/      - Go backend and Home Assistant add-on files
 2. Install and start the add-on from **Settings → Add-ons → Add-on Store**.
 3. Verify the add-on is running by visiting
    `http://<home-assistant>:8080/api/hello`.
+
+### Development deploy script
+
+`addon/deploy.sh` copies the local add-on source to a running Home Assistant
+instance and triggers a rebuild and restart, allowing a fast edit→deploy cycle.
+
+**Prerequisites**
+
+- The **Terminal & SSH** add-on is installed and running on Home Assistant
+  (it exposes SSH on port 22 by default).
+- A [long-lived access token](https://developers.home-assistant.io/docs/auth_api/#long-lived-access-token)
+  generated from your HA profile page.
+
+**Usage**
+
+```bash
+# Set variables inline or export them beforehand
+HA_HOST=192.168.1.100 HA_TOKEN=<your-token> ./addon/deploy.sh
+
+# Or pass them as positional arguments
+./addon/deploy.sh 192.168.1.100 <your-token>
+```
+
+Optional environment variables:
+
+| Variable   | Default              | Description                          |
+|------------|----------------------|--------------------------------------|
+| `HA_HOST`  | `homeassistant.local`| IP or hostname of HA                 |
+| `HA_TOKEN` | *(required)*         | Long-lived access token              |
+| `SSH_USER` | `root`               | SSH username                         |
+| `SSH_PORT` | `22`                 | SSH port of the Terminal & SSH add-on|
