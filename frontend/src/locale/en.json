@@ -5,6 +5,7 @@
 	"clone": "Clone",
 	"edit": "Edit",
 	"viewEntity": "View Entity",
+	"toggleEntity": "Toggle",
 	"confirmDelete": "Are you sure you want to delete this item?",
 	"loading": "Loading...",
 	"noData": "No data available",

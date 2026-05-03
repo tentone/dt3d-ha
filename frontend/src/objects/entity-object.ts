@@ -1,6 +1,22 @@
 import {DTObject} from "./dt-object.js";
 
 /**
+ * Interface for entities that support toggling their state.
+ */
+export interface Toggleable {
+	toggle(hass: any): Promise<void>;
+}
+
+/**
+ * Type guard to check if an object implements the Toggleable interface.
+ *
+ * @param obj - Object to check.
+ */
+export function isToggleable(obj: unknown): obj is Toggleable {
+	return typeof (obj as any)?.toggle === "function";
+}
+
+/**
  * Base 3D representation for Home Assistant entities.
  */
 export abstract class EntityObject extends DTObject {
