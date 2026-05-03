@@ -33,7 +33,7 @@ import {DTObject} from "../objects/dt-object.js";
 import {EntityBinary} from "../objects/entity-binary.js";
 import {EntityGeneric} from "../objects/entity-generic.js";
 import {EntityLight} from "../objects/entity-light.js";
-import {EntityObject} from "../objects/entity-object.js";
+import {EntityObject, isToggleable} from "../objects/entity-object.js";
 import {EntitySensor} from "../objects/entity-sensor.js";
 import {EntitySwitch} from "../objects/entity-switch.js";
 import {SpaceApi} from "../service/space-api.js";
@@ -796,6 +796,14 @@ export class DT3DCard extends LitElement {
 					composed: true,
 				}),
 			);
+		});
+
+		this.tree.addEventListener("entity-toggle", (e: any) => {
+			const id = e.detail.id as string;
+			const object = this.space?.getObjectByProperty("uuid", id);
+			if (object && isToggleable(object)) {
+				void object.toggle(this.hassInstance);
+			}
 		});
 
 		this.tree.addEventListener("object-updated", (e: any) => {

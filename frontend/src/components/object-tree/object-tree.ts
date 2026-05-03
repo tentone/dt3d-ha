@@ -6,7 +6,7 @@ import type {Object3D} from "three";
 
 import {localManager} from "../../locale/locale.js";
 import {DTObject} from "../../objects/dt-object.js";
-import {EntityObject} from "../../objects/entity-object.js";
+import {EntityObject, isToggleable} from "../../objects/entity-object.js";
 import {LocalStorage} from "../../utils/local-storage.js";
 import componentStyles from "./object-tree.css?inline";
 
@@ -21,6 +21,8 @@ interface TreeNode {
 	locked?: boolean;
 	// Entity ID if the node represents an EntityObject
 	entityId?: string;
+	// Whether the node's entity supports toggling
+	toggleable?: boolean;
 	// Children nodes
 	children?: TreeNode[];
 }
@@ -206,6 +208,7 @@ export class DT3DTree extends LitElement {
 				name: obj.name || obj.type,
 				locked: obj instanceof DTObject ? obj.locked : false,
 				entityId: obj instanceof EntityObject ? obj.entityId : undefined,
+				toggleable: obj instanceof EntityObject && isToggleable(obj),
 				children: children.length > 0 ? children : undefined,
 			};
 		};
@@ -366,6 +369,22 @@ export class DT3DTree extends LitElement {
 	}
 
 	/**
+	 * Dispatch entity-toggle event for the given object ID.
+	 *
+	 * @param id - UUID of the object whose entity should be toggled.
+	 */
+	private dispatchToggle(id: UUID) {
+		this.dispatchEvent(
+			new CustomEvent("entity-toggle", {
+				detail: {id},
+				bubbles: true,
+				composed: true,
+			}),
+		);
+		this.closeContextMenu();
+	}
+
+	/**
 	 * Find a tree node by its ID.
 	 *
 	 * @param nodes - Tree nodes to search.
@@ -447,17 +466,28 @@ export class DT3DTree extends LitElement {
 					${localManager.get("clone")}
 				</button>
 				${node?.entityId
-					? html`
-						<button
-							@click=${(event: MouseEvent) => {
-								event.stopPropagation();
-								this.dispatchOpenEntity(node.entityId!);
-							}}
-						>
-							${localManager.get("viewEntity")}
-						</button>`
-					: null}
-			</div>
+				? html`
+					<button
+						@click=${(event: MouseEvent) => {
+							event.stopPropagation();
+							this.dispatchOpenEntity(node.entityId!);
+						}}
+					>
+						${localManager.get("viewEntity")}
+					</button>`
+				: null}
+				${node?.toggleable
+				? html`
+					<button
+						@click=${(event: MouseEvent) => {
+							event.stopPropagation();
+							this.dispatchToggle(id);
+						}}
+					>
+						${localManager.get("toggleEntity")}
+					</button>`
+				: null}
+		</div>
 		`;
 	}
 
