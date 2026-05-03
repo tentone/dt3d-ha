@@ -111,7 +111,7 @@ export class WallObject extends DTObject {
 		this.position.set(midpoint.x, start.y, midpoint.z);
 
 		const angle = Math.atan2(direction.z, direction.x);
-		this.rotation.set(0, angle, 0);
+		this.rotation.set(0, -angle, 0);
 
 		this.length = length;
 		this.updateGeometry();
