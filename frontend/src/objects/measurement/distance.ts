@@ -41,7 +41,7 @@ export class DistanceMeasurement extends Group {
 
 		const label = new TextSprite(`${distance.toFixed(2)}m`);
 		label.position.copy(start.clone().add(end).multiplyScalar(0.5));
-		label.position.y += 1.0;
+		label.position.y += 0.2;
 
 		this.add(label);
 	}

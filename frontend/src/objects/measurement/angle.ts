@@ -53,7 +53,7 @@ export class AngleMeasurement extends Group {
 
 		const label = new TextSprite(`${degrees.toFixed(2)}°`);
 		label.position.copy(vertex);
-		label.position.y += 1.0;
+		label.position.y += 0.2;
 		this.add(label);
 	}
 }
