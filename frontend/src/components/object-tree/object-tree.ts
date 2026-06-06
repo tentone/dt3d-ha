@@ -2,6 +2,7 @@ import "../object-inspector/object-inspector.js";
 
 import {html, LitElement, unsafeCSS} from "lit";
 import {customElement, property, state} from "lit/decorators.js";
+import {repeat} from "lit/directives/repeat.js";
 import type {Object3D} from "three";
 
 import {localManager} from "../../locale/locale.js";
@@ -181,39 +182,24 @@ export class DT3DTree extends LitElement {
 	 * Convert a Three.js scene into a tree structure.
 	 *
 	 * @param scene - The Three.js scene to convert into a tree structure.
+	 * @param reset - When true, rebuild tree state and collapse everything except the root.
 	 */
 	public updateTreeFromScene(scene?: Object3D, reset: boolean = false) {
-		if (!scene) {
+		const targetScene = scene ?? this.scene;
+		if (!targetScene) {
 			return;
 		}
 
-		this.scene = scene || this.scene;
+		this.scene = targetScene;
 
-		console.log("DT3d: Updating tree from scene", scene, reset);
+		if (!reset) {
+			this.updateTreeDiff(targetScene);
+			return;
+		}
 
-		const toTreeNode = (obj: Object3D): TreeNode | null => {
-			if (obj?.internal === true) {
-				return null;
-			}
+		console.log("DT3d: Rebuilding tree from scene", targetScene, reset);
 
-			const children =
-				obj.children.length > 0
-					? obj.children
-						.map(toTreeNode)
-						.filter((child): child is TreeNode => child !== null)
-					: [];
-
-			return {
-				id: obj.uuid,
-				name: obj.name || obj.type,
-				locked: obj instanceof DTObject ? obj.locked : false,
-				entityId: obj instanceof EntityObject ? obj.entityId : undefined,
-				toggleable: obj instanceof EntityObject && isToggleable(obj),
-				children: children.length > 0 ? children : undefined,
-			};
-		};
-
-		const root = toTreeNode(scene);
+		const root = this.createTreeNode(targetScene);
 		this.tree = root ? [root] : [];
 
 		if (this.selectedId) {
@@ -225,9 +211,142 @@ export class DT3DTree extends LitElement {
 
 		// Reset expanded/selected state
 		if (reset) {
-			this.expanded = new Set([scene.uuid]);
+			this.expanded = new Set([targetScene.uuid]);
 			this.selectedId = null;
 		}
+	}
+
+	/**
+	 * Reconcile the existing tree with the current Three.js scene graph.
+	 *
+	 * Existing nodes are reused by UUID and only their metadata/children are updated.
+	 * This preserves expanded state and gives Lit stable keyed nodes to patch instead
+	 * of rebuilding the whole rendered tree.
+	 *
+	 * @param scene - Scene or object subtree to diff into the current tree.
+	 */
+	public updateTreeDiff(scene?: Object3D): void {
+		const targetScene = scene ?? this.scene;
+		if (!targetScene) {
+			return;
+		}
+
+		this.scene = targetScene;
+
+		console.log("DT3d: Diffing tree from scene", targetScene);
+
+		const existingRoot = this.tree.find((node) => node.id === targetScene.uuid) ?? null;
+		const root = this.syncTreeNode(targetScene, existingRoot);
+		this.tree = root ? [root] : [];
+
+		if (root && !existingRoot) {
+			this.expanded = new Set([...this.expanded, root.id]);
+		}
+
+		this.pruneExpandedState();
+
+		if (this.selectedId) {
+			this.selectedObject =
+				this.scene?.getObjectByProperty("uuid", this.selectedId) ?? null;
+
+			if (!this.selectedObject) {
+				this.selectedId = null;
+			}
+		}
+
+		this.requestUpdate();
+	}
+
+	/**
+	 * Create a tree node from a Three.js object and all non-internal descendants.
+	 *
+	 * @param obj - Object to convert.
+	 */
+	private createTreeNode(obj: Object3D): TreeNode | null {
+		if (obj?.internal === true) {
+			return null;
+		}
+
+		const children = obj.children
+			.map((child) => this.createTreeNode(child))
+			.filter((child): child is TreeNode => child !== null);
+
+		return {
+			...this.getNodeMetadata(obj),
+			children: children.length > 0 ? children : undefined,
+		};
+	}
+
+	/**
+	 * Update or create a tree node for an object while preserving matching child nodes.
+	 *
+	 * @param obj - Object to reconcile.
+	 * @param existing - Existing tree node with the same UUID, if present.
+	 */
+	private syncTreeNode(obj: Object3D, existing: TreeNode | null): TreeNode | null {
+		if (obj?.internal === true) {
+			return null;
+		}
+
+		const node = existing ?? this.getNodeMetadata(obj);
+		const existingChildren = new Map(
+			(existing?.children ?? []).map((child) => [child.id, child]),
+		);
+		const children = obj.children
+			.map((child) => this.syncTreeNode(
+				child,
+				existingChildren.get(child.uuid) ?? null,
+			))
+			.filter((child): child is TreeNode => child !== null);
+		const metadata = this.getNodeMetadata(obj);
+
+		node.name = metadata.name;
+		node.locked = metadata.locked;
+		node.entityId = metadata.entityId;
+		node.toggleable = metadata.toggleable;
+
+		if (children.length > 0) {
+			node.children = children;
+		} else {
+			delete node.children;
+		}
+
+		return node;
+	}
+
+	/**
+	 * Build display metadata for a tree node.
+	 *
+	 * @param obj - Source object.
+	 */
+	private getNodeMetadata(obj: Object3D): TreeNode {
+		return {
+			id: obj.uuid,
+			name: obj.name || obj.type,
+			locked: obj instanceof DTObject ? obj.locked : false,
+			entityId: obj instanceof EntityObject ? obj.entityId : undefined,
+			toggleable: obj instanceof EntityObject && isToggleable(obj),
+		};
+	}
+
+	/**
+	 * Remove expanded IDs for nodes that no longer exist after a diff update.
+	 */
+	private pruneExpandedState(): void {
+		const validIds = new Set<UUID>();
+		const collectIds = (nodes: TreeNode[]) => {
+			for (const node of nodes) {
+				validIds.add(node.id);
+				if (node.children) {
+					collectIds(node.children);
+				}
+			}
+		};
+
+		collectIds(this.tree);
+		this.expanded = new Set(
+			[...this.expanded].filter((id) => validIds.has(id)),
+		);
 	}
 
 	/**
@@ -426,7 +545,7 @@ export class DT3DTree extends LitElement {
 	private handleObjectUpdated() {
 		if (!this.scene) return;
 
-		this.updateTreeFromScene(this.scene);
+		this.updateTreeDiff(this.scene);
 	}
 
 
@@ -500,7 +619,9 @@ export class DT3DTree extends LitElement {
 	private renderTree(nodes: TreeNode[], depth: number = 0): any {
 		return html`
 			<ul style="list-style: none; margin: 0; padding: 0;">
-				${nodes.map(
+				${repeat(
+		nodes,
+		(node) => node.id,
 		(node) => html`
 						<li>
 							<!-- Node -->

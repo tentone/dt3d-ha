@@ -312,7 +312,7 @@ export class DT3DCard extends LitElement {
 		this.space.add(object);
 		this.attachTransform(object);
 
-		this.tree.updateTreeFromScene(this.space, true);
+		this.tree.updateTreeDiff(this.space);
 
 		void this.spaceSync?.syncObjectHierarchyCreate(object);
 	}
@@ -376,7 +376,7 @@ export class DT3DCard extends LitElement {
 			this.transform.detach();
 		}
 
-		this.tree.updateTreeFromScene(this.space, true);
+		this.tree.updateTreeDiff(this.space);
 
 		void this.spaceSync?.syncObjectDelete(target);
 	}
@@ -403,7 +403,7 @@ export class DT3DCard extends LitElement {
 		parent.add(clone);
 
 		this.attachTransform(clone);
-		this.tree.updateTreeFromScene(this.space);
+		this.tree.updateTreeDiff(this.space);
 
 		void this.spaceSync?.syncObjectHierarchyCreate(clone);
 	}
@@ -660,7 +660,7 @@ export class DT3DCard extends LitElement {
 			{
 				addToScene: (object) => this.addToScene(object),
 				attachTransform: (object) => this.attachTransform(object),
-				updateTree: () => this.tree.updateTreeFromScene(this.space),
+				updateTree: () => this.tree.updateTreeDiff(this.space),
 				syncCreate: (object) => {void this.spaceSync?.syncObjectHierarchyCreate(object);},
 				updateHintMessage: () => this.updateHintMessage(),
 				setLastSelectedObject: (object) => {this.lastSelectedObject = object;},
