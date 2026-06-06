@@ -3,14 +3,12 @@ import {BoxGeometry, Group, Mesh, MeshStandardMaterial} from "three";
 
 import type {DT3DTree} from "../components/object-tree/object-tree.js";
 import {createMeshObject} from "../editor/mesh-handler.js";
+import type {SceneManager} from "../editor/scene.js";
 import {DTObject} from "../objects/dt-object.js";
 import {EntityObject} from "../objects/entity-object.js";
 import {DoorObject} from "../objects/house/door.js";
 import {WallObject} from "../objects/house/wall.js";
 import {WindowObject} from "../objects/house/window.js";
-
-import type {SceneManager} from "../editor/scene.js";
-
 import type {
 	type ObjectInstancePayload,
 	type ObjectInstanceResponse,
@@ -62,6 +60,11 @@ export class SpaceSync {
 	 * Clear all objects from the active space and reset API mappings.
 	 */
 	public clearSpace(): void {
+		this.space.traverse((child) => {
+			if (child instanceof DTObject) {
+				child.dispose();
+			}
+		});
 		this.space.clear();
 		this.objectApiIds.clear();
 	}

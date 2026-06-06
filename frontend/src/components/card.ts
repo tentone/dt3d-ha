@@ -31,6 +31,7 @@ import type {Locale} from "../locale/locale.js";
 import {localManager} from "../locale/locale.js";
 import {DTObject} from "../objects/dt-object.js";
 import {EntityBinary} from "../objects/entity-binary.js";
+import {EntityCamera} from "../objects/entity-camera.js";
 import {EntityGeneric} from "../objects/entity-generic.js";
 import {EntityLight} from "../objects/entity-light.js";
 import {EntityObject, isToggleable} from "../objects/entity-object.js";
@@ -362,6 +363,12 @@ export class DT3DCard extends LitElement {
 		if (!parent) {
 			return;
 		}
+
+		target.traverse((child) => {
+			if (child instanceof DTObject) {
+				child.dispose();
+			}
+		});
 
 		parent.remove(target);
 
@@ -955,6 +962,8 @@ export class DT3DCard extends LitElement {
 			return new EntitySensor(id, entity);
 		} else if (domain === "binary_sensor") {
 			return new EntityBinary(id, entity);
+		} else if (domain === "camera") {
+			return new EntityCamera(id, entity);
 		} else if (domain === "light") {
 			return new EntityLight(id, entity);
 		} else if (domain === "switch") {
