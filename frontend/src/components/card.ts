@@ -408,13 +408,10 @@ export class DT3DCard extends LitElement {
 	 */
 	private handleCanvasClick(event: MouseEvent): void {
 		// In measurement mode, single clicks are consumed to prevent misclicks
-		if (this.measurementManager?.isActive()) {
+		if (this.measurementManager?.isActive() || this.wallManager?.isActive()) {
 			return;
 		}
 
-		if (this.wallManager?.handleClick(event)) {
-			return;
-		}
 
 		// Pick object and trigger click interaction
 		const {object} = this.pickObjectFromEvent(event);
@@ -830,6 +827,12 @@ export class DT3DCard extends LitElement {
 			if (this.measurementManager?.handleClick(event)) {
 				return;
 			}
+
+			// Handle wall tool clicks
+			if (this.wallManager?.handleClick(event)) {
+				return;
+			}
+
 
 			const {object, intersection} = this.pickObjectFromEvent(event);
 			if (intersection) {

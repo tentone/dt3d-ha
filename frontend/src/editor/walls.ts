@@ -62,6 +62,15 @@ export class WallManager {
 	}
 
 	/**
+	 * Check if the wall tool is currently active (in any mode other than "none").
+	 * 
+	 * @returns - True if the wall tool is active, false otherwise. 
+	 */
+	public isActive(): boolean {
+		return this.mode !== "none";
+	}
+
+	/**
 	 * Set the wall tool mode.
 	 *
 	 * Clearing the draft whenever switching away from wall-drawing mode.
