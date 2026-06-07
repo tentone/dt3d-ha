@@ -1,0 +1,68 @@
+:host {
+	position: absolute;
+	inset: 0;
+	z-index: 20;
+	color: var(--ha-color-neutral-95);
+}
+
+.overlay {
+	position: absolute;
+	inset: 0;
+	display: flex;
+	align-items: flex-start;
+	justify-content: center;
+	padding: 24px;
+	background: rgba(0, 0, 0, 0.3);
+	box-sizing: border-box;
+}
+
+.dialog {
+	width: min(360px, 100%);
+	max-height: 100%;
+	overflow-y: auto;
+	background: color-mix(in srgb, var(--ha-color-neutral-10) 95%, transparent);
+	border: 1px solid
+		color-mix(in srgb, var(--ha-color-neutral-30) 80%, transparent);
+	border-radius: 8px;
+	box-shadow: 0 12px 28px rgba(0, 0, 0, 0.3);
+	padding: 16px;
+	box-sizing: border-box;
+}
+
+header {
+	display: flex;
+	align-items: flex-start;
+	justify-content: space-between;
+	gap: 12px;
+	margin-bottom: 12px;
+}
+
+h3 {
+	margin: 0 0 4px 0;
+	font-size: 16px;
+	color: var(--ha-color-primary-60);
+}
+
+p {
+	margin: 0;
+	font-size: 13px;
+	color: var(--ha-color-neutral-75);
+}
+
+.close-button {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 32px;
+	height: 32px;
+	border: none;
+	border-radius: 4px;
+	padding: 0;
+	background: transparent;
+	color: var(--ha-color-neutral-95);
+	cursor: pointer;
+}
+
+.close-button:hover {
+	background: color-mix(in srgb, var(--ha-color-primary-60) 25%, transparent);
+}

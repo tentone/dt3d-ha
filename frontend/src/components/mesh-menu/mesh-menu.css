@@ -1,0 +1,43 @@
+:host {
+	position: absolute;
+	inset: 0;
+	z-index: 15;
+	pointer-events: none;
+}
+
+.overlay {
+	position: absolute;
+	inset: 0;
+	pointer-events: auto;
+}
+
+.menu {
+	position: absolute;
+	display: grid;
+	grid-template-columns: repeat(2, minmax(90px, 1fr));
+	gap: 8px;
+	max-width: calc(100% - 16px);
+	padding: 10px;
+	background: color-mix(in srgb, var(--ha-color-neutral-10) 90%, transparent);
+	border-radius: 8px;
+	box-shadow: 0 8px 16px
+		color-mix(in srgb, var(--ha-color-neutral-10) 30%, transparent);
+	pointer-events: auto;
+}
+
+button {
+	width: 100%;
+	margin: 0;
+	padding: 10px;
+	background: var(--ha-color-primary-50);
+	color: var(--ha-color-neutral-95);
+	border: none;
+	border-radius: 4px;
+	cursor: pointer;
+	font-size: 0.9em;
+}
+
+button:hover,
+button:active {
+	background: var(--ha-color-primary-40);
+}

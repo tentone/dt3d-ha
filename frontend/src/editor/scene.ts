@@ -22,6 +22,112 @@ import {TransformControls} from "three/examples/jsm/controls/TransformControls";
 export type CameraMode = "perspective" | "orthographic";
 
 /**
+ * Daylight settings for the active space.
+ */
+export type DaylightConfig = {
+	ambientColor: string;
+	ambientIntensity: number;
+	sunlightColor: string;
+	sunlightIntensity: number;
+	sunElevation: number;
+	sunAzimuth: number;
+};
+
+/**
+ * General configuration for the active space.
+ */
+export type SpaceSceneConfig = {
+	daylight: DaylightConfig;
+};
+
+export const DEFAULT_DAYLIGHT_CONFIG: DaylightConfig = {
+	ambientColor: "#bbbbbb",
+	ambientIntensity: 1,
+	sunlightColor: "#eeeeee",
+	sunlightIntensity: 1,
+	sunElevation: 90,
+	sunAzimuth: 180,
+};
+
+export const DEFAULT_SPACE_SCENE_CONFIG: SpaceSceneConfig = {
+	daylight: DEFAULT_DAYLIGHT_CONFIG,
+};
+
+const clamp = (value: number, min: number, max: number) =>
+	Math.min(Math.max(value, min), max);
+
+const numberOrDefault = (value: unknown, fallback: number): number => {
+	const parsed = Number(value);
+
+	return Number.isFinite(parsed) ? parsed : fallback;
+};
+
+const normalizeColor = (value: unknown, fallback: string): string => {
+	if (typeof value === "string" && /^#[0-9a-fA-F]{6}$/.test(value)) {
+		return value;
+	}
+
+	return fallback;
+};
+
+/**
+ * Merge partial daylight settings with defaults and constrain numeric values.
+ *
+ * @param config - Daylight settings patch.
+ * @returns Normalized daylight config.
+ */
+export const normalizeDaylightConfig = (
+	config: Partial<DaylightConfig> = {},
+): DaylightConfig => ({
+	ambientColor: normalizeColor(
+		config.ambientColor,
+		DEFAULT_DAYLIGHT_CONFIG.ambientColor,
+	),
+	ambientIntensity: clamp(
+		numberOrDefault(
+			config.ambientIntensity,
+			DEFAULT_DAYLIGHT_CONFIG.ambientIntensity,
+		),
+		0,
+		5,
+	),
+	sunlightColor: normalizeColor(
+		config.sunlightColor,
+		DEFAULT_DAYLIGHT_CONFIG.sunlightColor,
+	),
+	sunlightIntensity: clamp(
+		numberOrDefault(
+			config.sunlightIntensity,
+			DEFAULT_DAYLIGHT_CONFIG.sunlightIntensity,
+		),
+		0,
+		10,
+	),
+	sunElevation: clamp(
+		numberOrDefault(config.sunElevation, DEFAULT_DAYLIGHT_CONFIG.sunElevation),
+		-10,
+		90,
+	),
+	sunAzimuth: clamp(
+		numberOrDefault(config.sunAzimuth, DEFAULT_DAYLIGHT_CONFIG.sunAzimuth),
+		0,
+		360,
+	),
+});
+
+/**
+ * Merge partial scene settings with defaults.
+ *
+ * @param config - Scene settings patch.
+ * @returns Normalized scene config.
+ */
+export const normalizeSpaceSceneConfig = (
+	config: Partial<SpaceSceneConfig> = {},
+): SpaceSceneConfig => ({
+	daylight: normalizeDaylightConfig(config.daylight),
+});
+
+/**
  * SceneManager handles scene creation and camera/controls setup.
  */
 export class SceneManager {
@@ -97,6 +203,26 @@ export class SceneManager {
 	 */
 	private gridEnabled = true;
 
+	/**
+	 * Ambient light used by daylight configuration.
+	 */
+	private ambientLight: AmbientLight | null = null;
+
+	/**
+	 * Directional sunlight used by daylight configuration.
+	 */
+	private sunlight: DirectionalLight | null = null;
+
+	/**
+	 * Sky dome used by daylight configuration.
+	 */
+	private sky: Sky | null = null;
+
+	/**
+	 * Current space-level scene configuration.
+	 */
+	private spaceSceneConfig: SpaceSceneConfig = normalizeSpaceSceneConfig();
+
 	constructor(canvas: HTMLCanvasElement, height: number, width: number,) {
 		this.scene = new Scene();
 
@@ -130,6 +256,35 @@ export class SceneManager {
 		this.scene.add(this.transform.getHelper());
 
 		this.createGrid();
+	}
+
+	/**
+	 * Apply space-level scene configuration.
+	 *
+	 * @param config - Scene config patch.
+	 */
+	public setSpaceSceneConfig(config: Partial<SpaceSceneConfig>): SpaceSceneConfig {
+		this.spaceSceneConfig = normalizeSpaceSceneConfig({
+			...this.spaceSceneConfig,
+			...config,
+			daylight: {
+				...this.spaceSceneConfig.daylight,
+				...config.daylight,
+			},
+		});
+
+		this.applyDaylightConfig(this.spaceSceneConfig.daylight);
+
+		return this.getSpaceSceneConfig();
+	}
+
+	/**
+	 * Get the current space-level scene configuration.
+	 */
+	public getSpaceSceneConfig(): SpaceSceneConfig {
+		return {
+			daylight: {...this.spaceSceneConfig.daylight},
+		};
 	}
 
 	/**
@@ -296,20 +451,43 @@ export class SceneManager {
 	 * Create and add the sky to the scene.
 	 */
 	private addSky(): void {
-		this.scene.add(new AmbientLight(0xbbbbbb));
+		this.ambientLight = new AmbientLight(0xbbbbbb);
+		this.scene.add(this.ambientLight);
 
-		const directional = new DirectionalLight(0xeeeeee);
-		directional.position.set(200, 1000, 300);
-		this.scene.add(directional);
+		this.sunlight = new DirectionalLight(0xeeeeee);
+		this.sunlight.position.set(200, 1000, 300);
+		this.scene.add(this.sunlight);
 
-		const sky = new Sky();
-		sky.scale.setScalar(1e4);
+		this.sky = new Sky();
+		this.sky.scale.setScalar(1e4);
 
-		const phi = MathUtils.degToRad(90);
-		const theta = MathUtils.degToRad(180);
+		this.scene.add(this.sky);
+		this.applyDaylightConfig(this.spaceSceneConfig.daylight);
+	}
+
+	/**
+	 * Apply daylight config to ambient light, sun, and sky dome.
+	 *
+	 * @param config - Daylight config to apply.
+	 */
+	private applyDaylightConfig(config: DaylightConfig): void {
+		if (this.ambientLight) {
+			this.ambientLight.color.set(config.ambientColor);
+			this.ambientLight.intensity = config.ambientIntensity;
+		}
+
+		const phi = MathUtils.degToRad(90 - config.sunElevation);
+		const theta = MathUtils.degToRad(config.sunAzimuth);
 		const sunPosition = new Vector3().setFromSphericalCoords(1, phi, theta);
 
-		sky.material.uniforms.sunPosition.value = sunPosition;
-		this.scene.add(sky);
+		if (this.sunlight) {
+			this.sunlight.color.set(config.sunlightColor);
+			this.sunlight.intensity = config.sunlightIntensity;
+			this.sunlight.position.copy(sunPosition).multiplyScalar(1000);
+		}
+
+		if (this.sky) {
+			this.sky.material.uniforms.sunPosition.value.copy(sunPosition);
+		}
 	}
 }

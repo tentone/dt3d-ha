@@ -4,7 +4,6 @@ import tippy, {type Instance, type Props} from "tippy.js";
 import tippyStyles from  "tippy.js/dist/tippy.css?inline";
 
 import {localManager} from "../../locale/locale.js";
-import {MESH_OPTIONS} from "../../editor/mesh-handler.js";
 import {LocalStorage} from "../../utils/local-storage.js";
 import componentStyles from "./side-bar.css?inline";
 
@@ -195,6 +194,41 @@ export class DT3DSidebar extends LitElement {
 	}
 
 	/**
+	 * Open the mesh add menu at card level so it is not clipped by the sidebar.
+	 *
+	 * @param event - Click event from the mesh button.
+	 */
+	private handleMeshMenuOpen(event: MouseEvent) {
+		const target = event.currentTarget as HTMLElement | null;
+		const rect = target?.getBoundingClientRect();
+
+		this.dispatchEvent(
+			new CustomEvent("mesh-menu-open", {
+				detail: rect
+					? {
+						left: rect.right + 8,
+						top: rect.top,
+					}
+					: null,
+				bubbles: true,
+				composed: true,
+			}),
+		);
+	}
+
+	/**
+	 * Open the space-level scene configuration menu.
+	 */
+	private handleSpaceConfigOpen() {
+		this.dispatchEvent(
+			new CustomEvent("space-config-open", {
+				bubbles: true,
+				composed: true,
+			}),
+		);
+	}
+
+	/**
 	 * Create the tooltip element for each of the options.
 	 */
 	private createTooltips() {
@@ -285,26 +319,22 @@ export class DT3DSidebar extends LitElement {
 					</button>
 				</div>
 				<div class="sidebar-section">
+					<div class="sidebar-title">${localManager.get("space")}</div>
+					<button
+						@click=${() => this.handleSpaceConfigOpen()}
+						data-tooltip=${localManager.get("spaceConfiguration")}
+						aria-label=${localManager.get("spaceConfiguration")}>
+						<ha-icon icon="mdi:white-balance-sunny"></ha-icon>
+					</button>
+				</div>
+				<div class="sidebar-section">
 					<div class="sidebar-title">${localManager.get("add")}</div>
-					<details class="mesh-submenu">
-						<summary
-							data-tooltip=${localManager.get("addMesh")}
-							aria-label=${localManager.get("addMesh")}>
-							<ha-icon icon="mdi:shape-outline"></ha-icon>
-						</summary>
-						<div class="mesh-submenu-items">
-							${MESH_OPTIONS.map(
-		(option) => html`
-									<button
-										@click=${() => this.handleAddObject(option.type)}
-										data-tooltip=${`${localManager.get("add")} ${option.label}`}
-										aria-label=${`${localManager.get("add")} ${option.label}`}>
-										${option.label}
-									</button>
-								`,
-	)}
-						</div>
-					</details>
+					<button
+						@click=${(event: MouseEvent) => this.handleMeshMenuOpen(event)}
+						data-tooltip=${localManager.get("addMesh")}
+						aria-label=${localManager.get("addMesh")}>
+						<ha-icon icon="mdi:shape-outline"></ha-icon>
+					</button>
 					<button
 						@click=${() => this.handleAddObject("upload")}
 						data-tooltip=${localManager.get("uploadModel")}

@@ -2,8 +2,10 @@ import "./add-entity-modal/add-entity-modal.js";
 import "./camera-toggle/camera-toggle.js";
 import "./connection-status/connection-status.js";
 import "./hint-box/hint-box.js";
+import "./mesh-menu/mesh-menu.js";
 import "./object-tree/object-tree.js";
 import "./side-bar/side-bar.js";
+import "./space-config-menu/space-config-menu.js";
 
 import {LitElement} from "lit";
 import {customElement} from "lit/decorators.js";
@@ -24,8 +26,8 @@ import {OBJLoader} from "three/examples/jsm/loaders/OBJLoader.js";
 import {MeasurementManager} from "../editor/measurements.js";
 import {createMeshObject, resolveMeshType} from "../editor/mesh-handler.js";
 import {RendererManager} from "../editor/renderer.js";
-import type {CameraMode} from "../editor/scene.js";
-import {SceneManager} from "../editor/scene.js";
+import type {CameraMode, SpaceSceneConfig} from "../editor/scene.js";
+import {normalizeSpaceSceneConfig,SceneManager} from "../editor/scene.js";
 import {WallManager} from "../editor/walls.js";
 import type {Locale} from "../locale/locale.js";
 import {localManager} from "../locale/locale.js";
@@ -39,12 +41,17 @@ import {EntitySensor} from "../objects/entity-sensor.js";
 import {EntitySwitch} from "../objects/entity-switch.js";
 import {SpaceApi} from "../service/space-api.js";
 import {SpaceSync} from "../service/space-sync.js";
+import {LocalStorage} from "../utils/local-storage.js";
 import type {DT3DAddEntityModal} from "./add-entity-modal/add-entity-modal.js";
 import type {DT3DCameraToggle} from "./camera-toggle/camera-toggle.js";
 import type {ConnectionStatus} from "./connection-status/connection-status.js";
 import type {DT3DHintBox} from "./hint-box/hint-box.js";
+import type {DT3DMeshMenu} from "./mesh-menu/mesh-menu.js";
 import type {DT3DTree} from "./object-tree/object-tree.js";
 import type {DT3DSidebar} from "./side-bar/side-bar.js";
+import type {DT3DSpaceConfigMenu} from "./space-config-menu/space-config-menu.js";
+
+const SPACE_SCENE_CONFIG_STORAGE_KEY = "space-scene-config";
 
 @customElement("dt3d-card")
 export class DT3DCard extends LitElement {
@@ -146,6 +153,21 @@ export class DT3DCard extends LitElement {
 	 * Object currently hovered.
 	 */
 	private hoveredObject: DTObject | null = null;
+
+	/**
+	 * Current space-level scene configuration.
+	 */
+	private spaceSceneConfig: SpaceSceneConfig = normalizeSpaceSceneConfig();
+
+	/**
+	 * Active space configuration menu, if open.
+	 */
+	private spaceConfigMenu: DT3DSpaceConfigMenu | null = null;
+
+	/**
+	 * Active mesh add menu, if open.
+	 */
+	private meshMenu: DT3DMeshMenu | null = null;
 
 	static properties = {
 		hass: {attribute: false},
@@ -536,6 +558,98 @@ export class DT3DCard extends LitElement {
 	}
 
 	/**
+	 * Open the space-level scene configuration menu.
+	 */
+	private openSpaceConfigMenu(): void {
+		if (!this.content || this.spaceConfigMenu) {
+			return;
+		}
+
+		const menu = document.createElement("dt3d-space-config-menu") as DT3DSpaceConfigMenu;
+		menu.config = this.spaceSceneConfig;
+
+		menu.addEventListener("space-config-updated", (event: Event) => {
+			const {config} = (event as CustomEvent<{ config: SpaceSceneConfig }>).detail;
+			this.spaceSceneConfig = this.sceneManager.setSpaceSceneConfig(config);
+			LocalStorage.write(SPACE_SCENE_CONFIG_STORAGE_KEY, this.spaceSceneConfig);
+			menu.config = this.spaceSceneConfig;
+		});
+
+		menu.addEventListener("modal-close", () => {
+			menu.remove();
+			this.spaceConfigMenu = null;
+		});
+
+		this.spaceConfigMenu = menu;
+		this.content.appendChild(menu);
+	}
+
+	/**
+	 * Open the mesh add menu at the top card level.
+	 *
+	 * @param anchor - Menu anchor in viewport coordinates.
+	 */
+	private openMeshMenu(anchor: { left: number; top: number } | null): void {
+		if (!this.content) {
+			return;
+		}
+
+		if (this.meshMenu) {
+			this.meshMenu.remove();
+			this.meshMenu = null;
+		}
+
+		const contentRect = this.content.getBoundingClientRect();
+		const x = Math.max(
+			8,
+			Math.min((anchor?.left ?? contentRect.left + 8) - contentRect.left, contentRect.width - 208),
+		);
+		const y = Math.max(
+			8,
+			Math.min((anchor?.top ?? contentRect.top + 8) - contentRect.top, contentRect.height - 8),
+		);
+		const menu = document.createElement("dt3d-mesh-menu") as DT3DMeshMenu;
+		menu.x = x;
+		menu.y = y;
+
+		menu.addEventListener("add-object", (event: Event) => {
+			const {type} = (event as CustomEvent<{ type: string }>).detail;
+			this.handleAddObject(type);
+		});
+		menu.addEventListener("modal-close", () => {
+			menu.remove();
+			this.meshMenu = null;
+		});
+
+		this.meshMenu = menu;
+		this.content.appendChild(menu);
+	}
+
+	/**
+	 * Add a new object by sidebar/menu type.
+	 *
+	 * @param type - Object type to add.
+	 */
+	private handleAddObject(type: string): void {
+		let object: Mesh = null;
+		const material = new MeshStandardMaterial({
+			color: Math.floor(Math.random() * 0xffffff),
+			wireframe: false,
+		});
+
+		object = createMeshObject(type, material);
+
+		if (object) {
+			object.userData.meshType = type;
+			this.addToScene(object);
+		} else if (type === "upload") {
+			this.selectFile();
+		} else if (type === "entity") {
+			this.addEntityModal();
+		}
+	}
+
+	/**
 	 * Method called when the element is added to the DOM.
 	 *
 	 * Initializes the 3D scene and starts the rendering loop.
@@ -627,6 +741,12 @@ export class DT3DCard extends LitElement {
 		this.content.appendChild(cssElem);
 
 		this.sceneManager = new SceneManager(this.canvas, height, width);
+		this.spaceSceneConfig = normalizeSpaceSceneConfig(
+			LocalStorage.read(SPACE_SCENE_CONFIG_STORAGE_KEY, {}),
+		);
+		this.spaceSceneConfig = this.sceneManager.setSpaceSceneConfig(
+			this.spaceSceneConfig,
+		);
 		this.sceneManager.transform.addEventListener("objectChange", () => {
 			this.tree.refreshSelectedObject();
 			if (this.transform?.object) {
@@ -737,25 +857,20 @@ export class DT3DCard extends LitElement {
 			this.sceneManager.setTransformSnapEnabled(enabled);
 		});
 
+		this.sidebar.addEventListener("space-config-open", () => {
+			this.openSpaceConfigMenu();
+		});
+
+		this.sidebar.addEventListener("mesh-menu-open", (event: Event) => {
+			this.openMeshMenu(
+				(event as CustomEvent<{ left: number; top: number } | null>).detail,
+			);
+		});
+
 		this.sidebar.addEventListener("add-object", (e: any) => {
 			const type = e.detail.type;
 
-			let object: Mesh = null;
-			const material = new MeshStandardMaterial({
-				color: Math.floor(Math.random() * 0xffffff),
-				wireframe: false,
-			});
-
-			object = createMeshObject(type, material);
-
-			if (object) {
-				object.userData.meshType = type;
-				this.addToScene(object);
-			} else if (type === "upload") {
-				this.selectFile();
-			} else if (type === "entity") {
-				this.addEntityModal();
-			}
+			this.handleAddObject(type);
 		});
 
 
