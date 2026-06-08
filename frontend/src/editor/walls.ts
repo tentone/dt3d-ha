@@ -13,6 +13,8 @@ type WallContext = {
 	camera: Camera | null;
 	space: Group | null;
 	lastSelectedObject: Object3D | null;
+	gridSnapEnabled: boolean;
+	gridSnapSize: number;
 };
 
 type WallCallbacks = {
@@ -63,8 +65,8 @@ export class WallManager {
 
 	/**
 	 * Check if the wall tool is currently active (in any mode other than "none").
-	 * 
-	 * @returns - True if the wall tool is active, false otherwise. 
+	 *
+	 * @returns - True if the wall tool is active, false otherwise.
 	 */
 	public isActive(): boolean {
 		return this.mode !== "none";
@@ -132,6 +134,7 @@ export class WallManager {
 			return true;
 		}
 
+		this.draft.setFromPoints(this.draftStart, intersection);
 		this.finalizeWall();
 		return true;
 	}
@@ -208,7 +211,7 @@ export class WallManager {
 	}
 
 	private pickPointFromEvent(event: MouseEvent): Vector3 | null {
-		const {canvas, camera, space} = this.getContext();
+		const {canvas, camera, space, gridSnapEnabled, gridSnapSize} = this.getContext();
 		if (!canvas || !camera || !space) {
 			return null;
 		}
@@ -219,6 +222,23 @@ export class WallManager {
 		this.raycaster.setFromCamera(this.pointer, camera);
 
 		const intersects = this.raycaster.intersectObjects(space.children, true);
-		return intersects[0]?.point ?? null;
+		const point = intersects[0]?.point;
+		if (!point) {
+			return null;
+		}
+
+		return gridSnapEnabled ? this.snapPointToGrid(point, gridSnapSize) : point;
+	}
+
+	private snapPointToGrid(point: Vector3, snapSize: number): Vector3 {
+		if (snapSize <= 0) {
+			return point;
+		}
+
+		return point.clone().set(
+			Math.round(point.x / snapSize) * snapSize,
+			point.y,
+			Math.round(point.z / snapSize) * snapSize,
+		);
 	}
 }

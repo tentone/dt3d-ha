@@ -776,6 +776,8 @@ export class DT3DCard extends LitElement {
 				camera: this.camera,
 				space: this.space,
 				lastSelectedObject: this.lastSelectedObject,
+				gridSnapEnabled: this.sidebar.gridSnapEnabled,
+				gridSnapSize: this.sceneManager.getGridSnapSize(),
 			}),
 			{
 				addToScene: (object) => this.addToScene(object),

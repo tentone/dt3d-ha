@@ -316,6 +316,13 @@ export class SceneManager {
 	}
 
 	/**
+	 * Get the size used for grid snapping.
+	 */
+	public getGridSnapSize(): number {
+		return this.gridSnapSize;
+	}
+
+	/**
 	 * Create the grid helper and add it to the scene.
 	 */
 	private createGrid(): void {
