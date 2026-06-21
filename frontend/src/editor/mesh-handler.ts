@@ -1,22 +1,42 @@
 import type {BufferGeometry, Material, Object3D} from "three";
 import {BoxGeometry, CapsuleGeometry, CircleGeometry, ConeGeometry, CylinderGeometry, DodecahedronGeometry, IcosahedronGeometry, Mesh, OctahedronGeometry, PlaneGeometry, RingGeometry, SphereGeometry, TetrahedronGeometry, TorusGeometry, TorusKnotGeometry} from "three";
 
+/**
+ * Mesh type option rendered by the add-mesh menu.
+ */
 export type MeshOption = {
+	/** Stable mesh type identifier used by persistence and factory helpers. */
 	type: string;
+	/** Human-readable label displayed in the mesh menu. */
 	label: string;
 };
 
+/**
+ * Supported inspector control types for a geometry constructor parameter.
+ */
 export type MeshGeometryParameterType = "number" | "integer" | "boolean";
 
+/**
+ * Metadata describing one editable three.js geometry constructor parameter.
+ */
 export type MeshGeometryParameterDefinition = {
+	/** Constructor parameter name, matching the key stored by three.js geometry parameters. */
 	name: string;
+	/** Human-readable label displayed in the object inspector. */
 	label: string;
+	/** Form control type used to edit this parameter. */
 	type: MeshGeometryParameterType;
+	/** Default value used when a mesh or persisted payload omits this parameter. */
 	defaultValue: number | boolean;
+	/** Optional minimum numeric value accepted by the inspector and normalizer. */
 	min?: number;
+	/** Optional numeric input step used by the inspector. */
 	step?: number;
 };
 
+/**
+ * Current geometry constructor parameter values for a mesh.
+ */
 export type MeshGeometryParameters = Record<string, number | boolean>;
 
 /**
@@ -40,8 +60,38 @@ export const MESH_OPTIONS: MeshOption[] = [
 ];
 
 const TWO_PI = Math.PI * 2;
+
+/**
+ * Create metadata for an integer geometry constructor parameter.
+ *
+ * @param name - Constructor parameter name.
+ * @param label - Human-readable inspector label.
+ * @param defaultValue - Fallback value used when the parameter is missing.
+ * @param min - Minimum accepted value.
+ * @returns Geometry parameter metadata configured with integer stepping.
+ */
 const int = (name: string, label: string, defaultValue: number, min = 1): MeshGeometryParameterDefinition => ({name, label, type: "integer", defaultValue, min, step: 1});
+
+/**
+ * Create metadata for a decimal geometry constructor parameter.
+ *
+ * @param name - Constructor parameter name.
+ * @param label - Human-readable inspector label.
+ * @param defaultValue - Fallback value used when the parameter is missing.
+ * @param min - Minimum accepted value.
+ * @param step - Numeric input step shown by the inspector.
+ * @returns Geometry parameter metadata configured for decimal input.
+ */
 const num = (name: string, label: string, defaultValue: number, min = 0, step = 0.01): MeshGeometryParameterDefinition => ({name, label, type: "number", defaultValue, min, step});
+
+/**
+ * Create metadata for a boolean geometry constructor parameter.
+ *
+ * @param name - Constructor parameter name.
+ * @param label - Human-readable inspector label.
+ * @param defaultValue - Fallback value used when the parameter is missing.
+ * @returns Geometry parameter metadata configured for checkbox input.
+ */
 const bool = (name: string, label: string, defaultValue: boolean): MeshGeometryParameterDefinition => ({name, label, type: "boolean", defaultValue});
 
 /**
@@ -64,6 +114,17 @@ export const MESH_GEOMETRY_PARAMETER_DEFINITIONS: Record<string, MeshGeometryPar
 	torusKnot: [num("radius", "Radius", 0.4), num("tube", "Tube", 0.15), int("tubularSegments", "Tubular Segments", 80, 3), int("radialSegments", "Radial Segments", 12, 3), int("p", "P", 2, 1), int("q", "Q", 3, 1)],
 };
 
+/**
+ * Normalize a partial parameter set for a mesh type.
+ *
+ * Missing values are filled from the parameter definitions, invalid numeric
+ * values fall back to defaults, minimum values are enforced, and integer
+ * parameters are rounded.
+ *
+ * @param type - Mesh type whose definitions should be used.
+ * @param parameters - Partial or complete parameter values to normalize.
+ * @returns Complete normalized parameter values for the mesh type.
+ */
 function normalizeGeometryParameters(type: string, parameters: MeshGeometryParameters = {}): MeshGeometryParameters {
 	const definitions = MESH_GEOMETRY_PARAMETER_DEFINITIONS[type] ?? [];
 	return Object.fromEntries(definitions.map((definition) => {
@@ -79,6 +140,16 @@ function normalizeGeometryParameters(type: string, parameters: MeshGeometryParam
 	}));
 }
 
+/**
+ * Read editable geometry parameters from a mesh object.
+ *
+ * Values explicitly stored in `userData.geometryParameters` take precedence over
+ * three.js geometry `parameters`, allowing edited values to persist after the
+ * geometry is rebuilt.
+ *
+ * @param object - Object to inspect.
+ * @returns Normalized geometry parameters, or null when the object is not a supported mesh.
+ */
 export function getMeshGeometryParameters(object: Object3D): MeshGeometryParameters | null {
 	const meshType = resolveMeshType(object);
 	if (!meshType || !(object instanceof Mesh)) {
@@ -88,6 +159,13 @@ export function getMeshGeometryParameters(object: Object3D): MeshGeometryParamet
 	return normalizeGeometryParameters(meshType, object.userData.geometryParameters ?? object.geometry?.parameters ?? {});
 }
 
+/**
+ * Create a three.js geometry instance for a supported mesh type.
+ *
+ * @param type - Mesh type identifier from {@link MESH_OPTIONS}.
+ * @param parameters - Constructor parameter values for the geometry.
+ * @returns New geometry instance, or null when the mesh type is unsupported.
+ */
 function createGeometry(type: string, parameters: MeshGeometryParameters): BufferGeometry | null {
 	const params = normalizeGeometryParameters(type, parameters) as any;
 	switch (type) {
@@ -109,6 +187,17 @@ function createGeometry(type: string, parameters: MeshGeometryParameters): Buffe
 	}
 }
 
+/**
+ * Rebuild a mesh object's geometry from constructor parameters.
+ *
+ * The previous geometry is disposed to release GPU resources, and normalized
+ * values are stored on `userData.geometryParameters` for future inspector reads
+ * and persistence.
+ *
+ * @param object - Mesh object to update.
+ * @param parameters - New constructor parameter values.
+ * @returns True when the geometry was rebuilt, false for unsupported objects.
+ */
 export function updateMeshGeometry(object: Object3D, parameters: MeshGeometryParameters): boolean {
 	const meshType = resolveMeshType(object);
 	if (!meshType || !(object instanceof Mesh)) {
@@ -126,7 +215,11 @@ export function updateMeshGeometry(object: Object3D, parameters: MeshGeometryPar
 }
 
 /**
- * Resolve the mesh type of an object based on its geometry or user data.
+ * Resolve the mesh type of an object based on its `userData.meshType` marker or
+ * the runtime three.js geometry type.
+ *
+ * @param object - Object to resolve.
+ * @returns Mesh type identifier, or null if the object is not a supported mesh.
  */
 export function resolveMeshType(object: Object3D): string | null {
 	const meshType = object.userData.meshType as string | undefined;
@@ -188,6 +281,11 @@ export function resolveMeshType(object: Object3D): string | null {
 
 /**
  * Create a mesh object of the specified type with the given material.
+ *
+ * @param type - Mesh type identifier from {@link MESH_OPTIONS}.
+ * @param material - Material to assign to the created mesh.
+ * @param parameters - Optional geometry constructor parameter overrides.
+ * @returns Mesh object of the requested type, or null when the type is unsupported.
  */
 export function createMeshObject(type: string, material: Material, parameters: MeshGeometryParameters = {}): Mesh {
 	const geometry = createGeometry(type, parameters);
