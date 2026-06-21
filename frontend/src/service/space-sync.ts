@@ -1,8 +1,8 @@
 import type {Object3D} from "three";
-import {BoxGeometry, Group, Mesh, MeshStandardMaterial} from "three";
+import {Group, Mesh, MeshStandardMaterial} from "three";
 
 import type {DT3DTree} from "../components/object-tree/object-tree.js";
-import {createMeshObject} from "../editor/mesh-handler.js";
+import {createMeshObject, getMeshGeometryParameters} from "../editor/mesh-handler.js";
 import type {SceneManager} from "../editor/scene.js";
 import {DTObject} from "../objects/dt-object.js";
 import {EntityObject} from "../objects/entity-object.js";
@@ -205,7 +205,8 @@ export class SpaceSync {
 				}
 			} else {
 				const material = new MeshStandardMaterial({color});
-				object = createMeshObject(meshType, material);
+				const geometryParameters = data.geometryParameters as Record<string, number | boolean> | undefined;
+				object = createMeshObject(meshType, material, geometryParameters);
 			}
 			if (object) {
 				object.userData.meshType = meshType;
@@ -317,13 +318,11 @@ export class SpaceSync {
 					data.color = material.color.getHexString();
 				}
 
-				if (object instanceof Mesh && object.geometry instanceof BoxGeometry) {
-					const params = object.geometry.parameters as { width?: number; height?: number; depth?: number };
-					data.dimensions = {
-						width: params?.width,
-						height: params?.height,
-						depth: params?.depth,
-					};
+				if (object instanceof Mesh) {
+					const geometryParameters = getMeshGeometryParameters(object);
+					if (geometryParameters) {
+						data.geometryParameters = geometryParameters;
+					}
 				}
 			}
 		}

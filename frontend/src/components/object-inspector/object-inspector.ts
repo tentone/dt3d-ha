@@ -3,8 +3,9 @@ import "../dynamic-form/dynamic-form.js";
 import {html, LitElement, unsafeCSS} from "lit";
 import {customElement, property} from "lit/decorators.js";
 import type {Object3D} from "three";
-import {Color} from "three";
+import {Color, Mesh} from "three";
 
+import {getMeshGeometryParameters, MESH_GEOMETRY_PARAMETER_DEFINITIONS, resolveMeshType, updateMeshGeometry} from "../../editor/mesh-handler.js";
 import {localManager} from "../../locale/locale.js";
 import {DTObject} from "../../objects/dt-object.js";
 import {EntityObject} from "../../objects/entity-object.js";
@@ -127,6 +128,19 @@ export class DT3DObjectInspector extends LitElement {
 				this.selectedObject.setHeight(rawValue);
 			} else {
 				this.selectedObject.setThickness(rawValue);
+			}
+		} else if (attribute.startsWith("geometry.")) {
+			if (!(this.selectedObject instanceof Mesh)) {
+				return;
+			}
+			const geometryParameters = getMeshGeometryParameters(this.selectedObject);
+			if (!geometryParameters) {
+				return;
+			}
+			const parameterName = attribute.slice("geometry.".length);
+			geometryParameters[parameterName] = value as number | boolean;
+			if (!updateMeshGeometry(this.selectedObject, geometryParameters)) {
+				return;
 			}
 		} else if (attribute === "open") {
 			if (this.isDoorObject(this.selectedObject)) {
@@ -289,6 +303,36 @@ export class DT3DObjectInspector extends LitElement {
 		];
 	}
 
+	private getGeometryFields(locked: boolean): DynamicFormField[] {
+		if (!this.selectedObject || !(this.selectedObject instanceof Mesh)) {
+			return [];
+		}
+
+		const meshType = resolveMeshType(this.selectedObject);
+		if (!meshType) {
+			return [];
+		}
+
+		const geometryParameters = getMeshGeometryParameters(this.selectedObject);
+		const definitions = MESH_GEOMETRY_PARAMETER_DEFINITIONS[meshType] ?? [];
+		if (!geometryParameters || definitions.length === 0) {
+			return [];
+		}
+
+		this.selectedObject.userData.geometryParameters = geometryParameters;
+
+		return definitions.map((definition) => ({
+			label: definition.label,
+			attribute: `geometry.${definition.name}`,
+			type: definition.type === "boolean" ? "boolean" : "number",
+			tooltip: localManager.get("geometryParameterTooltip"),
+			editable: !locked,
+			enabled: true,
+			step: definition.step,
+			min: definition.min,
+		}));
+	}
+
 	private getEntityFields(): DynamicFormField[] {
 		if (!this.isEntityObject(this.selectedObject)) {
 			return [];
@@ -341,6 +385,8 @@ export class DT3DObjectInspector extends LitElement {
 		const baseFields = this.getBaseFields(locked);
 		const wallFields = this.getWallFields(locked);
 		const openingFields = this.getOpeningFields(locked);
+		const geometryFields = this.getGeometryFields(locked);
+		const geometryData = this.selectedObject instanceof Mesh ? this.selectedObject.userData : null;
 		const entityFields = this.getEntityFields();
 		const entityData = this.getEntityData();
 
@@ -381,6 +427,18 @@ export class DT3DObjectInspector extends LitElement {
 									<dt3d-dynamic-form
 										.fields=${openingFields}
 										.data=${this.selectedObject}
+										@field-change=${(
+		event: CustomEvent<DynamicFormChangeDetail>,
+	) => this.handleFormFieldChange(event)}
+									></dt3d-dynamic-form>
+								`
+		: null}
+						${geometryFields.length
+		? html`
+									<h4>${localManager.get("geometry")}</h4>
+									<dt3d-dynamic-form
+										.fields=${geometryFields}
+										.data=${geometryData}
 										@field-change=${(
 		event: CustomEvent<DynamicFormChangeDetail>,
 	) => this.handleFormFieldChange(event)}
