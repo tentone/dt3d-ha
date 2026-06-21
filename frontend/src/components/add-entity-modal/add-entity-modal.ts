@@ -16,7 +16,10 @@ export class DT3DAddEntityModal extends LitElement {
 	 */
 	@property({attribute: false})
 	public states: Record<string, unknown> = {};
-
+	
+	/**
+	 * Search query to filter entities.
+	 */
 	@state()
 	private query = "";
 
