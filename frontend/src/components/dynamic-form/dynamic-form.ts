@@ -140,6 +140,19 @@ export class DynamicForm extends LitElement {
 		);
 	}
 
+	private getAxisColor(axis: "x" | "y" | "z"): string {
+		switch (axis) {
+			case "x":
+				return "#ff0000";
+			case "y":
+				return "#00ff00";
+			case "z":
+				return "#0000ff";
+		default:
+			return "#000000";
+		}
+	}
+
 	/**
 	 * Render a field of the form.
 	 *
@@ -164,7 +177,7 @@ export class DynamicForm extends LitElement {
 						<label title=${field.tooltip ?? ""}>${field.label}</label>
 						<div class="group-row">
 							${(["x", "y", "z"] as const).map((axis) => html`
-									<label>
+									<label style="color: ${this.getAxisColor(axis)}">
 										${axis.toUpperCase()}
 										<input
 											type="number"
