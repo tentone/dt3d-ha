@@ -2,6 +2,7 @@ import type {Object3D} from "three";
 import {Group, Mesh, MeshStandardMaterial} from "three";
 
 import type {DT3DTree} from "../components/object-tree/object-tree.js";
+import {applyTextureDataUrlToMesh} from "../editor/material-texture.js";
 import {createMeshObject, getMeshGeometryParameters} from "../editor/mesh-handler.js";
 import type {SceneManager} from "../editor/scene.js";
 import {DTObject} from "../objects/dt-object.js";
@@ -232,6 +233,10 @@ export class SpaceSync {
 		object.name = instance.name || object.name;
 		this.applyObjectTransform(object, data);
 
+		if (object instanceof Mesh && typeof data.textureDataUrl === "string") {
+			void applyTextureDataUrlToMesh(object, data.textureDataUrl, typeof data.textureName === "string" ? data.textureName : "Texture");
+		}
+
 		if (object instanceof DTObject && typeof data.locked === "boolean") {
 			object.locked = data.locked;
 		}
@@ -316,6 +321,11 @@ export class SpaceSync {
 				const material = (object as Mesh).material as any;
 				if (material?.color?.getHexString) {
 					data.color = material.color.getHexString();
+				}
+
+				if (typeof object.userData.textureDataUrl === "string") {
+					data.textureDataUrl = object.userData.textureDataUrl;
+					data.textureName = object.userData.textureName;
 				}
 
 				if (object instanceof Mesh) {

@@ -5,6 +5,7 @@ import {customElement, property} from "lit/decorators.js";
 import type {Object3D} from "three";
 import {Color, Mesh} from "three";
 
+import {applyImageTextureToMesh, clearMeshTexture, findMesh} from "../../editor/material-texture.js";
 import {getMeshGeometryParameters, MESH_GEOMETRY_PARAMETER_DEFINITIONS, resolveMeshType, updateMeshGeometry} from "../../editor/mesh-handler.js";
 import {localManager} from "../../locale/locale.js";
 import {DTObject} from "../../objects/dt-object.js";
@@ -118,6 +119,22 @@ export class DT3DObjectInspector extends LitElement {
 				return;
 			}
 			this.selectedObject.material.color.set(colorValue);
+		} else if (attribute === "material.texture") {
+			const mesh = findMesh(this.selectedObject);
+			if (!mesh || !(value instanceof File)) {
+				return;
+			}
+			void applyImageTextureToMesh(mesh, value).then(() => {
+				this.dispatchUpdated();
+				this.requestUpdate();
+			});
+			return;
+		} else if (attribute === "material.clearTexture") {
+			const mesh = findMesh(this.selectedObject);
+			if (!mesh || value !== true) {
+				return;
+			}
+			clearMeshTexture(mesh);
 		} else if (attribute === "height" || attribute === "thickness") {
 			if (!this.isWallObject(this.selectedObject)) {
 				return;
@@ -225,6 +242,27 @@ export class DT3DObjectInspector extends LitElement {
 				editable: !locked,
 				enabled: true,
 			});
+		}
+
+		if (findMesh(this.selectedObject)) {
+			fields.push(
+				{
+					label: localManager.get("materialTexture"),
+					attribute: "material.texture",
+					type: "file",
+					tooltip: localManager.get("materialTextureTooltip"),
+					editable: !locked,
+					enabled: true,
+				},
+				{
+					label: localManager.get("clearMaterialTexture"),
+					attribute: "material.clearTexture",
+					type: "boolean",
+					tooltip: localManager.get("clearMaterialTextureTooltip"),
+					editable: !locked,
+					enabled: true,
+				},
+			);
 		}
 
 		return fields;
