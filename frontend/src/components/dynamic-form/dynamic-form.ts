@@ -12,7 +12,8 @@ export type DynamicFieldType =
 	| "number"
 	| "boolean"
 	| "color"
-	| "info";
+	| "info"
+	| "file";
 
 /**
  * The description of a single field to be rendered in the DynamicForm component.
@@ -239,6 +240,23 @@ export class DynamicForm extends LitElement {
 								field.type,
 								(event.target as HTMLInputElement).value,
 							)}
+						/>
+					</div>
+				`;
+			}
+			case "file": {
+				return html`
+					<div class="field">
+						<label title=${field.tooltip ?? ""}>${field.label}</label>
+						<input
+							type="file"
+							accept="image/*"
+							?disabled=${!field.editable}
+							@change=${(event: Event) => {
+								const file = (event.target as HTMLInputElement).files?.[0];
+								if (!file) return;
+								this.dispatchFieldChange(field.attribute, field.type, file);
+							}}
 						/>
 					</div>
 				`;

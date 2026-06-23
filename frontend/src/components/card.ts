@@ -23,6 +23,7 @@ import {FBXLoader} from "three/examples/jsm/loaders/FBXLoader.js";
 import {GLTFLoader} from "three/examples/jsm/loaders/GLTFLoader.js";
 import {OBJLoader} from "three/examples/jsm/loaders/OBJLoader.js";
 
+import {applyImageTextureToMesh, findMesh} from "../editor/material-texture.js";
 import {MeasurementManager} from "../editor/measurements.js";
 import {createMeshObject, resolveMeshType} from "../editor/mesh-handler.js";
 import {RendererManager} from "../editor/renderer.js";
@@ -428,6 +429,24 @@ export class DT3DCard extends LitElement {
 		this.tree.updateTreeDiff(this.space);
 
 		void this.spaceSync?.syncObjectHierarchyCreate(clone);
+	}
+
+	private async handleTextureDrop(event: DragEvent): Promise<void> {
+		event.preventDefault();
+		const file = Array.from(event.dataTransfer?.files ?? []).find((candidate) => candidate.type.startsWith("image/"));
+		if (!file) {
+			return;
+		}
+
+		const {intersection} = this.pickObjectFromEvent(event as MouseEvent);
+		const mesh = findMesh(intersection?.object ?? null);
+		if (!mesh) {
+			return;
+		}
+
+		await applyImageTextureToMesh(mesh, file);
+		this.tree.refreshSelectedObject();
+		void this.spaceSync?.syncObjectUpdate(mesh);
 	}
 
 	/**
@@ -975,6 +994,14 @@ export class DT3DCard extends LitElement {
 
 		this.canvas.addEventListener("click", (event: MouseEvent) => {
 			this.handleCanvasClick(event);
+		});
+
+		this.canvas.addEventListener("dragover", (event: DragEvent) => {
+			event.preventDefault();
+		});
+
+		this.canvas.addEventListener("drop", (event: DragEvent) => {
+			void this.handleTextureDrop(event);
 		});
 
 		this.canvas.addEventListener("mousemove", (event: MouseEvent) => {

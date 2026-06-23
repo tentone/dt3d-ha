@@ -93,5 +93,9 @@
 	"configuration": "Configuration",
 	"address": "Address",
 	"geometry": "Geometry",
-	"geometryParameterTooltip": "Rebuilds the mesh with this three.js geometry constructor parameter."
+	"geometryParameterTooltip": "Rebuilds the mesh with this three.js geometry constructor parameter.",
+	"materialTexture": "Material Texture",
+	"materialTextureTooltip": "Choose an image file to apply as a new material texture.",
+	"clearMaterialTexture": "Clear Texture",
+	"clearMaterialTextureTooltip": "Remove the current image texture from the material."
 }
