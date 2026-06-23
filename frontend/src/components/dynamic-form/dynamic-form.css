@@ -61,3 +61,57 @@
 .info-input {
 	opacity: 0.7;
 }
+
+.sub-form {
+	border: 1px solid
+		color-mix(in srgb, var(--ha-color-neutral-30) 80%, transparent);
+	border-radius: 6px;
+	background: color-mix(in srgb, var(--ha-color-neutral-10) 70%, transparent);
+	overflow: hidden;
+}
+
+.sub-form-summary {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
+	padding: 8px 10px;
+	color: var(--ha-color-primary-60);
+	font-size: 14px;
+	font-weight: 600;
+	cursor: pointer;
+	user-select: none;
+	list-style: none;
+}
+
+.sub-form-summary::-webkit-details-marker {
+	display: none;
+}
+
+.sub-form-summary::after {
+	content: "";
+	width: 8px;
+	height: 8px;
+	border-right: 2px solid currentColor;
+	border-bottom: 2px solid currentColor;
+	transform: rotate(45deg);
+	transition: transform 120ms ease;
+	flex: 0 0 auto;
+}
+
+.sub-form:not([open]) > .sub-form-summary::after {
+	transform: rotate(-45deg);
+}
+
+.sub-form-fields {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	padding: 8px 10px 10px;
+	border-top: 1px solid
+		color-mix(in srgb, var(--ha-color-neutral-30) 70%, transparent);
+}
+
+.sub-form-fields > .field:last-child {
+	margin-bottom: 0;
+}

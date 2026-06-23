@@ -6,7 +6,7 @@ import componentStyles from "./dynamic-form.css?inline";
 /**
  * Types of fields supported by the DynamicForm component.
  */
-export type DynamicFieldType =
+export type DynamicInputFieldType =
 	| "Vector3"
 	| "string"
 	| "number"
@@ -15,13 +15,15 @@ export type DynamicFieldType =
 	| "info"
 	| "file";
 
+export type DynamicFieldType = DynamicInputFieldType | "sub-form";
+
 /**
- * The description of a single field to be rendered in the DynamicForm component.
+ * The description of a single input field to be rendered in the DynamicForm component.
  */
-export type DynamicFormField = {
+export type DynamicFormInputField = {
 	label: string;
 	attribute: string;
-	type: DynamicFieldType;
+	type: DynamicInputFieldType;
 	tooltip?: string;
 	editable: boolean;
 	enabled: boolean;
@@ -30,12 +32,28 @@ export type DynamicFormField = {
 };
 
 /**
+ * A group of fields rendered in a collapsible DynamicForm section.
+ */
+export type DynamicFormSubFormField = {
+	label: string;
+	attribute?: string;
+	type: "sub-form";
+	tooltip?: string;
+	enabled: boolean;
+	fields: DynamicFormField[];
+	data?: unknown;
+	collapsed?: boolean;
+};
+
+export type DynamicFormField = DynamicFormInputField | DynamicFormSubFormField;
+
+/**
  * Detail of a change in a field of the DynamicForm component, emitted in the "field-change" event.
  */
 export type DynamicFormChangeDetail = {
 	attribute: string;
 	value: unknown;
-	type: DynamicFieldType;
+	type: DynamicInputFieldType;
 };
 
 /**
@@ -58,15 +76,17 @@ export class DynamicForm extends LitElement {
 	public fields: DynamicFormField[] = [];
 
 	@property({attribute: false})
-	public data: Record<string, unknown> | null = null;
+	public data: unknown = null;
 
-	private getFieldValue(field: DynamicFormField): unknown {
-		if (!this.data) {
+	private subFormOpenState = new Map<string, boolean>();
+
+	private getFieldValue(field: DynamicFormInputField, data = this.data): unknown {
+		if (!data) {
 			return null;
 		}
 
 		const path = field.attribute.split(".");
-		let current: any = this.data;
+		let current: any = data;
 		for (const segment of path) {
 			if (current == null) {
 				return null;
@@ -85,8 +105,11 @@ export class DynamicForm extends LitElement {
 		return value.toFixed(decimals);
 	}
 
-	private getVectorDisplayValue(field: DynamicFormField): VectorValue | null {
-		const value = this.getFieldValue(field);
+	private getVectorDisplayValue(
+		field: DynamicFormInputField,
+		data: unknown,
+	): VectorValue | null {
+		const value = this.getFieldValue(field, data);
 		if (!value || typeof value !== "object") {
 			return null;
 		}
@@ -112,8 +135,8 @@ export class DynamicForm extends LitElement {
 	 * @param field
 	 * @returns
 	 */
-	private getColorValue(field: DynamicFormField): string {
-		const value = this.getFieldValue(field);
+	private getColorValue(field: DynamicFormInputField, data: unknown): string {
+		const value = this.getFieldValue(field, data);
 		if (!value) return "#000000";
 		if (typeof value === "string") {
 			return value;
@@ -131,7 +154,7 @@ export class DynamicForm extends LitElement {
 	 * @param type - The type of the changed field.
 	 * @param value - The new value of the changed field.
 	 */
-	private dispatchFieldChange(attribute: string,type: DynamicFieldType,value: unknown,) {
+	private dispatchFieldChange(attribute: string,type: DynamicInputFieldType,value: unknown,) {
 		this.dispatchEvent(
 			new CustomEvent<DynamicFormChangeDetail>("field-change", {
 				detail: {attribute, value, type},
@@ -149,9 +172,45 @@ export class DynamicForm extends LitElement {
 				return "#00ff00";
 			case "z":
 				return "#0000ff";
-		default:
-			return "#000000";
+			default:
+				return "#000000";
 		}
+	}
+
+	private getSubFormKey(field: DynamicFormSubFormField): string {
+		return field.attribute ?? field.label;
+	}
+
+	private isSubFormOpen(field: DynamicFormSubFormField): boolean {
+		const key = this.getSubFormKey(field);
+		return this.subFormOpenState.get(key) ?? field.collapsed !== true;
+	}
+
+	private handleSubFormToggle(
+		field: DynamicFormSubFormField,
+		event: Event,
+	) {
+		const details = event.currentTarget as HTMLDetailsElement;
+		this.subFormOpenState.set(this.getSubFormKey(field), details.open);
+	}
+
+	private renderSubForm(field: DynamicFormSubFormField, data: unknown) {
+		const subFormData = field.data === undefined ? data : field.data;
+
+		return html`
+			<details
+				class="sub-form"
+				?open=${this.isSubFormOpen(field)}
+				@toggle=${(event: Event) => this.handleSubFormToggle(field, event)}
+			>
+				<summary class="sub-form-summary" title=${field.tooltip ?? ""}>
+					<span>${field.label}</span>
+				</summary>
+				<div class="sub-form-fields">
+					${field.fields.map((subField) => this.renderField(subField, subFormData))}
+				</div>
+			</details>
+		`;
 	}
 
 	/**
@@ -160,14 +219,16 @@ export class DynamicForm extends LitElement {
 	 * @param field - Field description to render.
 	 * @returns Rendered template for the field, or null if the field type is not supported or the field is disabled.
 	 */
-	private renderField(field: DynamicFormField) {
+	private renderField(field: DynamicFormField, data = this.data) {
 		if (!field.enabled) {
 			return null;
 		}
 
 		switch (field.type) {
+			case "sub-form":
+				return this.renderSubForm(field, data);
 			case "Vector3":
-				const vector = this.getVectorDisplayValue(field);
+				const vector = this.getVectorDisplayValue(field, data);
 				if (!vector) {
 					return null;
 				}
@@ -204,7 +265,7 @@ export class DynamicForm extends LitElement {
 					</div>
 				`;
 			case "boolean": {
-				const value = Boolean(this.getFieldValue(field));
+				const value = Boolean(this.getFieldValue(field, data));
 				return html`
 					<div class="field">
 						<label title=${field.tooltip ?? ""}>
@@ -225,7 +286,7 @@ export class DynamicForm extends LitElement {
 				`;
 			}
 			case "color": {
-				const value = this.getColorValue(field);
+				const value = this.getColorValue(field, data);
 				return html`
 					<div class="field">
 						<label title=${field.tooltip ?? ""}>${field.label}</label>
@@ -262,7 +323,7 @@ export class DynamicForm extends LitElement {
 				`;
 			}
 			case "info": {
-				const value = this.getFieldValue(field);
+				const value = this.getFieldValue(field, data);
 				return html`
 					<div class="field">
 						<label title=${field.tooltip ?? ""}>${field.label}</label>
@@ -277,7 +338,7 @@ export class DynamicForm extends LitElement {
 				`;
 			}
 			case "number": {
-				const value = Number(this.getFieldValue(field) ?? 0);
+				const value = Number(this.getFieldValue(field, data) ?? 0);
 				const step = field.step ?? 0.01;
 				return html`
 					<div class="field">
@@ -304,7 +365,7 @@ export class DynamicForm extends LitElement {
 				`;
 			}
 			case "string": {
-				const value = this.getFieldValue(field);
+				const value = this.getFieldValue(field, data);
 				return html`
 					<div class="field">
 						<label title=${field.tooltip ?? ""}>${field.label}</label>

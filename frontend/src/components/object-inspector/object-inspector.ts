@@ -207,6 +207,15 @@ export class DT3DObjectInspector extends LitElement {
 				editable: false,
 				enabled: true,
 			},
+		);
+
+		return fields;
+	}
+
+	private getTransformFields(locked: boolean): DynamicFormField[] {
+		if (!this.selectedObject) return [];
+
+		return [
 			{
 				label: localManager.get("position"),
 				attribute: "position",
@@ -231,7 +240,13 @@ export class DT3DObjectInspector extends LitElement {
 				editable: !locked,
 				enabled: true,
 			},
-		);
+		];
+	}
+
+	private getMaterialFields(locked: boolean): DynamicFormField[] {
+		if (!this.selectedObject) return [];
+
+		const fields: DynamicFormField[] = [];
 
 		if (this.hasEditableColor(this.selectedObject)) {
 			fields.push({
@@ -266,6 +281,27 @@ export class DT3DObjectInspector extends LitElement {
 		}
 
 		return fields;
+	}
+
+	private addSubFormField(
+		fields: DynamicFormField[],
+		attribute: string,
+		label: string,
+		subFields: DynamicFormField[],
+		data: unknown = this.selectedObject,
+	) {
+		if (subFields.length === 0) {
+			return;
+		}
+
+		fields.push({
+			label,
+			attribute,
+			type: "sub-form",
+			enabled: true,
+			fields: subFields,
+			data,
+		});
 	}
 
 	private renderEntityDetails() {
@@ -418,22 +454,71 @@ export class DT3DObjectInspector extends LitElement {
 		};
 	}
 
+	private getInspectorFields(locked: boolean): DynamicFormField[] {
+		const fields: DynamicFormField[] = [];
+		const geometryData = this.selectedObject instanceof Mesh ? this.selectedObject.userData : null;
+		const entityData = this.getEntityData();
+
+		this.addSubFormField(
+			fields,
+			"configuration",
+			localManager.get("configuration"),
+			this.getBaseFields(locked),
+		);
+		this.addSubFormField(
+			fields,
+			"transform",
+			localManager.get("transform"),
+			this.getTransformFields(locked),
+		);
+		this.addSubFormField(
+			fields,
+			"material",
+			localManager.get("material"),
+			this.getMaterialFields(locked),
+		);
+		this.addSubFormField(
+			fields,
+			"wall",
+			localManager.get("wall"),
+			this.getWallFields(locked),
+		);
+		this.addSubFormField(
+			fields,
+			"opening",
+			this.isDoorObject(this.selectedObject)
+				? localManager.get("door")
+				: localManager.get("window"),
+			this.getOpeningFields(locked),
+		);
+		this.addSubFormField(
+			fields,
+			"geometry",
+			localManager.get("geometry"),
+			this.getGeometryFields(locked),
+			geometryData,
+		);
+		this.addSubFormField(
+			fields,
+			"entity",
+			localManager.get("entity"),
+			this.getEntityFields(),
+			entityData,
+		);
+
+		return fields;
+	}
+
 	public render() {
 		const locked = this.isLocked();
-		const baseFields = this.getBaseFields(locked);
-		const wallFields = this.getWallFields(locked);
-		const openingFields = this.getOpeningFields(locked);
-		const geometryFields = this.getGeometryFields(locked);
-		const geometryData = this.selectedObject instanceof Mesh ? this.selectedObject.userData : null;
-		const entityFields = this.getEntityFields();
-		const entityData = this.getEntityData();
+		const inspectorFields = this.getInspectorFields(locked);
 
 		return html`
 			<h4>${localManager.get("selectedObject")}</h4>
 			${this.selectedObject
 		? html`
 						<dt3d-dynamic-form
-							.fields=${baseFields}
+							.fields=${inspectorFields}
 							.data=${this.selectedObject}
 							@field-change=${(event: CustomEvent<DynamicFormChangeDetail>) =>
 		this.handleFormFieldChange(event)}
@@ -442,55 +527,6 @@ export class DT3DObjectInspector extends LitElement {
 		? html`<div class="placeholder">
 									${localManager.get("objectLocked")}
 								</div>`
-		: null}
-						${wallFields.length
-		? html`
-									<h4>${localManager.get("wall")}</h4>
-									<dt3d-dynamic-form
-										.fields=${wallFields}
-										.data=${this.selectedObject}
-										@field-change=${(
-		event: CustomEvent<DynamicFormChangeDetail>,
-	) => this.handleFormFieldChange(event)}
-									></dt3d-dynamic-form>
-								`
-		: null}
-						${openingFields.length
-		? html`
-									<h4>
-										${this.isDoorObject(this.selectedObject)
-		? localManager.get("door")
-		: localManager.get("window")}
-									</h4>
-									<dt3d-dynamic-form
-										.fields=${openingFields}
-										.data=${this.selectedObject}
-										@field-change=${(
-		event: CustomEvent<DynamicFormChangeDetail>,
-	) => this.handleFormFieldChange(event)}
-									></dt3d-dynamic-form>
-								`
-		: null}
-						${geometryFields.length
-		? html`
-									<h4>${localManager.get("geometry")}</h4>
-									<dt3d-dynamic-form
-										.fields=${geometryFields}
-										.data=${geometryData}
-										@field-change=${(
-		event: CustomEvent<DynamicFormChangeDetail>,
-	) => this.handleFormFieldChange(event)}
-									></dt3d-dynamic-form>
-								`
-		: null}
-						${entityFields.length
-		? html`
-									<h4>${localManager.get("entity")}</h4>
-									<dt3d-dynamic-form
-										.fields=${entityFields}
-										.data=${entityData}
-									></dt3d-dynamic-form>
-								`
 		: null}
 						${this.renderEntityDetails()}
 					`
