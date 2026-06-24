@@ -38,16 +38,48 @@
 	cursor: pointer;
 	margin-right: 4px;
 	color: var(--ha-color-primary-60);
+	flex: 0 0 16px;
+	text-align: center;
+}
+
+.toggle-spacer {
+	display: inline-block;
+	flex: 0 0 16px;
+	width: 16px;
+}
+
+.node-icon {
+	color: var(--ha-color-neutral-70);
+	flex: 0 0 16px;
+	width: 16px;
+	height: 16px;
+	font-size: 16px;
+	line-height: 1;
+}
+
+.tree-node.selected .node-icon {
+	color: var(--ha-color-neutral-95);
 }
 
 .node-label {
 	display: inline-flex;
 	align-items: center;
 	gap: 4px;
+	min-width: 0;
+	flex: 1 1 auto;
+	overflow: hidden;
+}
+
+.label-text {
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
 }
 
 .lock-icon {
 	color: var(--ha-color-warning-50, #f0ad4e);
+	flex: 0 0 14px;
 	width: 14px;
 	height: 14px;
 	font-size: 14px;

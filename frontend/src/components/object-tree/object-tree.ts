@@ -4,20 +4,93 @@ import {html, LitElement, unsafeCSS} from "lit";
 import {customElement, property, state} from "lit/decorators.js";
 import {repeat} from "lit/directives/repeat.js";
 import type {Object3D} from "three";
+import {Camera, Group, Light, Line, Mesh, Points, Scene, Sprite} from "three";
 
+import {resolveMeshType} from "../../editor/mesh-handler.js";
 import {localManager} from "../../locale/locale.js";
 import {DTObject} from "../../objects/dt-object.js";
 import {EntityObject, isToggleable} from "../../objects/entity-object.js";
+import {DoorObject} from "../../objects/house/door.js";
+import {WallObject} from "../../objects/house/wall.js";
+import {WindowObject} from "../../objects/house/window.js";
 import {LocalStorage} from "../../utils/local-storage.js";
 import componentStyles from "./object-tree.css?inline";
 
 type UUID = string;
+
+const DEFAULT_NODE_ICON = "mdi:help-circle-outline";
+
+const ENTITY_DOMAIN_ICONS: Record<string, string> = {
+	alarm_control_panel: "mdi:shield-home",
+	automation: "mdi:robot",
+	binary_sensor: "mdi:checkbox-marked-circle-outline",
+	button: "mdi:gesture-tap-button",
+	camera: "mdi:cctv",
+	climate: "mdi:thermometer",
+	cover: "mdi:window-shutter",
+	device_tracker: "mdi:crosshairs-gps",
+	fan: "mdi:fan",
+	humidifier: "mdi:air-humidifier",
+	input_boolean: "mdi:toggle-switch-outline",
+	light: "mdi:lightbulb",
+	lock: "mdi:lock",
+	media_player: "mdi:play-box-outline",
+	number: "mdi:numeric",
+	person: "mdi:account",
+	remote: "mdi:remote",
+	scene: "mdi:palette",
+	script: "mdi:script-text-outline",
+	select: "mdi:format-list-bulleted",
+	sensor: "mdi:gauge",
+	switch: "mdi:toggle-switch",
+	update: "mdi:update",
+	vacuum: "mdi:robot-vacuum",
+	valve: "mdi:valve",
+	water_heater: "mdi:water-boiler",
+	weather: "mdi:weather-partly-cloudy",
+};
+
+const BINARY_SENSOR_DEVICE_CLASS_ICONS: Record<string, string> = {
+	connectivity: "mdi:power-socket",
+	door: "mdi:door",
+	garage_door: "mdi:garage",
+	gas: "mdi:smoke-detector",
+	moisture: "mdi:leak",
+	motion: "mdi:motion-sensor",
+	occupancy: "mdi:motion-sensor",
+	opening: "mdi:door-open",
+	plug: "mdi:power-socket",
+	presence: "mdi:motion-sensor",
+	problem: "mdi:alert-circle-outline",
+	safety: "mdi:shield-home",
+	smoke: "mdi:smoke-detector",
+	window: "mdi:window-closed-variant",
+};
+
+const MESH_TYPE_ICONS: Record<string, string> = {
+	capsule: "mdi:stadium-outline",
+	circle: "mdi:circle-outline",
+	cone: "mdi:cone",
+	cube: "mdi:cube-outline",
+	cylinder: "mdi:cylinder",
+	dodecahedron: "mdi:octahedron",
+	icosahedron: "mdi:octahedron",
+	octahedron: "mdi:octahedron",
+	plane: "mdi:rectangle-outline",
+	ring: "mdi:circle-outline",
+	sphere: "mdi:sphere",
+	tetrahedron: "mdi:pyramid",
+	torus: "mdi:circle-double",
+	torusKnot: "mdi:vector-polyline",
+};
 
 interface TreeNode {
 	// Unique identifier of the node
 	id: UUID;
 	// Display name of the node
 	name: string;
+	// Home Assistant icon name for this object type
+	icon: string;
 	// Locked state for DTObjects
 	locked?: boolean;
 	// Entity ID if the node represents an EntityObject
@@ -301,6 +374,7 @@ export class DT3DTree extends LitElement {
 		const metadata = this.getNodeMetadata(obj);
 
 		node.name = metadata.name;
+		node.icon = metadata.icon;
 		node.locked = metadata.locked;
 		node.entityId = metadata.entityId;
 		node.toggleable = metadata.toggleable;
@@ -323,10 +397,94 @@ export class DT3DTree extends LitElement {
 		return {
 			id: obj.uuid,
 			name: obj.name || obj.type,
+			icon: this.getObjectIcon(obj),
 			locked: obj instanceof DTObject ? obj.locked : false,
 			entityId: obj instanceof EntityObject ? obj.entityId : undefined,
 			toggleable: obj instanceof EntityObject && isToggleable(obj),
 		};
+	}
+
+	/**
+	 * Resolve the HA icon for an object tree node.
+	 *
+	 * @param obj - Source object.
+	 */
+	private getObjectIcon(obj: Object3D): string {
+		if (obj instanceof EntityObject) {
+			return this.getEntityIcon(obj);
+		}
+
+		if (obj instanceof WallObject) {
+			return "mdi:wall";
+		}
+
+		if (obj instanceof DoorObject) {
+			return obj.open ? "mdi:door-open" : "mdi:door";
+		}
+
+		if (obj instanceof WindowObject) {
+			return obj.open ? "mdi:window-open-variant" : "mdi:window-closed-variant";
+		}
+
+		const meshType = resolveMeshType(obj);
+		if (meshType) {
+			return MESH_TYPE_ICONS[meshType] ?? "mdi:shape-outline";
+		}
+
+		if (obj instanceof Mesh) {
+			return "mdi:shape-outline";
+		}
+
+		if (obj instanceof Light) {
+			return "mdi:lightbulb-on-outline";
+		}
+
+		if (obj instanceof Camera) {
+			return "mdi:camera-outline";
+		}
+
+		if (obj instanceof Line) {
+			return "mdi:vector-line";
+		}
+
+		if (obj instanceof Points) {
+			return "mdi:dots-triangle";
+		}
+
+		if (obj instanceof Sprite) {
+			return "mdi:image-outline";
+		}
+
+		if (obj instanceof Scene) {
+			return "mdi:file-tree-outline";
+		}
+
+		if (obj instanceof Group) {
+			return "mdi:folder-outline";
+		}
+
+		return DEFAULT_NODE_ICON;
+	}
+
+	/**
+	 * Resolve the HA icon for an entity object from entity attributes or domain.
+	 *
+	 * @param object - Entity object to inspect.
+	 */
+	private getEntityIcon(object: EntityObject): string {
+		const entity = object.getEntity();
+		const explicitIcon = entity?.attributes?.icon;
+		if (typeof explicitIcon === "string" && explicitIcon.includes(":")) {
+			return explicitIcon;
+		}
+
+		const domain = object.entityId.split(".")[0];
+		const deviceClass = entity?.attributes?.device_class;
+		if (domain === "binary_sensor" && typeof deviceClass === "string") {
+			return BINARY_SENSOR_DEVICE_CLASS_ICONS[deviceClass] ?? ENTITY_DOMAIN_ICONS[domain];
+		}
+
+		return ENTITY_DOMAIN_ICONS[domain] ?? "mdi:state-machine";
 	}
 
 	/**
@@ -633,7 +791,7 @@ export class DT3DTree extends LitElement {
 		this.handleContextMenu(event, node.id)}
 							>
 								${node.children && node.children.length
-		? html`
+	? html`
 											<span
 												class="toggle"
 												@click=${(e: Event) => {
@@ -644,9 +802,14 @@ export class DT3DTree extends LitElement {
 												${this.expanded.has(node.id) ? "▼" : "▶"}
 											</span>
 										`
-		: html`<span style="display:inline-block;width:16px"></span>`}
+		: html`<span class="toggle-spacer"></span>`}
+								<ha-icon
+									class="node-icon"
+									icon=${node.icon}
+									aria-hidden="true"
+								></ha-icon>
 								<span class="node-label">
-									${node.name}
+									<span class="label-text">${node.name}</span>
 									${node.locked
 		? html`<ha-icon
 												class="lock-icon"
