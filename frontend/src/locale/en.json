@@ -14,6 +14,7 @@
 	"switchToOrthographic": "Switch to orthographic camera",
 	"switchToPerspective": "Switch to perspective camera",
 	"waiting": "Waiting...",
+	"connectedToBackend": "Connected to backend on port",
 	"failedToReachBackend": "Failed to reach backend on port",
 	"selectedObject": "Selected Object",
 	"objectName": "Name",

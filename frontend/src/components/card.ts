@@ -745,6 +745,7 @@ export class DT3DCard extends LitElement {
 
 		const connection = document.createElement("dt3d-connection-status") as ConnectionStatus;
 		connection.port = port;
+		connection.address = address;
 		this.content.appendChild(connection);
 
 		const cssElem = document.createElement("div");

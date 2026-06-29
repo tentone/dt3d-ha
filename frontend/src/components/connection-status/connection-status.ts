@@ -8,10 +8,19 @@ import componentStyles from "./connection-status.css?inline";
 export class ConnectionStatus extends LitElement {
 	static properties = {
 		port: {type: Number, reflect: true},
+		address: {type: String, reflect: true},
 	};
 
 	static styles = unsafeCSS(componentStyles);
 
+	/**
+	 * Address to connect to the backend.
+	 */
+	public address: string = "localhost";
+
+	/**
+	 * Port to connect to the backend.
+	 */
 	public port: number = 8080;
 
 	@property()
@@ -26,14 +35,14 @@ export class ConnectionStatus extends LitElement {
 	public connectedCallback(): void {
 		super.connectedCallback();
 
-		fetch(`http://localhost:${this.port}/api/hello`)
+		fetch(`http://${this.address}:${this.port}/api/hello`)
 			.then((r) => r.text())
 			.then((text) => {
-				this.msg = text;
+				this.msg = `${localManager.get("connectedToBackend")} ${this.address}:${this.port}`;
 				this.success = true;
 			})
 			.catch(() => {
-				this.msg = `${localManager.get("failedToReachBackend")} ${this.port}`;
+				this.msg = `${localManager.get("failedToReachBackend")} ${this.address}:${this.port}`;
 				this.success = false;
 			});
 	}
