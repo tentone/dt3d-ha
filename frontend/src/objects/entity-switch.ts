@@ -34,7 +34,7 @@ export class EntitySwitch extends EntityObject {
 	}
 
 	public onInteraction(event: DTInteractionEvent): void {
-		if (event.type === "click") {
+		if (event.type === "dblclick") {
 			this.toggle((event as any).hass ?? null);
 		}
 	}
