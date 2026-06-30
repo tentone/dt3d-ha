@@ -1,5 +1,7 @@
-ARG BUILD_FROM
-FROM ${BUILD_FROM}
+FROM ghcr.io/home-assistant/base:latest
+
+
+LABEL io.hass.version="VERSION" io.hass.type="app" io.hass.arch="aarch64|amd64"
 
 ENV LANG C.UTF-8
 
@@ -16,7 +18,7 @@ COPY backend/ ./backend
 RUN cd backend && go get
 
 # Build the application
-RUN cd backend && go build -o /usr/bin/dt3d-backend ./cmd/server
+RUN cd backend && go build -o /usr/bin/dt3d-backend main.go
 
 # Run the application
-CMD ["/usr/bin/dt3d-backend"]
+CMD [ "/usr/bin/dt3d-backend" ]
