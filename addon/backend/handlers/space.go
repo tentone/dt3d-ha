@@ -22,8 +22,8 @@ func NewSpaceHandler(spaceService *service.SpaceService) *SpaceHandler {
 	return &SpaceHandler{spaces: spaceService}
 }
 
-func (h *SpaceHandler) Register(router *gin.Engine) {
-	spaces := router.Group("/api/spaces")
+func (h *SpaceHandler) Register(router gin.IRouter) {
+	spaces := router.Group("/spaces")
 	{
 		spaces.GET("", h.listSpaces)
 		spaces.POST("", h.createSpace)

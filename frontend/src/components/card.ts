@@ -306,6 +306,7 @@ export class DT3DCard extends LitElement {
 
 		this.config = {
 			port: 8080,
+			service_key: "",
 			...config,
 		};
 
@@ -680,10 +681,11 @@ export class DT3DCard extends LitElement {
 
 		const port = this.config?.port || 8080;
 		const address = this.config?.address || "http://localhost";
+		const serviceKey = this.config?.service_key || "";
 
 		const width = 300;
 		const height = 300;
-		this.apiClient = new SpaceApi(address, port);
+		this.apiClient = new SpaceApi(address, port, serviceKey);
 
 		this.style.cssText = `
 			overflow: hidden;
@@ -746,6 +748,7 @@ export class DT3DCard extends LitElement {
 		const connection = document.createElement("dt3d-connection-status") as ConnectionStatus;
 		connection.port = port;
 		connection.address = address;
+		connection.serviceKey = serviceKey;
 		this.content.appendChild(connection);
 
 		const cssElem = document.createElement("div");
@@ -1180,6 +1183,7 @@ export class DT3DCard extends LitElement {
 		return {
 			address: "http://localhost",
 			port: 8080,
+			service_key: "",
 		};
 	}
 }

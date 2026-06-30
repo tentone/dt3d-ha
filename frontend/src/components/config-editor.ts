@@ -22,6 +22,7 @@ export class DT3DConfigEditor extends LitElement {
 		this._config = {
 			address: "localhost",
 			port: 8080,
+			service_key: "",
 			...config,
 		};
 	}
@@ -68,6 +69,7 @@ export class DT3DConfigEditor extends LitElement {
 
 		const port = this._config.port;
 		const address = this._config.address;
+		const serviceKey = this._config.service_key;
 
 		const content = html`
 			<div>
@@ -89,6 +91,16 @@ export class DT3DConfigEditor extends LitElement {
 						.value=${address ?? ""}
 						@input=${this.onValueChanged}
 						placeholder="localhost"
+					/>
+				</div>
+				<div>
+					<label>${localManager.get("serviceKey")}</label>
+					<input
+						type="password"
+						data-key="service_key"
+						.value=${serviceKey ?? ""}
+						@input=${this.onValueChanged}
+						autocomplete="off"
 					/>
 				</div>
 			</div>

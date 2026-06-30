@@ -2,6 +2,7 @@ import {html, LitElement, unsafeCSS} from "lit";
 import {customElement, property} from "lit/decorators.js";
 
 import {localManager} from "../../locale/locale.js";
+import {buildBackendApiUrl, SERVICE_KEY_HEADER} from "../../service/space-api.js";
 import componentStyles from "./connection-status.css?inline";
 
 @customElement("dt3d-connection-status")
@@ -9,6 +10,7 @@ export class ConnectionStatus extends LitElement {
 	static properties = {
 		port: {type: Number, reflect: true},
 		address: {type: String, reflect: true},
+		serviceKey: {type: String, reflect: true},
 	};
 
 	static styles = unsafeCSS(componentStyles);
@@ -23,6 +25,11 @@ export class ConnectionStatus extends LitElement {
 	 */
 	public port: number = 8080;
 
+	/**
+	 * Key required by the backend service.
+	 */
+	public serviceKey: string = "";
+
 	@property()
 	public msg: string = localManager.get("waiting");
 
@@ -35,9 +42,20 @@ export class ConnectionStatus extends LitElement {
 	public connectedCallback(): void {
 		super.connectedCallback();
 
-		fetch(`http://${this.address}:${this.port}/api/hello`)
-			.then((r) => r.text())
-			.then((text) => {
+		const headers: Record<string, string> = {};
+		if (this.serviceKey) {
+			headers[SERVICE_KEY_HEADER] = this.serviceKey;
+		}
+
+		fetch(`${buildBackendApiUrl(this.address, this.port)}/hello`, {headers})
+			.then((response) => {
+				if (!response.ok) {
+					throw new Error(`Request failed: ${response.status}`);
+				}
+
+				return response.text();
+			})
+			.then(() => {
 				this.msg = `${localManager.get("connectedToBackend")} ${this.address}:${this.port}`;
 				this.success = true;
 			})

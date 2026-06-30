@@ -1,16 +1,19 @@
-name: DT3D Backend
+name: DT3D
 version: "0.1.0"
-slug: dt3d_backend
-description: Backend for DT3D card using Go and SQLite
+slug: dt3d
+description: Backend for 3D digital twin service in home assistant. Frontend must be installed as an integration that will comunicate directly with this backend using HTTP. Ports must be exposed to the frontend integration.
 arch:
   - amd64
   - aarch64
   - armv7
 startup: services
 boot: auto
+init: false
 ports:
   8080/tcp: 8080
 options:
   port: 8080
+  service_key: ""
 schema:
   port: int?
+  service_key: password

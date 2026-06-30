@@ -94,6 +94,7 @@
 	"configuration": "Configuration",
 	"transform": "Transform",
 	"address": "Address",
+	"serviceKey": "Service key",
 	"geometry": "Geometry",
 	"material": "Material",
 	"geometryParameterTooltip": "Rebuilds the mesh with this three.js geometry constructor parameter.",

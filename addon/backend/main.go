@@ -4,7 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"net/http"
 	"os"
+	"strings"
 
 	"dt3d-ha/backend/handlers"
 	"dt3d-ha/backend/models"
@@ -17,28 +19,36 @@ import (
 )
 
 type options struct {
-	Port int `json:"port"`
+	Port       int    `json:"port"`
+	ServiceKey string `json:"service_key"`
 }
 
-func loadPort() int {
-	port := 8080
-	data, err := os.ReadFile("/data/options.json")
-	if err != nil {
-		return port
+func loadOptions() options {
+	opt := options{
+		Port: 8080,
 	}
 
-	var opt options
+	data, err := os.ReadFile("/data/options.json")
+	if err != nil {
+		return opt
+	}
+
 	if err := json.Unmarshal(data, &opt); err != nil {
-		return port
+		opt.Port = 8080
+		return opt
 	}
-	if opt.Port != 0 {
-		port = opt.Port
+	if opt.Port == 0 {
+		opt.Port = 8080
 	}
-	return port
+	opt.ServiceKey = strings.TrimSpace(opt.ServiceKey)
+	return opt
 }
 
 func main() {
-	port := loadPort()
+	opt := loadOptions()
+	if opt.ServiceKey == "" {
+		log.Fatal("service_key must be configured in add-on options")
+	}
 
 	// Initialize database
 	db, err := gorm.Open(sqlite.Open("data.db"), &gorm.Config{})
@@ -59,11 +69,17 @@ func main() {
 
 	// Create router and register handlers
 	router := gin.Default()
-	spaceHandler := handlers.NewSpaceHandler(spaceService)
-	handlers.RegisterRoutes(router, spaceHandler)
+	router.Use(handlers.CORSMiddleware())
+	router.OPTIONS("/api/*path", func(c *gin.Context) {
+		c.Status(http.StatusNoContent)
+	})
 
-	log.Printf("Listening on :%d", port)
-	if err := router.Run(fmt.Sprintf(":%d", port)); err != nil {
+	api := router.Group("/api", handlers.RequireServiceKey(opt.ServiceKey))
+	spaceHandler := handlers.NewSpaceHandler(spaceService)
+	handlers.RegisterRoutes(api, spaceHandler)
+
+	log.Printf("Listening on :%d", opt.Port)
+	if err := router.Run(fmt.Sprintf("0.0.0.0:%d", opt.Port)); err != nil {
 		log.Fatalf("failed to start server: %v", err)
 	}
 }

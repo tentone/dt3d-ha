@@ -25,21 +25,31 @@ export type ObjectInstancePayload = {
 	parent_id: string | null;
 };
 
+export const SERVICE_KEY_HEADER = "X-DT3D-Service-Key";
+
+export function buildBackendApiUrl(address: string, port: number): string {
+	const normalizedAddress = /^https?:\/\//i.test(address) ? address : `http://${address}`;
+	return `${normalizedAddress.replace(/\/+$/, "")}:${port}/api`;
+}
+
 /**
  * SpaceApi wraps HTTP calls to the backend space endpoints.
  * It centralizes request configuration and response typing.
  */
 export class SpaceApi {
 	private baseUrl: string;
+	private serviceKey: string;
 
 	/**
 	 * Constructor for space API.
 	 *
 	 * @param address - The address of the backend server
 	 * @param port - The port of the backend server
+	 * @param serviceKey - The key required by the backend service
 	 */
-	constructor(address: string,port: number) {
-		this.baseUrl = `${address}:${port}/api`;
+	constructor(address: string, port: number, serviceKey = "") {
+		this.baseUrl = buildBackendApiUrl(address, port);
+		this.serviceKey = serviceKey;
 	}
 
 	/**
@@ -107,11 +117,12 @@ export class SpaceApi {
 
 	private async fetchJson<T>(path: string, options?: RequestInit): Promise<T> {
 		const response = await fetch(`${this.baseUrl}${path}`, {
+			...options,
 			headers: {
 				"Content-Type": "application/json",
+				...this.getAuthHeaders(),
 				...(options?.headers ?? {}),
 			},
-			...options,
 		});
 
 		if (!response.ok) {
@@ -124,5 +135,15 @@ export class SpaceApi {
 		}
 
 		return response.json() as Promise<T>;
+	}
+
+	private getAuthHeaders(): Record<string, string> {
+		if (!this.serviceKey) {
+			return {};
+		}
+
+		return {
+			[SERVICE_KEY_HEADER]: this.serviceKey,
+		};
 	}
 }

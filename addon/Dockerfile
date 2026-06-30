@@ -1,24 +1,24 @@
 FROM ghcr.io/home-assistant/base:latest
 
 
-LABEL io.hass.version="VERSION" io.hass.type="app" io.hass.arch="aarch64|amd64"
+ARG BUILD_VERSION
+ARG BUILD_ARCH
 
-ENV LANG C.UTF-8
+LABEL io.hass.version="${BUILD_VERSION}" \
+      io.hass.type="addon" \
+      io.hass.arch="${BUILD_ARCH}"
 
-# Install Go and build tools
+ENV LANG=C.UTF-8
+
 RUN apk add --no-cache go git build-base
 
-# Create working dir
 WORKDIR /app
 
-# Copy app code
-COPY backend/ ./backend
-
-# Install dependencies
+COPY backend/go.mod backend/go.sum ./backend/
 RUN cd backend && go get
 
-# Build the application
+COPY backend/ ./backend/
+
 RUN cd backend && go build -o /usr/bin/dt3d-backend main.go
 
-# Run the application
-CMD [ "/usr/bin/dt3d-backend" ]
+CMD [ "/usr/bin/dt3d-backend" 

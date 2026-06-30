@@ -23,6 +23,8 @@ The add-on source lives in `addon/` and is built with the Home Assistant add-on 
 - `Dockerfile` – builds the Go server inside a minimal Alpine image
 
 The Go server listens on port `8080` and uses a local SQLite database (`data.db`).
+Requests must include the service key configured in the add-on options using
+the `X-DT3D-Service-Key` header.
 
 ## Repository structure
 
@@ -42,13 +44,28 @@ addon/      - Go backend and Home Assistant add-on files
    `/local/dt3d-card.js` as a JavaScript resource.
 4. Add a manual card in the dashboard using the `custom:dt3d-card` element.
 
+Example card configuration:
+
+```yaml
+type: custom:dt3d-card
+address: http://<home-assistant-host>
+port: 8080
+service_key: <same-key-as-the-add-on>
+```
+
 ### Add-on
 
 1. Copy the `addon` directory into your Home Assistant `addons` folder or add
    this repository as a custom add-on repository.
-2. Install and start the add-on from **Settings → Add-ons → Add-on Store**.
-3. Verify the add-on is running by visiting
-   `http://<home-assistant>:8080/api/hello`.
+2. Install the add-on from **Settings → Add-ons → Add-on Store**.
+3. Set the `service_key` option to a private key and start the add-on.
+4. Verify the add-on is running by visiting
+   `http://<home-assistant>:8080/api/hello` with the service key header.
+
+```bash
+curl -H "X-DT3D-Service-Key: <service_key>" \
+  http://<home-assistant>:8080/api/hello
+```
 
 ### Development deploy script
 
