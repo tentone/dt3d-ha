@@ -14,11 +14,9 @@ RUN apk add --no-cache go git build-base
 
 WORKDIR /app
 
-COPY backend/go.mod backend/go.sum ./backend/
-RUN cd backend && go get
-
 COPY backend/ ./backend/
+RUN cd backend && go get
 
 RUN cd backend && go build -o /usr/bin/dt3d-backend main.go
 
-CMD [ "/usr/bin/dt3d-backend" 
+CMD [ "/usr/bin/dt3d-backend" ]
