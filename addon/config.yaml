@@ -1,7 +1,7 @@
 name: DT3D
 version: "0.1.0"
 slug: dt3d
-description: Backend for 3D digital twin service in home assistant. Frontend must be installed as an integration that will comunicate directly with this backend using HTTP. Ports must be exposed to the frontend integration.
+description: Backend for 3D digital twin service in home assistant. Frontend must be installed as an integration that will communicate directly with this backend using HTTP or HTTPS. Ports must be exposed to the frontend integration.
 arch:
   - amd64
   - aarch64
@@ -11,9 +11,17 @@ boot: auto
 init: false
 ports:
   8080/tcp: 8080
+map:
+  - ssl
 options:
   port: 8080
   service_key: ""
+  ssl_certificate: ""
+  ssl_key: ""
+  use_self_signed_certificate: false
 schema:
   port: int?
   service_key: password
+  ssl_certificate: str?
+  ssl_key: str?
+  use_self_signed_certificate: bool

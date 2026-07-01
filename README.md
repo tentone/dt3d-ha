@@ -53,6 +53,8 @@ port: 8080
 service_key: <same-key-as-the-add-on>
 ```
 
+Use an `https://` address when the add-on is configured to serve HTTPS.
+
 ### Add-on
 
 1. Copy the `addon` directory into your Home Assistant `addons` folder or add
@@ -65,6 +67,26 @@ service_key: <same-key-as-the-add-on>
 ```bash
 curl -H "X-DT3D-Service-Key: <service_key>" \
   http://<home-assistant>:8080/api/hello
+```
+
+#### HTTPS
+
+To serve the backend over HTTPS with your own certificate, place the certificate
+and key in Home Assistant's `/ssl` directory and configure the add-on options:
+
+```yaml
+ssl_certificate: /ssl/fullchain.pem
+ssl_key: /ssl/privkey.pem
+use_self_signed_certificate: false
+```
+
+If no certificate/key pair is available, set `use_self_signed_certificate: true`.
+The backend will generate and reuse a self-signed certificate under `/data`.
+Browsers and clients will need to trust or explicitly accept that certificate.
+
+```bash
+curl -k -H "X-DT3D-Service-Key: <service_key>" \
+  https://<home-assistant>:8080/api/hello
 ```
 
 ### Development deploy script
