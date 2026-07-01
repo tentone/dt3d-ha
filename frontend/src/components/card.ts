@@ -155,6 +155,20 @@ export class DT3DCard extends LitElement {
 	 */
 	private hoveredObject: DTObject | null = null;
 
+	private sceneLongPressTimer: number | null = null;
+
+	private sceneLongPressPointerId: number | null = null;
+
+	private sceneLongPressStart: { x: number; y: number } | null = null;
+
+	private suppressNextCanvasClick = false;
+
+	private suppressNextCanvasClickTimer: number | null = null;
+
+	private readonly sceneLongPressDelay = 600;
+
+	private readonly sceneLongPressMoveTolerance = 12;
+
 	/**
 	 * Current space-level scene configuration.
 	 */
@@ -456,6 +470,13 @@ export class DT3DCard extends LitElement {
 	 * @param event - Mouse event
 	 */
 	private handleCanvasClick(event: MouseEvent): void {
+		if (this.suppressNextCanvasClick) {
+			this.clearCanvasClickSuppression();
+			return;
+		}
+
+		this.tree?.closeContextMenu();
+
 		// In measurement mode, single clicks are consumed to prevent misclicks
 		if (this.measurementManager?.isActive() || this.wallManager?.isActive()) {
 			return;
@@ -550,6 +571,125 @@ export class DT3DCard extends LitElement {
 		}
 
 		return {object: null, intersection: null};
+	}
+
+	/**
+	 * Resolve the object that should own a scene context menu action.
+	 *
+	 * @param event - Pointer or mouse event to resolve.
+	 */
+	private resolveSceneContextMenuTarget(event: MouseEvent): Object3D | null {
+		const {object, intersection} = this.pickObjectFromEvent(event);
+
+		return object ?? intersection?.object ?? null;
+	}
+
+	/**
+	 * Open the object context menu from the 3D scene.
+	 *
+	 * @param event - Pointer or mouse event with the viewport position.
+	 */
+	private openSceneContextMenu(event: MouseEvent): boolean {
+		event.preventDefault();
+		event.stopPropagation();
+
+		const target = this.resolveSceneContextMenuTarget(event);
+		if (!target || target === this.space) {
+			this.tree?.closeContextMenu();
+			return false;
+		}
+
+		this.attachTransform(target);
+		this.tree.selectObject(target.uuid);
+		this.lastSelectedObject = target;
+		this.tree.openContextMenu(target.uuid, event.clientX, event.clientY);
+
+		return true;
+	}
+
+	/**
+	 * Start a mobile long-press timer for opening the scene context menu.
+	 *
+	 * @param event - Pointer event from the canvas.
+	 */
+	private startSceneLongPress(event: PointerEvent): void {
+		if (event.pointerType === "mouse") {
+			return;
+		}
+
+		if (!event.isPrimary) {
+			this.clearSceneLongPress();
+			return;
+		}
+
+		this.clearSceneLongPress();
+		this.sceneLongPressPointerId = event.pointerId;
+		this.sceneLongPressStart = {x: event.clientX, y: event.clientY};
+		this.sceneLongPressTimer = window.setTimeout(() => {
+			this.sceneLongPressTimer = null;
+			this.sceneLongPressPointerId = null;
+			this.sceneLongPressStart = null;
+
+			if (this.openSceneContextMenu(event)) {
+				this.suppressNextCanvasClickOnce();
+			}
+		}, this.sceneLongPressDelay);
+	}
+
+	/**
+	 * Cancel long press when the pointer moves far enough to become navigation.
+	 *
+	 * @param event - Pointer move event from the canvas.
+	 */
+	private handleSceneLongPressMove(event: PointerEvent): void {
+		if (
+			this.sceneLongPressPointerId !== event.pointerId ||
+			!this.sceneLongPressStart
+		) {
+			return;
+		}
+
+		const dx = event.clientX - this.sceneLongPressStart.x;
+		const dy = event.clientY - this.sceneLongPressStart.y;
+		if (Math.hypot(dx, dy) > this.sceneLongPressMoveTolerance) {
+			this.clearSceneLongPress();
+		}
+	}
+
+	/**
+	 * Cancel any pending scene long-press timer.
+	 */
+	private clearSceneLongPress(): void {
+		if (this.sceneLongPressTimer !== null) {
+			window.clearTimeout(this.sceneLongPressTimer);
+		}
+
+		this.sceneLongPressTimer = null;
+		this.sceneLongPressPointerId = null;
+		this.sceneLongPressStart = null;
+	}
+
+	/**
+	 * Suppress the synthetic click that can follow a mobile long press.
+	 */
+	private suppressNextCanvasClickOnce(): void {
+		this.clearCanvasClickSuppression();
+		this.suppressNextCanvasClick = true;
+		this.suppressNextCanvasClickTimer = window.setTimeout(() => {
+			this.clearCanvasClickSuppression();
+		}, 700);
+	}
+
+	/**
+	 * Clear pending synthetic-click suppression.
+	 */
+	private clearCanvasClickSuppression(): void {
+		if (this.suppressNextCanvasClickTimer !== null) {
+			window.clearTimeout(this.suppressNextCanvasClickTimer);
+		}
+
+		this.suppressNextCanvasClick = false;
+		this.suppressNextCanvasClickTimer = null;
 	}
 
 	/**
@@ -721,6 +861,7 @@ export class DT3DCard extends LitElement {
 			width: ${width}px;
 			height: ${height}px;
 			border-radius: 10px;
+			touch-action: none;
 		`;
 		this.content.appendChild(this.canvas);
 
@@ -1000,6 +1141,27 @@ export class DT3DCard extends LitElement {
 			this.handleCanvasClick(event);
 		});
 
+		this.canvas.addEventListener("contextmenu", (event: MouseEvent) => {
+			this.clearSceneLongPress();
+			this.openSceneContextMenu(event);
+		});
+
+		this.canvas.addEventListener("pointerdown", (event: PointerEvent) => {
+			this.startSceneLongPress(event);
+		});
+
+		this.canvas.addEventListener("pointermove", (event: PointerEvent) => {
+			this.handleSceneLongPressMove(event);
+		});
+
+		this.canvas.addEventListener("pointerup", () => {
+			this.clearSceneLongPress();
+		});
+
+		this.canvas.addEventListener("pointercancel", () => {
+			this.clearSceneLongPress();
+		});
+
 		this.canvas.addEventListener("dragover", (event: DragEvent) => {
 			event.preventDefault();
 		});
@@ -1013,6 +1175,8 @@ export class DT3DCard extends LitElement {
 		});
 
 		this.canvas.addEventListener("mouseleave", (event: MouseEvent) => {
+			this.clearSceneLongPress();
+
 			if (!this.hoveredObject) {
 				return;
 			}

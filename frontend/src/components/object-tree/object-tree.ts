@@ -588,13 +588,24 @@ export class DT3DTree extends LitElement {
 	private handleContextMenu(event: MouseEvent, id: UUID) {
 		event.preventDefault();
 		event.stopPropagation();
-		this.contextMenu = {id, x: event.clientX, y: event.clientY};
+		this.openContextMenu(id, event.clientX, event.clientY);
+	}
+
+	/**
+	 * Open the context menu for an object at viewport coordinates.
+	 *
+	 * @param id - ID of the object that opened the context menu.
+	 * @param x - Viewport X coordinate.
+	 * @param y - Viewport Y coordinate.
+	 */
+	public openContextMenu(id: UUID, x: number, y: number): void {
+		this.contextMenu = {id, x, y};
 	}
 
 	/**
 	 * Close the context menu.
 	 */
-	private closeContextMenu() {
+	public closeContextMenu(): void {
 		this.contextMenu = null;
 	}
 
