@@ -15,6 +15,7 @@ import {
 	MeshStandardMaterial,
 	Raycaster,
 	Vector2,
+	Vector3,
 } from "three";
 import type {OrbitControls} from "three/examples/jsm/controls/OrbitControls";
 import type {TransformControls} from "three/examples/jsm/controls/TransformControls";
@@ -53,6 +54,10 @@ import type {DT3DSidebar} from "./side-bar/side-bar.js";
 import type {DT3DSpaceConfigMenu} from "./space-config-menu/space-config-menu.js";
 
 const SPACE_SCENE_CONFIG_STORAGE_KEY = "space-scene-config";
+const MODEL_FILE_EXTENSIONS = new Set(["gltf", "glb", "obj", "fbx"]);
+
+const getFileExtension = (file: File): string | null =>
+	file.name.split(".").pop()?.toLowerCase() ?? null;
 
 @customElement("dt3d-card")
 export class DT3DCard extends LitElement {
@@ -235,12 +240,12 @@ export class DT3DCard extends LitElement {
 	 *
 	 * @param file - The model file to load.
 	 */
-	private loadModelFromFile(file: File) {
+	private loadModelFromFile(file: File, position?: Vector3) {
 		if (!this.space) {
 			return;
 		}
 
-		const extension = file.name.split(".").pop()?.toLowerCase();
+		const extension = getFileExtension(file);
 
 		if (!extension) {
 			console.warn("Unable to detect model file extension:", file.name);
@@ -258,6 +263,14 @@ export class DT3DCard extends LitElement {
 			cleanup();
 		};
 
+		const addLoadedModel = (object: Object3D | null | undefined) => {
+			if (position && object) {
+				object.position.copy(position);
+			}
+
+			this.addToScene(object, file.name);
+		};
+
 		if (extension === "gltf" || extension === "glb") {
 			const loader = new GLTFLoader();
 			const dracoLoader = new DRACOLoader();
@@ -268,7 +281,7 @@ export class DT3DCard extends LitElement {
 				(gltf: any) => {
 					dracoLoader.dispose();
 					cleanup();
-					this.addToScene(gltf.scene ?? gltf.scenes?.[0], file.name);
+					addLoadedModel(gltf.scene ?? gltf.scenes?.[0]);
 				},
 				undefined,
 				(error: any) => {
@@ -283,7 +296,7 @@ export class DT3DCard extends LitElement {
 				url,
 				(obj: any) => {
 					cleanup();
-					this.addToScene(obj, file.name);
+					addLoadedModel(obj);
 				},
 				undefined,
 				onError,
@@ -295,7 +308,7 @@ export class DT3DCard extends LitElement {
 				url,
 				(fbx: any) => {
 					cleanup();
-					this.addToScene(fbx, file.name);
+					addLoadedModel(fbx);
 				},
 				undefined,
 				onError,
@@ -444,6 +457,35 @@ export class DT3DCard extends LitElement {
 		this.tree.updateTreeDiff(this.space);
 
 		void this.spaceSync?.syncObjectHierarchyCreate(clone);
+	}
+
+	private isModelFile(file: File): boolean {
+		const extension = getFileExtension(file);
+
+		return extension !== null && MODEL_FILE_EXTENSIONS.has(extension);
+	}
+
+	private pickDropPositionFromEvent(event: MouseEvent): Vector3 {
+		const {intersection} = this.pickObjectFromEvent(event);
+
+		return intersection?.point.clone() ?? new Vector3(0, 0, 0);
+	}
+
+	private async handleCanvasDrop(event: DragEvent): Promise<void> {
+		event.preventDefault();
+
+		const files = Array.from(event.dataTransfer?.files ?? []);
+		const modelFiles = files.filter((file) => this.isModelFile(file));
+
+		if (modelFiles.length > 0) {
+			const position = this.pickDropPositionFromEvent(event as MouseEvent);
+			for (const file of modelFiles) {
+				this.loadModelFromFile(file, position);
+			}
+			return;
+		}
+
+		await this.handleTextureDrop(event);
 	}
 
 	private async handleTextureDrop(event: DragEvent): Promise<void> {
@@ -1167,7 +1209,7 @@ export class DT3DCard extends LitElement {
 		});
 
 		this.canvas.addEventListener("drop", (event: DragEvent) => {
-			void this.handleTextureDrop(event);
+			void this.handleCanvasDrop(event);
 		});
 
 		this.canvas.addEventListener("mousemove", (event: MouseEvent) => {
