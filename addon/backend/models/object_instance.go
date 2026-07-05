@@ -23,7 +23,7 @@ type ObjectInstance struct {
 	// Name of the object instance
 	Name string `gorm:"size:255" json:"name"`
 
-	// Type of the object instance (e.g., "mesh", "entity", "group")
+	// Frontend-declared object type.
 	Type string `gorm:"size:64" json:"type"`
 
 	// Arbitrary JSON data for the object instance

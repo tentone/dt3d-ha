@@ -39,7 +39,7 @@ func newSpaceTestRouter(t *testing.T) (*gin.Engine, *service.SpaceService) {
 	return router, spaceService
 }
 
-func TestCreateObjectInstanceAcceptsFrontendMeshType(t *testing.T) {
+func TestCreateObjectInstanceStoresFrontendDeclaredType(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	router, spaceService := newSpaceTestRouter(t)
@@ -49,10 +49,10 @@ func TestCreateObjectInstanceAcceptsFrontendMeshType(t *testing.T) {
 	}
 
 	requestBody := strings.NewReader(`{
-		"name": "Cube",
-		"type": "mesh",
+		"name": "Custom Object",
+		"type": "custom-spline",
 		"data": {
-			"meshType": "cube",
+			"object3DType": "custom-spline",
 			"position": {"x": 1, "y": 2, "z": 3}
 		},
 		"parent_id": null
@@ -75,7 +75,59 @@ func TestCreateObjectInstanceAcceptsFrontendMeshType(t *testing.T) {
 	if err := json.Unmarshal(response.Body.Bytes(), &objectResponse); err != nil {
 		t.Fatalf("failed to decode response body: %v", err)
 	}
-	if objectResponse.Type != "mesh" {
-		t.Fatalf("expected canonical type %q, got %q", "mesh", objectResponse.Type)
+	if objectResponse.Type != "custom-spline" {
+		t.Fatalf("expected type %q, got %q", "custom-spline", objectResponse.Type)
+	}
+}
+
+func TestUpdateObjectInstanceStoresFrontendDeclaredType(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	router, spaceService := newSpaceTestRouter(t)
+	space := models.Space{Name: "Test Space"}
+	if err := spaceService.CreateSpace(&space); err != nil {
+		t.Fatalf("failed to create test space: %v", err)
+	}
+
+	instance := models.ObjectInstance{
+		Name: "Original Object",
+		Type: "original-custom",
+	}
+	if err := instance.SetData(map[string]any{"position": map[string]int{"x": 0, "y": 0, "z": 0}}); err != nil {
+		t.Fatalf("failed to set object data: %v", err)
+	}
+	if err := spaceService.CreateObjectInstance(space.ID, &instance); err != nil {
+		t.Fatalf("failed to create test object: %v", err)
+	}
+
+	requestBody := strings.NewReader(`{
+		"name": "Updated Object",
+		"type": "updated-custom",
+		"data": {
+			"object3DType": "updated-custom",
+			"position": {"x": 4, "y": 5, "z": 6}
+		},
+		"parent_id": null
+	}`)
+	request := httptest.NewRequest(
+		http.MethodPut,
+		"/api/spaces/"+space.ID+"/objects/"+instance.ID,
+		requestBody,
+	)
+	request.Header.Set("Content-Type", "application/json")
+	response := httptest.NewRecorder()
+
+	router.ServeHTTP(response, request)
+
+	if response.Code != http.StatusOK {
+		t.Fatalf("expected status %d, got %d: %s", http.StatusOK, response.Code, response.Body.String())
+	}
+
+	var objectResponse objectInstanceResponse
+	if err := json.Unmarshal(response.Body.Bytes(), &objectResponse); err != nil {
+		t.Fatalf("failed to decode response body: %v", err)
+	}
+	if objectResponse.Type != "updated-custom" {
+		t.Fatalf("expected type %q, got %q", "updated-custom", objectResponse.Type)
 	}
 }

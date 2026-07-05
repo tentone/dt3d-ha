@@ -26,6 +26,8 @@ type SpaceSyncDependencies = {
 	createEntityObject: (entityId: string) => Object3D | null;
 };
 
+const OBJECT_INSTANCE_TYPE_USER_DATA_KEY = "objectInstanceType";
+
 function normalizeObjectInstanceType(type: string): "mesh" | "entity" | "group" | null {
 	switch (type.trim().toLowerCase()) {
 		case "mesh":
@@ -38,6 +40,16 @@ function normalizeObjectInstanceType(type: string): "mesh" | "entity" | "group" 
 		default:
 			return null;
 	}
+}
+
+function getDeclaredObjectInstanceType(object: Object3D): string | null {
+	const type = object.userData[OBJECT_INSTANCE_TYPE_USER_DATA_KEY];
+	if (typeof type !== "string") {
+		return null;
+	}
+
+	const trimmedType = type.trim();
+	return trimmedType || null;
 }
 
 /**
@@ -175,6 +187,7 @@ export class SpaceSync {
 		instance: ObjectInstanceResponse,
 	): Object3D | null {
 		const data = instance.data ?? {};
+		const declaredType = instance.type.trim();
 		const instanceType = normalizeObjectInstanceType(instance.type);
 		let object: Object3D | null = null;
 
@@ -239,7 +252,7 @@ export class SpaceSync {
 			if (object) {
 				object.userData.entityId = entityId;
 			}
-		} else if (instanceType === "group") {
+		} else if (instanceType === "group" || declaredType) {
 			object = new Group();
 		}
 
@@ -248,6 +261,7 @@ export class SpaceSync {
 		}
 
 		object.name = instance.name || object.name;
+		object.userData[OBJECT_INSTANCE_TYPE_USER_DATA_KEY] = declaredType || instance.type;
 		this.applyObjectTransform(object, data);
 
 		if (object instanceof Mesh && typeof data.textureDataUrl === "string") {
@@ -269,7 +283,8 @@ export class SpaceSync {
 			return null;
 		}
 
-		let type = "group";
+		const declaredType = getDeclaredObjectInstanceType(object);
+		let type = declaredType ?? "group";
 		const data: Record<string, any> = {
 			position: {
 				x: object.position.x,
@@ -289,10 +304,10 @@ export class SpaceSync {
 		};
 
 		if (object instanceof EntityObject) {
-			type = "entity";
+			type = declaredType ?? "entity";
 			data.entityId = object.entityId;
 		} else if (object instanceof WallObject) {
-			type = "mesh";
+			type = declaredType ?? "mesh";
 			data.meshType = "wall";
 			data.wall = {
 				length: object.length,
@@ -304,7 +319,7 @@ export class SpaceSync {
 				data.color = material.color.getHexString();
 			}
 		} else if (object instanceof DoorObject) {
-			type = "mesh";
+			type = declaredType ?? "mesh";
 			data.meshType = "door";
 			data.open = object.open;
 			data.dimensions = {
@@ -317,7 +332,7 @@ export class SpaceSync {
 				data.color = material.color.getHexString();
 			}
 		} else if (object instanceof WindowObject) {
-			type = "mesh";
+			type = declaredType ?? "mesh";
 			data.meshType = "window";
 			data.open = object.open;
 			data.dimensions = {
@@ -332,7 +347,7 @@ export class SpaceSync {
 		} else {
 			const meshType = this.resolveMeshType(object);
 			if (meshType) {
-				type = "mesh";
+				type = declaredType ?? "mesh";
 				data.meshType = meshType;
 
 				const material = (object as Mesh).material as any;
