@@ -36,22 +36,30 @@ func (s *SpaceService) GetSpaceByID(id string) (*models.Space, error) {
 	return s.spaces.FindByID(id)
 }
 
-var allowedInstanceTypes = map[string]struct{}{
-	"3DModel": {},
-	"Mesh":    {},
-	"Entity":  {},
+func normalizeObjectInstanceType(instanceType string) (string, bool) {
+	switch strings.ToLower(strings.TrimSpace(instanceType)) {
+	case "mesh":
+		return "mesh", true
+	case "entity":
+		return "entity", true
+	case "group", "3dmodel":
+		return "group", true
+	default:
+		return "", false
+	}
 }
 
 func (s *SpaceService) CreateObjectInstance(spaceID string, instance *models.ObjectInstance) error {
 	instance.SpaceID = spaceID
-	instance.Type = strings.TrimSpace(instance.Type)
+	normalizedType, ok := normalizeObjectInstanceType(instance.Type)
 
-	if instance.Type == "" {
+	if strings.TrimSpace(instance.Type) == "" {
 		return errors.New("object type is required")
 	}
-	if _, ok := allowedInstanceTypes[instance.Type]; !ok {
+	if !ok {
 		return errors.New("unsupported object type")
 	}
+	instance.Type = normalizedType
 	instance.Name = strings.TrimSpace(instance.Name)
 	if instance.Name == "" {
 		return errors.New("object name is required")
@@ -89,11 +97,11 @@ func (s *SpaceService) UpdateObjectInstance(spaceID, objectID string, payload Up
 		return nil, errors.New("object instance does not belong to space")
 	}
 
-	payload.Type = strings.TrimSpace(payload.Type)
-	if payload.Type == "" {
+	normalizedType, ok := normalizeObjectInstanceType(payload.Type)
+	if strings.TrimSpace(payload.Type) == "" {
 		return nil, errors.New("object type is required")
 	}
-	if _, ok := allowedInstanceTypes[payload.Type]; !ok {
+	if !ok {
 		return nil, errors.New("unsupported object type")
 	}
 
@@ -103,7 +111,7 @@ func (s *SpaceService) UpdateObjectInstance(spaceID, objectID string, payload Up
 	}
 
 	instance.Name = payload.Name
-	instance.Type = payload.Type
+	instance.Type = normalizedType
 	instance.Data = payload.Data
 
 	if payload.ParentProvided {

@@ -26,6 +26,20 @@ type SpaceSyncDependencies = {
 	createEntityObject: (entityId: string) => Object3D | null;
 };
 
+function normalizeObjectInstanceType(type: string): "mesh" | "entity" | "group" | null {
+	switch (type.trim().toLowerCase()) {
+		case "mesh":
+			return "mesh";
+		case "entity":
+			return "entity";
+		case "group":
+		case "3dmodel":
+			return "group";
+		default:
+			return null;
+	}
+}
+
 /**
  * SpaceSync handles loading spaces and syncing object changes with the API.
  */
@@ -37,6 +51,7 @@ export class SpaceSync {
 	private resolveMeshType: (object: Object3D) => string | null;
 	private createEntityObject: (entityId: string) => Object3D | null;
 	private objectApiIds: Map<string, string> = new Map();
+	private pendingObjectCreates: Map<string, Promise<void>> = new Map();
 	private isSyncingFromApi = false;
 
 	public activeSpaceId: string | null = null;
@@ -68,6 +83,7 @@ export class SpaceSync {
 		});
 		this.space.clear();
 		this.objectApiIds.clear();
+		this.pendingObjectCreates.clear();
 	}
 
 	/**
@@ -159,9 +175,10 @@ export class SpaceSync {
 		instance: ObjectInstanceResponse,
 	): Object3D | null {
 		const data = instance.data ?? {};
+		const instanceType = normalizeObjectInstanceType(instance.type);
 		let object: Object3D | null = null;
 
-		if (instance.type === "mesh") {
+		if (instanceType === "mesh") {
 			const meshType = data.meshType as string | undefined;
 			if (!meshType) {
 				return null;
@@ -212,7 +229,7 @@ export class SpaceSync {
 			if (object) {
 				object.userData.meshType = meshType;
 			}
-		} else if (instance.type === "entity") {
+		} else if (instanceType === "entity") {
 			const entityId = data.entityId as string | undefined;
 			if (!entityId) {
 				return null;
@@ -222,7 +239,7 @@ export class SpaceSync {
 			if (object) {
 				object.userData.entityId = entityId;
 			}
-		} else if (instance.type === "group") {
+		} else if (instanceType === "group") {
 			object = new Group();
 		}
 
@@ -380,13 +397,32 @@ export class SpaceSync {
 			return;
 		}
 
+		const pendingCreate = this.pendingObjectCreates.get(object.uuid);
+		if (pendingCreate) {
+			await pendingCreate;
+			return;
+		}
+
 		const payload = this.buildObjectPayload(object);
 		if (!payload) {
 			return;
 		}
 
-		const response = await this.apiClient.createObject(this.activeSpaceId, payload);
-		this.setObjectApiId(object, response.id);
+		const createPromise = this.apiClient
+			.createObject(this.activeSpaceId, payload)
+			.then((response) => {
+				this.setObjectApiId(object, response.id);
+			});
+
+		this.pendingObjectCreates.set(object.uuid, createPromise);
+
+		try {
+			await createPromise;
+		} finally {
+			if (this.pendingObjectCreates.get(object.uuid) === createPromise) {
+				this.pendingObjectCreates.delete(object.uuid);
+			}
+		}
 	}
 
 	/**
@@ -404,6 +440,9 @@ export class SpaceSync {
 		const objectId = this.getObjectApiId(object);
 		if (!objectId) {
 			await this.syncObjectCreate(object);
+			if (this.getObjectApiId(object)) {
+				await this.syncObjectUpdate(object);
+			}
 			return;
 		}
 
@@ -488,6 +527,7 @@ export class SpaceSync {
 
 	private clearObjectMapping(object: Object3D): void {
 		this.objectApiIds.delete(object.uuid);
+		this.pendingObjectCreates.delete(object.uuid);
 		delete object.userData.apiId;
 
 		for (const child of object.children) {
