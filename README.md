@@ -80,6 +80,22 @@ ssl_key: /ssl/privkey.pem
 use_self_signed_certificate: false
 ```
 
+The `ssl_certificate` and `ssl_key` options also accept PEM content directly.
+Multi-line PEM is supported, as are single-line pasted values with spaces
+between the `BEGIN`/`END` markers and the base64 body:
+
+```yaml
+ssl_certificate: |
+  -----BEGIN CERTIFICATE-----
+  ...
+  -----END CERTIFICATE-----
+ssl_key: |
+  -----BEGIN PRIVATE KEY-----
+  ...
+  -----END PRIVATE KEY-----
+use_self_signed_certificate: false
+```
+
 If no certificate/key pair is available, set `use_self_signed_certificate: true`.
 The backend will generate and reuse a self-signed certificate under `/data`.
 Browsers and clients will need to trust or explicitly accept that certificate.

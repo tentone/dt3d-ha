@@ -14,8 +14,10 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"regexp"
 	"strings"
 	"time"
+	"unicode"
 
 	"dt3d-ha/backend/handlers"
 	"dt3d-ha/backend/models"
@@ -30,9 +32,13 @@ import (
 const (
 	defaultPort               = 8080
 	optionsFilePath           = "/data/options.json"
+	configuredCertificateFile = "/data/dt3d-configured.crt"
+	configuredKeyFile         = "/data/dt3d-configured.key"
 	selfSignedCertificateFile = "/data/dt3d-self-signed.crt"
 	selfSignedKeyFile         = "/data/dt3d-self-signed.key"
 )
+
+var inlinePEMBlockPattern = regexp.MustCompile(`(?s)-----BEGIN ([A-Z0-9 ]+)-----\s*(.*?)\s*-----END ([A-Z0-9 ]+)-----`)
 
 type options struct {
 	Port                     int    `json:"port"`
@@ -78,13 +84,19 @@ func (opt *options) normalize() {
 }
 
 func resolveTLSCertificatePaths(opt options) (string, string, bool, error) {
-	return resolveTLSCertificatePathsWithDefaults(opt, selfSignedCertificateFile, selfSignedKeyFile)
+	return resolveTLSCertificatePathsWithDefaults(
+		opt,
+		selfSignedCertificateFile,
+		selfSignedKeyFile,
+		configuredCertificateFile,
+		configuredKeyFile,
+	)
 }
 
-func resolveTLSCertificatePathsWithDefaults(opt options, selfSignedCertificateFile string, selfSignedKeyFile string) (string, string, bool, error) {
+func resolveTLSCertificatePathsWithDefaults(opt options, selfSignedCertificateFile string, selfSignedKeyFile string, configuredCertificateFile string, configuredKeyFile string) (string, string, bool, error) {
 	if opt.SSLCertificate != "" && opt.SSLKey != "" {
-		if err := validateTLSCertificatePair(opt.SSLCertificate, opt.SSLKey); err == nil {
-			return opt.SSLCertificate, opt.SSLKey, true, nil
+		if certFile, keyFile, err := prepareTLSCertificatePair(opt.SSLCertificate, opt.SSLKey, configuredCertificateFile, configuredKeyFile); err == nil {
+			return certFile, keyFile, true, nil
 		} else if !opt.UseSelfSignedCertificate {
 			return "", "", false, err
 		}
@@ -168,14 +180,79 @@ func validateTLSCertificatePair(certFile string, keyFile string) error {
 		return fmt.Errorf("both ssl_certificate and ssl_key must be configured to enable HTTPS")
 	}
 
-	if err := validateTLSFile(certFile, "ssl_certificate"); err != nil {
+	certPEM, err := readTLSFile(certFile, "ssl_certificate")
+	if err != nil {
 		return err
 	}
-	if err := validateTLSFile(keyFile, "ssl_key"); err != nil {
+	keyPEM, err := readTLSFile(keyFile, "ssl_key")
+	if err != nil {
 		return err
 	}
 
-	if _, err := tls.LoadX509KeyPair(certFile, keyFile); err != nil {
+	return validateTLSCertificatePairPEM(certPEM, keyPEM)
+}
+
+func prepareTLSCertificatePair(certValue string, keyValue string, configuredCertificateFile string, configuredKeyFile string) (string, string, error) {
+	if certValue == "" || keyValue == "" {
+		return "", "", fmt.Errorf("both ssl_certificate and ssl_key must be configured to enable HTTPS")
+	}
+
+	certPEM, certIsInline, err := readTLSOptionValue(certValue, "ssl_certificate")
+	if err != nil {
+		return "", "", err
+	}
+	keyPEM, keyIsInline, err := readTLSOptionValue(keyValue, "ssl_key")
+	if err != nil {
+		return "", "", err
+	}
+
+	if err := validateTLSCertificatePairPEM(certPEM, keyPEM); err != nil {
+		return "", "", err
+	}
+
+	certFile := certValue
+	if certIsInline {
+		if err := os.WriteFile(configuredCertificateFile, certPEM, 0644); err != nil {
+			return "", "", fmt.Errorf("failed to write ssl_certificate content to %q: %w", configuredCertificateFile, err)
+		}
+		certFile = configuredCertificateFile
+	}
+
+	keyFile := keyValue
+	if keyIsInline {
+		if err := os.WriteFile(configuredKeyFile, keyPEM, 0600); err != nil {
+			return "", "", fmt.Errorf("failed to write ssl_key content to %q: %w", configuredKeyFile, err)
+		}
+		keyFile = configuredKeyFile
+	}
+
+	return certFile, keyFile, nil
+}
+
+func readTLSOptionValue(value string, label string) ([]byte, bool, error) {
+	if pemBytes, isInline, err := normalizeInlinePEM(value, label); isInline || err != nil {
+		return pemBytes, isInline, err
+	}
+
+	fileBytes, err := readTLSFile(value, label)
+	return fileBytes, false, err
+}
+
+func readTLSFile(path string, label string) ([]byte, error) {
+	if err := validateTLSFile(path, label); err != nil {
+		return nil, err
+	}
+
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read %s file %q: %w", label, path, err)
+	}
+
+	return data, nil
+}
+
+func validateTLSCertificatePairPEM(certPEM []byte, keyPEM []byte) error {
+	if _, err := tls.X509KeyPair(certPEM, keyPEM); err != nil {
 		return fmt.Errorf("failed to load SSL certificate/key pair: %w", err)
 	}
 
@@ -192,6 +269,76 @@ func validateTLSFile(path string, label string) error {
 	}
 
 	return nil
+}
+
+func normalizeInlinePEM(value string, label string) ([]byte, bool, error) {
+	normalizedValue := strings.TrimSpace(value)
+	normalizedValue = strings.ReplaceAll(normalizedValue, `\n`, "\n")
+	normalizedValue = strings.ReplaceAll(normalizedValue, "\r\n", "\n")
+	normalizedValue = strings.ReplaceAll(normalizedValue, "\r", "\n")
+
+	if !strings.Contains(normalizedValue, "-----BEGIN ") && !strings.Contains(normalizedValue, "-----END ") {
+		return nil, false, nil
+	}
+
+	if block, _ := pem.Decode([]byte(normalizedValue)); block != nil {
+		return []byte(normalizedValue), true, nil
+	}
+
+	matches := inlinePEMBlockPattern.FindAllStringSubmatch(normalizedValue, -1)
+	if len(matches) == 0 {
+		return nil, true, fmt.Errorf("%s contains PEM markers but could not be parsed", label)
+	}
+
+	var builder strings.Builder
+	for _, match := range matches {
+		beginType := strings.TrimSpace(match[1])
+		endType := strings.TrimSpace(match[3])
+		if beginType != endType {
+			return nil, true, fmt.Errorf("%s PEM block starts as %q but ends as %q", label, beginType, endType)
+		}
+
+		body := compactPEMBody(match[2])
+		if body == "" {
+			return nil, true, fmt.Errorf("%s PEM block %q is empty", label, beginType)
+		}
+
+		builder.WriteString("-----BEGIN ")
+		builder.WriteString(beginType)
+		builder.WriteString("-----\n")
+		builder.WriteString(wrapPEMBody(body))
+		builder.WriteString("-----END ")
+		builder.WriteString(endType)
+		builder.WriteString("-----\n")
+	}
+
+	normalizedPEM := []byte(builder.String())
+	if block, _ := pem.Decode(normalizedPEM); block == nil {
+		return nil, true, fmt.Errorf("%s contains PEM markers but could not be normalized", label)
+	}
+
+	return normalizedPEM, true, nil
+}
+
+func compactPEMBody(body string) string {
+	return strings.Map(func(r rune) rune {
+		if unicode.IsSpace(r) {
+			return -1
+		}
+		return r
+	}, body)
+}
+
+func wrapPEMBody(body string) string {
+	var builder strings.Builder
+	for len(body) > 64 {
+		builder.WriteString(body[:64])
+		builder.WriteString("\n")
+		body = body[64:]
+	}
+	builder.WriteString(body)
+	builder.WriteString("\n")
+	return builder.String()
 }
 
 func ensureSelfSignedCertificate(certFile string, keyFile string) error {
