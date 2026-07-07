@@ -1,5 +1,5 @@
-import type {Object3D} from "three";
-import {Group, Mesh, MeshStandardMaterial} from "three";
+import type {Material, Object3D} from "three";
+import {BufferGeometryLoader, Group, MaterialLoader, Mesh, MeshStandardMaterial} from "three";
 
 import type {DT3DTree} from "../components/object-tree/object-tree.js";
 import {applyTextureToMesh} from "../editor/material-texture.js";
@@ -27,6 +27,40 @@ type SpaceSyncDependencies = {
 };
 
 const OBJECT_INSTANCE_TYPE_USER_DATA_KEY = "objectInstanceType";
+
+function serializeMaterial(material: Material | Material[]): Record<string, any> | Record<string, any>[] | null {
+	try {
+		if (Array.isArray(material)) {
+			return material.map((item) => item.toJSON() as Record<string, any>);
+		}
+
+		return material.toJSON() as Record<string, any>;
+	} catch (error) {
+		console.warn("DT3D: Failed to serialize mesh material", error);
+		return null;
+	}
+}
+
+function deserializeMaterial(data: unknown, fallbackColor: number): Material | Material[] {
+	const loader = new MaterialLoader();
+
+	try {
+		if (Array.isArray(data)) {
+			const materials = data
+				.map((item) => loader.parse(item))
+				.filter((material): material is Material => material instanceof MeshStandardMaterial || Boolean(material));
+			if (materials.length > 0) {
+				return materials;
+			}
+		} else if (data && typeof data === "object") {
+			return loader.parse(data as Record<string, any>);
+		}
+	} catch (error) {
+		console.warn("DT3D: Failed to deserialize mesh material", error);
+	}
+
+	return new MeshStandardMaterial({color: fallbackColor});
+}
 
 function normalizeObjectInstanceType(type: string): "mesh" | "entity" | "group" | null {
 	switch (type.trim().toLowerCase()) {
@@ -193,12 +227,19 @@ export class SpaceSync {
 
 		if (instanceType === "mesh") {
 			const meshType = data.meshType as string | undefined;
-			if (!meshType) {
-				return null;
-			}
-
 			const color = typeof data.color === "string" ? parseInt(data.color, 16) : 0xffffff;
-			if (meshType === "wall") {
+			if (data.geometry && typeof data.geometry === "object") {
+				try {
+					const geometry = new BufferGeometryLoader().parse(data.geometry);
+					const material = deserializeMaterial(data.material, color);
+					object = new Mesh(geometry, material);
+				} catch (error) {
+					console.warn("DT3D: Failed to load persisted mesh geometry", error);
+					return null;
+				}
+			} else if (!meshType) {
+				return null;
+			} else if (meshType === "wall") {
 				const wallData = data.wall as { length?: number; height?: number; thickness?: number } | undefined;
 				object = new WallObject(
 					{
@@ -239,7 +280,7 @@ export class SpaceSync {
 				const geometryParameters = data.geometryParameters as Record<string, number | boolean> | undefined;
 				object = createMeshObject(meshType, material, geometryParameters);
 			}
-			if (object) {
+			if (object && meshType) {
 				object.userData.meshType = meshType;
 			}
 		} else if (instanceType === "entity") {
@@ -277,7 +318,7 @@ export class SpaceSync {
 
 	/**
 	 * Build an API payload from a three.js object.
-	 * 
+	 *
 	 * @param object - The three.js object to convert into an API payload.
 	 * @returns The API payload representing the object, or null if the object should not be persisted.
 	 */
@@ -347,7 +388,7 @@ export class SpaceSync {
 			if (material?.color?.getHexString) {
 				data.color = material.color.getHexString();
 			}
-		} else {
+		} else if (object instanceof Mesh) {
 			const meshType = this.resolveMeshType(object);
 			if (meshType) {
 				type = declaredType ?? "mesh";
@@ -368,6 +409,19 @@ export class SpaceSync {
 					if (geometryParameters) {
 						data.geometryParameters = geometryParameters;
 					}
+				}
+			} else {
+				type = declaredType ?? "mesh";
+				data.geometry = object.geometry.toJSON();
+
+				const material = serializeMaterial(object.material);
+				if (material) {
+					data.material = material;
+				}
+
+				const materialWithColor = Array.isArray(object.material) ? object.material[0] : object.material;
+				if (materialWithColor && "color" in materialWithColor && materialWithColor.color?.getHexString) {
+					data.color = materialWithColor.color.getHexString();
 				}
 			}
 		}
