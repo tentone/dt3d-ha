@@ -1,0 +1,93 @@
+:host {
+	position: absolute;
+	top: 12px;
+	right: 72px;
+	z-index: 110;
+	width: min(320px, calc(100% - 150px));
+	pointer-events: none;
+}
+
+:host([hidden]) {
+	display: none;
+}
+
+.sync-progress {
+	background: color-mix(in srgb, var(--ha-color-neutral-10, #15171c) 90%, transparent);
+	border: 1px solid color-mix(in srgb, var(--ha-color-neutral-70, #a9b0bc) 18%, transparent);
+	border-radius: 6px;
+	box-shadow: 0 8px 24px rgba(0, 0, 0, 0.32);
+	color: var(--ha-color-neutral-95, #f6f7f9);
+	font-size: 12px;
+	line-height: 1.35;
+	padding: 10px 12px;
+}
+
+.sync-header {
+	align-items: center;
+	display: flex;
+	gap: 8px;
+	justify-content: space-between;
+	margin-bottom: 8px;
+}
+
+.sync-title {
+	font-weight: 600;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.sync-count {
+	color: var(--ha-color-neutral-80, #c8ced8);
+	flex: 0 0 auto;
+	font-variant-numeric: tabular-nums;
+}
+
+.sync-bar {
+	background: rgba(255, 255, 255, 0.16);
+	border-radius: 999px;
+	height: 6px;
+	overflow: hidden;
+}
+
+.sync-bar-fill {
+	background: var(--ha-color-primary-60, #4a90d9);
+	border-radius: inherit;
+	height: 100%;
+	min-width: 5%;
+	transition: width 0.18s ease;
+}
+
+.sync-list {
+	display: grid;
+	gap: 4px;
+	margin-top: 8px;
+}
+
+.sync-item {
+	align-items: center;
+	color: var(--ha-color-neutral-85, #d8dde6);
+	display: grid;
+	gap: 6px;
+	grid-template-columns: minmax(86px, auto) minmax(0, 1fr);
+	min-width: 0;
+}
+
+.sync-operation {
+	color: var(--ha-color-neutral-75, #b7bfca);
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.sync-label {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.sync-failed {
+	color: var(--error-color, #ff6b6b);
+	margin-top: 6px;
+}

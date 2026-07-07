@@ -6,6 +6,7 @@ import "./mesh-menu/mesh-menu.js";
 import "./object-tree/object-tree.js";
 import "./side-bar/side-bar.js";
 import "./space-config-menu/space-config-menu.js";
+import "./sync-progress-component/sync-progress-component.js";
 
 import {LitElement} from "lit";
 import {customElement} from "lit/decorators.js";
@@ -44,6 +45,7 @@ import {EntitySwitch} from "../objects/entity-switch.js";
 import {SpaceApi} from "../service/space-api.js";
 import {SpaceSync} from "../service/space-sync.js";
 import {LocalStorage} from "../utils/local-storage.js";
+import {findMesh} from "../utils/object3d-utils.js";
 import type {DT3DAddEntityModal} from "./add-entity-modal/add-entity-modal.js";
 import type {DT3DCameraToggle} from "./camera-toggle/camera-toggle.js";
 import type {ConnectionStatus} from "./connection-status/connection-status.js";
@@ -52,7 +54,7 @@ import type {DT3DMeshMenu} from "./mesh-menu/mesh-menu.js";
 import type {DT3DTree} from "./object-tree/object-tree.js";
 import type {DT3DSidebar} from "./side-bar/side-bar.js";
 import type {DT3DSpaceConfigMenu} from "./space-config-menu/space-config-menu.js";
-import { findMesh } from "../utils/object3d-utils.js";
+import type {SyncProgressComponent} from "./sync-progress-component/sync-progress-component.js";
 
 const SPACE_SCENE_CONFIG_STORAGE_KEY = "space-scene-config";
 const MODEL_FILE_EXTENSIONS = new Set(["gltf", "glb", "obj", "fbx"]);
@@ -118,6 +120,8 @@ export class DT3DCard extends LitElement {
 	 * Hint box element that shows contextual instructions to the user.
 	 */
 	private hintBox: DT3DHintBox;
+
+	private syncProgressComponent: SyncProgressComponent | null = null;
 
 	/**
 	 * Tree element for displaying the 3D object hierarchy.
@@ -935,6 +939,9 @@ export class DT3DCard extends LitElement {
 		connection.serviceKey = serviceKey;
 		this.content.appendChild(connection);
 
+		this.syncProgressComponent = document.createElement("sync-progress-component") as SyncProgressComponent;
+		this.content.appendChild(this.syncProgressComponent);
+
 		const cssElem = document.createElement("div");
 		cssElem.style.cssText = `
 			position: absolute;
@@ -1103,6 +1110,11 @@ export class DT3DCard extends LitElement {
 			tree: this.tree,
 			resolveMeshType: (object) => resolveMeshType(object),
 			createEntityObject: (entityId) => this.createEntityObject(entityId),
+		});
+		this.spaceSync.addProgressListener((progress) => {
+			if (this.syncProgressComponent) {
+				this.syncProgressComponent.progress = progress;
+			}
 		});
 
 		this.spaceSync.initializeSpaceFromApi();

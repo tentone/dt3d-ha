@@ -27,6 +27,20 @@ type SpaceSyncDependencies = {
 	createEntityObject: (entityId: string) => Object3D | null;
 };
 
+export type SyncProgressItem = {
+	id: string;
+	label: string;
+	operation: string;
+};
+
+export type SyncProgressSnapshot = {
+	active: boolean;
+	completed: number;
+	failed: number;
+	items: SyncProgressItem[];
+	total: number;
+};
+
 const OBJECT_INSTANCE_TYPE_USER_DATA_KEY = "objectInstanceType";
 const GEOMETRY_FILE_ID_DATA_KEY = "geometryFileId";
 const GEOMETRY_FILE_GEOMETRY_UUID_USER_DATA_KEY = "geometryFileGeometryUuid";
@@ -101,6 +115,13 @@ export class SpaceSync {
 	private createEntityObject: (entityId: string) => Object3D | null;
 	private objectApiIds: Map<string, string> = new Map();
 	private pendingObjectCreates: Map<string, Promise<void>> = new Map();
+	private progressCompleted = 0;
+	private progressFailed = 0;
+	private progressItems: Map<string, SyncProgressItem> = new Map();
+	private progressListeners: Set<(progress: SyncProgressSnapshot) => void> = new Set();
+	private progressResetTimer: number | null = null;
+	private progressSequence = 0;
+	private progressTotal = 0;
 	private isSyncingFromApi = false;
 
 	public activeSpaceId: string | null = null;
@@ -119,6 +140,15 @@ export class SpaceSync {
 		this.tree = tree;
 		this.resolveMeshType = resolveMeshType;
 		this.createEntityObject = createEntityObject;
+	}
+
+	public addProgressListener(listener: (progress: SyncProgressSnapshot) => void): () => void {
+		this.progressListeners.add(listener);
+		listener(this.getProgressSnapshot());
+
+		return () => {
+			this.progressListeners.delete(listener);
+		};
 	}
 
 	/**
@@ -236,7 +266,7 @@ export class SpaceSync {
 				const material = deserializeMaterial(data.material, color);
 				const mesh = new Mesh(new BoxGeometry(1, 1, 1), material);
 				mesh.userData[GEOMETRY_FILE_ID_DATA_KEY] = geometryFileId;
-				void this.loadMeshGeometryFile(mesh, geometryFileId);
+				void this.loadMeshGeometryFile(mesh, geometryFileId, instance.name);
 				object = mesh;
 			} else if (data.geometry && typeof data.geometry === "object") {
 				try {
@@ -494,11 +524,15 @@ export class SpaceSync {
 			return;
 		}
 
-		const createPromise = this.apiClient
-			.createObject(this.activeSpaceId, payload)
-			.then((response) => {
-				this.setObjectApiId(object, response.id);
-			});
+		const createPromise = this.trackProgress(
+			"Create object",
+			this.getObjectLabel(object),
+			() => this.apiClient
+				.createObject(this.activeSpaceId, payload)
+				.then((response) => {
+					this.setObjectApiId(object, response.id);
+				}),
+		);
 
 		this.pendingObjectCreates.set(object.uuid, createPromise);
 
@@ -537,7 +571,11 @@ export class SpaceSync {
 			return;
 		}
 
-		await this.apiClient.updateObject(this.activeSpaceId, objectId, payload);
+		await this.trackProgress(
+			"Update object",
+			this.getObjectLabel(object),
+			() => this.apiClient.updateObject(this.activeSpaceId, objectId, payload),
+		);
 	}
 
 	/**
@@ -553,7 +591,11 @@ export class SpaceSync {
 			return;
 		}
 
-		await this.apiClient.deleteObject(this.activeSpaceId, objectId);
+		await this.trackProgress(
+			"Delete object",
+			this.getObjectLabel(object),
+			() => this.apiClient.deleteObject(this.activeSpaceId, objectId),
+		);
 		this.clearObjectMapping(object);
 	}
 
@@ -593,20 +635,28 @@ export class SpaceSync {
 		}
 
 		const geometryData = serializeGeometryToBinary(object.geometry);
-		const response = await this.apiClient.uploadGeometry(this.activeSpaceId, geometryData);
+		const response = await this.trackProgress(
+			"Upload geometry",
+			this.getObjectLabel(object),
+			() => this.apiClient.uploadGeometry(this.activeSpaceId, geometryData),
+		);
 		object.userData[GEOMETRY_FILE_ID_DATA_KEY] = response.id;
 		object.userData[GEOMETRY_FILE_GEOMETRY_UUID_USER_DATA_KEY] = object.geometry.uuid;
 
 		return response.id;
 	}
 
-	private async loadMeshGeometryFile(object: Mesh, geometryFileId: string): Promise<void> {
+	private async loadMeshGeometryFile(object: Mesh, geometryFileId: string, label?: string): Promise<void> {
 		if (!this.activeSpaceId) {
 			return;
 		}
 
 		try {
-			const geometryData = await this.apiClient.getGeometry(this.activeSpaceId, geometryFileId);
+			const geometryData = await this.trackProgress(
+				"Load geometry",
+				label || this.getObjectLabel(object),
+				() => this.apiClient.getGeometry(this.activeSpaceId, geometryFileId),
+			);
 			const geometry = deserializeGeometryBinary(geometryData);
 			if (object.userData[GEOMETRY_FILE_ID_DATA_KEY] !== geometryFileId) {
 				geometry.dispose();
@@ -621,6 +671,80 @@ export class SpaceSync {
 		} catch (error) {
 			console.error("DT3D: Failed to load mesh geometry file", error);
 		}
+	}
+
+	private async trackProgress<T>(
+		operation: string,
+		label: string,
+		task: () => Promise<T>,
+	): Promise<T> {
+		const id = `${Date.now()}-${this.progressSequence}`;
+		this.progressSequence += 1;
+		this.progressTotal += 1;
+		if (this.progressResetTimer !== null) {
+			window.clearTimeout(this.progressResetTimer);
+			this.progressResetTimer = null;
+		}
+		this.progressItems.set(id, {
+			id,
+			label,
+			operation,
+		});
+		this.emitProgress();
+
+		try {
+			const result = await task();
+			this.progressCompleted += 1;
+			return result;
+		} catch (error) {
+			this.progressFailed += 1;
+			throw error;
+		} finally {
+			this.progressItems.delete(id);
+			this.emitProgress();
+			this.resetProgressIfIdle();
+		}
+	}
+
+	private getProgressSnapshot(): SyncProgressSnapshot {
+		const items = Array.from(this.progressItems.values());
+
+		return {
+			active: items.length > 0 || this.progressTotal > 0,
+			completed: this.progressCompleted,
+			failed: this.progressFailed,
+			items,
+			total: this.progressTotal,
+		};
+	}
+
+	private emitProgress(): void {
+		const snapshot = this.getProgressSnapshot();
+		for (const listener of this.progressListeners) {
+			listener(snapshot);
+		}
+	}
+
+	private resetProgressIfIdle(): void {
+		if (this.progressItems.size > 0) {
+			return;
+		}
+
+		this.progressResetTimer = window.setTimeout(() => {
+			if (this.progressItems.size > 0) {
+				return;
+			}
+
+			this.progressCompleted = 0;
+			this.progressFailed = 0;
+			this.progressTotal = 0;
+			this.progressResetTimer = null;
+			this.emitProgress();
+		}, 600);
+	}
+
+	private getObjectLabel(object: Object3D): string {
+		return object.name || object.type || "Object";
 	}
 
 	private shouldPersistObject(object: Object3D): boolean {
