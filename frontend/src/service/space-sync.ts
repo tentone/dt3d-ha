@@ -1,5 +1,5 @@
 import type {Material, Object3D} from "three";
-import {BufferGeometryLoader, Group, MaterialLoader, Mesh, MeshStandardMaterial} from "three";
+import {BoxGeometry, BufferGeometryLoader, Group, MaterialLoader, Mesh, MeshStandardMaterial} from "three";
 
 import type {DT3DTree} from "../components/object-tree/object-tree.js";
 import {applyTextureToMesh} from "../editor/material-texture.js";
@@ -10,9 +10,10 @@ import {EntityObject} from "../objects/entity-object.js";
 import {DoorObject} from "../objects/house/door.js";
 import {WallObject} from "../objects/house/wall.js";
 import {WindowObject} from "../objects/house/window.js";
+import {deserializeGeometryBinary, serializeGeometryToBinary} from "./geometry-binary.js";
 import type {
-	type ObjectInstancePayload,
-	type ObjectInstanceResponse,
+	ObjectInstancePayload,
+	ObjectInstanceResponse,
 	SpaceApi,
 } from "./space-api.js";
 
@@ -27,6 +28,8 @@ type SpaceSyncDependencies = {
 };
 
 const OBJECT_INSTANCE_TYPE_USER_DATA_KEY = "objectInstanceType";
+const GEOMETRY_FILE_ID_DATA_KEY = "geometryFileId";
+const GEOMETRY_FILE_GEOMETRY_UUID_USER_DATA_KEY = "geometryFileGeometryUuid";
 
 function serializeMaterial(material: Material | Material[]): Record<string, any> | Record<string, any>[] | null {
 	try {
@@ -228,7 +231,14 @@ export class SpaceSync {
 		if (instanceType === "mesh") {
 			const meshType = data.meshType as string | undefined;
 			const color = typeof data.color === "string" ? parseInt(data.color, 16) : 0xffffff;
-			if (data.geometry && typeof data.geometry === "object") {
+			const geometryFileId = data[GEOMETRY_FILE_ID_DATA_KEY] as string | undefined;
+			if (typeof geometryFileId === "string" && geometryFileId) {
+				const material = deserializeMaterial(data.material, color);
+				const mesh = new Mesh(new BoxGeometry(1, 1, 1), material);
+				mesh.userData[GEOMETRY_FILE_ID_DATA_KEY] = geometryFileId;
+				void this.loadMeshGeometryFile(mesh, geometryFileId);
+				object = mesh;
+			} else if (data.geometry && typeof data.geometry === "object") {
 				try {
 					const geometry = new BufferGeometryLoader().parse(data.geometry);
 					const material = deserializeMaterial(data.material, color);
@@ -322,7 +332,7 @@ export class SpaceSync {
 	 * @param object - The three.js object to convert into an API payload.
 	 * @returns The API payload representing the object, or null if the object should not be persisted.
 	 */
-	public buildObjectPayload(object: Object3D): ObjectInstancePayload | null {
+	public async buildObjectPayload(object: Object3D): Promise<ObjectInstancePayload | null> {
 		if (!this.activeSpaceId || !this.shouldPersistObject(object)) {
 			return null;
 		}
@@ -412,7 +422,11 @@ export class SpaceSync {
 				}
 			} else {
 				type = declaredType ?? "mesh";
-				data.geometry = object.geometry.toJSON();
+				const geometryFileId = await this.ensureMeshGeometryFile(object);
+				if (!geometryFileId) {
+					return null;
+				}
+				data[GEOMETRY_FILE_ID_DATA_KEY] = geometryFileId;
 
 				const material = serializeMaterial(object.material);
 				if (material) {
@@ -475,7 +489,7 @@ export class SpaceSync {
 			return;
 		}
 
-		const payload = this.buildObjectPayload(object);
+		const payload = await this.buildObjectPayload(object);
 		if (!payload) {
 			return;
 		}
@@ -518,7 +532,7 @@ export class SpaceSync {
 			return;
 		}
 
-		const payload = this.buildObjectPayload(object);
+		const payload = await this.buildObjectPayload(object);
 		if (!payload) {
 			return;
 		}
@@ -561,6 +575,51 @@ export class SpaceSync {
 		const scale = data.scale as { x?: number; y?: number; z?: number } | undefined;
 		if (scale) {
 			object.scale.set(scale.x ?? 1, scale.y ?? 1, scale.z ?? 1);
+		}
+	}
+
+	private async ensureMeshGeometryFile(object: Mesh): Promise<string | null> {
+		if (!this.activeSpaceId) {
+			return null;
+		}
+
+		const existingGeometryFileId = object.userData[GEOMETRY_FILE_ID_DATA_KEY];
+		const uploadedGeometryUuid = object.userData[GEOMETRY_FILE_GEOMETRY_UUID_USER_DATA_KEY];
+		if (
+			typeof existingGeometryFileId === "string" &&
+			(!uploadedGeometryUuid || uploadedGeometryUuid === object.geometry.uuid)
+		) {
+			return existingGeometryFileId;
+		}
+
+		const geometryData = serializeGeometryToBinary(object.geometry);
+		const response = await this.apiClient.uploadGeometry(this.activeSpaceId, geometryData);
+		object.userData[GEOMETRY_FILE_ID_DATA_KEY] = response.id;
+		object.userData[GEOMETRY_FILE_GEOMETRY_UUID_USER_DATA_KEY] = object.geometry.uuid;
+
+		return response.id;
+	}
+
+	private async loadMeshGeometryFile(object: Mesh, geometryFileId: string): Promise<void> {
+		if (!this.activeSpaceId) {
+			return;
+		}
+
+		try {
+			const geometryData = await this.apiClient.getGeometry(this.activeSpaceId, geometryFileId);
+			const geometry = deserializeGeometryBinary(geometryData);
+			if (object.userData[GEOMETRY_FILE_ID_DATA_KEY] !== geometryFileId) {
+				geometry.dispose();
+				return;
+			}
+
+			const placeholderGeometry = object.geometry;
+			object.geometry = geometry;
+			object.userData[GEOMETRY_FILE_GEOMETRY_UUID_USER_DATA_KEY] = geometry.uuid;
+			placeholderGeometry.dispose();
+			this.tree.refreshSelectedObject();
+		} catch (error) {
+			console.error("DT3D: Failed to load mesh geometry file", error);
 		}
 	}
 

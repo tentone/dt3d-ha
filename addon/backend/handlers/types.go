@@ -58,6 +58,11 @@ type objectTreeNodeResponse struct {
 	Children []objectTreeNodeResponse `json:"children,omitempty"`
 }
 
+type geometryFileResponse struct {
+	ID   string `json:"id"`
+	Size int    `json:"size"`
+}
+
 func toObjectInstanceResponse(instance models.ObjectInstance) objectInstanceResponse {
 	data := json.RawMessage(instance.Data)
 	if len(data) == 0 {

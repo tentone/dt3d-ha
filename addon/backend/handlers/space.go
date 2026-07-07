@@ -5,21 +5,27 @@ import (
 	"errors"
 	"io"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strings"
 
 	"dt3d-ha/backend/models"
 	"dt3d-ha/backend/service"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
+const maxGeometryFileBytes = 256 * 1024 * 1024
+
 type SpaceHandler struct {
-	spaces *service.SpaceService
+	geometryDir string
+	spaces      *service.SpaceService
 }
 
-func NewSpaceHandler(spaceService *service.SpaceService) *SpaceHandler {
-	return &SpaceHandler{spaces: spaceService}
+func NewSpaceHandler(spaceService *service.SpaceService, geometryDir string) *SpaceHandler {
+	return &SpaceHandler{geometryDir: geometryDir, spaces: spaceService}
 }
 
 func (h *SpaceHandler) Register(router gin.IRouter) {
@@ -33,6 +39,8 @@ func (h *SpaceHandler) Register(router gin.IRouter) {
 		spaces.POST(":spaceID/objects", h.createObjectInstance)
 		spaces.PUT(":spaceID/objects/:objectID", h.updateObjectInstance)
 		spaces.DELETE(":spaceID/objects/:objectID", h.deleteObjectInstance)
+		spaces.POST(":spaceID/geometries", h.createGeometryFile)
+		spaces.GET(":spaceID/geometries/:geometryID", h.getGeometryFile)
 	}
 }
 
@@ -194,4 +202,89 @@ func (h *SpaceHandler) deleteObjectInstance(c *gin.Context) {
 	}
 
 	c.Status(http.StatusNoContent)
+}
+
+func (h *SpaceHandler) createGeometryFile(c *gin.Context) {
+	spaceID := c.Param("spaceID")
+	if _, err := uuid.Parse(spaceID); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid space id"})
+		return
+	}
+
+	if _, err := h.spaces.GetSpaceByID(spaceID); err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "space not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	body := http.MaxBytesReader(c.Writer, c.Request.Body, maxGeometryFileBytes)
+	data, err := io.ReadAll(body)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "failed to read geometry file"})
+		return
+	}
+
+	if len(data) == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "geometry file is empty"})
+		return
+	}
+
+	geometryID := uuid.New().String()
+	filePath, err := h.geometryFilePath(spaceID, geometryID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	if err := os.MkdirAll(filepath.Dir(filePath), 0750); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create geometry directory"})
+		return
+	}
+
+	if err := os.WriteFile(filePath, data, 0640); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to store geometry file"})
+		return
+	}
+
+	c.JSON(http.StatusCreated, geometryFileResponse{
+		ID:   geometryID,
+		Size: len(data),
+	})
+}
+
+func (h *SpaceHandler) getGeometryFile(c *gin.Context) {
+	spaceID := c.Param("spaceID")
+	geometryID := c.Param("geometryID")
+	filePath, err := h.geometryFilePath(spaceID, geometryID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	if _, err := os.Stat(filePath); err != nil {
+		if os.IsNotExist(err) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "geometry file not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to read geometry file"})
+		return
+	}
+
+	c.Header("Content-Type", "application/octet-stream")
+	c.File(filePath)
+}
+
+func (h *SpaceHandler) geometryFilePath(spaceID string, geometryID string) (string, error) {
+	if _, err := uuid.Parse(spaceID); err != nil {
+		return "", errors.New("invalid space id")
+	}
+
+	if _, err := uuid.Parse(geometryID); err != nil {
+		return "", errors.New("invalid geometry id")
+	}
+
+	return filepath.Join(h.geometryDir, spaceID, geometryID+".dt3dgeo"), nil
 }

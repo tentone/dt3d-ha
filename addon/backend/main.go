@@ -34,6 +34,7 @@ const (
 	optionsFilePath           = "/data/options.json"
 	configuredCertificateFile = "/data/dt3d-configured.crt"
 	configuredKeyFile         = "/data/dt3d-configured.key"
+	geometryFilesDir          = "/data/dt3d-geometries"
 	selfSignedCertificateFile = "/data/dt3d-self-signed.crt"
 	selfSignedKeyFile         = "/data/dt3d-self-signed.key"
 )
@@ -167,7 +168,7 @@ func main() {
 	})
 
 	api := router.Group("/api", handlers.RequireServiceKey(opt.ServiceKey))
-	spaceHandler := handlers.NewSpaceHandler(spaceService)
+	spaceHandler := handlers.NewSpaceHandler(spaceService, geometryFilesDir)
 	handlers.RegisterRoutes(api, spaceHandler)
 
 	if err := runServer(router, fmt.Sprintf("0.0.0.0:%d", opt.Port), opt); err != nil {
