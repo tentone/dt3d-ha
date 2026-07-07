@@ -45,9 +45,6 @@ const numberOrDefault = (value: unknown, fallback: number): number => (
 	typeof value === "number" && Number.isFinite(value) ? value : fallback
 );
 
-const normalizeMode = (value: unknown, fallback: CameraMode): CameraMode => (
-	value === "orthographic" || value === "perspective" ? value : fallback
-);
 
 const normalizeVector = (
 	value: unknown,
@@ -80,14 +77,12 @@ const normalizeQuaternion = (
 	};
 };
 
-const normalizeViewportConfig = (
-	config: Partial<CameraViewportConfig> = {},
-): CameraViewportConfig => {
+const normalizeViewportConfig = (config: Partial<CameraViewportConfig> = {},): CameraViewportConfig => {
 	const fallback = DEFAULT_VIEWPORT_CONFIG;
 	const normalized: CameraViewportConfig = {
 		direction: normalizeVector(config.direction, fallback.direction),
 		fov: numberOrDefault(config.fov, fallback.fov ?? 75),
-		mode: normalizeMode(config.mode, fallback.mode),
+		mode: config.mode === "orthographic" || config.mode === "perspective" ? config.mode : fallback.mode,
 		position: normalizeVector(config.position, fallback.position),
 		targetDistance: numberOrDefault(
 			config.targetDistance,
@@ -110,9 +105,7 @@ const normalizeViewportConfig = (
 	return normalized;
 };
 
-const cloneViewportConfig = (
-	config: Partial<CameraViewportConfig>,
-): CameraViewportConfig => normalizeViewportConfig(config);
+const cloneViewportConfig = (config: Partial<CameraViewportConfig>): CameraViewportConfig => normalizeViewportConfig(config);
 
 /**
  * Saved camera viewport marker.
@@ -125,7 +118,6 @@ export class ViewportObject extends DTObject {
 
 	private readonly label: TextSprite;
 
-	private readonly directionLine: Line;
 
 	public constructor(
 		config: Partial<CameraViewportConfig> = DEFAULT_VIEWPORT_CONFIG,
@@ -143,15 +135,6 @@ export class ViewportObject extends DTObject {
 		icon.position.y = 0.14;
 		this.add(icon);
 
-		this.directionLine = new Line(
-			new BufferGeometry().setFromPoints([
-				new Vector3(0, 0.14, 0),
-				new Vector3(0, 0.14, -0.75),
-			]),
-			new LineBasicMaterial({color: 0x2f80ed}),
-		);
-		this.directionLine.internal = true;
-		this.add(this.directionLine);
 
 		this.label = new TextSprite(name, 44, {
 			background: "rgba(14, 22, 34, 0.82)",
@@ -253,6 +236,11 @@ export class ViewportObject extends DTObject {
 		).copy(this, recursive) as this;
 	}
 
+	/**
+	 * Apply the given camera config to the object transform.
+	 * 
+	 * @param config - The camera config to apply.
+	 */
 	private applyConfigToTransform(config: CameraViewportConfig): void {
 		this.position.set(config.position.x, config.position.y, config.position.z);
 
