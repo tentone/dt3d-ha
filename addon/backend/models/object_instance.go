@@ -15,7 +15,7 @@ type ObjectInstance struct {
 
 	// Parent-child relationship for hierarchical objects
 	ParentID *string         `gorm:"type:uuid;index" json:"parent_id,omitempty"`
-	Parent   *ObjectInstance `gorm:"constraint:OnUpdate:CASCADE,OnDelete:SET NULL;" json:"-"`
+	Parent   *ObjectInstance `gorm:"constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"-"`
 
 	// Children objects for hierarchical structure
 	Children []ObjectInstance `gorm:"foreignKey:ParentID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"children,omitempty"`

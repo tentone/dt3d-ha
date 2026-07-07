@@ -6,6 +6,8 @@ import (
 	"gorm.io/gorm"
 )
 
+const objectInstanceIDBatchSize = 500
+
 type ObjectInstanceRepository struct {
 	// Database connection
 	db *gorm.DB
@@ -37,6 +39,62 @@ func (r *ObjectInstanceRepository) Update(instance *models.ObjectInstance) error
 	return r.db.Save(instance).Error
 }
 
-func (r *ObjectInstanceRepository) Delete(id string) error {
-	return r.db.Delete(&models.ObjectInstance{}, "id = ?", id).Error
+func (r *ObjectInstanceRepository) DeleteWithDescendants(id string) error {
+	return r.db.Transaction(func(tx *gorm.DB) error {
+		ids, err := collectObjectSubtreeIDs(tx, id)
+		if err != nil {
+			return err
+		}
+
+		for end := len(ids); end > 0; end -= objectInstanceIDBatchSize {
+			start := end - objectInstanceIDBatchSize
+			if start < 0 {
+				start = 0
+			}
+
+			if err := tx.Delete(&models.ObjectInstance{}, "id IN ?", ids[start:end]).Error; err != nil {
+				return err
+			}
+		}
+
+		return nil
+	})
+}
+
+func collectObjectSubtreeIDs(tx *gorm.DB, rootID string) ([]string, error) {
+	ids := []string{rootID}
+	frontier := []string{rootID}
+	seen := map[string]struct{}{rootID: {}}
+
+	for len(frontier) > 0 {
+		next := []string{}
+
+		for start := 0; start < len(frontier); start += objectInstanceIDBatchSize {
+			end := start + objectInstanceIDBatchSize
+			if end > len(frontier) {
+				end = len(frontier)
+			}
+
+			var childIDs []string
+			if err := tx.Model(&models.ObjectInstance{}).
+				Where("parent_id IN ?", frontier[start:end]).
+				Pluck("id", &childIDs).Error; err != nil {
+				return nil, err
+			}
+
+			for _, childID := range childIDs {
+				if _, ok := seen[childID]; ok {
+					continue
+				}
+
+				seen[childID] = struct{}{}
+				ids = append(ids, childID)
+				next = append(next, childID)
+			}
+		}
+
+		frontier = next
+	}
+
+	return ids, nil
 }

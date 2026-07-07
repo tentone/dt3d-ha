@@ -124,7 +124,7 @@ func (s *SpaceService) DeleteObjectInstance(spaceID, objectID string) error {
 	if instance.SpaceID != spaceID {
 		return errors.New("object instance does not belong to space")
 	}
-	return s.instances.Delete(objectID)
+	return s.instances.DeleteWithDescendants(objectID)
 }
 
 type ObjectTreeNode struct {
