@@ -1,5 +1,6 @@
 import "./add-entity-modal/add-entity-modal.js";
 import "./camera-toggle/camera-toggle.js";
+import "./confirmation-modal/confirmation-modal.js";
 import "./connection-status/connection-status.js";
 import "./hint-box/hint-box.js";
 import "./mesh-menu/mesh-menu.js";
@@ -49,6 +50,10 @@ import {LocalStorage} from "../utils/local-storage.js";
 import {findMesh} from "../utils/object3d-utils.js";
 import type {DT3DAddEntityModal} from "./add-entity-modal/add-entity-modal.js";
 import type {DT3DCameraToggle} from "./camera-toggle/camera-toggle.js";
+import type {
+	ConfirmationActionType,
+	DT3DConfirmationModal,
+} from "./confirmation-modal/confirmation-modal.js";
 import type {ConnectionStatus} from "./connection-status/connection-status.js";
 import type {DT3DHintBox} from "./hint-box/hint-box.js";
 import type {DT3DMeshMenu} from "./mesh-menu/mesh-menu.js";
@@ -65,6 +70,14 @@ const getFileExtension = (file: File): string | null =>
 
 const booleanConfig = (value: unknown): boolean =>
 	value === true || value === "true" || value === "1";
+
+type ConfirmationOptions = {
+	heading: string;
+	message: string;
+	confirmLabel: string;
+	actionType: ConfirmationActionType;
+	onConfirm: () => void;
+};
 
 @customElement("dt3d-card")
 export class DT3DCard extends LitElement {
@@ -181,6 +194,28 @@ export class DT3DCard extends LitElement {
 
 	private suppressNextCanvasClickTimer: number | null = null;
 
+	private readonly handleKeyDown = (event: KeyboardEvent): void => {
+		if (event.key !== "Delete" || event.defaultPrevented || event.repeat) {
+			return;
+		}
+
+		if (
+			this.isVisualizationOnly() ||
+			this.hasOpenDialog() ||
+			this.isKeyboardEventFromEditableElement(event)
+		) {
+			return;
+		}
+
+		const target = this.getSelectedObjectForDelete();
+		if (!target) {
+			return;
+		}
+
+		event.preventDefault();
+		this.requestDeleteObject(target.uuid);
+	};
+
 	private readonly sceneLongPressDelay = 600;
 
 	private readonly sceneLongPressMoveTolerance = 12;
@@ -199,6 +234,8 @@ export class DT3DCard extends LitElement {
 	 * Active mesh add menu, if open.
 	 */
 	private meshMenu: DT3DMeshMenu | null = null;
+
+	private confirmationModal: DT3DConfirmationModal | null = null;
 
 	static properties = {
 		hass: {attribute: false},
@@ -383,6 +420,8 @@ export class DT3DCard extends LitElement {
 			this.spaceConfigMenu = null;
 			this.meshMenu?.remove();
 			this.meshMenu = null;
+			this.confirmationModal?.remove();
+			this.confirmationModal = null;
 			this.content
 				?.querySelectorAll("dt3d-add-entity-modal")
 				.forEach((modal) => modal.remove());
@@ -470,6 +509,56 @@ export class DT3DCard extends LitElement {
 		this.transform.getHelper().visible = enabled;
 	}
 
+	private openConfirmationModal(options: ConfirmationOptions): void {
+		if (!this.content) {
+			return;
+		}
+
+		this.confirmationModal?.remove();
+
+		const modal = document.createElement("dt3d-confirmation-modal") as DT3DConfirmationModal;
+		modal.heading = options.heading;
+		modal.message = options.message;
+		modal.confirmLabel = options.confirmLabel;
+		modal.actionType = options.actionType;
+
+		const closeModal = () => {
+			modal.remove();
+			if (this.confirmationModal === modal) {
+				this.confirmationModal = null;
+			}
+		};
+
+		modal.addEventListener("modal-confirm", () => {
+			closeModal();
+			options.onConfirm();
+		});
+		modal.addEventListener("modal-close", closeModal);
+
+		this.confirmationModal = modal;
+		this.content.appendChild(modal);
+	}
+
+	private requestDeleteObject(objectId: string): void {
+		if (!this.space || this.isVisualizationOnly()) {
+			return;
+		}
+
+		const target = this.space.getObjectByProperty("uuid", objectId) as Object3D | null;
+		if (!target || target === this.space) {
+			return;
+		}
+
+		this.tree?.closeContextMenu();
+		this.openConfirmationModal({
+			heading: localManager.get("deleteObjectTitle"),
+			message: localManager.get("confirmDelete"),
+			confirmLabel: localManager.get("delete"),
+			actionType: "red",
+			onConfirm: () => this.deleteObject(objectId),
+		});
+	}
+
 	/**
 	 * Delete object from space.
 	 *
@@ -490,6 +579,15 @@ export class DT3DCard extends LitElement {
 			return;
 		}
 
+		const transformTarget = this.transform?.object ?? null;
+		const selectedTarget = this.lastSelectedObject;
+		const removesTransformTarget = transformTarget
+			? Boolean(target.getObjectByProperty("uuid", transformTarget.uuid))
+			: false;
+		const removesSelectedTarget = selectedTarget
+			? Boolean(target.getObjectByProperty("uuid", selectedTarget.uuid))
+			: false;
+
 		target.traverse((child) => {
 			if (child instanceof DTObject) {
 				child.dispose();
@@ -498,8 +596,12 @@ export class DT3DCard extends LitElement {
 
 		parent.remove(target);
 
-		if (this.transform?.object === target) {
+		if (removesTransformTarget) {
 			this.transform.detach();
+		}
+
+		if (removesSelectedTarget) {
+			this.lastSelectedObject = null;
 		}
 
 		this.tree.updateTreeDiff(this.space);
@@ -828,6 +930,47 @@ export class DT3DCard extends LitElement {
 		this.suppressNextCanvasClickTimer = null;
 	}
 
+	private hasOpenDialog(): boolean {
+		return Boolean(
+			this.confirmationModal ||
+			this.spaceConfigMenu ||
+			this.meshMenu ||
+			this.content?.querySelector("dt3d-add-entity-modal"),
+		);
+	}
+
+	private isKeyboardEventFromEditableElement(event: KeyboardEvent): boolean {
+		return event.composedPath().some((target) => {
+			if (
+				target instanceof HTMLInputElement ||
+				target instanceof HTMLTextAreaElement ||
+				target instanceof HTMLSelectElement
+			) {
+				return true;
+			}
+
+			return target instanceof HTMLElement &&
+				(target.isContentEditable || target.getAttribute("role") === "textbox");
+		});
+	}
+
+	private getSelectedObjectForDelete(): Object3D | null {
+		if (!this.space || !this.lastSelectedObject) {
+			return null;
+		}
+
+		const target = this.space.getObjectByProperty(
+			"uuid",
+			this.lastSelectedObject.uuid,
+		) as Object3D | null;
+
+		if (!target || target === this.space) {
+			return null;
+		}
+
+		return target;
+	}
+
 	/**
 	 * Update the hint box message based on the currently active tool state.
 	 */
@@ -1007,6 +1150,8 @@ export class DT3DCard extends LitElement {
 	 * Initializes the 3D scene and starts the rendering loop.
 	 */
 	public connectedCallback() {
+		window.addEventListener("keydown", this.handleKeyDown);
+
 		if (this.container) {
 			return;
 		}
@@ -1317,7 +1462,7 @@ export class DT3DCard extends LitElement {
 			}
 
 			const id = e.detail.id as string;
-			this.deleteObject(id);
+			this.requestDeleteObject(id);
 		});
 
 		this.tree.addEventListener("object-clone", (e: any) => {
@@ -1481,6 +1626,14 @@ export class DT3DCard extends LitElement {
 		});
 
 		resizeDetector.observe(this.container, {box: "border-box"});
+	}
+
+	public disconnectedCallback(): void {
+		window.removeEventListener("keydown", this.handleKeyDown);
+		this.clearSceneLongPress();
+		this.clearCanvasClickSuppression();
+		this.confirmationModal?.remove();
+		this.confirmationModal = null;
 	}
 
 	/**
