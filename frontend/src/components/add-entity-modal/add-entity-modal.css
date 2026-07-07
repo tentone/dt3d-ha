@@ -43,10 +43,29 @@ li {
 	padding: 6px;
 	cursor: pointer;
 	border-bottom: 1px solid var(--ha-color-border);
+	display: flex;
+	gap: 6px;
+	min-width: 0;
 }
 
 li:hover {
 	background: var(--ha-color-primary-10);
+}
+
+.entity-name,
+.entity-id {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.entity-name {
+	flex: 0 1 auto;
+}
+
+.entity-id {
+	color: var(--ha-color-neutral-70);
+	flex: 1 1 auto;
 }
 
 button {

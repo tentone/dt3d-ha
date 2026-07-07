@@ -16,7 +16,7 @@ export class DT3DAddEntityModal extends LitElement {
 	 */
 	@property({attribute: false})
 	public states: Record<string, unknown> = {};
-	
+
 	/**
 	 * Search query to filter entities.
 	 */
@@ -30,8 +30,20 @@ export class DT3DAddEntityModal extends LitElement {
 		const query = this.query.trim().toLowerCase();
 
 		return Object.keys(this.states ?? {}).filter(
-			(entityId) => !query || entityId.toLowerCase().includes(query),
+			(entityId) => {
+				if (!query) {
+					return true;
+				}
+
+				const entityName = this.getEntityName(entityId).toLowerCase();
+				return entityId.toLowerCase().includes(query) || entityName.includes(query);
+			},
 		);
+	}
+
+	private getEntityName(entityId: string): string {
+		const entity = this.states?.[entityId] as { attributes?: { friendly_name?: string } } | undefined;
+		return entity?.attributes?.friendly_name || entityId;
 	}
 
 
@@ -82,11 +94,12 @@ export class DT3DAddEntityModal extends LitElement {
 					@input=${this.handleSearch} />
 				<ul>
 					${this.filteredEntityIds.map(
-		(entityId) =>
-			html`<li @click=${() => this.handleEntitySelect(entityId)}>
-								${entityId}
+						(entityId) =>
+							html`<li @click=${() => this.handleEntitySelect(entityId)}>
+								<span class="entity-name">${this.getEntityName(entityId)}</span>
+								<span class="entity-id">(${entityId})</span>
 							</li>`,
-	)}
+					)}
 				</ul>
 				<button @click=${this.handleClose}>${localManager.get("cancel")}</button>
 			</div>
