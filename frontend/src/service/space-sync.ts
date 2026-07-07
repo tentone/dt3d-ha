@@ -2,7 +2,7 @@ import type {Object3D} from "three";
 import {Group, Mesh, MeshStandardMaterial} from "three";
 
 import type {DT3DTree} from "../components/object-tree/object-tree.js";
-import {applyTextureDataUrlToMesh} from "../editor/material-texture.js";
+import {applyTextureToMesh} from "../editor/material-texture.js";
 import {createMeshObject, getMeshGeometryParameters} from "../editor/mesh-handler.js";
 import type {SceneManager} from "../editor/scene.js";
 import {DTObject} from "../objects/dt-object.js";
@@ -265,7 +265,7 @@ export class SpaceSync {
 		this.applyObjectTransform(object, data);
 
 		if (object instanceof Mesh && typeof data.textureDataUrl === "string") {
-			void applyTextureDataUrlToMesh(object, data.textureDataUrl, typeof data.textureName === "string" ? data.textureName : "Texture");
+			void applyTextureToMesh(object, data.textureDataUrl, typeof data.textureName === "string" ? data.textureName : "Texture");
 		}
 
 		if (object instanceof DTObject && typeof data.locked === "boolean") {
@@ -277,6 +277,9 @@ export class SpaceSync {
 
 	/**
 	 * Build an API payload from a three.js object.
+	 * 
+	 * @param object - The three.js object to convert into an API payload.
+	 * @returns The API payload representing the object, or null if the object should not be persisted.
 	 */
 	public buildObjectPayload(object: Object3D): ObjectInstancePayload | null {
 		if (!this.activeSpaceId || !this.shouldPersistObject(object)) {
@@ -314,7 +317,7 @@ export class SpaceSync {
 				height: object.height,
 				thickness: object.thickness,
 			};
-			const material = object.getWallMaterial();
+			const material = (object.wallMesh.material as any);
 			if (material?.color?.getHexString) {
 				data.color = material.color.getHexString();
 			}
@@ -327,7 +330,7 @@ export class SpaceSync {
 				height: object.height,
 				thickness: object.thickness,
 			};
-			const material = object.getDoorMaterial();
+			const material = (object.doorMesh.material as any);
 			if (material?.color?.getHexString) {
 				data.color = material.color.getHexString();
 			}

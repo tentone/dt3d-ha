@@ -23,11 +23,20 @@ export class DoorObject extends DTObject {
 
 	public thickness: number;
 
+	/**
+	 * State of the door.
+	 */
 	public open = false;
 
-	private hingeGroup: Group;
+	/**
+	 * Hinge group that allows the door to rotate around its hinge when opening or closing.
+	 */
+	public hingeGroup: Group;
 
-	private doorMesh: Mesh;
+	/**
+	 * Mesh used to represent the door panel. This mesh is a child of the hingeGroup, which allows for rotation around the hinge when opening or closing the door.
+	 */
+	public doorMesh: Mesh;
 
 	constructor(
 		dimensions: Partial<DoorDimensions> = {},
@@ -53,18 +62,23 @@ export class DoorObject extends DTObject {
 		this.updateGeometry();
 	}
 
+	/**
+	 * Set the open state of the door.
+	 * 
+	 * @param isOpen - True to open the door, false to close it.
+	 */
 	public setOpen(isOpen: boolean): void {
 		this.open = isOpen;
 		this.hingeGroup.rotation.y = isOpen ? -Math.PI / 2 : 0;
 	}
 
+	/**
+	 * Toggle the open state of the door. If the door is currently open, it will be closed, and if it is closed, it will be opened.
+	 */
 	public toggleOpen(): void {
 		this.setOpen(!this.open);
 	}
 
-	public getDoorMaterial(): MeshStandardMaterial {
-		return this.doorMesh.material as MeshStandardMaterial;
-	}
 
 	public override copy(source: this, recursive: boolean = true): this {
 		super.copy(source, recursive);
@@ -84,6 +98,9 @@ export class DoorObject extends DTObject {
 		return this;
 	}
 
+	/**
+	 * Update the door geometry based on the current width, height, and thickness. This method is called whenever the dimensions of the door are changed.
+	 */
 	private updateGeometry(): void {
 		const geometry = new BoxGeometry(this.width, this.height, this.thickness);
 		this.doorMesh.geometry.dispose();

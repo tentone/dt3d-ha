@@ -5,7 +5,7 @@ import {customElement, property} from "lit/decorators.js";
 import type {Object3D} from "three";
 import {Color, Mesh} from "three";
 
-import {applyImageTextureToMesh, clearMeshTexture, findMesh} from "../../editor/material-texture.js";
+import {applyImageTextureToMesh, clearMeshTexture} from "../../editor/material-texture.js";
 import {getMeshGeometryParameters, MESH_GEOMETRY_PARAMETER_DEFINITIONS, resolveMeshType, updateMeshGeometry} from "../../editor/mesh-handler.js";
 import {localManager} from "../../locale/locale.js";
 import {DTObject} from "../../objects/dt-object.js";
@@ -18,6 +18,7 @@ import type {
 	DynamicFormField,
 } from "../dynamic-form/dynamic-form.js";
 import componentStyles from "./object-inspector.css?inline";
+import { findMesh } from "../../utils/object3d-utils.js";
 
 @customElement("dt3d-object-inspector")
 export class DT3DObjectInspector extends LitElement {
@@ -26,27 +27,6 @@ export class DT3DObjectInspector extends LitElement {
 	@property({attribute: false})
 	public selectedObject: Object3D | null = null;
 
-	/**
-	 * Check if object is a entity object.
-	 *
-	 * @param object - Object attached to the inspector.
-	 * @returns True if object is a entity object.
-	 */
-	private isEntityObject(object: Object3D | null): object is EntityObject {
-		return object instanceof EntityObject;
-	}
-
-	private isWallObject(object: Object3D | null): object is WallObject {
-		return object instanceof WallObject;
-	}
-
-	private isDoorObject(object: Object3D | null): object is DoorObject {
-		return object instanceof DoorObject;
-	}
-
-	private isWindowObject(object: Object3D | null): object is WindowObject {
-		return object instanceof WindowObject;
-	}
 	/**
 	 * Check if object has a material with a color.
 	 *
@@ -69,7 +49,7 @@ export class DT3DObjectInspector extends LitElement {
 	}
 
 	/**
-	 *
+	 * Dispatch a updated event, which can be used to notify other components that the selected object has been updated.
 	 */
 	private dispatchUpdated() {
 		this.dispatchEvent(
@@ -81,6 +61,15 @@ export class DT3DObjectInspector extends LitElement {
 		);
 	}
 
+	/**
+	 * Set a nested attribute of an object using a dot-separated string path.
+	 * 
+	 * E.g. setNestedAttribute(obj, "position.x", 10) will set obj.position.x to 10.
+	 * 
+	 * @param target - The target object on which to set the attribute. 
+	 * @param attribute - The dot-separated string path of the attribute to set.
+	 * @param value - The value to set the attribute to.
+	 */
 	private setNestedAttribute(target: any, attribute: string, value: unknown) {
 		const keys = attribute.split(".");
 		let current = target;
@@ -93,6 +82,11 @@ export class DT3DObjectInspector extends LitElement {
 		current[keys[keys.length - 1]] = value;
 	}
 
+	/**
+	 * Handle changes to the form fields and update the selected object's properties accordingly.
+	 * 
+	 * @param event - The custom event containing the form field change details.
+	 */
 	private handleFormFieldChange(event: CustomEvent<DynamicFormChangeDetail>) {
 		if (!this.selectedObject) return;
 
@@ -136,7 +130,7 @@ export class DT3DObjectInspector extends LitElement {
 			}
 			clearMeshTexture(mesh);
 		} else if (attribute === "height" || attribute === "thickness") {
-			if (!this.isWallObject(this.selectedObject)) {
+			if (!(this.selectedObject instanceof WallObject)) {
 				return;
 			}
 			const rawValue = Number(value);
@@ -160,9 +154,9 @@ export class DT3DObjectInspector extends LitElement {
 				return;
 			}
 		} else if (attribute === "open") {
-			if (this.isDoorObject(this.selectedObject)) {
+			if (this.selectedObject instanceof DoorObject) {
 				this.selectedObject.setOpen(Boolean(value));
-			} else if (this.isWindowObject(this.selectedObject)) {
+			} else if (this.selectedObject instanceof WindowObject) {
 				this.selectedObject.setOpen(Boolean(value));
 			}
 		} else {
@@ -305,7 +299,7 @@ export class DT3DObjectInspector extends LitElement {
 	}
 
 	private renderEntityDetails() {
-		if (!this.isEntityObject(this.selectedObject)) {
+		if (!(this.selectedObject instanceof EntityObject)) {
 			return null;
 		}
 
@@ -336,7 +330,7 @@ export class DT3DObjectInspector extends LitElement {
 	}
 
 	private getWallFields(locked: boolean): DynamicFormField[] {
-		if (!this.isWallObject(this.selectedObject)) {
+		if (!(this.selectedObject instanceof WallObject)) {
 			return [];
 		}
 
@@ -361,7 +355,7 @@ export class DT3DObjectInspector extends LitElement {
 	}
 
 	private getOpeningFields(locked: boolean): DynamicFormField[] {
-		if (!this.isDoorObject(this.selectedObject) && !this.isWindowObject(this.selectedObject)) {
+		if (!(this.selectedObject instanceof DoorObject) && !(this.selectedObject instanceof WindowObject)) {
 			return [];
 		}
 
@@ -408,7 +402,7 @@ export class DT3DObjectInspector extends LitElement {
 	}
 
 	private getEntityFields(): DynamicFormField[] {
-		if (!this.isEntityObject(this.selectedObject)) {
+		if (!(this.selectedObject instanceof EntityObject)) {
 			return [];
 		}
 
@@ -438,7 +432,7 @@ export class DT3DObjectInspector extends LitElement {
 	}
 
 	private getEntityData(): Record<string, unknown> | null {
-		if (!this.isEntityObject(this.selectedObject)) {
+		if (!(this.selectedObject instanceof EntityObject)) {
 			return null;
 		}
 
@@ -486,9 +480,7 @@ export class DT3DObjectInspector extends LitElement {
 		this.addSubFormField(
 			fields,
 			"opening",
-			this.isDoorObject(this.selectedObject)
-				? localManager.get("door")
-				: localManager.get("window"),
+			this.selectedObject instanceof DoorObject ? localManager.get("door") : localManager.get("window"),
 			this.getOpeningFields(locked),
 		);
 		this.addSubFormField(

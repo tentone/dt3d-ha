@@ -49,7 +49,7 @@ export class WallObject extends DTObject {
 	 *
 	 * This mesh's geometry is updated when doors/windows are added/removed.
 	 */
-	private wallMesh: Mesh;
+	public wallMesh: Mesh;
 
 	/**
 	 * Count of doors added to this wall.
@@ -186,13 +186,6 @@ export class WallObject extends DTObject {
 		this.add(window);
 		this.updateGeometry();
 		return window;
-	}
-
-	/**
-	 * Get the material used for the wall mesh.
-	 */
-	public getWallMaterial(): MeshStandardMaterial {
-		return this.wallMesh.material as MeshStandardMaterial;
 	}
 
 	/**

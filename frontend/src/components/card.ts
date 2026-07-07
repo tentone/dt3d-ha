@@ -24,7 +24,7 @@ import {FBXLoader} from "three/examples/jsm/loaders/FBXLoader.js";
 import {GLTFLoader} from "three/examples/jsm/loaders/GLTFLoader.js";
 import {OBJLoader} from "three/examples/jsm/loaders/OBJLoader.js";
 
-import {applyImageTextureToMesh, findMesh} from "../editor/material-texture.js";
+import {applyImageTextureToMesh} from "../editor/material-texture.js";
 import {MeasurementManager} from "../editor/measurements.js";
 import {createMeshObject, resolveMeshType} from "../editor/mesh-handler.js";
 import {RendererManager} from "../editor/renderer.js";
@@ -52,6 +52,7 @@ import type {DT3DMeshMenu} from "./mesh-menu/mesh-menu.js";
 import type {DT3DTree} from "./object-tree/object-tree.js";
 import type {DT3DSidebar} from "./side-bar/side-bar.js";
 import type {DT3DSpaceConfigMenu} from "./space-config-menu/space-config-menu.js";
+import { findMesh } from "../utils/object3d-utils.js";
 
 const SPACE_SCENE_CONFIG_STORAGE_KEY = "space-scene-config";
 const MODEL_FILE_EXTENSIONS = new Set(["gltf", "glb", "obj", "fbx"]);
