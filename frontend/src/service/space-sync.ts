@@ -4,12 +4,13 @@ import {BoxGeometry, BufferGeometryLoader, Group, MaterialLoader, Mesh, MeshStan
 import type {DT3DTree} from "../components/object-tree/object-tree.js";
 import {applyTextureToMesh} from "../editor/material-texture.js";
 import {createMeshObject, getMeshGeometryParameters} from "../editor/mesh-handler.js";
-import type {SceneManager} from "../editor/scene.js";
+import type {CameraViewportConfig, SceneManager} from "../editor/scene.js";
 import {DTObject} from "../objects/dt-object.js";
 import {EntityObject} from "../objects/entity-object.js";
 import {DoorObject} from "../objects/house/door.js";
 import {WallObject} from "../objects/house/wall.js";
 import {WindowObject} from "../objects/house/window.js";
+import {ViewportObject} from "../objects/viewport-object.js";
 import {deserializeGeometryBinary, serializeGeometryToBinary} from "./geometry-binary.js";
 import type {
 	ObjectInstancePayload,
@@ -79,12 +80,14 @@ function deserializeMaterial(data: unknown, fallbackColor: number): Material | M
 	return new MeshStandardMaterial({color: fallbackColor});
 }
 
-function normalizeObjectInstanceType(type: string): "mesh" | "entity" | "group" | null {
+function normalizeObjectInstanceType(type: string): "mesh" | "entity" | "group" | "viewport" | null {
 	switch (type.trim().toLowerCase()) {
 		case "mesh":
 			return "mesh";
 		case "entity":
 			return "entity";
+		case "viewport":
+			return "viewport";
 		case "group":
 		case "3dmodel":
 			return "group";
@@ -333,6 +336,9 @@ export class SpaceSync {
 			if (object) {
 				object.userData.entityId = entityId;
 			}
+		} else if (instanceType === "viewport") {
+			const viewport = data.viewport as Partial<CameraViewportConfig> | undefined;
+			object = new ViewportObject(viewport, instance.name || "Viewport");
 		} else if (instanceType === "group" || declaredType) {
 			object = new Group();
 		}
@@ -387,7 +393,10 @@ export class SpaceSync {
 			},
 		};
 
-		if (object instanceof EntityObject) {
+		if (object instanceof ViewportObject) {
+			type = declaredType ?? "viewport";
+			data.viewport = object.getViewportConfig();
+		} else if (object instanceof EntityObject) {
 			type = declaredType ?? "entity";
 			data.entityId = object.entityId;
 		} else if (object instanceof WallObject) {

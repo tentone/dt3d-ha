@@ -76,6 +76,8 @@
 	"addMesh": "Add mesh",
 	"uploadModel": "Upload model",
 	"addEntity": "Add entity",
+	"addViewport": "Create viewport",
+	"viewport": "Viewport",
 	"measure": "Measure",
 	"measureDistance": "Measure distance",
 	"measureAngle": "Measure angle",

@@ -347,6 +347,12 @@ export class DT3DSidebar extends LitElement {
 						aria-label=${localManager.get("addEntity")}>
 						<ha-icon icon="mdi:state-machine"></ha-icon>
 					</button>
+					<button
+						@click=${() => this.handleAddObject("viewport")}
+						data-tooltip=${localManager.get("addViewport")}
+						aria-label=${localManager.get("addViewport")}>
+						<ha-icon icon="mdi:camera-plus-outline"></ha-icon>
+					</button>
 				</div>
 				<!-- --ha-color-primary-30) -->
 				<div class="sidebar-section">

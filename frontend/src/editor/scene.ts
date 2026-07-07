@@ -21,6 +21,34 @@ import {TransformControls} from "three/examples/jsm/controls/TransformControls";
  */
 export type CameraMode = "perspective" | "orthographic";
 
+export type CameraViewportConfig = {
+	direction: {
+		x: number;
+		y: number;
+		z: number;
+	};
+	fov?: number;
+	mode: CameraMode;
+	position: {
+		x: number;
+		y: number;
+		z: number;
+	};
+	quaternion?: {
+		w: number;
+		x: number;
+		y: number;
+		z: number;
+	};
+	target?: {
+		x: number;
+		y: number;
+		z: number;
+	};
+	targetDistance?: number;
+	zoom?: number;
+};
+
 /**
  * Daylight settings for the active space.
  */
@@ -452,6 +480,88 @@ export class SceneManager {
 	 */
 	public getCameraMode(): CameraMode {
 		return this.cameraMode;
+	}
+
+	/**
+	 * Capture the current camera position, orientation and projection mode.
+	 */
+	public captureViewportConfig(): CameraViewportConfig {
+		const direction = new Vector3();
+		this.camera.getWorldDirection(direction);
+
+		return {
+			direction: {
+				x: direction.x,
+				y: direction.y,
+				z: direction.z,
+			},
+			fov: this.camera instanceof PerspectiveCamera ? this.camera.fov : undefined,
+			mode: this.cameraMode,
+			position: {
+				x: this.camera.position.x,
+				y: this.camera.position.y,
+				z: this.camera.position.z,
+			},
+			quaternion: {
+				w: this.camera.quaternion.w,
+				x: this.camera.quaternion.x,
+				y: this.camera.quaternion.y,
+				z: this.camera.quaternion.z,
+			},
+			target: {
+				x: this.controls.target.x,
+				y: this.controls.target.y,
+				z: this.controls.target.z,
+			},
+			targetDistance: this.controls.target.distanceTo(this.camera.position),
+			zoom: this.camera.zoom,
+		};
+	}
+
+	/**
+	 * Move the editor camera to a saved viewport.
+	 *
+	 * @param config - Viewport camera configuration.
+	 */
+	public applyViewportConfig(config: CameraViewportConfig): void {
+		this.setCameraMode(config.mode);
+
+		this.camera.position.set(config.position.x, config.position.y, config.position.z);
+
+		if (config.quaternion) {
+			this.camera.quaternion.set(
+				config.quaternion.x,
+				config.quaternion.y,
+				config.quaternion.z,
+				config.quaternion.w,
+			);
+		} else {
+			const direction = new Vector3(config.direction.x, config.direction.y, config.direction.z).normalize();
+			const distance = config.targetDistance ?? 10;
+			const target = this.camera.position.clone().add(direction.multiplyScalar(distance));
+			this.camera.lookAt(target);
+		}
+
+		if (this.camera instanceof PerspectiveCamera && typeof config.fov === "number") {
+			this.camera.fov = config.fov;
+		}
+
+		if (typeof config.zoom === "number") {
+			this.camera.zoom = config.zoom;
+		}
+
+		if (config.target) {
+			this.controls.target.set(config.target.x, config.target.y, config.target.z);
+		} else {
+			const direction = new Vector3(config.direction.x, config.direction.y, config.direction.z).normalize();
+			const distance = config.targetDistance ?? 10;
+			this.controls.target.copy(this.camera.position).add(direction.multiplyScalar(distance));
+		}
+
+		this.camera.updateProjectionMatrix();
+		this.camera.updateMatrixWorld();
+		this.controls.update();
+		this.updateGridPosition();
 	}
 
 	/**

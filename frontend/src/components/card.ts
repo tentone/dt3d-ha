@@ -42,6 +42,7 @@ import {EntityLight} from "../objects/entity-light.js";
 import {EntityObject, isToggleable} from "../objects/entity-object.js";
 import {EntitySensor} from "../objects/entity-sensor.js";
 import {EntitySwitch} from "../objects/entity-switch.js";
+import {ViewportObject} from "../objects/viewport-object.js";
 import {SpaceApi} from "../service/space-api.js";
 import {SpaceSync} from "../service/space-sync.js";
 import {LocalStorage} from "../utils/local-storage.js";
@@ -122,6 +123,8 @@ export class DT3DCard extends LitElement {
 	private hintBox: DT3DHintBox;
 
 	private syncProgressComponent: SyncProgressComponent | null = null;
+
+	private cameraToggle: DT3DCameraToggle | null = null;
 
 	/**
 	 * Tree element for displaying the 3D object hierarchy.
@@ -833,6 +836,54 @@ export class DT3DCard extends LitElement {
 	}
 
 	/**
+	 * Create a saved viewport from the active camera configuration.
+	 */
+	private addViewportFromCurrentCamera(): void {
+		if (!this.sceneManager) {
+			return;
+		}
+
+		const name = `${localManager.get("viewport")} ${this.getViewportCount() + 1}`;
+		const viewport = new ViewportObject(
+			this.sceneManager.captureViewportConfig(),
+			name,
+		);
+
+		this.addToScene(viewport);
+	}
+
+	/**
+	 * Count existing saved viewport objects.
+	 */
+	private getViewportCount(): number {
+		let count = 0;
+		this.space?.traverse((child) => {
+			if (child instanceof ViewportObject) {
+				count += 1;
+			}
+		});
+
+		return count;
+	}
+
+	/**
+	 * Move the editor camera to a saved viewport.
+	 *
+	 * @param viewport - Viewport marker to activate.
+	 */
+	private activateViewport(viewport: ViewportObject): void {
+		this.sceneManager.applyViewportConfig(viewport.getViewportConfig());
+		this.camera = this.sceneManager.camera;
+		this.controls = this.sceneManager.controls;
+		this.transform = this.sceneManager.transform;
+		this.rendererManager.setCamera(this.camera);
+
+		if (this.cameraToggle) {
+			this.cameraToggle.mode = this.sceneManager.getCameraMode();
+		}
+	}
+
+	/**
 	 * Add a new object by sidebar/menu type.
 	 *
 	 * @param type - Object type to add.
@@ -849,6 +900,8 @@ export class DT3DCard extends LitElement {
 		if (object) {
 			object.userData.meshType = type;
 			this.addToScene(object);
+		} else if (type === "viewport") {
+			this.addViewportFromCurrentCamera();
 		} else if (type === "upload") {
 			this.selectFile();
 		} else if (type === "entity") {
@@ -1025,9 +1078,9 @@ export class DT3DCard extends LitElement {
 			width,
 		);
 
-		const cameraToggle = document.createElement("dt3d-camera-toggle") as DT3DCameraToggle;
-		cameraToggle.mode = this.sceneManager.getCameraMode();
-		cameraToggle.addEventListener("camera-mode-change", (event: Event) => {
+		this.cameraToggle = document.createElement("dt3d-camera-toggle") as DT3DCameraToggle;
+		this.cameraToggle.mode = this.sceneManager.getCameraMode();
+		this.cameraToggle.addEventListener("camera-mode-change", (event: Event) => {
 			const {mode} = (event as CustomEvent<{ mode: CameraMode }>).detail;
 
 			this.sceneManager.setCameraMode(mode);
@@ -1035,7 +1088,7 @@ export class DT3DCard extends LitElement {
 			this.rendererManager.setCamera(this.camera);
 		});
 
-		this.content.appendChild(cameraToggle);
+		this.content.appendChild(this.cameraToggle);
 
 		this.sidebar.addEventListener("transform-tool-selected", (e: any) => {
 			const tool = e.detail.tool;
@@ -1195,6 +1248,10 @@ export class DT3DCard extends LitElement {
 				this.attachTransform(target);
 				this.tree.selectObject(target.uuid);
 				this.lastSelectedObject = target;
+			}
+
+			if (object instanceof ViewportObject) {
+				this.activateViewport(object);
 			}
 
 			object?.onInteraction({
