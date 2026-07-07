@@ -97,6 +97,8 @@
 	"transform": "Transform",
 	"address": "Address",
 	"serviceKey": "Service key",
+	"visualizationOnly": "Visualization only",
+	"visualizationOnlyDescription": "Hide editing controls and object tree, while allowing navigation and object interaction.",
 	"geometry": "Geometry",
 	"material": "Material",
 	"geometryParameterTooltip": "Rebuilds the mesh with this three.js geometry constructor parameter.",

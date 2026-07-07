@@ -63,6 +63,9 @@ const MODEL_FILE_EXTENSIONS = new Set(["gltf", "glb", "obj", "fbx"]);
 const getFileExtension = (file: File): string | null =>
 	file.name.split(".").pop()?.toLowerCase() ?? null;
 
+const booleanConfig = (value: unknown): boolean =>
+	value === true || value === "true" || value === "1";
+
 @customElement("dt3d-card")
 export class DT3DCard extends LitElement {
 	/**
@@ -221,7 +224,7 @@ export class DT3DCard extends LitElement {
 	 * Presents a file picker dialog to the user and loads the selected model into the scene.
 	 */
 	private selectFile() {
-		if (!this.space) {
+		if (!this.space || this.isVisualizationOnly()) {
 			return;
 		}
 
@@ -249,7 +252,7 @@ export class DT3DCard extends LitElement {
 	 * @param file - The model file to load.
 	 */
 	private loadModelFromFile(file: File, position?: Vector3) {
-		if (!this.space) {
+		if (!this.space || this.isVisualizationOnly()) {
 			return;
 		}
 
@@ -339,13 +342,66 @@ export class DT3DCard extends LitElement {
 			throw new Error("Invalid configuration");
 		}
 
-		this.config = {
+		const visualizationOnly = booleanConfig(
+			config.visualization_only ?? config.visualizationOnly,
+		);
+
+		const mergedConfig = {
 			port: 8080,
 			service_key: "",
 			...config,
 		};
+		this.config = {
+			...mergedConfig,
+			visualization_only: visualizationOnly,
+		};
+
+		this.applyVisualizationMode();
 
 		console.log("DT3D: Config set:", this.config);
+	}
+
+	private isVisualizationOnly(): boolean {
+		return this.config?.visualization_only === true;
+	}
+
+	private applyVisualizationMode(): void {
+		const visualizationOnly = this.isVisualizationOnly();
+		this.spaceSync?.setReadOnly(visualizationOnly);
+
+		if (this.sidebar) {
+			this.sidebar.style.display = visualizationOnly ? "none" : "";
+		}
+
+		if (this.tree) {
+			this.tree.style.display = visualizationOnly ? "none" : "";
+			this.tree.closeContextMenu();
+		}
+
+		if (visualizationOnly) {
+			this.spaceConfigMenu?.remove();
+			this.spaceConfigMenu = null;
+			this.meshMenu?.remove();
+			this.meshMenu = null;
+			this.content
+				?.querySelectorAll("dt3d-add-entity-modal")
+				.forEach((modal) => modal.remove());
+
+			this.measurementManager?.setMode("none");
+			this.wallManager?.setMode("none");
+			if (this.sidebar) {
+				this.sidebar.measurementTool = "none";
+				this.sidebar.wallTool = "none";
+			}
+
+			if (this.transform) {
+				this.transform.detach();
+				this.transform.enabled = false;
+				this.transform.getHelper().visible = false;
+			}
+		}
+
+		this.updateHintMessage();
 	}
 
 	/**
@@ -354,6 +410,10 @@ export class DT3DCard extends LitElement {
 	 * @param object - The 3D object to add to the scene.
 	 */
 	public addToScene(object: Object3D | null | undefined, name?: string): void {
+		if (this.isVisualizationOnly()) {
+			return;
+		}
+
 		if (!object) {
 			return;
 		}
@@ -390,6 +450,13 @@ export class DT3DCard extends LitElement {
 			return;
 		}
 
+		if (this.isVisualizationOnly()) {
+			this.transform.detach();
+			this.transform.enabled = false;
+			this.transform.getHelper().visible = false;
+			return;
+		}
+
 		// Detach if no target or target is locked
 		if (!target || target instanceof DTObject && target.locked) {
 			this.transform.detach();
@@ -409,7 +476,7 @@ export class DT3DCard extends LitElement {
 	 * @param objectId - ID of the object to be delete from the space.
 	 */
 	private deleteObject(objectId: string): void {
-		if (!this.space) {
+		if (!this.space || this.isVisualizationOnly()) {
 			return;
 		}
 
@@ -446,7 +513,7 @@ export class DT3DCard extends LitElement {
 	 * @param objectId - Object ID to clone
 	 */
 	private cloneObject(objectId: string): void {
-		if (!this.space) {
+		if (!this.space || this.isVisualizationOnly()) {
 			return;
 		}
 
@@ -482,6 +549,10 @@ export class DT3DCard extends LitElement {
 	private async handleCanvasDrop(event: DragEvent): Promise<void> {
 		event.preventDefault();
 
+		if (this.isVisualizationOnly()) {
+			return;
+		}
+
 		const files = Array.from(event.dataTransfer?.files ?? []);
 		const modelFiles = files.filter((file) => this.isModelFile(file));
 
@@ -498,6 +569,10 @@ export class DT3DCard extends LitElement {
 
 	private async handleTextureDrop(event: DragEvent): Promise<void> {
 		event.preventDefault();
+		if (this.isVisualizationOnly()) {
+			return;
+		}
+
 		const file = Array.from(event.dataTransfer?.files ?? []).find((candidate) => candidate.type.startsWith("image/"));
 		if (!file) {
 			return;
@@ -549,7 +624,9 @@ export class DT3DCard extends LitElement {
 	 * @param event - Mouse event
 	 */
 	private handlePointerMove(event: MouseEvent): void {
-		this.wallManager?.handlePointerMove(event);
+		if (!this.isVisualizationOnly()) {
+			this.wallManager?.handlePointerMove(event);
+		}
 
 		const {object} = this.pickObjectFromEvent(event);
 		if (object === this.hoveredObject) {
@@ -643,6 +720,11 @@ export class DT3DCard extends LitElement {
 		event.preventDefault();
 		event.stopPropagation();
 
+		if (this.isVisualizationOnly()) {
+			this.tree?.closeContextMenu();
+			return false;
+		}
+
 		const target = this.resolveSceneContextMenuTarget(event);
 		if (!target || target === this.space) {
 			this.tree?.closeContextMenu();
@@ -663,6 +745,10 @@ export class DT3DCard extends LitElement {
 	 * @param event - Pointer event from the canvas.
 	 */
 	private startSceneLongPress(event: PointerEvent): void {
+		if (this.isVisualizationOnly()) {
+			return;
+		}
+
 		if (event.pointerType === "mouse") {
 			return;
 		}
@@ -750,7 +836,9 @@ export class DT3DCard extends LitElement {
 			return;
 		}
 
-		if (this.sidebar?.measurementTool === "distance") {
+		if (this.isVisualizationOnly()) {
+			this.hintBox.message = "";
+		} else if (this.sidebar?.measurementTool === "distance") {
 			this.hintBox.message = localManager.get("hintMeasureDistance");
 		} else if (this.sidebar?.measurementTool === "angle") {
 			this.hintBox.message = localManager.get("hintMeasureAngle");
@@ -771,7 +859,7 @@ export class DT3DCard extends LitElement {
 	 * Open the space-level scene configuration menu.
 	 */
 	private openSpaceConfigMenu(): void {
-		if (!this.content || this.spaceConfigMenu) {
+		if (!this.content || this.spaceConfigMenu || this.isVisualizationOnly()) {
 			return;
 		}
 
@@ -800,7 +888,7 @@ export class DT3DCard extends LitElement {
 	 * @param anchor - Menu anchor in viewport coordinates.
 	 */
 	private openMeshMenu(anchor: { left: number; top: number } | null): void {
-		if (!this.content) {
+		if (!this.content || this.isVisualizationOnly()) {
 			return;
 		}
 
@@ -839,7 +927,7 @@ export class DT3DCard extends LitElement {
 	 * Create a saved viewport from the active camera configuration.
 	 */
 	private addViewportFromCurrentCamera(): void {
-		if (!this.sceneManager) {
+		if (!this.sceneManager || this.isVisualizationOnly()) {
 			return;
 		}
 
@@ -889,6 +977,10 @@ export class DT3DCard extends LitElement {
 	 * @param type - Object type to add.
 	 */
 	private handleAddObject(type: string): void {
+		if (this.isVisualizationOnly()) {
+			return;
+		}
+
 		let object: Mesh = null;
 		const material = new MeshStandardMaterial({
 			color: Math.floor(Math.random() * 0xffffff),
@@ -1016,12 +1108,21 @@ export class DT3DCard extends LitElement {
 		);
 		let transformedObject: Object3D | null = null;
 		this.sceneManager.transform.addEventListener("objectChange", () => {
+			if (this.isVisualizationOnly()) {
+				return;
+			}
+
 			this.tree.refreshSelectedObject();
 			if (this.transform?.object) {
 				transformedObject = this.transform.object;
 			}
 		});
 		this.sceneManager.transform.addEventListener("dragging-changed", (event: any) => {
+			if (this.isVisualizationOnly()) {
+				transformedObject = null;
+				return;
+			}
+
 			if (event.value) {
 				transformedObject = null;
 				return;
@@ -1090,7 +1191,13 @@ export class DT3DCard extends LitElement {
 
 		this.content.appendChild(this.cameraToggle);
 
+		this.applyVisualizationMode();
+
 		this.sidebar.addEventListener("transform-tool-selected", (e: any) => {
+			if (this.isVisualizationOnly()) {
+				return;
+			}
+
 			const tool = e.detail.tool;
 			if (tool === "none") {
 				this.transform.enabled = false;
@@ -1104,6 +1211,10 @@ export class DT3DCard extends LitElement {
 		});
 
 		this.sidebar.addEventListener("measurement-mode-selected", (e: any) => {
+			if (this.isVisualizationOnly()) {
+				return;
+			}
+
 			const mode = e.detail.mode as "distance" | "angle" | "none";
 			this.measurementManager?.setMode(mode);
 			this.sidebar.measurementTool = mode;
@@ -1117,6 +1228,10 @@ export class DT3DCard extends LitElement {
 		});
 
 		this.sidebar.addEventListener("wall-tool-selected", (e: any) => {
+			if (this.isVisualizationOnly()) {
+				return;
+			}
+
 			const mode = e.detail.mode as "wall" | "door" | "window" | "none";
 			this.wallManager?.setMode(mode);
 			this.sidebar.wallTool = mode;
@@ -1139,16 +1254,28 @@ export class DT3DCard extends LitElement {
 		});
 
 		this.sidebar.addEventListener("space-config-open", () => {
+			if (this.isVisualizationOnly()) {
+				return;
+			}
+
 			this.openSpaceConfigMenu();
 		});
 
 		this.sidebar.addEventListener("mesh-menu-open", (event: Event) => {
+			if (this.isVisualizationOnly()) {
+				return;
+			}
+
 			this.openMeshMenu(
 				(event as CustomEvent<{ left: number; top: number } | null>).detail,
 			);
 		});
 
 		this.sidebar.addEventListener("add-object", (e: any) => {
+			if (this.isVisualizationOnly()) {
+				return;
+			}
+
 			const type = e.detail.type;
 
 			this.handleAddObject(type);
@@ -1158,6 +1285,7 @@ export class DT3DCard extends LitElement {
 		this.tree.scene = this.space;
 		this.spaceSync = new SpaceSync({
 			apiClient: this.getApiClient(),
+			readOnly: this.isVisualizationOnly(),
 			sceneManager: this.sceneManager,
 			space: this.space,
 			tree: this.tree,
@@ -1176,7 +1304,7 @@ export class DT3DCard extends LitElement {
 		this.tree.addEventListener("object-selected", (e: any) => {
 			const id = e.detail.id;
 			const object = this.space.getObjectByProperty("uuid", id);
-			if (object) {
+			if (object && !this.isVisualizationOnly()) {
 				this.attachTransform(object);
 				this.lastSelectedObject = object;
 			}
@@ -1184,11 +1312,19 @@ export class DT3DCard extends LitElement {
 
 
 		this.tree.addEventListener("object-delete", (e: any) => {
+			if (this.isVisualizationOnly()) {
+				return;
+			}
+
 			const id = e.detail.id as string;
 			this.deleteObject(id);
 		});
 
 		this.tree.addEventListener("object-clone", (e: any) => {
+			if (this.isVisualizationOnly()) {
+				return;
+			}
+
 			const id = e.detail.id as string;
 			this.cloneObject(id);
 		});
@@ -1213,6 +1349,10 @@ export class DT3DCard extends LitElement {
 		});
 
 		this.tree.addEventListener("object-updated", (e: any) => {
+			if (this.isVisualizationOnly()) {
+				return;
+			}
+
 			const updatedObject = e.detail?.object as Object3D | null;
 			if (!updatedObject) {
 				return;
@@ -1231,19 +1371,21 @@ export class DT3DCard extends LitElement {
 		});
 
 		this.canvas.addEventListener("dblclick", (event: MouseEvent) => {
-			// Handle measurement points on double click
-			if (this.measurementManager?.handleClick(event)) {
-				return;
-			}
+			if (!this.isVisualizationOnly()) {
+				// Handle measurement points on double click
+				if (this.measurementManager?.handleClick(event)) {
+					return;
+				}
 
-			// Handle wall tool clicks
-			if (this.wallManager?.handleClick(event)) {
-				return;
+				// Handle wall tool clicks
+				if (this.wallManager?.handleClick(event)) {
+					return;
+				}
 			}
 
 
 			const {object, intersection} = this.pickObjectFromEvent(event);
-			if (intersection) {
+			if (intersection && !this.isVisualizationOnly()) {
 				const target = object ?? (intersection.object as Object3D);
 				this.attachTransform(target);
 				this.tree.selectObject(target.uuid);
@@ -1349,6 +1491,10 @@ export class DT3DCard extends LitElement {
 	 * The entities list is fetched from Home Assistant.
 	 */
 	public addEntityModal(): void {
+		if (this.isVisualizationOnly()) {
+			return;
+		}
+
 		const modal = document.createElement("dt3d-add-entity-modal") as DT3DAddEntityModal;
 		modal.states = this.hassInstance?.states ?? {};
 
@@ -1369,6 +1515,10 @@ export class DT3DCard extends LitElement {
 	 * @param id - The ID of the entity to add.
 	 */
 	private addEntityToScene(id: string): void {
+		if (this.isVisualizationOnly()) {
+			return;
+		}
+
 		const object = this.createEntityObject(id);
 		if (!object) {
 			return;

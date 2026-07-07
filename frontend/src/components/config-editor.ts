@@ -4,6 +4,9 @@ import {customElement} from "lit/decorators.js";
 import {localManager} from "../locale/locale.js";
 import componentStyles from "./config-editor.css?inline";
 
+const booleanConfig = (value: unknown): boolean =>
+	value === true || value === "true" || value === "1";
+
 @customElement("dt3d-config-editor")
 export class DT3DConfigEditor extends LitElement {
 	static styles = unsafeCSS(componentStyles);
@@ -23,6 +26,7 @@ export class DT3DConfigEditor extends LitElement {
 			address: "localhost",
 			port: 8080,
 			service_key: "",
+			visualization_only: false,
 			...config,
 		};
 	}
@@ -51,8 +55,13 @@ export class DT3DConfigEditor extends LitElement {
 	 * @param e - Event
 	 */
 	public onValueChanged(e: any) {
-		const key = e.target.dataset.key;
-		const value = e.target.value;
+		const target = e.target as HTMLInputElement;
+		const key = target.dataset.key;
+		if (!key) {
+			return;
+		}
+
+		const value = target.type === "checkbox" ? target.checked : target.value;
 
 		console.log("DT3d: Updating config", key, value);
 
@@ -70,6 +79,7 @@ export class DT3DConfigEditor extends LitElement {
 		const port = this._config.port;
 		const address = this._config.address;
 		const serviceKey = this._config.service_key;
+		const visualizationOnly = booleanConfig(this._config.visualization_only);
 
 		const content = html`
 			<div>
@@ -102,6 +112,19 @@ export class DT3DConfigEditor extends LitElement {
 						@input=${this.onValueChanged}
 						autocomplete="off"
 					/>
+				</div>
+				<div class="checkbox-field">
+					<input
+						id="visualization-only"
+						type="checkbox"
+						data-key="visualization_only"
+						?checked=${visualizationOnly}
+						@change=${this.onValueChanged}
+					/>
+					<div>
+						<label for="visualization-only">${localManager.get("visualizationOnly")}</label>
+						<p>${localManager.get("visualizationOnlyDescription")}</p>
+					</div>
 				</div>
 			</div>
 		`;

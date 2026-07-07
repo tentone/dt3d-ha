@@ -21,6 +21,7 @@ import type {
 
 type SpaceSyncDependencies = {
 	apiClient: SpaceApi;
+	readOnly?: boolean;
 	sceneManager: SceneManager;
 	space: Group;
 	tree: DT3DTree;
@@ -111,6 +112,7 @@ function getDeclaredObjectInstanceType(object: Object3D): string | null {
  */
 export class SpaceSync {
 	private apiClient: SpaceApi;
+	private readOnly: boolean;
 	private sceneManager: SceneManager;
 	private space: Group;
 	private tree: DT3DTree;
@@ -131,6 +133,7 @@ export class SpaceSync {
 
 	constructor({
 		apiClient,
+		readOnly = false,
 		sceneManager,
 		space,
 		tree,
@@ -138,11 +141,16 @@ export class SpaceSync {
 		createEntityObject,
 	}: SpaceSyncDependencies) {
 		this.apiClient = apiClient;
+		this.readOnly = readOnly;
 		this.sceneManager = sceneManager;
 		this.space = space;
 		this.tree = tree;
 		this.resolveMeshType = resolveMeshType;
 		this.createEntityObject = createEntityObject;
+	}
+
+	public setReadOnly(readOnly: boolean): void {
+		this.readOnly = readOnly;
 	}
 
 	public addProgressListener(listener: (progress: SyncProgressSnapshot) => void): () => void {
@@ -180,6 +188,13 @@ export class SpaceSync {
 			let space = spaces[0];
 
 			if (!space) {
+				if (this.readOnly) {
+					this.clearSpace();
+					this.sceneManager.createDefaultScene();
+					this.tree.updateTreeFromScene(this.space, true);
+					return;
+				}
+
 				space = await this.apiClient.createSpace(
 					"Default Space",
 					"Auto-created space",
@@ -194,8 +209,10 @@ export class SpaceSync {
 				this.clearSpace();
 				this.sceneManager.createDefaultScene();
 				this.tree.updateTreeFromScene(this.space, true);
-				this.isSyncingFromApi = false;
-				await this.syncAllObjectsToApi();
+				if (!this.readOnly) {
+					this.isSyncingFromApi = false;
+					await this.syncAllObjectsToApi();
+				}
 				return;
 			}
 
@@ -498,7 +515,7 @@ export class SpaceSync {
 	 * Sync a full object subtree to the API (creates/updates as needed).
 	 */
 	public async syncObjectHierarchyCreate(object: Object3D): Promise<void> {
-		if (this.isSyncingFromApi || !this.shouldPersistObject(object)) {
+		if (this.readOnly || this.isSyncingFromApi || !this.shouldPersistObject(object)) {
 			return;
 		}
 
@@ -513,7 +530,7 @@ export class SpaceSync {
 	 * Create a single object in the API or update if already present.
 	 */
 	public async syncObjectCreate(object: Object3D): Promise<void> {
-		if (!this.activeSpaceId || this.isSyncingFromApi) {
+		if (this.readOnly || !this.activeSpaceId || this.isSyncingFromApi) {
 			return;
 		}
 
@@ -558,7 +575,7 @@ export class SpaceSync {
 	 * Update a single object in the API.
 	 */
 	public async syncObjectUpdate(object: Object3D): Promise<void> {
-		if (!this.activeSpaceId || this.isSyncingFromApi) {
+		if (this.readOnly || !this.activeSpaceId || this.isSyncingFromApi) {
 			return;
 		}
 
@@ -591,7 +608,7 @@ export class SpaceSync {
 	 * Delete an object in the API and clear all stored mappings.
 	 */
 	public async syncObjectDelete(object: Object3D): Promise<void> {
-		if (!this.activeSpaceId || this.isSyncingFromApi) {
+		if (this.readOnly || !this.activeSpaceId || this.isSyncingFromApi) {
 			return;
 		}
 
@@ -609,6 +626,10 @@ export class SpaceSync {
 	}
 
 	public syncAllObjectsToApi(): Promise<void[]> {
+		if (this.readOnly) {
+			return Promise.resolve([]);
+		}
+
 		return Promise.all(this.space.children.map((child) => this.syncObjectHierarchyCreate(child)));
 	}
 

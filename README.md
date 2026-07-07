@@ -51,9 +51,12 @@ type: custom:dt3d-card
 address: http://<home-assistant-host>
 port: 8080
 service_key: <same-key-as-the-add-on>
+visualization_only: false
 ```
 
 Use an `https://` address when the add-on is configured to serve HTTPS.
+Set `visualization_only: true` to hide editing controls and the object tree
+while keeping camera navigation and object interaction available.
 
 ### Add-on
 
