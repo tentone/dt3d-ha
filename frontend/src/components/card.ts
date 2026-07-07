@@ -954,10 +954,22 @@ export class DT3DCard extends LitElement {
 		this.spaceSceneConfig = this.sceneManager.setSpaceSceneConfig(
 			this.spaceSceneConfig,
 		);
+		let transformedObject: Object3D | null = null;
 		this.sceneManager.transform.addEventListener("objectChange", () => {
 			this.tree.refreshSelectedObject();
 			if (this.transform?.object) {
-				void this.spaceSync?.syncObjectUpdate(this.transform.object);
+				transformedObject = this.transform.object;
+			}
+		});
+		this.sceneManager.transform.addEventListener("dragging-changed", (event: any) => {
+			if (event.value) {
+				transformedObject = null;
+				return;
+			}
+
+			if (transformedObject) {
+				void this.spaceSync?.syncObjectUpdate(transformedObject);
+				transformedObject = null;
 			}
 		});
 		this.sceneManager.setGridEnabled(this.sidebar.gridEnabled);
