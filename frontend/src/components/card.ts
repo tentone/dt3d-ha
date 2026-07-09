@@ -12,14 +12,8 @@ import "./sync-progress-component/sync-progress-component.js";
 
 import {LitElement} from "lit";
 import {customElement} from "lit/decorators.js";
-import type {Camera, 	Group,
-	Intersection, 		Mesh,Object3D,Scene} from "three";
-import {
-	MeshStandardMaterial,
-	Raycaster,
-	Vector2,
-	Vector3,
-} from "three";
+import type {Camera, Group, Intersection, Mesh, Object3D, Scene} from "three";
+import {MeshStandardMaterial, Raycaster, Vector2, Vector3} from "three";
 import type {OrbitControls} from "three/examples/jsm/controls/OrbitControls";
 import type {TransformControls} from "three/examples/jsm/controls/TransformControls";
 import {DRACOLoader} from "three/examples/jsm/loaders/DRACOLoader.js";
@@ -27,12 +21,30 @@ import {FBXLoader} from "three/examples/jsm/loaders/FBXLoader.js";
 import {GLTFLoader} from "three/examples/jsm/loaders/GLTFLoader.js";
 import {OBJLoader} from "three/examples/jsm/loaders/OBJLoader.js";
 
+import type {
+	GeneralConfig,
+	SpaceConfiguration,
+} from "../editor/general-config.js";
+import {
+	hasGeneralConfiguration,
+	hasSceneConfiguration,
+	normalizeGeneralConfig,
+	normalizeSpaceConfiguration,
+} from "../editor/general-config.js";
 import {applyImageTextureToMesh} from "../editor/material-texture.js";
 import {MeasurementManager} from "../editor/measurements.js";
 import {createMeshObject, resolveMeshType} from "../editor/mesh-handler.js";
 import {RendererManager} from "../editor/renderer.js";
-import type {CameraMode, GridConfig, SpaceSceneConfig} from "../editor/scene.js";
-import {normalizeGridConfig, normalizeSpaceSceneConfig,SceneManager} from "../editor/scene.js";
+import type {
+	CameraMode,
+	GridConfig,
+	SpaceSceneConfig,
+} from "../editor/scene.js";
+import {
+	normalizeGridConfig,
+	normalizeSpaceSceneConfig,
+	SceneManager,
+} from "../editor/scene.js";
 import {WallManager} from "../editor/walls.js";
 import type {Locale} from "../locale/locale.js";
 import {localManager} from "../locale/locale.js";
@@ -45,6 +57,7 @@ import {EntityObject, isToggleable} from "../objects/entity-object.js";
 import {EntitySensor} from "../objects/entity-sensor.js";
 import {EntitySwitch} from "../objects/entity-switch.js";
 import {ViewportObject} from "../objects/viewport-object.js";
+import type {SpaceResponse} from "../service/space-api.js";
 import {SpaceApi} from "../service/space-api.js";
 import {SpaceSync} from "../service/space-sync.js";
 import {LocalStorage} from "../utils/local-storage.js";
@@ -149,6 +162,8 @@ export class DT3DCard extends LitElement {
 
 	private cameraToggle: DT3DCameraToggle | null = null;
 
+	private connectionStatus: ConnectionStatus | null = null;
+
 	/**
 	 * Tree element for displaying the 3D object hierarchy.
 	 */
@@ -228,6 +243,11 @@ export class DT3DCard extends LitElement {
 	private readonly sceneLongPressMoveTolerance = 12;
 
 	/**
+	 * Current general rendering/development configuration.
+	 */
+	private generalConfig: GeneralConfig = normalizeGeneralConfig();
+
+	/**
 	 * Current space-level scene configuration.
 	 */
 	private spaceSceneConfig: SpaceSceneConfig = normalizeSpaceSceneConfig();
@@ -245,6 +265,8 @@ export class DT3DCard extends LitElement {
 	private confirmationModal: DT3DConfirmationModal | null = null;
 
 	private gridConfigModal: DT3DFormModal | null = null;
+
+	private persistSpaceConfigTimer: number | null = null;
 
 	static properties = {
 		hass: {attribute: false},
@@ -401,7 +423,11 @@ export class DT3DCard extends LitElement {
 			...mergedConfig,
 			visualization_only: visualizationOnly,
 		};
+		this.generalConfig = normalizeGeneralConfig(
+			this.config.general ?? this.config,
+		);
 
+		this.applyGeneralConfig(this.generalConfig);
 		this.applyVisualizationMode();
 
 		console.log("DT3D: Config set:", this.config);
@@ -409,6 +435,92 @@ export class DT3DCard extends LitElement {
 
 	private isVisualizationOnly(): boolean {
 		return this.config?.visualization_only === true;
+	}
+
+	private isDevelopmentMode(): boolean {
+		return this.generalConfig.developmentMode.enabled;
+	}
+
+	private applyDevelopmentMode(): void {
+		if (this.connectionStatus) {
+			this.connectionStatus.style.display = this.isDevelopmentMode()
+				? ""
+				: "none";
+		}
+	}
+
+	private applyGeneralConfig(config: Partial<GeneralConfig>): void {
+		this.generalConfig = normalizeGeneralConfig(config as Record<string, any>);
+		this.rendererManager?.setRenderingConfig(this.generalConfig.rendering);
+		this.sceneManager?.setShadowsEnabled(
+			this.generalConfig.rendering.shadowMap.enabled,
+		);
+		this.applyDevelopmentMode();
+	}
+
+	private getSpaceConfiguration(): SpaceConfiguration {
+		return normalizeSpaceConfiguration({
+			general: this.generalConfig,
+			scene: this.spaceSceneConfig,
+		});
+	}
+
+	private applySpaceConfiguration(
+		config: Partial<SpaceConfiguration>,
+	): SpaceConfiguration {
+		const normalized = normalizeSpaceConfiguration({
+			general: config.general ?? this.generalConfig,
+			scene: config.scene ?? this.spaceSceneConfig,
+		});
+
+		this.applyGeneralConfig(normalized.general);
+		this.spaceSceneConfig = this.sceneManager
+			? this.sceneManager.setSpaceSceneConfig(normalized.scene)
+			: normalizeSpaceSceneConfig(normalized.scene);
+		LocalStorage.write(SPACE_SCENE_CONFIG_STORAGE_KEY, this.spaceSceneConfig);
+
+		return this.getSpaceConfiguration();
+	}
+
+	private applySpaceConfigFromApi(space: SpaceResponse | null): void {
+		const apiConfig = space?.config ?? {};
+		const hasGeneral = hasGeneralConfiguration(apiConfig);
+		const hasScene = hasSceneConfiguration(apiConfig);
+		const nextConfig = normalizeSpaceConfiguration({
+			general: hasGeneral
+				? (apiConfig.general ?? apiConfig)
+				: this.generalConfig,
+			scene: hasScene
+				? (apiConfig.scene ?? apiConfig.spaceScene)
+				: this.spaceSceneConfig,
+		});
+
+		this.applySpaceConfiguration(nextConfig);
+
+		if (space && (!hasGeneral || !hasScene)) {
+			void this.persistSpaceConfiguration();
+		}
+	}
+
+	private schedulePersistSpaceConfiguration(): void {
+		if (this.persistSpaceConfigTimer !== null) {
+			window.clearTimeout(this.persistSpaceConfigTimer);
+		}
+
+		this.persistSpaceConfigTimer = window.setTimeout(() => {
+			this.persistSpaceConfigTimer = null;
+			void this.persistSpaceConfiguration();
+		}, 300);
+	}
+
+	private async persistSpaceConfiguration(): Promise<void> {
+		try {
+			await this.spaceSync?.updateActiveSpaceConfig(
+				this.getSpaceConfiguration(),
+			);
+		} catch (error) {
+			console.warn("DT3D: Failed to persist space configuration", error);
+		}
 	}
 
 	private applyVisualizationMode(): void {
@@ -485,6 +597,7 @@ export class DT3DCard extends LitElement {
 			object.init();
 		}
 
+		this.sceneManager?.applyShadowSettingsToObject(object);
 		this.space.add(object);
 		this.attachTransform(object);
 
@@ -515,7 +628,7 @@ export class DT3DCard extends LitElement {
 		}
 
 		// Detach if no target or target is locked
-		if (!target || target instanceof DTObject && target.locked) {
+		if (!target || (target instanceof DTObject && target.locked)) {
 			this.transform.detach();
 			return;
 		}
@@ -534,7 +647,9 @@ export class DT3DCard extends LitElement {
 
 		this.confirmationModal?.remove();
 
-		const modal = document.createElement("dt3d-confirmation-modal") as DT3DConfirmationModal;
+		const modal = document.createElement(
+			"dt3d-confirmation-modal",
+		) as DT3DConfirmationModal;
 		modal.heading = options.heading;
 		modal.message = options.message;
 		modal.confirmLabel = options.confirmLabel;
@@ -562,7 +677,10 @@ export class DT3DCard extends LitElement {
 			return;
 		}
 
-		const target = this.space.getObjectByProperty("uuid", objectId) as Object3D | null;
+		const target = this.space.getObjectByProperty(
+			"uuid",
+			objectId,
+		) as Object3D | null;
 		if (!target || target === this.space) {
 			return;
 		}
@@ -587,7 +705,10 @@ export class DT3DCard extends LitElement {
 			return;
 		}
 
-		const target = this.space.getObjectByProperty("uuid", objectId) as Object3D | null;
+		const target = this.space.getObjectByProperty(
+			"uuid",
+			objectId,
+		) as Object3D | null;
 		if (!target || target === this.space) {
 			return;
 		}
@@ -637,7 +758,10 @@ export class DT3DCard extends LitElement {
 			return;
 		}
 
-		const original = this.space.getObjectByProperty("uuid", objectId) as Object3D | null;
+		const original = this.space.getObjectByProperty(
+			"uuid",
+			objectId,
+		) as Object3D | null;
 
 		if (!original || original === this.space) {
 			return;
@@ -693,7 +817,9 @@ export class DT3DCard extends LitElement {
 			return;
 		}
 
-		const file = Array.from(event.dataTransfer?.files ?? []).find((candidate) => candidate.type.startsWith("image/"));
+		const file = Array.from(event.dataTransfer?.files ?? []).find((candidate) =>
+			candidate.type.startsWith("image/"),
+		);
 		if (!file) {
 			return;
 		}
@@ -726,7 +852,6 @@ export class DT3DCard extends LitElement {
 		if (this.measurementManager?.isActive() || this.wallManager?.isActive()) {
 			return;
 		}
-
 
 		// Pick object and trigger click interaction
 		const {object} = this.pickObjectFromEvent(event);
@@ -780,7 +905,10 @@ export class DT3DCard extends LitElement {
 	 * @param event - Mouse event to get pointer coordinates
 	 * @returns - Object fround in interaction
 	 */
-	private pickObjectFromEvent(event: MouseEvent): {object: DTObject | null; intersection: Intersection<Object3D> | null;} {
+	private pickObjectFromEvent(event: MouseEvent): {
+		object: DTObject | null;
+		intersection: Intersection<Object3D> | null;
+	} {
 		if (!this.canvas || !this.camera || !this.space) {
 			return {object: null, intersection: null};
 		}
@@ -968,8 +1096,10 @@ export class DT3DCard extends LitElement {
 				return true;
 			}
 
-			return target instanceof HTMLElement &&
-				(target.isContentEditable || target.getAttribute("role") === "textbox");
+			return (
+				target instanceof HTMLElement &&
+				(target.isContentEditable || target.getAttribute("role") === "textbox")
+			);
 		});
 	}
 
@@ -1025,14 +1155,16 @@ export class DT3DCard extends LitElement {
 			return;
 		}
 
-		const menu = document.createElement("dt3d-space-config-menu") as DT3DSpaceConfigMenu;
-		menu.config = this.spaceSceneConfig;
+		const menu = document.createElement(
+			"dt3d-space-config-menu",
+		) as DT3DSpaceConfigMenu;
+		menu.config = this.getSpaceConfiguration();
 
 		menu.addEventListener("space-config-updated", (event: Event) => {
-			const {config} = (event as CustomEvent<{ config: SpaceSceneConfig }>).detail;
-			this.spaceSceneConfig = this.sceneManager.setSpaceSceneConfig(config);
-			LocalStorage.write(SPACE_SCENE_CONFIG_STORAGE_KEY, this.spaceSceneConfig);
-			menu.config = this.spaceSceneConfig;
+			const {config} = (event as CustomEvent<{ config: SpaceConfiguration }>)
+				.detail;
+			menu.config = this.applySpaceConfiguration(config);
+			this.schedulePersistSpaceConfiguration();
 		});
 
 		menu.addEventListener("modal-close", () => {
@@ -1119,11 +1251,17 @@ export class DT3DCard extends LitElement {
 		const contentRect = this.content.getBoundingClientRect();
 		const x = Math.max(
 			8,
-			Math.min((anchor?.left ?? contentRect.left + 8) - contentRect.left, contentRect.width - 208),
+			Math.min(
+				(anchor?.left ?? contentRect.left + 8) - contentRect.left,
+				contentRect.width - 208,
+			),
 		);
 		const y = Math.max(
 			8,
-			Math.min((anchor?.top ?? contentRect.top + 8) - contentRect.top, contentRect.height - 8),
+			Math.min(
+				(anchor?.top ?? contentRect.top + 8) - contentRect.top,
+				contentRect.height - 8,
+			),
 		);
 		const menu = document.createElement("dt3d-mesh-menu") as DT3DMeshMenu;
 		menu.x = x;
@@ -1299,13 +1437,19 @@ export class DT3DCard extends LitElement {
 		`;
 		this.content.appendChild(this.tree);
 
-		const connection = document.createElement("dt3d-connection-status") as ConnectionStatus;
+		const connection = document.createElement(
+			"dt3d-connection-status",
+		) as ConnectionStatus;
 		connection.port = port;
 		connection.address = address;
 		connection.serviceKey = serviceKey;
+		this.connectionStatus = connection;
+		this.applyDevelopmentMode();
 		this.content.appendChild(connection);
 
-		this.syncProgressComponent = document.createElement("sync-progress-component") as SyncProgressComponent;
+		this.syncProgressComponent = document.createElement(
+			"sync-progress-component",
+		) as SyncProgressComponent;
 		this.content.appendChild(this.syncProgressComponent);
 
 		const cssElem = document.createElement("div");
@@ -1341,22 +1485,25 @@ export class DT3DCard extends LitElement {
 				transformedObject = this.transform.object;
 			}
 		});
-		this.sceneManager.transform.addEventListener("dragging-changed", (event: any) => {
-			if (this.isVisualizationOnly()) {
-				transformedObject = null;
-				return;
-			}
+		this.sceneManager.transform.addEventListener(
+			"dragging-changed",
+			(event: any) => {
+				if (this.isVisualizationOnly()) {
+					transformedObject = null;
+					return;
+				}
 
-			if (event.value) {
-				transformedObject = null;
-				return;
-			}
+				if (event.value) {
+					transformedObject = null;
+					return;
+				}
 
-			if (transformedObject) {
-				void this.spaceSync?.syncObjectUpdate(transformedObject);
-				transformedObject = null;
-			}
-		});
+				if (transformedObject) {
+					void this.spaceSync?.syncObjectUpdate(transformedObject);
+					transformedObject = null;
+				}
+			},
+		);
 		this.applyGridVisibility();
 		this.sceneManager.setTransformSnapEnabled(this.sidebar.gridSnapEnabled);
 
@@ -1387,9 +1534,13 @@ export class DT3DCard extends LitElement {
 				addToScene: (object) => this.addToScene(object),
 				attachTransform: (object) => this.attachTransform(object),
 				updateTree: () => this.tree.updateTreeDiff(this.space),
-				syncCreate: (object) => {void this.spaceSync?.syncObjectHierarchyCreate(object);},
+				syncCreate: (object) => {
+					void this.spaceSync?.syncObjectHierarchyCreate(object);
+				},
 				updateHintMessage: () => this.updateHintMessage(),
-				setLastSelectedObject: (object) => {this.lastSelectedObject = object;},
+				setLastSelectedObject: (object) => {
+					this.lastSelectedObject = object;
+				},
 			},
 		);
 
@@ -1401,9 +1552,13 @@ export class DT3DCard extends LitElement {
 			height,
 			this.scene,
 			width,
+			this.generalConfig.rendering,
 		);
+		this.applyGeneralConfig(this.generalConfig);
 
-		this.cameraToggle = document.createElement("dt3d-camera-toggle") as DT3DCameraToggle;
+		this.cameraToggle = document.createElement(
+			"dt3d-camera-toggle",
+		) as DT3DCameraToggle;
 		this.cameraToggle.mode = this.sceneManager.getCameraMode();
 		this.cameraToggle.addEventListener("camera-mode-change", (event: Event) => {
 			const {mode} = (event as CustomEvent<{ mode: CameraMode }>).detail;
@@ -1513,7 +1668,6 @@ export class DT3DCard extends LitElement {
 			this.handleAddObject(type);
 		});
 
-
 		this.tree.scene = this.space;
 		this.spaceSync = new SpaceSync({
 			apiClient: this.getApiClient(),
@@ -1530,7 +1684,9 @@ export class DT3DCard extends LitElement {
 			}
 		});
 
-		this.spaceSync.initializeSpaceFromApi();
+		void this.spaceSync.initializeSpaceFromApi().then((space) => {
+			this.applySpaceConfigFromApi(space);
+		});
 
 		// Listen for selection events from the tree
 		this.tree.addEventListener("object-selected", (e: any) => {
@@ -1541,7 +1697,6 @@ export class DT3DCard extends LitElement {
 				this.lastSelectedObject = object;
 			}
 		});
-
 
 		this.tree.addEventListener("object-delete", (e: any) => {
 			if (this.isVisualizationOnly()) {
@@ -1614,7 +1769,6 @@ export class DT3DCard extends LitElement {
 					return;
 				}
 			}
-
 
 			const {object, intersection} = this.pickObjectFromEvent(event);
 			if (intersection && !this.isVisualizationOnly()) {
@@ -1717,6 +1871,10 @@ export class DT3DCard extends LitElement {
 
 	public disconnectedCallback(): void {
 		window.removeEventListener("keydown", this.handleKeyDown);
+		if (this.persistSpaceConfigTimer !== null) {
+			window.clearTimeout(this.persistSpaceConfigTimer);
+			this.persistSpaceConfigTimer = null;
+		}
 		this.clearSceneLongPress();
 		this.clearCanvasClickSuppression();
 		this.confirmationModal?.remove();
@@ -1737,7 +1895,9 @@ export class DT3DCard extends LitElement {
 			return;
 		}
 
-		const modal = document.createElement("dt3d-add-entity-modal") as DT3DAddEntityModal;
+		const modal = document.createElement(
+			"dt3d-add-entity-modal",
+		) as DT3DAddEntityModal;
 		modal.states = this.hassInstance?.states ?? {};
 
 		modal.addEventListener("entity-selected", (event: Event) => {
@@ -1864,6 +2024,7 @@ export class DT3DCard extends LitElement {
 			address: "http://localhost",
 			port: 8080,
 			service_key: "",
+			general: normalizeGeneralConfig(),
 		};
 	}
 }

@@ -10,8 +10,15 @@ import (
 )
 
 type createSpaceRequest struct {
-	Name        string `json:"name"`
-	Description string `json:"description"`
+	Name        string          `json:"name"`
+	Description string          `json:"description"`
+	Config      json.RawMessage `json:"config"`
+}
+
+type updateSpaceRequest struct {
+	Name        string          `json:"name"`
+	Description string          `json:"description"`
+	Config      json.RawMessage `json:"config"`
 }
 
 type createObjectInstanceRequest struct {
@@ -43,6 +50,7 @@ type spaceResponse struct {
 	ID              string                   `json:"id"`
 	Name            string                   `json:"name"`
 	Description     string                   `json:"description"`
+	Config          json.RawMessage          `json:"config"`
 	CreatedAt       int64                    `json:"created_at"`
 	UpdatedAt       int64                    `json:"updated_at"`
 	ObjectInstances []objectInstanceResponse `json:"object_instances"`
@@ -85,10 +93,15 @@ func toSpaceResponse(space models.Space) spaceResponse {
 	for _, inst := range space.ObjectInstances {
 		responses = append(responses, toObjectInstanceResponse(inst))
 	}
+	config := json.RawMessage(space.Config)
+	if len(config) == 0 {
+		config = json.RawMessage([]byte("null"))
+	}
 	return spaceResponse{
 		ID:              space.ID,
 		Name:            space.Name,
 		Description:     space.Description,
+		Config:          config,
 		CreatedAt:       space.CreatedAt,
 		UpdatedAt:       space.UpdatedAt,
 		ObjectInstances: responses,

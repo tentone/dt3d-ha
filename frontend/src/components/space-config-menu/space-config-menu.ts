@@ -3,8 +3,8 @@ import "../dynamic-form/dynamic-form.js";
 import {html, LitElement, unsafeCSS} from "lit";
 import {customElement, property} from "lit/decorators.js";
 
-import type {SpaceSceneConfig} from "../../editor/scene.js";
-import {normalizeSpaceSceneConfig} from "../../editor/scene.js";
+import type {SpaceConfiguration} from "../../editor/general-config.js";
+import {normalizeSpaceConfiguration} from "../../editor/general-config.js";
 import {localManager} from "../../locale/locale.js";
 import type {
 	DynamicFormChangeDetail,
@@ -17,56 +17,159 @@ export class DT3DSpaceConfigMenu extends LitElement {
 	static styles = unsafeCSS(componentStyles);
 
 	@property({attribute: false})
-	public config: SpaceSceneConfig = normalizeSpaceSceneConfig();
+	public config: SpaceConfiguration = normalizeSpaceConfiguration();
 
 	private fields: DynamicFormField[] = [
 		{
-			label: localManager.get("ambientColor"),
-			attribute: "daylight.ambientColor",
-			type: "color",
-			tooltip: localManager.get("ambientColorTooltip"),
-			editable: true,
+			label: localManager.get("rendering"),
+			type: "sub-form",
 			enabled: true,
+			fields: [
+				{
+					label: localManager.get("antialiasing"),
+					attribute: "general.rendering.antialiasing",
+					type: "boolean",
+					tooltip: localManager.get("antialiasingTooltip"),
+					editable: true,
+					enabled: true,
+				},
+				{
+					label: localManager.get("toneMapping"),
+					attribute: "general.rendering.toneMapping",
+					type: "select",
+					tooltip: localManager.get("toneMappingTooltip"),
+					editable: true,
+					enabled: true,
+					options: [
+						{label: localManager.get("toneMappingNone"), value: "none"},
+						{label: localManager.get("toneMappingLinear"), value: "linear"},
+						{
+							label: localManager.get("toneMappingReinhard"),
+							value: "reinhard",
+						},
+						{label: localManager.get("toneMappingCineon"), value: "cineon"},
+						{
+							label: localManager.get("toneMappingAcesFilmic"),
+							value: "aces_filmic",
+						},
+					],
+				},
+				{
+					label: localManager.get("resolution"),
+					attribute: "general.rendering.resolution",
+					type: "select",
+					tooltip: localManager.get("resolutionTooltip"),
+					editable: true,
+					enabled: true,
+					options: [
+						{label: "100%", value: 1},
+						{label: "75%", value: 0.75},
+						{label: "50%", value: 0.5},
+					],
+				},
+				{
+					label: localManager.get("shadowMap"),
+					type: "sub-form",
+					enabled: true,
+					fields: [
+						{
+							label: localManager.get("enabled"),
+							attribute: "general.rendering.shadowMap.enabled",
+							type: "boolean",
+							tooltip: localManager.get("shadowMapEnabledTooltip"),
+							editable: true,
+							enabled: true,
+						},
+						{
+							label: localManager.get("shadowMapType"),
+							attribute: "general.rendering.shadowMap.type",
+							type: "select",
+							tooltip: localManager.get("shadowMapTypeTooltip"),
+							editable: true,
+							enabled: true,
+							options: [
+								{label: localManager.get("shadowMapBasic"), value: "basic"},
+								{label: localManager.get("shadowMapPcf"), value: "pcf"},
+								{
+									label: localManager.get("shadowMapPcfSoft"),
+									value: "pcf_soft",
+								},
+								{label: localManager.get("shadowMapVsm"), value: "vsm"},
+							],
+						},
+					],
+				},
+			],
 		},
 		{
-			label: localManager.get("ambientIntensity"),
-			attribute: "daylight.ambientIntensity",
-			type: "number",
-			tooltip: localManager.get("ambientIntensityTooltip"),
-			editable: true,
+			label: localManager.get("developmentMode"),
+			type: "sub-form",
 			enabled: true,
+			fields: [
+				{
+					label: localManager.get("enabled"),
+					attribute: "general.developmentMode.enabled",
+					type: "boolean",
+					tooltip: localManager.get("developmentModeTooltip"),
+					editable: true,
+					enabled: true,
+				},
+			],
 		},
 		{
-			label: localManager.get("sunlightColor"),
-			attribute: "daylight.sunlightColor",
-			type: "color",
-			tooltip: localManager.get("sunlightColorTooltip"),
-			editable: true,
+			label: localManager.get("daylightConditions"),
+			type: "sub-form",
 			enabled: true,
-		},
-		{
-			label: localManager.get("sunlightIntensity"),
-			attribute: "daylight.sunlightIntensity",
-			type: "number",
-			tooltip: localManager.get("sunlightIntensityTooltip"),
-			editable: true,
-			enabled: true,
-		},
-		{
-			label: localManager.get("sunElevation"),
-			attribute: "daylight.sunElevation",
-			type: "number",
-			tooltip: localManager.get("sunElevationTooltip"),
-			editable: true,
-			enabled: true,
-		},
-		{
-			label: localManager.get("sunAzimuth"),
-			attribute: "daylight.sunAzimuth",
-			type: "number",
-			tooltip: localManager.get("sunAzimuthTooltip"),
-			editable: true,
-			enabled: true,
+			fields: [
+				{
+					label: localManager.get("ambientColor"),
+					attribute: "scene.daylight.ambientColor",
+					type: "color",
+					tooltip: localManager.get("ambientColorTooltip"),
+					editable: true,
+					enabled: true,
+				},
+				{
+					label: localManager.get("ambientIntensity"),
+					attribute: "scene.daylight.ambientIntensity",
+					type: "number",
+					tooltip: localManager.get("ambientIntensityTooltip"),
+					editable: true,
+					enabled: true,
+				},
+				{
+					label: localManager.get("sunlightColor"),
+					attribute: "scene.daylight.sunlightColor",
+					type: "color",
+					tooltip: localManager.get("sunlightColorTooltip"),
+					editable: true,
+					enabled: true,
+				},
+				{
+					label: localManager.get("sunlightIntensity"),
+					attribute: "scene.daylight.sunlightIntensity",
+					type: "number",
+					tooltip: localManager.get("sunlightIntensityTooltip"),
+					editable: true,
+					enabled: true,
+				},
+				{
+					label: localManager.get("sunElevation"),
+					attribute: "scene.daylight.sunElevation",
+					type: "number",
+					tooltip: localManager.get("sunElevationTooltip"),
+					editable: true,
+					enabled: true,
+				},
+				{
+					label: localManager.get("sunAzimuth"),
+					attribute: "scene.daylight.sunAzimuth",
+					type: "number",
+					tooltip: localManager.get("sunAzimuthTooltip"),
+					editable: true,
+					enabled: true,
+				},
+			],
 		},
 	];
 
@@ -99,9 +202,13 @@ export class DT3DSpaceConfigMenu extends LitElement {
 	}
 
 	private handleFieldChange(event: CustomEvent<DynamicFormChangeDetail>) {
-		const nextConfig = normalizeSpaceSceneConfig(this.config);
-		this.setNestedAttribute(nextConfig, event.detail.attribute, event.detail.value);
-		this.config = normalizeSpaceSceneConfig(nextConfig);
+		const nextConfig = normalizeSpaceConfiguration(this.config);
+		this.setNestedAttribute(
+			nextConfig,
+			event.detail.attribute,
+			event.detail.value,
+		);
+		this.config = normalizeSpaceConfiguration(nextConfig);
 
 		this.dispatchEvent(
 			new CustomEvent("space-config-updated", {
@@ -119,7 +226,7 @@ export class DT3DSpaceConfigMenu extends LitElement {
 					<header>
 						<div>
 							<h3>${localManager.get("spaceConfiguration")}</h3>
-							<p>${localManager.get("daylightConditions")}</p>
+							<p>${localManager.get("generalConfigurationDescription")}</p>
 						</div>
 						<button
 							class="close-button"
@@ -133,7 +240,7 @@ export class DT3DSpaceConfigMenu extends LitElement {
 						.fields=${this.fields}
 						.data=${this.config}
 						@field-change=${(event: CustomEvent<DynamicFormChangeDetail>) =>
-		this.handleFieldChange(event)}
+							this.handleFieldChange(event)}
 					></dt3d-dynamic-form>
 				</div>
 			</div>

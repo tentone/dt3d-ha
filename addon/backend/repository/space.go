@@ -31,3 +31,7 @@ func (r *SpaceRepository) FindByID(id string) (*models.Space, error) {
 	}
 	return &space, nil
 }
+
+func (r *SpaceRepository) Update(space *models.Space) error {
+	return r.db.Save(space).Error
+}

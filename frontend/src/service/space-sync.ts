@@ -16,6 +16,7 @@ import type {
 	ObjectInstancePayload,
 	ObjectInstanceResponse,
 	SpaceApi,
+	SpaceResponse,
 } from "./space-api.js";
 
 
@@ -131,6 +132,8 @@ export class SpaceSync {
 
 	public activeSpaceId: string | null = null;
 
+	public activeSpace: SpaceResponse | null = null;
+
 	constructor({
 		apiClient,
 		readOnly = false,
@@ -180,7 +183,7 @@ export class SpaceSync {
 	 * Fetch spaces from the API and load the first available space.
 	 * When no spaces exist, a default space is created automatically.
 	 */
-	public async initializeSpaceFromApi(): Promise<void> {
+	public async initializeSpaceFromApi(): Promise<SpaceResponse | null> {
 		this.isSyncingFromApi = true;
 
 		try {
@@ -192,7 +195,7 @@ export class SpaceSync {
 					this.clearSpace();
 					this.sceneManager.createDefaultScene();
 					this.tree.updateTreeFromScene(this.space, true);
-					return;
+					return null;
 				}
 
 				space = await this.apiClient.createSpace(
@@ -202,6 +205,7 @@ export class SpaceSync {
 			}
 
 			this.activeSpaceId = space.id;
+			this.activeSpace = space;
 
 			const instances = await this.apiClient.listObjects(space.id);
 
@@ -213,19 +217,36 @@ export class SpaceSync {
 					this.isSyncingFromApi = false;
 					await this.syncAllObjectsToApi();
 				}
-				return;
+				return space;
 			}
 
 			this.loadObjectsFromApi(instances);
 			this.tree.updateTreeFromScene(this.space, true);
+			return space;
 		} catch (error) {
 			console.error("DT3D: Failed to load spaces from API", error);
 			this.clearSpace();
 			this.sceneManager.createDefaultScene();
 			this.tree.updateTreeFromScene(this.space, true);
+			return null;
 		} finally {
 			this.isSyncingFromApi = false;
 		}
+	}
+
+	public async updateActiveSpaceConfig(config: Record<string, any>): Promise<SpaceResponse | null> {
+		if (!this.activeSpaceId || !this.activeSpace) {
+			return null;
+		}
+
+		const updatedSpace = await this.apiClient.updateSpace(this.activeSpaceId, {
+			name: this.activeSpace.name,
+			description: this.activeSpace.description,
+			config,
+		});
+		this.activeSpace = updatedSpace;
+
+		return updatedSpace;
 	}
 
 	/**

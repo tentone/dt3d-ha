@@ -13,7 +13,8 @@ export type DynamicInputFieldType =
 	| "boolean"
 	| "color"
 	| "info"
-	| "file";
+	| "file"
+	| "select";
 
 export type DynamicFieldType = DynamicInputFieldType | "sub-form";
 
@@ -29,6 +30,10 @@ export type DynamicFormInputField = {
 	enabled: boolean;
 	step?: number;
 	min?: number;
+	options?: Array<{
+		label: string;
+		value: string | number | boolean;
+	}>;
 };
 
 /**
@@ -80,7 +85,10 @@ export class DynamicForm extends LitElement {
 
 	private subFormOpenState = new Map<string, boolean>();
 
-	private getFieldValue(field: DynamicFormInputField, data = this.data): unknown {
+	private getFieldValue(
+		field: DynamicFormInputField,
+		data = this.data,
+	): unknown {
 		if (!data) {
 			return null;
 		}
@@ -154,7 +162,11 @@ export class DynamicForm extends LitElement {
 	 * @param type - The type of the changed field.
 	 * @param value - The new value of the changed field.
 	 */
-	private dispatchFieldChange(attribute: string,type: DynamicInputFieldType,value: unknown,) {
+	private dispatchFieldChange(
+		attribute: string,
+		type: DynamicInputFieldType,
+		value: unknown,
+	) {
 		this.dispatchEvent(
 			new CustomEvent<DynamicFormChangeDetail>("field-change", {
 				detail: {attribute, value, type},
@@ -186,10 +198,7 @@ export class DynamicForm extends LitElement {
 		return this.subFormOpenState.get(key) ?? field.collapsed !== true;
 	}
 
-	private handleSubFormToggle(
-		field: DynamicFormSubFormField,
-		event: Event,
-	) {
+	private handleSubFormToggle(field: DynamicFormSubFormField, event: Event) {
 		const details = event.currentTarget as HTMLDetailsElement;
 		this.subFormOpenState.set(this.getSubFormKey(field), details.open);
 	}
@@ -207,7 +216,9 @@ export class DynamicForm extends LitElement {
 					<span>${field.label}</span>
 				</summary>
 				<div class="sub-form-fields">
-					${field.fields.map((subField) => this.renderField(subField, subFormData))}
+					${field.fields.map((subField) =>
+						this.renderField(subField, subFormData),
+					)}
 				</div>
 			</details>
 		`;
@@ -233,12 +244,12 @@ export class DynamicForm extends LitElement {
 					return null;
 				}
 
-
 				return html`
 					<div class="field">
 						<label title=${field.tooltip ?? ""}>${field.label}</label>
 						<div class="group-row">
-							${(["x", "y", "z"] as const).map((axis) => html`
+							${(["x", "y", "z"] as const).map(
+								(axis) => html`
 									<label style="color: ${this.getAxisColor(axis)}">
 										${axis.toUpperCase()}
 										<input
@@ -260,7 +271,7 @@ export class DynamicForm extends LitElement {
 										/>
 									</label>
 								`,
-	)}
+							)}
 						</div>
 					</div>
 				`;
@@ -274,11 +285,11 @@ export class DynamicForm extends LitElement {
 								.checked=${value}
 								?disabled=${!field.editable}
 								@change=${(event: Event) =>
-								this.dispatchFieldChange(
-									field.attribute,
-									field.type,
-									(event.target as HTMLInputElement).checked,
-								)}
+									this.dispatchFieldChange(
+										field.attribute,
+										field.type,
+										(event.target as HTMLInputElement).checked,
+									)}
 							/>
 							${field.label}
 						</label>
@@ -296,11 +307,11 @@ export class DynamicForm extends LitElement {
 							.value=${value}
 							?disabled=${!field.editable}
 							@input=${(event: Event) =>
-							this.dispatchFieldChange(
-								field.attribute,
-								field.type,
-								(event.target as HTMLInputElement).value,
-							)}
+								this.dispatchFieldChange(
+									field.attribute,
+									field.type,
+									(event.target as HTMLInputElement).value,
+								)}
 						/>
 					</div>
 				`;
@@ -337,6 +348,30 @@ export class DynamicForm extends LitElement {
 					</div>
 				`;
 			}
+			case "select": {
+				const value = this.getFieldValue(field, data);
+				return html`
+					<div class="field">
+						<label title=${field.tooltip ?? ""}>${field.label}</label>
+						<select
+							?disabled=${!field.editable}
+							.value=${value == null ? "" : String(value)}
+							@change=${(event: Event) =>
+								this.dispatchFieldChange(
+									field.attribute,
+									field.type,
+									(event.target as HTMLSelectElement).value,
+								)}
+						>
+							${(field.options ?? []).map(
+								(option) => html`
+									<option value=${String(option.value)}>${option.label}</option>
+								`,
+							)}
+						</select>
+					</div>
+				`;
+			}
 			case "number": {
 				const value = Number(this.getFieldValue(field, data) ?? 0);
 				const step = field.step ?? 0.01;
@@ -354,11 +389,7 @@ export class DynamicForm extends LitElement {
 									(event.target as HTMLInputElement).value,
 								);
 								if (Number.isNaN(rawValue)) return;
-								this.dispatchFieldChange(
-									field.attribute,
-									field.type,
-									rawValue,
-								);
+								this.dispatchFieldChange(field.attribute, field.type, rawValue);
 							}}
 						/>
 					</div>

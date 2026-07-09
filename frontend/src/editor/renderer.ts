@@ -1,7 +1,53 @@
 import type {Camera, Scene} from "three";
-import {WebGLRenderer} from "three";
+import {
+	ACESFilmicToneMapping,
+	BasicShadowMap,
+	CineonToneMapping,
+	LinearToneMapping,
+	NoToneMapping,
+	PCFShadowMap,
+	PCFSoftShadowMap,
+	ReinhardToneMapping,
+	VSMShadowMap,
+	WebGLRenderer,
+} from "three";
 import type {OrbitControls} from "three/examples/jsm/controls/OrbitControls";
 import {CSS3DRenderer} from "three/examples/jsm/renderers/CSS3DRenderer.js";
+
+import type {
+	RenderingConfig,
+	ShadowMapMode,
+	ToneMappingMode,
+} from "./general-config.js";
+import {normalizeGeneralConfig} from "./general-config.js";
+
+const getToneMapping = (mode: ToneMappingMode) => {
+	switch (mode) {
+		case "linear":
+			return LinearToneMapping;
+		case "reinhard":
+			return ReinhardToneMapping;
+		case "cineon":
+			return CineonToneMapping;
+		case "aces_filmic":
+			return ACESFilmicToneMapping;
+		default:
+			return NoToneMapping;
+	}
+};
+
+const getShadowMapType = (type: ShadowMapMode) => {
+	switch (type) {
+		case "basic":
+			return BasicShadowMap;
+		case "pcf_soft":
+			return PCFSoftShadowMap;
+		case "vsm":
+			return VSMShadowMap;
+		default:
+			return PCFShadowMap;
+	}
+};
 
 /**
  * RendererManager handles WebGL and CSS renderers along with the render loop.
@@ -32,22 +78,92 @@ export class RendererManager {
 	 */
 	public controls: OrbitControls;
 
+	private canvas: HTMLCanvasElement;
+
+	private width: number;
+
+	private height: number;
+
+	private renderingConfig: RenderingConfig = normalizeGeneralConfig().rendering;
+
 	/**
 	 * If true the render loop if running.
 	 */
 	private running: boolean = false;
 
-	constructor(camera: Camera, canvas: HTMLCanvasElement, controls: OrbitControls, cssElement: HTMLElement, height: number, scene: Scene, width: number) {
+	constructor(
+		camera: Camera,
+		canvas: HTMLCanvasElement,
+		controls: OrbitControls,
+		cssElement: HTMLElement,
+		height: number,
+		scene: Scene,
+		width: number,
+		renderingConfig: Partial<RenderingConfig> = {},
+	) {
 		this.scene = scene;
 		this.camera = camera;
 		this.controls = controls;
+		this.canvas = canvas;
+		this.width = width;
+		this.height = height;
+		this.renderingConfig = normalizeGeneralConfig({
+			rendering: renderingConfig,
+		}).rendering;
 
 		this.cssRenderer = new CSS3DRenderer({element: cssElement});
 		this.cssRenderer.setSize(width, height);
 
-		this.renderer = new WebGLRenderer({alpha: true, canvas});
-		this.renderer.setSize(width, height, false);
-		this.renderer.setClearColor(0x446644, 1);
+		this.renderer = this.createRenderer();
+	}
+
+	private createRenderer(): WebGLRenderer {
+		const renderer = new WebGLRenderer({
+			alpha: true,
+			antialias: this.renderingConfig.antialiasing,
+			canvas: this.canvas,
+		});
+		renderer.setClearColor(0x446644, 1);
+		this.applyRenderingConfig(renderer);
+
+		return renderer;
+	}
+
+	private applyRenderingConfig(renderer = this.renderer): void {
+		const pixelRatio =
+			(window.devicePixelRatio || 1) * this.renderingConfig.resolution;
+		renderer.setPixelRatio(pixelRatio);
+		renderer.toneMapping = getToneMapping(this.renderingConfig.toneMapping);
+		renderer.shadowMap.enabled = this.renderingConfig.shadowMap.enabled;
+		renderer.shadowMap.type = getShadowMapType(
+			this.renderingConfig.shadowMap.type,
+		);
+		renderer.setSize(this.width, this.height, false);
+	}
+
+	public setRenderingConfig(config: Partial<RenderingConfig>): void {
+		const nextConfig = normalizeGeneralConfig({
+			rendering: {
+				...this.renderingConfig,
+				...config,
+				shadowMap: {
+					...this.renderingConfig.shadowMap,
+					...config.shadowMap,
+				},
+			},
+		}).rendering;
+		const antialiasingChanged =
+			nextConfig.antialiasing !== this.renderingConfig.antialiasing;
+
+		this.renderingConfig = nextConfig;
+
+		if (antialiasingChanged) {
+			this.renderer.dispose();
+			this.renderer = this.createRenderer();
+			return;
+		}
+
+		this.applyRenderingConfig();
 	}
 
 	/**
@@ -90,6 +206,8 @@ export class RendererManager {
 	 * @param height - Height in px
 	 */
 	public resize(width: number, height: number): void {
+		this.width = width;
+		this.height = height;
 		this.renderer.setSize(width, height, false);
 		this.cssRenderer.setSize(width, height);
 	}

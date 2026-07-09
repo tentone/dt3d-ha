@@ -2,9 +2,16 @@ export type SpaceResponse = {
 	id: string;
 	name: string;
 	description: string;
+	config: Record<string, any> | null;
 	created_at: number;
 	updated_at: number;
 	object_instances: ObjectInstanceResponse[];
+};
+
+export type SpacePayload = {
+	name: string;
+	description: string;
+	config?: Record<string, any> | null;
 };
 
 export type ObjectInstanceResponse = {
@@ -93,10 +100,27 @@ export class SpaceApi {
 	/**
 	 * Create a new space with the provided name/description.
 	 */
-	public createSpace(name: string, description: string): Promise<SpaceResponse> {
+	public createSpace(
+		name: string,
+		description: string,
+		config: Record<string, any> | null = null,
+	): Promise<SpaceResponse> {
 		return this.fetchJson<SpaceResponse>("/spaces", {
 			method: "POST",
-			body: JSON.stringify({name, description}),
+			body: JSON.stringify({name, description, config}),
+		});
+	}
+
+	/**
+	 * Update a space's metadata/configuration.
+	 */
+	public updateSpace(
+		spaceId: string,
+		payload: SpacePayload,
+	): Promise<SpaceResponse> {
+		return this.fetchJson<SpaceResponse>(`/spaces/${spaceId}`, {
+			method: "PUT",
+			body: JSON.stringify(payload),
 		});
 	}
 

@@ -1,3 +1,5 @@
+import type {
+	Object3D} from "three";
 import {
 	AmbientLight,
 	BoxGeometry,
@@ -281,6 +283,11 @@ export class SceneManager {
 	private transformSnapEnabled = false;
 
 	/**
+	 * Global shadow flag for renderable scene objects.
+	 */
+	private shadowsEnabled = false;
+
+	/**
 	 * Ambient light used by daylight configuration.
 	 */
 	private ambientLight: AmbientLight | null = null;
@@ -300,7 +307,7 @@ export class SceneManager {
 	 */
 	private spaceSceneConfig: SpaceSceneConfig = normalizeSpaceSceneConfig();
 
-	constructor(canvas: HTMLCanvasElement, height: number, width: number,) {
+	constructor(canvas: HTMLCanvasElement, height: number, width: number) {
 		this.scene = new Scene();
 
 		this.canvas = canvas;
@@ -340,7 +347,9 @@ export class SceneManager {
 	 *
 	 * @param config - Scene config patch.
 	 */
-	public setSpaceSceneConfig(config: Partial<SpaceSceneConfig>): SpaceSceneConfig {
+	public setSpaceSceneConfig(
+		config: Partial<SpaceSceneConfig>,
+	): SpaceSceneConfig {
 		this.spaceSceneConfig = normalizeSpaceSceneConfig({
 			...this.spaceSceneConfig,
 			...config,
@@ -416,6 +425,35 @@ export class SceneManager {
 	}
 
 	/**
+	 * Enable or disable shadows for scene lights and mesh objects.
+	 */
+	public setShadowsEnabled(enabled: boolean): void {
+		this.shadowsEnabled = enabled;
+
+		if (this.sunlight) {
+			this.sunlight.castShadow = enabled;
+		}
+
+		this.applyShadowSettingsToObject(this.space);
+	}
+
+	/**
+	 * Apply the current shadow settings to a newly added object subtree.
+	 */
+	public applyShadowSettingsToObject(object: Object3D): void {
+		object.traverse((child) => {
+			if ((child as any).internal === true) {
+				return;
+			}
+
+			if (child instanceof Mesh) {
+				child.castShadow = this.shadowsEnabled;
+				child.receiveShadow = this.shadowsEnabled;
+			}
+		});
+	}
+
+	/**
 	 * Apply the current snap settings to transform controls.
 	 */
 	private applyTransformSnap(): void {
@@ -458,7 +496,11 @@ export class SceneManager {
 			return;
 		}
 
-		this.grid.position.set(Math.round(this.camera.position.x), 0, Math.round(this.camera.position.z));
+		this.grid.position.set(
+			Math.round(this.camera.position.x),
+			0,
+			Math.round(this.camera.position.z),
+		);
 	}
 
 	/**
@@ -525,10 +567,14 @@ export class SceneManager {
 		if (this.camera instanceof PerspectiveCamera) {
 			const viewportHeight =
 				2 * cameraHeight * Math.tan(MathUtils.degToRad(this.camera.fov) / 2);
-			viewportSize = Math.max(viewportHeight, viewportHeight * aspect) * GRID_VIEWPORT_PADDING;
+			viewportSize =
+				Math.max(viewportHeight, viewportHeight * aspect) *
+				GRID_VIEWPORT_PADDING;
 		} else if (this.camera instanceof OrthographicCamera) {
 			const viewportHeight = this.orthographicFrustumSize / this.camera.zoom;
-			viewportSize = Math.max(viewportHeight, viewportHeight * aspect) * GRID_VIEWPORT_PADDING;
+			viewportSize =
+				Math.max(viewportHeight, viewportHeight * aspect) *
+				GRID_VIEWPORT_PADDING;
 		}
 
 		const targetSize = Math.max(this.gridSize, heightBasedSize, viewportSize);
@@ -605,14 +651,18 @@ export class SceneManager {
 		this.cameraMode = mode;
 
 		if (this.cameraMode === "perspective") {
-			this.camera = new PerspectiveCamera(75, this.width / this.height, 0.1, 10000);
+			this.camera = new PerspectiveCamera(
+				75,
+				this.width / this.height,
+				0.1,
+				10000,
+			);
 			this.camera.position.z = 3;
 			this.scene.add(this.camera);
 		} else {
 			this.camera = new OrthographicCamera(-1, 1, 1, -1, 0.1, 1e5);
 			this.scene.add(this.camera);
 		}
-
 
 		// Copy camera position
 		this.camera.position.copy(previous.position);
@@ -631,7 +681,8 @@ export class SceneManager {
 	 * Toggle camera mode between perspective and orthographic.
 	 */
 	public toggleCameraMode(): CameraMode {
-		const nextMode: CameraMode = this.cameraMode === "perspective" ? "orthographic" : "perspective";
+		const nextMode: CameraMode =
+			this.cameraMode === "perspective" ? "orthographic" : "perspective";
 		this.setCameraMode(nextMode);
 		return this.cameraMode;
 	}
@@ -656,7 +707,8 @@ export class SceneManager {
 				y: direction.y,
 				z: direction.z,
 			},
-			fov: this.camera instanceof PerspectiveCamera ? this.camera.fov : undefined,
+			fov:
+				this.camera instanceof PerspectiveCamera ? this.camera.fov : undefined,
 			mode: this.cameraMode,
 			position: {
 				x: this.camera.position.x,
@@ -687,7 +739,11 @@ export class SceneManager {
 	public applyViewportConfig(config: CameraViewportConfig): void {
 		this.setCameraMode(config.mode);
 
-		this.camera.position.set(config.position.x, config.position.y, config.position.z);
+		this.camera.position.set(
+			config.position.x,
+			config.position.y,
+			config.position.z,
+		);
 
 		if (config.quaternion) {
 			this.camera.quaternion.set(
@@ -697,13 +753,22 @@ export class SceneManager {
 				config.quaternion.w,
 			);
 		} else {
-			const direction = new Vector3(config.direction.x, config.direction.y, config.direction.z).normalize();
+			const direction = new Vector3(
+				config.direction.x,
+				config.direction.y,
+				config.direction.z,
+			).normalize();
 			const distance = config.targetDistance ?? 10;
-			const target = this.camera.position.clone().add(direction.multiplyScalar(distance));
+			const target = this.camera.position
+				.clone()
+				.add(direction.multiplyScalar(distance));
 			this.camera.lookAt(target);
 		}
 
-		if (this.camera instanceof PerspectiveCamera && typeof config.fov === "number") {
+		if (
+			this.camera instanceof PerspectiveCamera &&
+			typeof config.fov === "number"
+		) {
 			this.camera.fov = config.fov;
 		}
 
@@ -712,11 +777,21 @@ export class SceneManager {
 		}
 
 		if (config.target) {
-			this.controls.target.set(config.target.x, config.target.y, config.target.z);
+			this.controls.target.set(
+				config.target.x,
+				config.target.y,
+				config.target.z,
+			);
 		} else {
-			const direction = new Vector3(config.direction.x, config.direction.y, config.direction.z).normalize();
+			const direction = new Vector3(
+				config.direction.x,
+				config.direction.y,
+				config.direction.z,
+			).normalize();
 			const distance = config.targetDistance ?? 10;
-			this.controls.target.copy(this.camera.position).add(direction.multiplyScalar(distance));
+			this.controls.target
+				.copy(this.camera.position)
+				.add(direction.multiplyScalar(distance));
 		}
 
 		this.camera.updateProjectionMatrix();
@@ -734,6 +809,14 @@ export class SceneManager {
 
 		this.sunlight = new DirectionalLight(0xeeeeee);
 		this.sunlight.position.set(200, 1000, 300);
+		this.sunlight.castShadow = this.shadowsEnabled;
+		this.sunlight.shadow.mapSize.set(2048, 2048);
+		this.sunlight.shadow.camera.near = 0.5;
+		this.sunlight.shadow.camera.far = 3000;
+		this.sunlight.shadow.camera.left = -200;
+		this.sunlight.shadow.camera.right = 200;
+		this.sunlight.shadow.camera.top = 200;
+		this.sunlight.shadow.camera.bottom = -200;
 		this.scene.add(this.sunlight);
 
 		this.sky = new Sky();

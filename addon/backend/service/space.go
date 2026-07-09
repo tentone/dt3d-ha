@@ -36,6 +36,34 @@ func (s *SpaceService) GetSpaceByID(id string) (*models.Space, error) {
 	return s.spaces.FindByID(id)
 }
 
+type UpdateSpaceInput struct {
+	Name        string
+	Description string
+	Config      datatypes.JSON
+}
+
+func (s *SpaceService) UpdateSpace(spaceID string, payload UpdateSpaceInput) (*models.Space, error) {
+	space, err := s.spaces.FindByID(spaceID)
+	if err != nil {
+		return nil, err
+	}
+
+	payload.Name = strings.TrimSpace(payload.Name)
+	if payload.Name == "" {
+		return nil, errors.New("space name is required")
+	}
+
+	space.Name = payload.Name
+	space.Description = payload.Description
+	space.Config = payload.Config
+
+	if err := s.spaces.Update(space); err != nil {
+		return nil, err
+	}
+
+	return space, nil
+}
+
 func (s *SpaceService) CreateObjectInstance(spaceID string, instance *models.ObjectInstance) error {
 	instance.SpaceID = spaceID
 	instance.Type = strings.TrimSpace(instance.Type)

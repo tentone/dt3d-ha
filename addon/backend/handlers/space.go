@@ -34,6 +34,7 @@ func (h *SpaceHandler) Register(router gin.IRouter) {
 		spaces.GET("", h.listSpaces)
 		spaces.POST("", h.createSpace)
 		spaces.GET(":spaceID", h.getSpace)
+		spaces.PUT(":spaceID", h.updateSpace)
 		spaces.GET(":spaceID/objects", h.listObjectInstances)
 		spaces.GET(":spaceID/tree", h.getObjectTree)
 		spaces.POST(":spaceID/objects", h.createObjectInstance)
@@ -67,6 +68,7 @@ func (h *SpaceHandler) createSpace(c *gin.Context) {
 	space := models.Space{
 		Name:        req.Name,
 		Description: req.Description,
+		Config:      rawMessageToJSON(req.Config),
 	}
 	if err := h.spaces.CreateSpace(&space); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -86,6 +88,31 @@ func (h *SpaceHandler) getSpace(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
+	c.JSON(http.StatusOK, toSpaceResponse(*space))
+}
+
+func (h *SpaceHandler) updateSpace(c *gin.Context) {
+	spaceID := c.Param("spaceID")
+	var req updateSpaceRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid space payload"})
+		return
+	}
+
+	space, err := h.spaces.UpdateSpace(spaceID, service.UpdateSpaceInput{
+		Name:        req.Name,
+		Description: req.Description,
+		Config:      rawMessageToJSON(req.Config),
+	})
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "space not found"})
+			return
+		}
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
 	c.JSON(http.StatusOK, toSpaceResponse(*space))
 }
 

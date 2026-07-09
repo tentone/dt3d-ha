@@ -16,7 +16,8 @@
 	color: var(--ha-color-neutral-80);
 }
 
-.field input {
+.field input,
+.field select {
 	background: color-mix(in srgb, var(--ha-color-neutral-10) 95%, transparent);
 	border: 1px solid
 		color-mix(in srgb, var(--ha-color-neutral-30) 80%, transparent);
