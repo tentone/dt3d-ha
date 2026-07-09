@@ -1,5 +1,14 @@
 import type {Color} from "three";
-import {CanvasTexture, Sprite, SpriteMaterial} from "three";
+import {
+	CanvasTexture,
+	LinearFilter,
+	LinearMipMapLinearFilter,
+	Sprite,
+	SpriteMaterial,
+	SRGBColorSpace,
+} from "three";
+
+import {renderIconPathToCanvas} from "../../utils/icon-utils.js";
 
 /**
  * Icon with a gradient circle of a specific color.
@@ -9,27 +18,13 @@ export class CircleIconSprite extends Sprite {
 	 * @param color - Color of the sprite icon.
 	 * @param size - Size of the sprite.
 	 */
-	public constructor(color: Color | number, size = 0.25) {
-		const canvas = document.createElement("canvas");
-		canvas.width = 128;
-		canvas.height = 128;
-
-		const ctx = canvas.getContext("2d");
-		if (ctx) {
-			ctx.clearRect(0, 0, canvas.width, canvas.height);
-			ctx.fillStyle =
-				typeof color === "number"
-					? `#${color.toString(16).padStart(6, "0")}`
-					: `#${color.getHexString()}`;
-			ctx.beginPath();
-			ctx.arc(64, 64, 40, 0, Math.PI * 2);
-			ctx.fill();
-			ctx.strokeStyle = "#ffffff";
-			ctx.lineWidth = 4;
-			ctx.stroke();
-		}
-
+	public constructor(color: Color | number, size = 0.5) {
+		const canvas = renderIconPathToCanvas("", {backgroundColor: color});
 		const texture = new CanvasTexture(canvas);
+		texture.colorSpace = SRGBColorSpace;
+		texture.magFilter = LinearFilter;
+		texture.minFilter = LinearMipMapLinearFilter;
+		texture.generateMipmaps = true;
 		const material = new SpriteMaterial({map: texture, transparent: true});
 
 		super(material);

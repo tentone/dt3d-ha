@@ -1,10 +1,7 @@
-import * as mdiIcons from "@mdi/js";
-
+import {DEFAULT_HA_ICON, resolveHaIconPath} from "../utils/icon-utils.js";
 import {EntityObject} from "./entity-object.js";
 import {IconSprite} from "./helpers/icon-sprite.js";
 import {TextSprite} from "./helpers/text-sprite.js";
-
-const DEFAULT_ICON = mdiIcons.mdiHelpCircleOutline;
 
 /**
  * Home Assistant binary entity representation.
@@ -23,18 +20,19 @@ export class EntityBinary extends EntityObject {
 	public constructor(entityId: string, entity: any) {
 		super(entityId);
 
-		const iconPath = EntityBinary.getIconPath(entity?.attributes?.icon);
+		const iconPath = resolveHaIconPath(entity?.attributes?.icon, DEFAULT_HA_ICON);
 		const color = EntityBinary.getStateColor(entity?.state);
 
-		this.icon = new IconSprite(iconPath, color, 0.32);
+		this.icon = new IconSprite(iconPath, color, 0.64);
 		this.icon.internal = true;
-		this.icon.position.y = 0.1;
+		this.icon.position.y = 0.32;
 		this.add(this.icon);
 
 		const friendlyName = this.friendlyName(entity);
 		this.label = new TextSprite(`${friendlyName}\n${entity.state ?? "unknown"}`);
 		this.label.internal = true;
-		this.label.position.y = 0.5;
+		this.label.position.y = 0.72;
+		this.setHoverLabel(this.label);
 		this.add(this.label);
 
 		this.setEntity(entity);
@@ -45,33 +43,7 @@ export class EntityBinary extends EntityObject {
 		this.label.setText(`${friendlyName}\n${entity.state ?? "unknown"}`);
 
 		this.icon.setColor(EntityBinary.getStateColor(entity.state));
-		this.icon.setIcon(EntityBinary.getIconPath(entity.attributes?.icon));
-	}
-
-	/**
-	 * Map an HA icon string to an MDI path.
-	 *
-	 * @param icon - Icon name, e.g. "mdi:door".
-	 * @returns SVG path data string.
-	 */
-	private static getIconPath(icon?: string): string {
-		if (!icon || typeof icon !== "string") {
-			return DEFAULT_ICON;
-		}
-
-		const [prefix, name] = icon.split(":");
-		if (prefix !== "mdi" || !name) {
-			return DEFAULT_ICON;
-		}
-
-		const formattedName =
-			"mdi" +
-			name
-				.split("-")
-				.map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-				.join("");
-
-		return (mdiIcons as Record<string, string>)[formattedName] ?? DEFAULT_ICON;
+		this.icon.setIcon(resolveHaIconPath(entity.attributes?.icon, DEFAULT_HA_ICON));
 	}
 
 	/**

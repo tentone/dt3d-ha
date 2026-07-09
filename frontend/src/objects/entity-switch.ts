@@ -1,25 +1,31 @@
-import type {Object3D} from "three";
+import {mdiToggleSwitch, mdiToggleSwitchOff} from "@mdi/js";
 
+import {resolveHaIconPath} from "../utils/icon-utils.js";
 import type {DTInteractionEvent} from "./dt-object.js";
 import {EntityObject} from "./entity-object.js";
-import {CircleIconSprite} from "./helpers/circle-icon-sprite.js";
+import {IconSprite} from "./helpers/icon-sprite.js";
 import {TextSprite} from "./helpers/text-sprite.js";
 
 export class EntitySwitch extends EntityObject {
 	public label: TextSprite;
-	private icon: Object3D;
+	private icon: IconSprite;
 
 	public constructor(entityId: string, entity: any) {
 		super(entityId);
 
-		this.icon = this.createIcon(false);
+		this.icon = new IconSprite(
+			EntitySwitch.getIconPath(entity),
+			EntitySwitch.getStateColor(entity?.state),
+			0.44,
+		);
 		this.icon.internal = true;
-		this.icon.position.y = 0.1;
+		this.icon.position.y = 0.22;
 		this.add(this.icon);
 
 		this.label = new TextSprite("Loading\n...");
 		this.label.internal = true;
-		this.label.position.y = 0.45;
+		this.label.position.y = 0.58;
+		this.setHoverLabel(this.label);
 		this.add(this.label);
 
 		this.setEntity(entity);
@@ -30,10 +36,13 @@ export class EntitySwitch extends EntityObject {
 		const labelText = `${friendlyName}\n${entity.state}`;
 		this.label.setText(labelText);
 
-		this.refreshIcon(entity.state === "on");
+		this.icon.setColor(EntitySwitch.getStateColor(entity.state));
+		this.icon.setIcon(EntitySwitch.getIconPath(entity));
 	}
 
 	public onInteraction(event: DTInteractionEvent): void {
+		super.onInteraction(event);
+
 		if (event.type === "dblclick") {
 			this.toggle((event as any).hass ?? null);
 		}
@@ -59,24 +68,17 @@ export class EntitySwitch extends EntityObject {
 		}
 	}
 
-	/**
-	 * Refresh the icon of the switch after its state has been changed.
-	 *
-	 *
-	 * @param isOn - State of the switch.
-	 */
-	private refreshIcon(isOn: boolean): void {
-		if (this.icon) {
-			this.remove(this.icon);
-		}
-
-		this.icon = this.createIcon(isOn);
-		this.icon.position.y = 0.1;
-		this.add(this.icon);
+	private static getIconPath(entity: any): string {
+		const fallbackIcon =
+			entity?.state === "on" ? mdiToggleSwitch : mdiToggleSwitchOff;
+		return resolveHaIconPath(entity?.attributes?.icon, fallbackIcon);
 	}
 
-	private createIcon(isOn: boolean): Object3D {
-		const color = isOn ? 0x00ff7f : 0x555555;
-		return new CircleIconSprite(color, 0.22);
+	private static getStateColor(state?: string): number {
+		if (state === "unavailable") {
+			return 0x808080;
+		}
+
+		return state === "on" ? 0x00ff7f : 0x555555;
 	}
 }

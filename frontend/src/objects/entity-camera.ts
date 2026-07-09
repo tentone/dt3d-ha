@@ -1,6 +1,7 @@
 import * as mdiIcons from "@mdi/js";
 import {CSS3DSprite} from "three/examples/jsm/renderers/CSS3DRenderer.js";
 
+import type {DTInteractionEvent} from "./dt-object.js";
 import {EntityObject} from "./entity-object.js";
 import {IconSprite} from "./helpers/icon-sprite.js";
 
@@ -56,6 +57,11 @@ export class EntityCamera extends EntityObject {
 	private refreshTimer: number | null = null;
 
 	/**
+	 * Whether camera text should be visible.
+	 */
+	private isHovered = false;
+
+	/**
 	 * Create a camera entity object.
 	 *
 	 * @param entityId - Home Assistant camera entity ID.
@@ -64,9 +70,9 @@ export class EntityCamera extends EntityObject {
 	public constructor(entityId: string, entity: any) {
 		super(entityId);
 
-		this.icon = new IconSprite(CAMERA_ICON, 0x1e90ff, 0.32);
+		this.icon = new IconSprite(CAMERA_ICON, 0x1e90ff, 0.64);
 		this.icon.internal = true;
-		this.icon.position.y = 0.1;
+		this.icon.position.y = 0.32;
 		this.add(this.icon);
 
 		this.root = document.createElement("div");
@@ -105,6 +111,7 @@ export class EntityCamera extends EntityObject {
 			text-overflow: ellipsis;
 			white-space: nowrap;
 		`;
+		this.title.style.display = "none";
 		this.root.appendChild(this.title);
 
 		this.status = document.createElement("div");
@@ -139,6 +146,18 @@ export class EntityCamera extends EntityObject {
 	public override dispose(): void {
 		this.stopRefreshTimer();
 		this.root.remove();
+	}
+
+	public override onInteraction(event: DTInteractionEvent): void {
+		super.onInteraction(event);
+
+		if (event.type === "pointerenter") {
+			this.isHovered = true;
+			this.updateTextVisibility();
+		} else if (event.type === "pointerleave") {
+			this.isHovered = false;
+			this.updateTextVisibility();
+		}
 	}
 
 	/**
@@ -214,14 +233,20 @@ export class EntityCamera extends EntityObject {
 	 */
 	private setStatus(message: string): void {
 		this.status.textContent = message;
-		this.status.style.display = message ? "block" : "none";
+		this.updateTextVisibility();
+	}
+
+	private updateTextVisibility(): void {
+		this.title.style.display = this.isHovered ? "block" : "none";
+		this.status.style.display =
+			this.isHovered && this.status.textContent ? "block" : "none";
 	}
 
 	/**
 	 * Resolve the Home Assistant camera image URL from entity_picture.
 	 *
 	 * Root-relative Home Assistant paths are resolved against the current frontend origin.
-	 * 
+	 *
 	 * Absolute URLs are accepted only for HTTP(S) images.
 	 *
 	 * @param entity - Home Assistant entity state.

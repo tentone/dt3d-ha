@@ -1,3 +1,6 @@
+import type {Object3D} from "three";
+
+import type {DTInteractionEvent} from "./dt-object.js";
 import {DTObject} from "./dt-object.js";
 
 /**
@@ -30,6 +33,11 @@ export abstract class EntityObject extends DTObject {
 	 */
 	private entityData: any;
 
+	/**
+	 * Entity label that is only visible while the entity is hovered.
+	 */
+	private hoverLabel: Object3D | null = null;
+
 	protected constructor(entityId: string, entity?: any) {
 		super();
 
@@ -58,6 +66,32 @@ export abstract class EntityObject extends DTObject {
 	 */
 	public getEntity(): any {
 		return this.entityData;
+	}
+
+	public override onInteraction(event: DTInteractionEvent): void {
+		this.updateHoverLabel(event);
+	}
+
+	/**
+	 * Register a label to show only while the entity is hovered.
+	 *
+	 * @param label - Label object to control.
+	 */
+	protected setHoverLabel(label: Object3D): void {
+		this.hoverLabel = label;
+		this.hoverLabel.visible = false;
+	}
+
+	private updateHoverLabel(event: DTInteractionEvent): void {
+		if (!this.hoverLabel) {
+			return;
+		}
+
+		if (event.type === "pointerenter") {
+			this.hoverLabel.visible = true;
+		} else if (event.type === "pointerleave") {
+			this.hoverLabel.visible = false;
+		}
 	}
 
 	/**

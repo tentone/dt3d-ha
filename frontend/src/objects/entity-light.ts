@@ -1,12 +1,14 @@
+import {mdiLightbulb} from "@mdi/js";
 import {Color, PointLight} from "three";
 
+import {resolveHaIconPath} from "../utils/icon-utils.js";
 import type {DTInteractionEvent} from "./dt-object.js";
 import {EntityObject} from "./entity-object.js";
-import {CircleIconSprite} from "./helpers/circle-icon-sprite.js";
+import {IconSprite} from "./helpers/icon-sprite.js";
 import {TextSprite} from "./helpers/text-sprite.js";
 
 export class EntityLight extends EntityObject {
-	private icon: CircleIconSprite;
+	private icon: IconSprite;
 
 	/**
 	 * Point light to represent the light.
@@ -21,22 +23,28 @@ export class EntityLight extends EntityObject {
 	public constructor(entityId: string, entity: any) {
 		super(entityId);
 
-		this.icon = new CircleIconSprite(0x555555, 0.25);
+		const color = EntityLight.getLightColor(entity);
+		this.icon = new IconSprite(
+			EntityLight.getIconPath(entity),
+			color.getHex(),
+			0.5,
+		);
 		this.icon.internal = true;
-		this.icon.position.y = 0.1;
+		this.icon.position.y = 0.25;
 		this.add(this.icon);
 
 		this.light = new PointLight(0x555555, 0, 6, 2);
 		this.light.internal = true;
 		this.light.castShadow = true;
-		this.light.position.y = 0.4;
+		this.light.position.y = 0.6;
 		this.add(this.light);
 
 		const friendlyName = this.friendlyName(entity);
 
 		this.label = new TextSprite(friendlyName);
 		this.label.internal = true;
-		this.label.position.y = 0.6;
+		this.label.position.y = 0.68;
+		this.setHoverLabel(this.label);
 		this.add(this.label);
 
 		this.setEntity(entity);
@@ -50,6 +58,7 @@ export class EntityLight extends EntityObject {
 	protected updateFromEntity(entity: any): void {
 		const color = EntityLight.getLightColor(entity);
 		this.icon.setColor(color.getHex());
+		this.icon.setIcon(EntityLight.getIconPath(entity));
 
 		this.light.color = color;
 		this.light.intensity = entity.state === "on" ? 1 : 0;
@@ -80,7 +89,13 @@ export class EntityLight extends EntityObject {
 		return new Color(entity.state === "on" ? 0xffffaa : 0x555555);
 	}
 
+	private static getIconPath(entity: any): string {
+		return resolveHaIconPath(entity?.attributes?.icon, mdiLightbulb);
+	}
+
 	public onInteraction(event: DTInteractionEvent): void {
+		super.onInteraction(event);
+
 		if (event.type === "dblclick") {
 			this.toggle((event as any).hass ?? null);
 		}
