@@ -2,6 +2,7 @@ import "./add-entity-modal/add-entity-modal.js";
 import "./camera-toggle/camera-toggle.js";
 import "./confirmation-modal/confirmation-modal.js";
 import "./connection-status/connection-status.js";
+import "./form-modal/form-modal.js";
 import "./hint-box/hint-box.js";
 import "./mesh-menu/mesh-menu.js";
 import "./object-tree/object-tree.js";
@@ -30,8 +31,8 @@ import {applyImageTextureToMesh} from "../editor/material-texture.js";
 import {MeasurementManager} from "../editor/measurements.js";
 import {createMeshObject, resolveMeshType} from "../editor/mesh-handler.js";
 import {RendererManager} from "../editor/renderer.js";
-import type {CameraMode, SpaceSceneConfig} from "../editor/scene.js";
-import {normalizeSpaceSceneConfig,SceneManager} from "../editor/scene.js";
+import type {CameraMode, GridConfig, SpaceSceneConfig} from "../editor/scene.js";
+import {normalizeGridConfig, normalizeSpaceSceneConfig,SceneManager} from "../editor/scene.js";
 import {WallManager} from "../editor/walls.js";
 import type {Locale} from "../locale/locale.js";
 import {localManager} from "../locale/locale.js";
@@ -55,6 +56,11 @@ import type {
 	DT3DConfirmationModal,
 } from "./confirmation-modal/confirmation-modal.js";
 import type {ConnectionStatus} from "./connection-status/connection-status.js";
+import type {DynamicFormField} from "./dynamic-form/dynamic-form.js";
+import type {
+	DT3DFormModal,
+	FormModalSubmitDetail,
+} from "./form-modal/form-modal.js";
 import type {DT3DHintBox} from "./hint-box/hint-box.js";
 import type {DT3DMeshMenu} from "./mesh-menu/mesh-menu.js";
 import type {DT3DTree} from "./object-tree/object-tree.js";
@@ -63,6 +69,7 @@ import type {DT3DSpaceConfigMenu} from "./space-config-menu/space-config-menu.js
 import type {SyncProgressComponent} from "./sync-progress-component/sync-progress-component.js";
 
 const SPACE_SCENE_CONFIG_STORAGE_KEY = "space-scene-config";
+const GRID_CONFIG_STORAGE_KEY = "grid-config";
 const MODEL_FILE_EXTENSIONS = new Set(["gltf", "glb", "obj", "fbx"]);
 
 const getFileExtension = (file: File): string | null =>
@@ -236,6 +243,8 @@ export class DT3DCard extends LitElement {
 	private meshMenu: DT3DMeshMenu | null = null;
 
 	private confirmationModal: DT3DConfirmationModal | null = null;
+
+	private gridConfigModal: DT3DFormModal | null = null;
 
 	static properties = {
 		hass: {attribute: false},
@@ -422,6 +431,8 @@ export class DT3DCard extends LitElement {
 			this.meshMenu = null;
 			this.confirmationModal?.remove();
 			this.confirmationModal = null;
+			this.gridConfigModal?.remove();
+			this.gridConfigModal = null;
 			this.content
 				?.querySelectorAll("dt3d-add-entity-modal")
 				.forEach((modal) => modal.remove());
@@ -440,7 +451,14 @@ export class DT3DCard extends LitElement {
 			}
 		}
 
+		this.applyGridVisibility();
 		this.updateHintMessage();
+	}
+
+	private applyGridVisibility(): void {
+		this.sceneManager?.setGridEnabled(
+			!this.isVisualizationOnly() && (this.sidebar?.gridEnabled ?? true),
+		);
 	}
 
 	/**
@@ -933,6 +951,7 @@ export class DT3DCard extends LitElement {
 	private hasOpenDialog(): boolean {
 		return Boolean(
 			this.confirmationModal ||
+			this.gridConfigModal ||
 			this.spaceConfigMenu ||
 			this.meshMenu ||
 			this.content?.querySelector("dt3d-add-entity-modal"),
@@ -1023,6 +1042,63 @@ export class DT3DCard extends LitElement {
 
 		this.spaceConfigMenu = menu;
 		this.content.appendChild(menu);
+	}
+
+	/**
+	 * Open the grid configuration form.
+	 */
+	private openGridConfigModal(): void {
+		if (!this.content || this.gridConfigModal || this.isVisualizationOnly()) {
+			return;
+		}
+
+		const fields: DynamicFormField[] = [
+			{
+				label: localManager.get("gridSize"),
+				attribute: "size",
+				type: "number",
+				tooltip: localManager.get("gridSizeTooltip"),
+				editable: true,
+				enabled: true,
+				step: 1,
+				min: 1,
+			},
+			{
+				label: localManager.get("gridSnapSize"),
+				attribute: "snapSize",
+				type: "number",
+				tooltip: localManager.get("gridSnapSizeTooltip"),
+				editable: true,
+				enabled: true,
+				step: 0.01,
+				min: 0.01,
+			},
+		];
+		const modal = document.createElement("dt3d-form-modal") as DT3DFormModal;
+		modal.heading = localManager.get("gridConfiguration");
+		modal.description = localManager.get("gridConfigurationDescription");
+		modal.confirmLabel = localManager.get("save");
+		modal.fields = fields;
+		modal.data = this.sceneManager.getGridConfig();
+
+		const closeModal = () => {
+			modal.remove();
+			if (this.gridConfigModal === modal) {
+				this.gridConfigModal = null;
+			}
+		};
+
+		modal.addEventListener("form-submit", (event: Event) => {
+			const {values} = (event as CustomEvent<FormModalSubmitDetail>).detail;
+			const config = normalizeGridConfig(values as Partial<GridConfig>);
+			const appliedConfig = this.sceneManager.setGridConfig(config);
+			LocalStorage.write(GRID_CONFIG_STORAGE_KEY, appliedConfig);
+			closeModal();
+		});
+		modal.addEventListener("modal-close", closeModal);
+
+		this.gridConfigModal = modal;
+		this.content.appendChild(modal);
 	}
 
 	/**
@@ -1245,6 +1321,9 @@ export class DT3DCard extends LitElement {
 		this.content.appendChild(cssElem);
 
 		this.sceneManager = new SceneManager(this.canvas, height, width);
+		this.sceneManager.setGridConfig(
+			normalizeGridConfig(LocalStorage.read(GRID_CONFIG_STORAGE_KEY, {}) ?? {}),
+		);
 		this.spaceSceneConfig = normalizeSpaceSceneConfig(
 			LocalStorage.read(SPACE_SCENE_CONFIG_STORAGE_KEY, {}),
 		);
@@ -1278,7 +1357,7 @@ export class DT3DCard extends LitElement {
 				transformedObject = null;
 			}
 		});
-		this.sceneManager.setGridEnabled(this.sidebar.gridEnabled);
+		this.applyGridVisibility();
 		this.sceneManager.setTransformSnapEnabled(this.sidebar.gridSnapEnabled);
 
 		this.scene = this.sceneManager.scene;
@@ -1390,12 +1469,20 @@ export class DT3DCard extends LitElement {
 
 		this.sidebar.addEventListener("grid-visibility-toggle", (e: any) => {
 			const enabled = e.detail.enabled as boolean;
-			this.sceneManager.setGridEnabled(enabled);
+			this.sceneManager.setGridEnabled(enabled && !this.isVisualizationOnly());
 		});
 
 		this.sidebar.addEventListener("grid-snap-toggle", (e: any) => {
 			const enabled = e.detail.enabled as boolean;
 			this.sceneManager.setTransformSnapEnabled(enabled);
+		});
+
+		this.sidebar.addEventListener("grid-config-open", () => {
+			if (this.isVisualizationOnly()) {
+				return;
+			}
+
+			this.openGridConfigModal();
 		});
 
 		this.sidebar.addEventListener("space-config-open", () => {
@@ -1634,6 +1721,8 @@ export class DT3DCard extends LitElement {
 		this.clearCanvasClickSuppression();
 		this.confirmationModal?.remove();
 		this.confirmationModal = null;
+		this.gridConfigModal?.remove();
+		this.gridConfigModal = null;
 	}
 
 	/**

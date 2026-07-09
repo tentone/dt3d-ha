@@ -68,6 +68,14 @@ export type SpaceSceneConfig = {
 	daylight: DaylightConfig;
 };
 
+/**
+ * Grid display and snapping settings.
+ */
+export type GridConfig = {
+	size: number;
+	snapSize: number;
+};
+
 export const DEFAULT_DAYLIGHT_CONFIG: DaylightConfig = {
 	ambientColor: "#bbbbbb",
 	ambientIntensity: 1,
@@ -80,6 +88,15 @@ export const DEFAULT_DAYLIGHT_CONFIG: DaylightConfig = {
 export const DEFAULT_SPACE_SCENE_CONFIG: SpaceSceneConfig = {
 	daylight: DEFAULT_DAYLIGHT_CONFIG,
 };
+
+export const DEFAULT_GRID_CONFIG: GridConfig = {
+	size: 200,
+	snapSize: 0.5,
+};
+
+const GRID_CAMERA_HEIGHT_MULTIPLIER = 4;
+const GRID_VIEWPORT_PADDING = 1.5;
+const GRID_MAX_DIVISIONS = 800;
 
 const clamp = (value: number, min: number, max: number) =>
 	Math.min(Math.max(value, min), max);
@@ -156,6 +173,23 @@ export const normalizeSpaceSceneConfig = (
 });
 
 /**
+ * Merge partial grid settings with defaults and constrain numeric values.
+ *
+ * @param config - Grid settings patch.
+ * @returns Normalized grid config.
+ */
+export const normalizeGridConfig = (
+	config: Partial<GridConfig> = {},
+): GridConfig => ({
+	size: clamp(numberOrDefault(config.size, DEFAULT_GRID_CONFIG.size), 1, 10000),
+	snapSize: clamp(
+		numberOrDefault(config.snapSize, DEFAULT_GRID_CONFIG.snapSize),
+		0.01,
+		1000,
+	),
+});
+
+/**
  * SceneManager handles scene creation and camera/controls setup.
  */
 export class SceneManager {
@@ -222,14 +256,29 @@ export class SceneManager {
 	private grid: GridHelper | null = null;
 
 	/**
+	 * Base grid size before camera-height expansion.
+	 */
+	private gridSize = DEFAULT_GRID_CONFIG.size;
+
+	/**
 	 * Snap size for grid-aligned transforms.
 	 */
-	private gridSnapSize = 0.5;
+	private gridSnapSize = DEFAULT_GRID_CONFIG.snapSize;
+
+	/**
+	 * Last size used to build the visible grid helper.
+	 */
+	private renderedGridSize = 0;
 
 	/**
 	 * Grid visibility toggle.
 	 */
 	private gridEnabled = true;
+
+	/**
+	 * Transform snap toggle.
+	 */
+	private transformSnapEnabled = false;
 
 	/**
 	 * Ambient light used by daylight configuration.
@@ -322,17 +371,55 @@ export class SceneManager {
 		this.gridEnabled = enabled;
 		if (this.grid) {
 			this.grid.visible = enabled;
-			if (enabled) {
-				this.updateGridPosition();
-			}
 		}
+
+		if (enabled) {
+			this.updateGridPosition();
+		}
+	}
+
+	/**
+	 * Apply grid display and snap settings.
+	 *
+	 * @param config - Grid settings patch.
+	 */
+	public setGridConfig(config: Partial<GridConfig>): GridConfig {
+		const nextConfig = normalizeGridConfig({
+			...this.getGridConfig(),
+			...config,
+		});
+
+		this.gridSize = nextConfig.size;
+		this.gridSnapSize = nextConfig.snapSize;
+		this.applyTransformSnap();
+		this.updateGridPosition();
+
+		return this.getGridConfig();
+	}
+
+	/**
+	 * Get the current grid display and snap settings.
+	 */
+	public getGridConfig(): GridConfig {
+		return {
+			size: this.gridSize,
+			snapSize: this.gridSnapSize,
+		};
 	}
 
 	/**
 	 * Enable or disable snapping for transform controls.
 	 */
 	public setTransformSnapEnabled(enabled: boolean): void {
-		if (enabled) {
+		this.transformSnapEnabled = enabled;
+		this.applyTransformSnap();
+	}
+
+	/**
+	 * Apply the current snap settings to transform controls.
+	 */
+	private applyTransformSnap(): void {
+		if (this.transformSnapEnabled) {
 			this.transform.setTranslationSnap(this.gridSnapSize);
 			this.transform.setRotationSnap(MathUtils.degToRad(15));
 			this.transform.setScaleSnap(0.1);
@@ -354,15 +441,7 @@ export class SceneManager {
 	 * Create the grid helper and add it to the scene.
 	 */
 	private createGrid(): void {
-		if (this.grid) {
-			return;
-		}
-
-		this.grid = new GridHelper(200, 200, 0x7d7d7d, 0x7d7d7d);
-		this.grid.material.opacity = 0.5;
-		this.grid.material.transparent = true;
-		this.grid.visible = this.gridEnabled;
-		this.scene.add(this.grid);
+		this.ensureGridSize();
 		this.updateGridPosition();
 	}
 
@@ -370,11 +449,92 @@ export class SceneManager {
 	 * Keep the grid centered on the camera to simulate infinite plane.
 	 */
 	private updateGridPosition(): void {
-		if (!this.grid || !this.gridEnabled) {
+		if (!this.gridEnabled) {
+			return;
+		}
+
+		this.ensureGridSize();
+		if (!this.grid) {
 			return;
 		}
 
 		this.grid.position.set(Math.round(this.camera.position.x), 0, Math.round(this.camera.position.z));
+	}
+
+	/**
+	 * Rebuild the helper when the responsive grid size changes.
+	 */
+	private ensureGridSize(): void {
+		const nextSize = this.getResponsiveGridSize();
+		if (this.grid && this.renderedGridSize === nextSize) {
+			this.grid.visible = this.gridEnabled;
+			return;
+		}
+
+		const previousPosition = this.grid?.position.clone() ?? null;
+		this.disposeGrid();
+
+		const divisions = Math.round(clamp(nextSize, 1, GRID_MAX_DIVISIONS));
+		this.grid = new GridHelper(nextSize, divisions, 0x7d7d7d, 0x7d7d7d);
+		const materials = Array.isArray(this.grid.material)
+			? this.grid.material
+			: [this.grid.material];
+		for (const material of materials) {
+			material.opacity = 0.5;
+			material.transparent = true;
+		}
+
+		if (previousPosition) {
+			this.grid.position.copy(previousPosition);
+		}
+
+		this.grid.visible = this.gridEnabled;
+		this.scene.add(this.grid);
+		this.renderedGridSize = nextSize;
+	}
+
+	/**
+	 * Dispose the current grid helper before rebuilding it.
+	 */
+	private disposeGrid(): void {
+		if (!this.grid) {
+			return;
+		}
+
+		this.scene.remove(this.grid);
+		this.grid.geometry.dispose();
+		const materials = Array.isArray(this.grid.material)
+			? this.grid.material
+			: [this.grid.material];
+		for (const material of materials) {
+			material.dispose();
+		}
+		this.grid = null;
+		this.renderedGridSize = 0;
+	}
+
+	/**
+	 * Calculate a grid size large enough for the current camera height.
+	 */
+	private getResponsiveGridSize(): number {
+		const cameraHeight = Math.abs(this.camera.position.y);
+		const aspect = this.height > 0 ? this.width / this.height : 1;
+		const heightBasedSize = cameraHeight * GRID_CAMERA_HEIGHT_MULTIPLIER;
+		let viewportSize = heightBasedSize;
+
+		if (this.camera instanceof PerspectiveCamera) {
+			const viewportHeight =
+				2 * cameraHeight * Math.tan(MathUtils.degToRad(this.camera.fov) / 2);
+			viewportSize = Math.max(viewportHeight, viewportHeight * aspect) * GRID_VIEWPORT_PADDING;
+		} else if (this.camera instanceof OrthographicCamera) {
+			const viewportHeight = this.orthographicFrustumSize / this.camera.zoom;
+			viewportSize = Math.max(viewportHeight, viewportHeight * aspect) * GRID_VIEWPORT_PADDING;
+		}
+
+		const targetSize = Math.max(this.gridSize, heightBasedSize, viewportSize);
+		const resizeStep = clamp(this.gridSize / 4, 1, 50);
+
+		return Math.ceil(targetSize / resizeStep) * resizeStep;
 	}
 
 	public createDefaultScene(): void {
@@ -424,6 +584,8 @@ export class SceneManager {
 		} else {
 			throw new Error("Camera type is unknown");
 		}
+
+		this.updateGridPosition();
 	}
 
 	/**
@@ -461,9 +623,8 @@ export class SceneManager {
 		this.controls.update();
 
 		this.transform.camera = this.camera;
-		this.updateGridPosition();
-
 		this.updateSize(this.width, this.height);
+		this.updateGridPosition();
 	}
 
 	/**

@@ -194,6 +194,18 @@ export class DT3DSidebar extends LitElement {
 	}
 
 	/**
+	 * Open grid configuration.
+	 */
+	private handleGridConfigOpen() {
+		this.dispatchEvent(
+			new CustomEvent("grid-config-open", {
+				bubbles: true,
+				composed: true,
+			}),
+		);
+	}
+
+	/**
 	 * Open the mesh add menu at card level so it is not clipped by the sidebar.
 	 *
 	 * @param event - Click event from the mesh button.
@@ -316,6 +328,12 @@ export class DT3DSidebar extends LitElement {
 						data-tooltip=${localManager.get("toggleGrid")}
 						aria-label=${localManager.get("toggleGrid")}>
 						<ha-icon icon="mdi:grid"></ha-icon>
+					</button>
+					<button
+						@click=${() => this.handleGridConfigOpen()}
+						data-tooltip=${localManager.get("configureGrid")}
+						aria-label=${localManager.get("configureGrid")}>
+						<ha-icon icon="mdi:grid-large"></ha-icon>
 					</button>
 				</div>
 				<div class="sidebar-section">
