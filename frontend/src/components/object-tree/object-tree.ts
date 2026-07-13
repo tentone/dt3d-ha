@@ -107,10 +107,18 @@ interface TreeNode {
 }
 
 const TREE_WIDTH_STORAGE_KEY = "object-tree-width";
+const TREE_COLLAPSED_STORAGE_KEY = "object-tree-collapsed";
 
 @customElement("dt3d-tree")
 export class DT3DTree extends LitElement {
 	static styles = unsafeCSS(componentStyles);
+
+	/**
+	 * Indicates whether the object tree explorer is collapsed.
+	 */
+	@property({type: Boolean, reflect: true})
+	public collapsed =
+			LocalStorage.read(TREE_COLLAPSED_STORAGE_KEY, false) ?? false;
 
 	/**
 	 * The 3D scene to visualize.
@@ -163,6 +171,20 @@ export class DT3DTree extends LitElement {
 	private width = LocalStorage.read(TREE_WIDTH_STORAGE_KEY, 220) ?? 220;
 
 	private resizeInitialSize = 0;
+
+	/**
+	 * Toggle the visibility of the object tree explorer.
+	 */
+	private toggleCollapse(): void {
+		this.collapsed = !this.collapsed;
+		this.style.width = this.collapsed ? "0px" : this.width + "px";
+		LocalStorage.write(TREE_COLLAPSED_STORAGE_KEY, this.collapsed);
+
+		if (this.collapsed) {
+			this.closeContextMenu();
+			this.handleResizeEnd();
+		}
+	}
 
 	/**
 	 * Handle the resize move event.
@@ -221,7 +243,7 @@ export class DT3DTree extends LitElement {
 	public connectedCallback(): void {
 		super.connectedCallback();
 
-		this.style.width = this.width + "px";
+		this.style.width = this.collapsed ? "0px" : this.width + "px";
 	}
 
 	public disconnectedCallback(): void {
@@ -912,7 +934,23 @@ export class DT3DTree extends LitElement {
 	}
 
 	public render() {
+		const collapseLabel = localManager.get(
+			this.collapsed ? "expandObjectTree" : "collapseObjectTree",
+		);
+
 		return html`
+			<button
+				class="collapse-btn"
+				@click=${this.toggleCollapse}
+				aria-label=${collapseLabel}
+				title=${collapseLabel}
+			>
+				<ha-icon
+					icon=${this.collapsed
+						? "mdi:arrow-left-drop-circle-outline"
+						: "mdi:arrow-right-drop-circle-outline"}
+				></ha-icon>
+			</button>
 			<div
 				class="resize-handle"
 				@mousedown=${(event: MouseEvent) => this.handleResizeStart(event)}

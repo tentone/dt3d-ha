@@ -52,6 +52,8 @@
 	"objectLocked": "This object is locked and cannot be edited.",
 	"selectObjectPrompt": "Select an object from the tree to edit its properties.",
 	"collapseSidebar": "Collapse sidebar",
+	"collapseObjectTree": "Collapse object tree explorer",
+	"expandObjectTree": "Expand object tree explorer",
 	"controls": "Controls",
 	"translateObject": "Translate object",
 	"rotateObject": "Rotate object",
