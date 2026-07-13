@@ -1,5 +1,5 @@
-import type {Material, Object3D} from "three";
-import {BoxGeometry, BufferGeometryLoader, Group, MaterialLoader, Mesh, MeshStandardMaterial} from "three";
+import type {Material, Object3D, Texture} from "three";
+import {BoxGeometry, BufferGeometryLoader, Group, MaterialLoader, Mesh, MeshStandardMaterial, ObjectLoader} from "three";
 
 import type {DT3DTree} from "../components/object-tree/object-tree.js";
 import {applyTextureToMesh} from "../editor/material-texture.js";
@@ -61,19 +61,43 @@ function serializeMaterial(material: Material | Material[]): Record<string, any>
 	}
 }
 
-function deserializeMaterial(data: unknown, fallbackColor: number): Material | Material[] {
-	const loader = new MaterialLoader();
+function parseSerializedMaterial(data: unknown): Material | null {
+	if (!data || typeof data !== "object") {
+		return null;
+	}
 
+	const materialData = data as Record<string, any>;
+	const materialLoader = new MaterialLoader();
+
+	if (Array.isArray(materialData.images) && Array.isArray(materialData.textures)) {
+		const objectLoader = new ObjectLoader();
+		let textures: Record<string, Texture> = {};
+		const images = objectLoader.parseImages(materialData.images, () => {
+			for (const texture of Object.values(textures)) {
+				texture.needsUpdate = true;
+			}
+		});
+		textures = objectLoader.parseTextures(materialData.textures, images);
+		materialLoader.setTextures(textures);
+	}
+
+	return materialLoader.parse(materialData);
+}
+
+function deserializeMaterial(data: unknown, fallbackColor: number): Material | Material[] {
 	try {
 		if (Array.isArray(data)) {
 			const materials = data
-				.map((item) => loader.parse(item))
+				.map((item) => parseSerializedMaterial(item))
 				.filter((material): material is Material => material instanceof MeshStandardMaterial || Boolean(material));
 			if (materials.length > 0) {
 				return materials;
 			}
 		} else if (data && typeof data === "object") {
-			return loader.parse(data as Record<string, any>);
+			const material = parseSerializedMaterial(data);
+			if (material) {
+				return material;
+			}
 		}
 	} catch (error) {
 		console.warn("DT3D: Failed to deserialize mesh material", error);
