@@ -376,7 +376,11 @@ export class SpaceSync {
 			}
 		} else if (instanceType === "viewport") {
 			const viewport = data.viewport as Partial<CameraViewportConfig> | undefined;
-			object = new ViewportObject(viewport, instance.name || "Viewport");
+			object = new ViewportObject(
+				viewport,
+				instance.name || "Viewport",
+				data.defaultViewport === true,
+			);
 		} else if (instanceType === "group" || declaredType) {
 			object = new Group();
 		}
@@ -434,6 +438,7 @@ export class SpaceSync {
 		if (object instanceof ViewportObject) {
 			type = declaredType ?? "viewport";
 			data.viewport = object.getViewportConfig();
+			data.defaultViewport = object.defaultViewport;
 		} else if (object instanceof EntityObject) {
 			type = declaredType ?? "entity";
 			data.entityId = object.entityId;

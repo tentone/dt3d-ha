@@ -96,6 +96,10 @@ interface TreeNode {
 	locked?: boolean;
 	// Entity ID if the node represents an EntityObject
 	entityId?: string;
+	// Whether the node represents a saved viewport object
+	viewport?: boolean;
+	// Whether a viewport node is currently the default viewport
+	defaultViewport?: boolean;
 	// Whether the node's entity supports toggling
 	toggleable?: boolean;
 	// Children nodes
@@ -378,6 +382,8 @@ export class DT3DTree extends LitElement {
 		node.icon = metadata.icon;
 		node.locked = metadata.locked;
 		node.entityId = metadata.entityId;
+		node.viewport = metadata.viewport;
+		node.defaultViewport = metadata.defaultViewport;
 		node.toggleable = metadata.toggleable;
 
 		if (children.length > 0) {
@@ -401,6 +407,8 @@ export class DT3DTree extends LitElement {
 			icon: this.getObjectIcon(obj),
 			locked: obj instanceof DTObject ? obj.locked : false,
 			entityId: obj instanceof EntityObject ? obj.entityId : undefined,
+			viewport: obj instanceof ViewportObject,
+			defaultViewport: obj instanceof ViewportObject ? obj.defaultViewport : undefined,
 			toggleable: obj instanceof EntityObject && isToggleable(obj),
 		};
 	}
@@ -678,6 +686,38 @@ export class DT3DTree extends LitElement {
 	}
 
 	/**
+	 * Dispatch viewport-default event for the given object ID.
+	 *
+	 * @param id - UUID of the viewport object to mark as default.
+	 */
+	private dispatchSetDefaultViewport(id: UUID) {
+		this.dispatchEvent(
+			new CustomEvent("viewport-set-default", {
+				detail: {id},
+				bubbles: true,
+				composed: true,
+			}),
+		);
+		this.closeContextMenu();
+	}
+
+	/**
+	 * Dispatch viewport-update event for the given object ID.
+	 *
+	 * @param id - UUID of the viewport object to update from the active camera.
+	 */
+	private dispatchUpdateViewport(id: UUID) {
+		this.dispatchEvent(
+			new CustomEvent("viewport-update", {
+				detail: {id},
+				bubbles: true,
+				composed: true,
+			}),
+		);
+		this.closeContextMenu();
+	}
+
+	/**
 	 * Find a tree node by its ID.
 	 *
 	 * @param nodes - Tree nodes to search.
@@ -780,6 +820,25 @@ export class DT3DTree extends LitElement {
 						${localManager.get("toggleEntity")}
 					</button>`
 				: null}
+				${node?.viewport
+				? html`
+					<button
+						@click=${(event: MouseEvent) => {
+							event.stopPropagation();
+							this.dispatchSetDefaultViewport(id);
+						}}
+					>
+						${localManager.get("setDefaultViewport")}
+					</button>
+					<button
+						@click=${(event: MouseEvent) => {
+							event.stopPropagation();
+							this.dispatchUpdateViewport(id);
+						}}
+					>
+						${localManager.get("updateViewport")}
+					</button>`
+				: null}
 		</div>
 		`;
 	}
@@ -831,6 +890,13 @@ export class DT3DTree extends LitElement {
 												class="lock-icon"
 												icon="mdi:lock"
 												title=${localManager.get("lockedTitle")}
+											></ha-icon>`
+		: null}
+									${node.defaultViewport
+		? html`<ha-icon
+												class="default-viewport-icon"
+												icon="mdi:star"
+												title=${localManager.get("defaultViewport")}
 											></ha-icon>`
 		: null}
 								</span>

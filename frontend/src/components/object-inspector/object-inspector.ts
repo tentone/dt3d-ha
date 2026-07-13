@@ -13,12 +13,13 @@ import {EntityObject} from "../../objects/entity-object.js";
 import {DoorObject} from "../../objects/house/door.js";
 import {WallObject} from "../../objects/house/wall.js";
 import {WindowObject} from "../../objects/house/window.js";
+import {ViewportObject} from "../../objects/viewport-object.js";
+import {findMesh} from "../../utils/object3d-utils.js";
 import type {
 	DynamicFormChangeDetail,
 	DynamicFormField,
 } from "../dynamic-form/dynamic-form.js";
 import componentStyles from "./object-inspector.css?inline";
-import { findMesh } from "../../utils/object3d-utils.js";
 
 @customElement("dt3d-object-inspector")
 export class DT3DObjectInspector extends LitElement {
@@ -63,10 +64,10 @@ export class DT3DObjectInspector extends LitElement {
 
 	/**
 	 * Set a nested attribute of an object using a dot-separated string path.
-	 * 
+	 *
 	 * E.g. setNestedAttribute(obj, "position.x", 10) will set obj.position.x to 10.
-	 * 
-	 * @param target - The target object on which to set the attribute. 
+	 *
+	 * @param target - The target object on which to set the attribute.
 	 * @param attribute - The dot-separated string path of the attribute to set.
 	 * @param value - The value to set the attribute to.
 	 */
@@ -84,7 +85,7 @@ export class DT3DObjectInspector extends LitElement {
 
 	/**
 	 * Handle changes to the form fields and update the selected object's properties accordingly.
-	 * 
+	 *
 	 * @param event - The custom event containing the form field change details.
 	 */
 	private handleFormFieldChange(event: CustomEvent<DynamicFormChangeDetail>) {
@@ -99,6 +100,12 @@ export class DT3DObjectInspector extends LitElement {
 			if (this.selectedObject instanceof DTObject) {
 				this.selectedObject.locked = Boolean(value);
 			}
+		} else if (attribute === "defaultViewport") {
+			if (!(this.selectedObject instanceof ViewportObject)) {
+				return;
+			}
+
+			this.selectedObject.defaultViewport = Boolean(value);
 		} else if (attribute.startsWith("rotation.")) {
 			const axis = attribute.split(".")[1] as "x" | "y" | "z";
 			const rawValue = Number(value);
@@ -431,6 +438,23 @@ export class DT3DObjectInspector extends LitElement {
 		];
 	}
 
+	private getViewportFields(locked: boolean): DynamicFormField[] {
+		if (!(this.selectedObject instanceof ViewportObject)) {
+			return [];
+		}
+
+		return [
+			{
+				label: localManager.get("defaultViewport"),
+				attribute: "defaultViewport",
+				type: "boolean",
+				tooltip: localManager.get("defaultViewportTooltip"),
+				editable: !locked,
+				enabled: true,
+			},
+		];
+	}
+
 	private getEntityData(): Record<string, unknown> | null {
 		if (!(this.selectedObject instanceof EntityObject)) {
 			return null;
@@ -489,6 +513,12 @@ export class DT3DObjectInspector extends LitElement {
 			localManager.get("geometry"),
 			this.getGeometryFields(locked),
 			geometryData,
+		);
+		this.addSubFormField(
+			fields,
+			"viewport",
+			localManager.get("viewport"),
+			this.getViewportFields(locked),
 		);
 		this.addSubFormField(
 			fields,

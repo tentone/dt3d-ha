@@ -1311,6 +1311,131 @@ export class DT3DCard extends LitElement {
 		return count;
 	}
 
+	private getViewportById(objectId: string): ViewportObject | null {
+		const object = this.space?.getObjectByProperty(
+			"uuid",
+			objectId,
+		) as Object3D | null;
+
+		return object instanceof ViewportObject ? object : null;
+	}
+
+	private getDefaultViewport(): ViewportObject | null {
+		let defaultViewport: ViewportObject | null = null;
+
+		this.space?.traverse((child) => {
+			if (!defaultViewport && child instanceof ViewportObject && child.defaultViewport) {
+				defaultViewport = child;
+			}
+		});
+
+		return defaultViewport;
+	}
+
+	private enforceSingleDefaultViewport(
+		preferredViewport?: ViewportObject,
+	): ViewportObject[] {
+		const changed: ViewportObject[] = [];
+		let defaultViewport = preferredViewport?.defaultViewport
+			? preferredViewport
+			: null;
+
+		this.space?.traverse((child) => {
+			if (!(child instanceof ViewportObject) || !child.defaultViewport) {
+				return;
+			}
+
+			if (!defaultViewport) {
+				defaultViewport = child;
+				return;
+			}
+
+			if (child !== defaultViewport) {
+				child.defaultViewport = false;
+				changed.push(child);
+			}
+		});
+
+		return changed;
+	}
+
+	private syncViewportObjects(viewports: Iterable<ViewportObject>): void {
+		for (const viewport of new Set(viewports)) {
+			void this.spaceSync?.syncObjectUpdate(viewport);
+		}
+	}
+
+	private applyDefaultViewportOnLoad(): void {
+		const changedViewports = this.enforceSingleDefaultViewport();
+
+		if (changedViewports.length > 0) {
+			this.tree.updateTreeDiff(this.space);
+
+			if (!this.isVisualizationOnly()) {
+				this.syncViewportObjects(changedViewports);
+			}
+		}
+
+		const defaultViewport = this.getDefaultViewport();
+		if (defaultViewport) {
+			this.activateViewport(defaultViewport);
+		}
+	}
+
+	private setDefaultViewport(viewport: ViewportObject): void {
+		if (this.isVisualizationOnly()) {
+			return;
+		}
+
+		const changedViewports = new Set<ViewportObject>();
+
+		if (!viewport.defaultViewport) {
+			viewport.defaultViewport = true;
+			changedViewports.add(viewport);
+		}
+
+		for (const changedViewport of this.enforceSingleDefaultViewport(viewport)) {
+			changedViewports.add(changedViewport);
+		}
+
+		if (changedViewports.size === 0) {
+			return;
+		}
+
+		this.tree.updateTreeDiff(this.space);
+		this.tree.refreshSelectedObject();
+		this.syncViewportObjects(changedViewports);
+	}
+
+	private setDefaultViewportById(objectId: string): void {
+		const viewport = this.getViewportById(objectId);
+		if (!viewport) {
+			return;
+		}
+
+		this.setDefaultViewport(viewport);
+	}
+
+	private updateViewportFromCurrentCamera(viewport: ViewportObject): void {
+		if (!this.sceneManager || this.isVisualizationOnly()) {
+			return;
+		}
+
+		viewport.setViewportConfig(this.sceneManager.captureViewportConfig());
+		this.tree.updateTreeDiff(this.space);
+		this.tree.refreshSelectedObject();
+		void this.spaceSync?.syncObjectUpdate(viewport);
+	}
+
+	private updateViewportFromCurrentCameraById(objectId: string): void {
+		const viewport = this.getViewportById(objectId);
+		if (!viewport) {
+			return;
+		}
+
+		this.updateViewportFromCurrentCamera(viewport);
+	}
+
 	/**
 	 * Move the editor camera to a saved viewport.
 	 *
@@ -1686,6 +1811,7 @@ export class DT3DCard extends LitElement {
 
 		void this.spaceSync.initializeSpaceFromApi().then((space) => {
 			this.applySpaceConfigFromApi(space);
+			this.applyDefaultViewportOnLoad();
 		});
 
 		// Listen for selection events from the tree
@@ -1735,6 +1861,24 @@ export class DT3DCard extends LitElement {
 			}
 		});
 
+		this.tree.addEventListener("viewport-set-default", (e: any) => {
+			if (this.isVisualizationOnly()) {
+				return;
+			}
+
+			const id = e.detail.id as string;
+			this.setDefaultViewportById(id);
+		});
+
+		this.tree.addEventListener("viewport-update", (e: any) => {
+			if (this.isVisualizationOnly()) {
+				return;
+			}
+
+			const id = e.detail.id as string;
+			this.updateViewportFromCurrentCameraById(id);
+		});
+
 		this.tree.addEventListener("object-updated", (e: any) => {
 			if (this.isVisualizationOnly()) {
 				return;
@@ -1745,12 +1889,22 @@ export class DT3DCard extends LitElement {
 				return;
 			}
 
+			const changedDefaultViewports =
+				updatedObject instanceof ViewportObject && updatedObject.defaultViewport
+					? this.enforceSingleDefaultViewport(updatedObject)
+					: [];
+
 			if (updatedObject instanceof DTObject && updatedObject.locked) {
 				if (this.transform?.object === updatedObject) {
 					this.attachTransform(null);
 				}
 			} else if (this.transform?.object === updatedObject) {
 				this.attachTransform(updatedObject);
+			}
+
+			if (changedDefaultViewports.length > 0) {
+				this.tree.updateTreeDiff(this.space);
+				this.syncViewportObjects(changedDefaultViewports);
 			}
 
 			this.tree.refreshSelectedObject();

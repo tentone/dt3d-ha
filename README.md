@@ -111,30 +111,31 @@ curl -k -H "X-DT3D-Service-Key: <service_key>" \
 ### Development deploy script
 
 `addon/deploy.sh` copies the local add-on source to a running Home Assistant
-instance and triggers a rebuild and restart, allowing a fast edit→deploy cycle.
+instance over SSH and triggers a rebuild and restart, allowing a fast edit→deploy
+cycle.
 
 **Prerequisites**
 
 - The **Terminal & SSH** add-on is installed and running on Home Assistant
   (it exposes SSH on port 22 by default).
-- A [long-lived access token](https://developers.home-assistant.io/docs/auth_api/#long-lived-access-token)
-  generated from your HA profile page.
+- `sshpass` is installed on the machine running the script.
 
 **Usage**
 
 ```bash
-# Set variables inline or export them beforehand
-HA_HOST=192.168.1.100 HA_TOKEN=<your-token> ./addon/deploy.sh
+bash ./addon/deploy.sh <ssh-user> <ssh-password> [ha-host] [ssh-port]
 
-# Or pass them as positional arguments
-./addon/deploy.sh 192.168.1.100 <your-token>
+# Example
+bash ./addon/deploy.sh root '<ssh-password>' 192.168.1.100 22
 ```
 
 Optional environment variables:
 
-| Variable   | Default              | Description                          |
-|------------|----------------------|--------------------------------------|
-| `HA_HOST`  | `homeassistant.local`| IP or hostname of HA                 |
-| `HA_TOKEN` | *(required)*         | Long-lived access token              |
-| `SSH_USER` | `root`               | SSH username                         |
-| `SSH_PORT` | `22`                 | SSH port of the Terminal & SSH add-on|
+| Variable   | Default               | Description                           |
+|------------|-----------------------|---------------------------------------|
+| `HA_HOST`  | `homeassistant.local` | IP or hostname of HA                  |
+| `SSH_PORT` | `22`                  | SSH port of the Terminal & SSH add-on |
+
+The script copies `addon/` to `/addons/dt3d`, reloads the Home Assistant add-on
+store, then rebuilds and restarts `local_dt3d` if it is installed. If the add-on
+is not installed yet, it installs and starts `local_dt3d`.

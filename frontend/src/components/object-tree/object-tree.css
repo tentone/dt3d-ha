@@ -90,6 +90,15 @@
 	line-height: 1;
 }
 
+.default-viewport-icon {
+	color: var(--ha-color-primary-60);
+	flex: 0 0 14px;
+	width: 14px;
+	height: 14px;
+	font-size: 14px;
+	line-height: 1;
+}
+
 .tree-section {
 	flex: 1 1 55%;
 	min-height: 40%;

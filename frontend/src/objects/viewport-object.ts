@@ -1,15 +1,13 @@
 import * as mdiIcons from "@mdi/js";
 import {
-	BufferGeometry,
-	Line,
-	LineBasicMaterial,
+	type BufferGeometry,
 	type Material,
 	type Object3D,
 	Quaternion,
 	Vector3,
 } from "three";
 
-import type {CameraMode, CameraViewportConfig} from "../editor/scene.js";
+import type {CameraViewportConfig} from "../editor/scene.js";
 import type {DTInteractionEvent} from "./dt-object.js";
 import {DTObject} from "./dt-object.js";
 import {IconSprite} from "./helpers/icon-sprite.js";
@@ -116,18 +114,25 @@ export class ViewportObject extends DTObject {
 	 */
 	public viewport: CameraViewportConfig;
 
+	/**
+	 * Whether this viewport should be activated automatically when the space loads.
+	 */
+	public defaultViewport: boolean;
+
 	private readonly label: TextSprite;
 
 
 	public constructor(
 		config: Partial<CameraViewportConfig> = DEFAULT_VIEWPORT_CONFIG,
 		name = "Viewport",
+		defaultViewport = false,
 	) {
 		super();
 
 		this.type = "ViewportObject";
 		this.name = name;
 		this.viewport = cloneViewportConfig(config);
+		this.defaultViewport = defaultViewport;
 		this.userData.objectInstanceType = VIEWPORT_OBJECT_TYPE;
 
 		const icon = new IconSprite(mdiIcons.mdiCameraOutline, 0x2f80ed, 0.4);
@@ -148,6 +153,16 @@ export class ViewportObject extends DTObject {
 		this.label.visible = false;
 		this.add(this.label);
 
+		this.applyConfigToTransform(this.viewport);
+	}
+
+	/**
+	 * Replace the saved camera config and move the viewport marker to match it.
+	 *
+	 * @param config - Camera config to save in this viewport object.
+	 */
+	public setViewportConfig(config: Partial<CameraViewportConfig>): void {
+		this.viewport = cloneViewportConfig(config);
 		this.applyConfigToTransform(this.viewport);
 	}
 
@@ -213,6 +228,7 @@ export class ViewportObject extends DTObject {
 	public override copy(source: this, recursive: boolean = true): this {
 		super.copy(source, false);
 		this.viewport = cloneViewportConfig(source.getViewportConfig());
+		this.defaultViewport = source.defaultViewport;
 		this.label.setText(this.name || "Viewport");
 		this.userData.objectInstanceType = VIEWPORT_OBJECT_TYPE;
 
@@ -230,15 +246,20 @@ export class ViewportObject extends DTObject {
 	}
 
 	public override clone(recursive: boolean = true): this {
-		return new ViewportObject(
+		const clone = new ViewportObject(
 			this.getViewportConfig(),
 			this.name || "Viewport",
+			false,
 		).copy(this, recursive) as this;
+
+		clone.defaultViewport = false;
+
+		return clone;
 	}
 
 	/**
 	 * Apply the given camera config to the object transform.
-	 * 
+	 *
 	 * @param config - The camera config to apply.
 	 */
 	private applyConfigToTransform(config: CameraViewportConfig): void {
