@@ -2142,6 +2142,25 @@ export class DT3DCard extends LitElement {
 			void this.spaceSync?.syncObjectUpdate(updatedObject);
 		});
 
+		this.tree.addEventListener("object-moved", (e: any) => {
+			if (this.isVisualizationOnly()) {
+				return;
+			}
+
+			const movedObject = e.detail?.object as Object3D | null;
+			const affectedObjects = e.detail?.objects as Object3D[] | undefined;
+			if (!movedObject) {
+				return;
+			}
+
+			this.tree.refreshSelectedObject();
+			void Promise.all(
+				(affectedObjects ?? [movedObject]).map((object) =>
+					this.spaceSync?.syncObjectUpdate(object),
+				),
+			);
+		});
+
 		this.canvas.addEventListener("dblclick", (event: MouseEvent) => {
 			if (!this.isVisualizationOnly()) {
 				// Handle measurement points on double click

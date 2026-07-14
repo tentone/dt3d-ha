@@ -4,7 +4,17 @@ import {html, LitElement, unsafeCSS} from "lit";
 import {customElement, property, state} from "lit/decorators.js";
 import {repeat} from "lit/directives/repeat.js";
 import type {Object3D} from "three";
-import {Camera, Group, Light, Line, Mesh, Points, Scene, Sprite} from "three";
+import {
+	Camera,
+	Group,
+	Light,
+	Line,
+	Matrix4,
+	Mesh,
+	Points,
+	Scene,
+	Sprite,
+} from "three";
 
 import {resolveMeshType} from "../../editor/mesh-handler.js";
 import {localManager} from "../../locale/locale.js";
@@ -18,6 +28,7 @@ import {LocalStorage} from "../../utils/local-storage.js";
 import componentStyles from "./object-tree.css?inline";
 
 type UUID = string;
+type DropPosition = "before" | "inside" | "after";
 
 const DEFAULT_NODE_ICON = "mdi:help-circle-outline";
 
@@ -154,6 +165,14 @@ export class DT3DTree extends LitElement {
 	 */
 	@state()
 	private contextMenu: { id: UUID; x: number; y: number } | null = null;
+
+	/** Object currently being dragged in the tree. */
+	@state()
+	private draggedId: UUID | null = null;
+
+	/** Active insertion target shown while dragging. */
+	@state()
+	private dropTarget: { id: UUID; position: DropPosition } | null = null;
 
 	/**
 	 * Object tree resizing flag. Set true when the
@@ -784,6 +803,162 @@ export class DT3DTree extends LitElement {
 		this.updateTreeDiff(this.scene);
 	}
 
+	/**
+	 * Start moving an object in the scene hierarchy.
+	 */
+	private handleDragStart(event: DragEvent, node: TreeNode): void {
+		if (!this.scene || node.id === this.scene.uuid || node.locked) {
+			event.preventDefault();
+			return;
+		}
+
+		this.draggedId = node.id;
+		this.dropTarget = null;
+		this.closeContextMenu();
+		if (event.dataTransfer) {
+			event.dataTransfer.effectAllowed = "move";
+			event.dataTransfer.setData("text/plain", node.id);
+		}
+	}
+
+	/** Clear all transient drag state. */
+	private handleDragEnd(): void {
+		this.draggedId = null;
+		this.dropTarget = null;
+	}
+
+	/**
+	 * Resolve whether the pointer means insert before, reparent inside, or insert
+	 * after a node. The scene node only accepts children, making it the root drop
+	 * target.
+	 */
+	private getDropPosition(event: DragEvent, node: TreeNode): DropPosition {
+		if (node.id === this.scene?.uuid) {
+			return "inside";
+		}
+
+		const element = event.currentTarget as HTMLElement;
+		const bounds = element.getBoundingClientRect();
+		const offset = (event.clientY - bounds.top) / bounds.height;
+		if (offset < 0.25) return "before";
+		if (offset > 0.75) return "after";
+		return "inside";
+	}
+
+	/** Return true when the proposed move stays inside the scene and creates no cycle. */
+	private canDrop(targetId: UUID, position: DropPosition): boolean {
+		if (!this.scene || !this.draggedId || this.draggedId === targetId) {
+			return false;
+		}
+
+		const object = this.scene.getObjectByProperty("uuid", this.draggedId);
+		const target = this.scene.getObjectByProperty("uuid", targetId);
+		if (!object || !target || object === this.scene) {
+			return false;
+		}
+
+		const newParent = position === "inside" ? target : target.parent;
+		if (!newParent || (newParent !== this.scene && !this.scene.getObjectByProperty("uuid", newParent.uuid))) {
+			return false;
+		}
+
+		// A node cannot become a child or sibling inside its own subtree.
+		return newParent !== object && !object.getObjectByProperty("uuid", newParent.uuid);
+	}
+
+	private handleDragOver(event: DragEvent, node: TreeNode): void {
+		if (!this.draggedId) return;
+
+		const position = this.getDropPosition(event, node);
+		if (!this.canDrop(node.id, position)) {
+			return;
+		}
+
+		event.preventDefault();
+		event.stopPropagation();
+		if (event.dataTransfer) {
+			event.dataTransfer.dropEffect = "move";
+		}
+		if (this.dropTarget?.id !== node.id || this.dropTarget.position !== position) {
+			this.dropTarget = {id: node.id, position};
+		}
+	}
+
+	private handleDragLeave(event: DragEvent, node: TreeNode): void {
+		const element = event.currentTarget as HTMLElement;
+		if (event.relatedTarget instanceof Node && element.contains(event.relatedTarget)) {
+			return;
+		}
+		if (this.dropTarget?.id === node.id) {
+			this.dropTarget = null;
+		}
+	}
+
+	private handleDrop(event: DragEvent, node: TreeNode): void {
+		const position = this.getDropPosition(event, node);
+		if (!this.canDrop(node.id, position)) {
+			this.handleDragEnd();
+			return;
+		}
+
+		event.preventDefault();
+		event.stopPropagation();
+		this.moveObject(this.draggedId!, node.id, position);
+		this.handleDragEnd();
+	}
+
+	/**
+	 * Move an Object3D and preserve its world transform by converting its old
+	 * world matrix into the new parent's local coordinate system.
+	 */
+	private moveObject(objectId: UUID, targetId: UUID, position: DropPosition): void {
+		if (!this.scene) return;
+
+		const object = this.scene.getObjectByProperty("uuid", objectId);
+		const target = this.scene.getObjectByProperty("uuid", targetId);
+		if (!object || !target || !object.parent) return;
+
+		const oldParent = object.parent;
+		const newParent = position === "inside" ? target : target.parent;
+		if (!newParent) return;
+
+		const affected = new Set<Object3D>(oldParent.children);
+		newParent.children.forEach((child) => affected.add(child));
+
+		object.updateWorldMatrix(true, false);
+		const worldMatrix = object.matrixWorld.clone();
+		newParent.updateWorldMatrix(true, false);
+		const localMatrix = new Matrix4()
+			.copy(newParent.matrixWorld)
+			.invert()
+			.multiply(worldMatrix);
+
+		newParent.add(object);
+		localMatrix.decompose(object.position, object.quaternion, object.scale);
+		object.updateMatrix();
+
+		if (position !== "inside") {
+			const currentIndex = newParent.children.indexOf(object);
+			newParent.children.splice(currentIndex, 1);
+			const targetIndex = newParent.children.indexOf(target);
+			const insertionIndex = targetIndex + (position === "after" ? 1 : 0);
+			newParent.children.splice(insertionIndex, 0, object);
+		}
+
+		object.updateWorldMatrix(false, true);
+		newParent.children.forEach((child) => affected.add(child));
+		this.expanded = new Set([...this.expanded, newParent.uuid]);
+		this.updateTreeDiff(this.scene);
+
+		this.dispatchEvent(
+			new CustomEvent("object-moved", {
+				detail: {object, objects: [...affected]},
+				bubbles: true,
+				composed: true,
+			}),
+		);
+	}
+
 
 	/**
 	 * Render a context menu when the user right clicks a object in the tree.
@@ -881,11 +1056,19 @@ export class DT3DTree extends LitElement {
 						<li>
 							<!-- Node -->
 							<div
-								class="tree-node ${this.selectedId === node.id ? "selected" : ""}"
+								class="tree-node ${this.selectedId === node.id ? "selected" : ""}
+									${this.draggedId === node.id ? "dragging" : ""}
+									${this.dropTarget?.id === node.id ? `drop-${this.dropTarget.position}` : ""}"
 								style=${`--tree-depth: ${depth};`}
+								.draggable=${node.id !== this.scene?.uuid && !node.locked}
 								@click=${() => this.selectObject(node.id, true)}
 								@contextmenu=${(event: MouseEvent) =>
 		this.handleContextMenu(event, node.id)}
+								@dragstart=${(event: DragEvent) => this.handleDragStart(event, node)}
+								@dragend=${this.handleDragEnd}
+								@dragover=${(event: DragEvent) => this.handleDragOver(event, node)}
+								@dragleave=${(event: DragEvent) => this.handleDragLeave(event, node)}
+								@drop=${(event: DragEvent) => this.handleDrop(event, node)}
 							>
 								${node.children && node.children.length
 	? html`

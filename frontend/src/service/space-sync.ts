@@ -377,7 +377,31 @@ export class SpaceSync {
 			objectsById.set(instance.id, object);
 		}
 
-		for (const instance of instances) {
+		const originalOrder = new Map(
+			instances.map((instance, index) => [instance.id, index]),
+		);
+		const orderedInstances = [...instances].sort((left, right) => {
+			const leftParent = left.parent_id ?? "";
+			const rightParent = right.parent_id ?? "";
+			if (leftParent !== rightParent) {
+				return leftParent.localeCompare(rightParent);
+			}
+
+			const leftOrder = left.data?.sortOrder;
+			const rightOrder = right.data?.sortOrder;
+			const leftIndex = originalOrder.get(left.id) ?? 0;
+			const rightIndex = originalOrder.get(right.id) ?? 0;
+			const normalizedLeft = typeof leftOrder === "number" && Number.isFinite(leftOrder)
+				? leftOrder
+				: leftIndex;
+			const normalizedRight = typeof rightOrder === "number" && Number.isFinite(rightOrder)
+				? rightOrder
+				: rightIndex;
+
+			return normalizedLeft - normalizedRight || leftIndex - rightIndex;
+		});
+
+		for (const instance of orderedInstances) {
 			const object = objectsById.get(instance.id);
 			if (!object) {
 				continue;
@@ -527,6 +551,11 @@ export class SpaceSync {
 		const declaredType = getDeclaredObjectInstanceType(object);
 		let type = declaredType ?? "group";
 		const data: Record<string, any> = {
+			sortOrder: object.parent
+				? object.parent.children
+					.filter((child) => child.internal !== true)
+					.indexOf(object)
+				: 0,
 			position: {
 				x: object.position.x,
 				y: object.position.y,

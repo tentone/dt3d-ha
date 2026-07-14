@@ -43,6 +43,7 @@
 }
 
 .tree-node {
+	position: relative;
 	padding-left: calc(8px + (var(--tree-depth, 0) * 16px));
 	cursor: pointer;
 	user-select: none;
@@ -114,6 +115,40 @@
 	height: 14px;
 	font-size: 14px;
 	line-height: 1;
+}
+
+.tree-node[draggable="true"] {
+	cursor: grab;
+}
+
+.tree-node.dragging {
+	opacity: 0.45;
+}
+
+.tree-node.drop-inside {
+	background: color-mix(in srgb, var(--ha-color-primary-60) 28%, transparent);
+	outline: 1px solid var(--ha-color-primary-60);
+	outline-offset: -1px;
+}
+
+.tree-node.drop-before::before,
+.tree-node.drop-after::after {
+	content: "";
+	position: absolute;
+	left: calc(8px + (var(--tree-depth, 0) * 16px));
+	right: 4px;
+	height: 2px;
+	background: var(--ha-color-primary-60);
+	pointer-events: none;
+	z-index: 1;
+}
+
+.tree-node.drop-before::before {
+	top: 0;
+}
+
+.tree-node.drop-after::after {
+	bottom: 0;
 }
 
 .default-viewport-icon {
