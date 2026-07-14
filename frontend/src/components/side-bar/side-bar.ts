@@ -366,6 +366,12 @@ export class DT3DSidebar extends LitElement {
 						<ha-icon icon="mdi:state-machine"></ha-icon>
 					</button>
 					<button
+						@click=${() => this.handleAddObject("static-light")}
+						data-tooltip=${localManager.get("addStaticLight")}
+						aria-label=${localManager.get("addStaticLight")}>
+						<ha-icon icon="mdi:lightbulb-on-outline"></ha-icon>
+					</button>
+					<button
 						@click=${() => this.handleAddObject("group")}
 						data-tooltip=${localManager.get("addGroup")}
 						aria-label=${localManager.get("addGroup")}>

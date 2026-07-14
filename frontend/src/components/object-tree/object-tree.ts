@@ -23,6 +23,7 @@ import {EntityObject, isToggleable} from "../../objects/entity-object.js";
 import {DoorObject} from "../../objects/house/door.js";
 import {WallObject} from "../../objects/house/wall.js";
 import {WindowObject} from "../../objects/house/window.js";
+import {StaticLightObject} from "../../objects/static-light.js";
 import {ViewportObject} from "../../objects/viewport-object.js";
 import {LocalStorage} from "../../utils/local-storage.js";
 import componentStyles from "./object-tree.css?inline";
@@ -466,6 +467,10 @@ export class DT3DTree extends LitElement {
 
 		if (obj instanceof ViewportObject) {
 			return "mdi:camera-marker-outline";
+		}
+
+		if (obj instanceof StaticLightObject) {
+			return obj.enabled ? "mdi:lightbulb-on-outline" : "mdi:lightbulb-off-outline";
 		}
 
 		if (obj instanceof WallObject) {

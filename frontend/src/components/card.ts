@@ -13,7 +13,7 @@ import "./sync-progress-component/sync-progress-component.js";
 
 import {LitElement} from "lit";
 import {customElement} from "lit/decorators.js";
-import type {Camera, Intersection, Mesh, Object3D, Scene} from "three";
+import type {Camera, Intersection, Object3D, Scene} from "three";
 import {Group, MeshStandardMaterial, Raycaster, Vector2, Vector3} from "three";
 import type {OrbitControls} from "three/examples/jsm/controls/OrbitControls";
 import type {TransformControls} from "three/examples/jsm/controls/TransformControls";
@@ -57,6 +57,7 @@ import {EntityLight} from "../objects/entity-light.js";
 import {EntityObject, isToggleable} from "../objects/entity-object.js";
 import {EntitySensor} from "../objects/entity-sensor.js";
 import {EntitySwitch} from "../objects/entity-switch.js";
+import {StaticLightObject} from "../objects/static-light.js";
 import {ViewportObject} from "../objects/viewport-object.js";
 import type {SpaceResponse} from "../service/space-api.js";
 import {SpaceApi} from "../service/space-api.js";
@@ -1660,7 +1661,7 @@ export class DT3DCard extends LitElement {
 			return;
 		}
 
-		let object: Mesh = null;
+		let object: Object3D = null;
 		const material = new MeshStandardMaterial({
 			color: Math.floor(Math.random() * 0xffffff),
 			wireframe: false,
@@ -1677,6 +1678,16 @@ export class DT3DCard extends LitElement {
 			this.selectFile();
 		} else if (type === "entity") {
 			this.addEntityModal();
+		} else if (type === "static-light") {
+			const light = new StaticLightObject();
+			let lightCount = 0;
+			this.space.traverse((child) => {
+				if (child instanceof StaticLightObject) {
+					lightCount += 1;
+				}
+			});
+			light.name = `${localManager.get("staticLight")} ${lightCount + 1}`;
+			this.addToScene(light);
 		} else if (type === "group") {
 			const group = new Group();
 			let groupCount = 0;

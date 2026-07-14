@@ -10,6 +10,7 @@ import {EntityObject} from "../objects/entity-object.js";
 import {DoorObject} from "../objects/house/door.js";
 import {WallObject} from "../objects/house/wall.js";
 import {WindowObject} from "../objects/house/window.js";
+import {StaticLightObject} from "../objects/static-light.js";
 import {ViewportObject} from "../objects/viewport-object.js";
 import {deserializeGeometryBinary, serializeGeometryToBinary} from "./geometry-binary.js";
 import type {
@@ -106,7 +107,7 @@ function deserializeMaterial(data: unknown, fallbackColor: number): Material | M
 	return new MeshStandardMaterial({color: fallbackColor});
 }
 
-function normalizeObjectInstanceType(type: string): "mesh" | "entity" | "group" | "viewport" | null {
+function normalizeObjectInstanceType(type: string): "mesh" | "entity" | "group" | "viewport" | "static-light" | null {
 	switch (type.trim().toLowerCase()) {
 		case "mesh":
 			return "mesh";
@@ -114,6 +115,9 @@ function normalizeObjectInstanceType(type: string): "mesh" | "entity" | "group" 
 			return "entity";
 		case "viewport":
 			return "viewport";
+		case "static-light":
+		case "static_light":
+			return "static-light";
 		case "group":
 		case "3dmodel":
 			return "group";
@@ -514,6 +518,8 @@ export class SpaceSync {
 				instance.name || "Viewport",
 				data.defaultViewport === true,
 			);
+		} else if (instanceType === "static-light") {
+			object = new StaticLightObject(data.light ?? {});
 		} else if (instanceType === "group" || declaredType) {
 			object = new Group();
 		}
@@ -573,7 +579,10 @@ export class SpaceSync {
 			},
 		};
 
-		if (object instanceof ViewportObject) {
+		if (object instanceof StaticLightObject) {
+			type = declaredType ?? "static-light";
+			data.light = object.getSettings();
+		} else if (object instanceof ViewportObject) {
 			type = declaredType ?? "viewport";
 			data.viewport = object.getViewportConfig();
 			data.defaultViewport = object.defaultViewport;
