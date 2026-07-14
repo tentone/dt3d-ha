@@ -99,6 +99,61 @@ export class DT3DSpaceConfigMenu extends LitElement {
 						},
 					],
 				},
+				{
+					label: localManager.get("postProcessing"),
+					type: "sub-form",
+					enabled: true,
+					fields: [
+						{
+							label: localManager.get("bokehDepth"),
+							attribute: "general.rendering.postProcessing.bokehDepth",
+							type: "boolean",
+							tooltip: localManager.get("bokehDepthTooltip"),
+							editable: true,
+							enabled: true,
+						},
+						{
+							label: localManager.get("bloom"),
+							attribute: "general.rendering.postProcessing.bloom",
+							type: "boolean",
+							tooltip: localManager.get("bloomTooltip"),
+							editable: true,
+							enabled: true,
+						},
+						{
+							label: localManager.get("gtao"),
+							attribute: "general.rendering.postProcessing.gtao",
+							type: "boolean",
+							tooltip: localManager.get("gtaoTooltip"),
+							editable: true,
+							enabled: true,
+						},
+						{
+							label: localManager.get("ssao"),
+							attribute: "general.rendering.postProcessing.ssao",
+							type: "boolean",
+							tooltip: localManager.get("ssaoTooltip"),
+							editable: true,
+							enabled: true,
+						},
+						{
+							label: localManager.get("halftone"),
+							attribute: "general.rendering.postProcessing.halftone",
+							type: "boolean",
+							tooltip: localManager.get("halftoneTooltip"),
+							editable: true,
+							enabled: true,
+						},
+						{
+							label: localManager.get("filmGrain"),
+							attribute: "general.rendering.postProcessing.filmGrain",
+							type: "boolean",
+							tooltip: localManager.get("filmGrainTooltip"),
+							editable: true,
+							enabled: true,
+						},
+					],
+				},
 			],
 		},
 		{
@@ -208,6 +263,17 @@ export class DT3DSpaceConfigMenu extends LitElement {
 			event.detail.attribute,
 			event.detail.value,
 		);
+
+		if (event.detail.value === true) {
+			if (event.detail.attribute === "general.rendering.postProcessing.gtao") {
+				nextConfig.general.rendering.postProcessing.ssao = false;
+			} else if (
+				event.detail.attribute === "general.rendering.postProcessing.ssao"
+			) {
+				nextConfig.general.rendering.postProcessing.gtao = false;
+			}
+		}
+
 		this.config = normalizeSpaceConfiguration(nextConfig);
 
 		this.dispatchEvent(
