@@ -158,6 +158,8 @@ export class SpaceSync {
 
 	public activeSpace: SpaceResponse | null = null;
 
+	public availableSpaces: SpaceResponse[] = [];
+
 	constructor({
 		apiClient,
 		readOnly = false,
@@ -204,18 +206,26 @@ export class SpaceSync {
 	}
 
 	/**
-	 * Fetch spaces from the API and load the first available space.
+	 * Fetch spaces from the API and load the configured space when available.
 	 * When no spaces exist, a default space is created automatically.
 	 */
-	public async initializeSpaceFromApi(): Promise<SpaceResponse | null> {
+	public async initializeSpaceFromApi(
+		preferredSpaceId?: string,
+	): Promise<SpaceResponse | null> {
 		this.isSyncingFromApi = true;
 
 		try {
 			const spaces = await this.apiClient.listSpaces();
-			let space = spaces[0];
+			this.availableSpaces = spaces;
+			let space = preferredSpaceId
+				? spaces.find((candidate) => candidate.id === preferredSpaceId)
+				: undefined;
+			space ??= spaces[0];
 
 			if (!space) {
 				if (this.readOnly) {
+					this.activeSpaceId = null;
+					this.activeSpace = null;
 					this.clearSpace();
 					this.sceneManager.createDefaultScene();
 					this.tree.updateTreeFromScene(this.space, true);
@@ -226,29 +236,15 @@ export class SpaceSync {
 					"Default Space",
 					"Auto-created space",
 				);
+				this.availableSpaces = [space];
 			}
 
-			this.activeSpaceId = space.id;
-			this.activeSpace = space;
-
-			const instances = await this.apiClient.listObjects(space.id);
-
-			if (instances.length === 0) {
-				this.clearSpace();
-				this.sceneManager.createDefaultScene();
-				this.tree.updateTreeFromScene(this.space, true);
-				if (!this.readOnly) {
-					this.isSyncingFromApi = false;
-					await this.syncAllObjectsToApi();
-				}
-				return space;
-			}
-
-			this.loadObjectsFromApi(instances);
-			this.tree.updateTreeFromScene(this.space, true);
-			return space;
+			return await this.loadSpace(space);
 		} catch (error) {
 			console.error("DT3D: Failed to load spaces from API", error);
+			this.availableSpaces = [];
+			this.activeSpaceId = null;
+			this.activeSpace = null;
 			this.clearSpace();
 			this.sceneManager.createDefaultScene();
 			this.tree.updateTreeFromScene(this.space, true);
@@ -258,17 +254,66 @@ export class SpaceSync {
 		}
 	}
 
+	/**
+	 * Replace the active editor contents with a different API space.
+	 */
+	public async loadSpaceFromApi(spaceId: string): Promise<SpaceResponse> {
+		const space = this.availableSpaces.find(
+			(candidate) => candidate.id === spaceId,
+		);
+		if (!space) {
+			throw new Error(`Space not found: ${spaceId}`);
+		}
+
+		this.isSyncingFromApi = true;
+		try {
+			return await this.loadSpace(space);
+		} finally {
+			this.isSyncingFromApi = false;
+		}
+	}
+
+	private async loadSpace(space: SpaceResponse): Promise<SpaceResponse> {
+		const instances = await this.apiClient.listObjects(space.id);
+
+		this.activeSpaceId = space.id;
+		this.activeSpace = space;
+
+		if (instances.length === 0) {
+			this.clearSpace();
+			this.sceneManager.createDefaultScene();
+			this.tree.updateTreeFromScene(this.space, true);
+			if (!this.readOnly) {
+				this.isSyncingFromApi = false;
+				await this.syncAllObjectsToApi();
+				this.isSyncingFromApi = true;
+			}
+			return space;
+		}
+
+		this.loadObjectsFromApi(instances);
+		this.tree.updateTreeFromScene(this.space, true);
+		return space;
+	}
+
 	public async updateActiveSpaceConfig(config: Record<string, any>): Promise<SpaceResponse | null> {
 		if (!this.activeSpaceId || !this.activeSpace) {
 			return null;
 		}
 
-		const updatedSpace = await this.apiClient.updateSpace(this.activeSpaceId, {
-			name: this.activeSpace.name,
-			description: this.activeSpace.description,
+		const spaceId = this.activeSpaceId;
+		const activeSpace = this.activeSpace;
+		const updatedSpace = await this.apiClient.updateSpace(spaceId, {
+			name: activeSpace.name,
+			description: activeSpace.description,
 			config,
 		});
-		this.activeSpace = updatedSpace;
+		if (this.activeSpaceId === spaceId) {
+			this.activeSpace = updatedSpace;
+		}
+		this.availableSpaces = this.availableSpaces.map((space) =>
+			space.id === updatedSpace.id ? updatedSpace : space,
+		);
 
 		return updatedSpace;
 	}

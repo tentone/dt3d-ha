@@ -51,12 +51,17 @@ type: custom:dt3d-card
 address: http://<home-assistant-host>
 port: 8080
 service_key: <same-key-as-the-add-on>
+default_space: <space-id>
 visualization_only: false
 ```
 
 Use an `https://` address when the add-on is configured to serve HTTPS.
+In edit mode, use the space selector at the top of the card to switch the
+space being edited.
 Set `visualization_only: true` to hide editing controls and the object tree
-while keeping camera navigation and object interaction available.
+while keeping camera navigation and object interaction available. The
+`default_space` is selected in the visual card configuration and is the only
+way to choose the displayed space in visualization-only mode.
 
 ### Add-on
 

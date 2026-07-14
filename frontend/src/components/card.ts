@@ -8,6 +8,7 @@ import "./mesh-menu/mesh-menu.js";
 import "./object-tree/object-tree.js";
 import "./side-bar/side-bar.js";
 import "./space-config-menu/space-config-menu.js";
+import "./space-selector/space-selector.js";
 import "./sync-progress-component/sync-progress-component.js";
 
 import {LitElement} from "lit";
@@ -79,6 +80,7 @@ import type {DT3DMeshMenu} from "./mesh-menu/mesh-menu.js";
 import type {DT3DTree} from "./object-tree/object-tree.js";
 import type {DT3DSidebar} from "./side-bar/side-bar.js";
 import type {DT3DSpaceConfigMenu} from "./space-config-menu/space-config-menu.js";
+import type {DT3DSpaceSelector} from "./space-selector/space-selector.js";
 import type {SyncProgressComponent} from "./sync-progress-component/sync-progress-component.js";
 
 const SPACE_SCENE_CONFIG_STORAGE_KEY = "space-scene-config";
@@ -161,6 +163,8 @@ export class DT3DCard extends LitElement {
 	private syncProgressComponent: SyncProgressComponent | null = null;
 
 	private cameraToggle: DT3DCameraToggle | null = null;
+
+	private spaceSelector: DT3DSpaceSelector | null = null;
 
 	private connectionStatus: ConnectionStatus | null = null;
 
@@ -437,6 +441,11 @@ export class DT3DCard extends LitElement {
 		return this.config?.visualization_only === true;
 	}
 
+	private getDefaultSpaceId(): string | undefined {
+		const value = this.config?.default_space ?? this.config?.defaultSpace;
+		return typeof value === "string" && value.trim() ? value.trim() : undefined;
+	}
+
 	private isDevelopmentMode(): boolean {
 		return this.generalConfig.developmentMode.enabled;
 	}
@@ -534,6 +543,10 @@ export class DT3DCard extends LitElement {
 		if (this.tree) {
 			this.tree.style.display = visualizationOnly ? "none" : "";
 			this.tree.closeContextMenu();
+		}
+
+		if (this.spaceSelector) {
+			this.spaceSelector.style.display = visualizationOnly ? "none" : "";
 		}
 
 		if (visualizationOnly) {
@@ -1382,6 +1395,47 @@ export class DT3DCard extends LitElement {
 		}
 	}
 
+	private async changeActiveSpace(spaceId: string): Promise<void> {
+		if (
+			this.isVisualizationOnly() ||
+			!this.spaceSync ||
+			!spaceId ||
+			spaceId === this.spaceSync.activeSpaceId
+		) {
+			return;
+		}
+
+		if (this.persistSpaceConfigTimer !== null) {
+			window.clearTimeout(this.persistSpaceConfigTimer);
+			this.persistSpaceConfigTimer = null;
+		}
+
+		if (this.spaceSelector) {
+			this.spaceSelector.loading = true;
+		}
+
+		try {
+			this.attachTransform(null);
+			this.lastSelectedObject = null;
+			const space = await this.spaceSync.loadSpaceFromApi(spaceId);
+			this.applySpaceConfigFromApi(space);
+			this.applyDefaultViewportOnLoad();
+			if (this.spaceSelector) {
+				this.spaceSelector.selectedSpaceId = space.id;
+			}
+		} catch (error) {
+			console.error("DT3D: Failed to change active space", error);
+			if (this.spaceSelector) {
+				this.spaceSelector.selectedSpaceId =
+					this.spaceSync.activeSpaceId ?? "";
+			}
+		} finally {
+			if (this.spaceSelector) {
+				this.spaceSelector.loading = false;
+			}
+		}
+	}
+
 	private setDefaultViewport(viewport: ViewportObject): void {
 		if (this.isVisualizationOnly()) {
 			return;
@@ -1695,6 +1749,16 @@ export class DT3DCard extends LitElement {
 
 		this.content.appendChild(this.cameraToggle);
 
+		this.spaceSelector = document.createElement(
+			"dt3d-space-selector",
+		) as DT3DSpaceSelector;
+		this.spaceSelector.loading = true;
+		this.spaceSelector.addEventListener("space-change", (event: Event) => {
+			const {spaceId} = (event as CustomEvent<{ spaceId: string }>).detail;
+			void this.changeActiveSpace(spaceId);
+		});
+		this.content.appendChild(this.spaceSelector);
+
 		this.applyVisualizationMode();
 
 		this.sidebar.addEventListener("transform-tool-selected", (e: any) => {
@@ -1809,10 +1873,17 @@ export class DT3DCard extends LitElement {
 			}
 		});
 
-		void this.spaceSync.initializeSpaceFromApi().then((space) => {
-			this.applySpaceConfigFromApi(space);
-			this.applyDefaultViewportOnLoad();
-		});
+		void this.spaceSync
+			.initializeSpaceFromApi(this.getDefaultSpaceId())
+			.then((space) => {
+				if (this.spaceSelector) {
+					this.spaceSelector.spaces = this.spaceSync?.availableSpaces ?? [];
+					this.spaceSelector.selectedSpaceId = space?.id ?? "";
+					this.spaceSelector.loading = false;
+				}
+				this.applySpaceConfigFromApi(space);
+				this.applyDefaultViewportOnLoad();
+			});
 
 		// Listen for selection events from the tree
 		this.tree.addEventListener("object-selected", (e: any) => {
@@ -2178,6 +2249,7 @@ export class DT3DCard extends LitElement {
 			address: "http://localhost",
 			port: 8080,
 			service_key: "",
+			default_space: "",
 			general: normalizeGeneralConfig(),
 		};
 	}

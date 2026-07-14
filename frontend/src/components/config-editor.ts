@@ -3,6 +3,8 @@ import {customElement} from "lit/decorators.js";
 
 import {normalizeGeneralConfig} from "../editor/general-config.js";
 import {localManager} from "../locale/locale.js";
+import type {SpaceResponse} from "../service/space-api.js";
+import {SpaceApi} from "../service/space-api.js";
 import componentStyles from "./config-editor.css?inline";
 
 const booleanConfig = (value: unknown): boolean =>
@@ -31,8 +33,13 @@ export class DT3DConfigEditor extends LitElement {
 
 	static properties = {
 		_config: {state: true},
+		_spaces: {state: true},
 	};
 	private _config: any;
+	private _spaces: SpaceResponse[] = [];
+	private spacesConnectionKey = "";
+	private spacesReloadTimer: number | null = null;
+	private spacesRequestSequence = 0;
 
 	/**
 	 * Set the configuration of the card.
@@ -44,11 +51,72 @@ export class DT3DConfigEditor extends LitElement {
 			address: "localhost",
 			port: 8080,
 			service_key: "",
+			default_space: "",
 			general: normalizeGeneralConfig(config?.general ?? {}),
 			visualization_only: false,
 			...config,
 		};
 		this._config.general = normalizeGeneralConfig(this._config.general ?? {});
+		const connectionKey = this.getSpacesConnectionKey();
+		if (connectionKey !== this.spacesConnectionKey) {
+			this.spacesConnectionKey = connectionKey;
+			this.scheduleSpacesReload();
+		}
+	}
+
+	public disconnectedCallback(): void {
+		super.disconnectedCallback();
+		if (this.spacesReloadTimer !== null) {
+			window.clearTimeout(this.spacesReloadTimer);
+			this.spacesReloadTimer = null;
+		}
+		this.spacesRequestSequence += 1;
+	}
+
+	private getSpacesConnectionKey(): string {
+		return JSON.stringify([
+			String(this._config?.address ?? "").trim(),
+			Number(this._config?.port),
+			String(this._config?.service_key ?? ""),
+		]);
+	}
+
+	private scheduleSpacesReload(): void {
+		this._spaces = [];
+		this.spacesRequestSequence += 1;
+		const requestSequence = this.spacesRequestSequence;
+
+		if (this.spacesReloadTimer !== null) {
+			window.clearTimeout(this.spacesReloadTimer);
+		}
+
+		this.spacesReloadTimer = window.setTimeout(() => {
+			this.spacesReloadTimer = null;
+			void this.reloadSpaces(requestSequence);
+		}, 300);
+	}
+
+	private async reloadSpaces(requestSequence: number): Promise<void> {
+		const address = String(this._config?.address ?? "").trim();
+		const port = Number(this._config?.port);
+		if (!address || !Number.isInteger(port) || port < 1 || port > 65535) {
+			return;
+		}
+
+		try {
+			const spaces = await new SpaceApi(
+				address,
+				port,
+				String(this._config?.service_key ?? ""),
+			).listSpaces();
+			if (requestSequence === this.spacesRequestSequence) {
+				this._spaces = spaces;
+			}
+		} catch {
+			if (requestSequence === this.spacesRequestSequence) {
+				this._spaces = [];
+			}
+		}
 	}
 
 	/**
@@ -115,6 +183,10 @@ export class DT3DConfigEditor extends LitElement {
 		}
 
 		this.updateConfig({[key]: value});
+		if (key === "address" || key === "port" || key === "service_key") {
+			this.spacesConnectionKey = this.getSpacesConnectionKey();
+			this.scheduleSpacesReload();
+		}
 	}
 
 	/**
@@ -128,6 +200,7 @@ export class DT3DConfigEditor extends LitElement {
 		const port = this._config.port;
 		const address = this._config.address;
 		const serviceKey = this._config.service_key;
+		const defaultSpace = this._config.default_space ?? "";
 		const visualizationOnly = booleanConfig(this._config.visualization_only);
 		const general = normalizeGeneralConfig(this._config.general ?? {});
 
@@ -165,6 +238,27 @@ export class DT3DConfigEditor extends LitElement {
 							autocomplete="off"
 						/>
 					</div>
+					${this._spaces.length > 0
+						? html`
+								<div>
+									<label>${localManager.get("defaultSpace")}</label>
+									<select
+										data-key="default_space"
+										.value=${defaultSpace}
+										@change=${this.onValueChanged}>
+										<option value="">
+											${localManager.get("firstAvailableSpace")}
+										</option>
+										${this._spaces.map(
+											(space) => html`<option value=${space.id}>
+												${space.name}
+											</option>`,
+										)}
+									</select>
+									<p>${localManager.get("defaultSpaceDescription")}</p>
+								</div>
+							`
+						: ""}
 					<div class="checkbox-field">
 						<input
 							id="visualization-only"
