@@ -57,7 +57,9 @@ visualization_only: false
 
 Use an `https://` address when the add-on is configured to serve HTTPS.
 In edit mode, use the space selector at the top of the card to switch the
-space being edited.
+space being edited. The adjacent actions create spaces and delete the active
+space. Use **Create group** in the sidebar to add an empty group, then organize
+objects beneath it in the object tree.
 Set `visualization_only: true` to hide editing controls and the object tree
 while keeping camera navigation and object interaction available. The
 `default_space` is selected in the visual card configuration and is the only

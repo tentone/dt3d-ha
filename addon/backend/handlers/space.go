@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"log"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -35,6 +36,7 @@ func (h *SpaceHandler) Register(router gin.IRouter) {
 		spaces.POST("", h.createSpace)
 		spaces.GET(":spaceID", h.getSpace)
 		spaces.PUT(":spaceID", h.updateSpace)
+		spaces.DELETE(":spaceID", h.deleteSpace)
 		spaces.GET(":spaceID/objects", h.listObjectInstances)
 		spaces.GET(":spaceID/tree", h.getObjectTree)
 		spaces.POST(":spaceID/objects", h.createObjectInstance)
@@ -114,6 +116,29 @@ func (h *SpaceHandler) updateSpace(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, toSpaceResponse(*space))
+}
+
+func (h *SpaceHandler) deleteSpace(c *gin.Context) {
+	spaceID := c.Param("spaceID")
+	if _, err := uuid.Parse(spaceID); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid space id"})
+		return
+	}
+
+	if err := h.spaces.DeleteSpace(spaceID); err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "space not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	if err := os.RemoveAll(filepath.Join(h.geometryDir, spaceID)); err != nil {
+		log.Printf("Failed to remove geometry files for deleted space %s: %v", spaceID, err)
+	}
+
+	c.Status(http.StatusNoContent)
 }
 
 func (h *SpaceHandler) listObjectInstances(c *gin.Context) {

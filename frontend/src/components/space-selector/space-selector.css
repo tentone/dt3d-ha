@@ -35,6 +35,42 @@ select {
 	cursor: pointer;
 }
 
+button {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 30px;
+	height: 30px;
+	padding: 0;
+	border: 1px solid rgba(255, 255, 255, 0.35);
+	border-radius: 5px;
+	background: rgba(30, 30, 30, 0.95);
+	color: #ffffff;
+	cursor: pointer;
+}
+
+button:hover:not(:disabled) {
+	background: rgba(70, 70, 70, 0.95);
+}
+
+button.delete-button:hover:not(:disabled) {
+	background: rgba(180, 35, 35, 0.95);
+}
+
+button:disabled {
+	cursor: not-allowed;
+	opacity: 0.45;
+}
+
+button:focus-visible {
+	outline: 2px solid rgba(255, 255, 255, 0.9);
+	outline-offset: 2px;
+}
+
+ha-icon {
+	--mdc-icon-size: 18px;
+}
+
 select:disabled {
 	cursor: wait;
 	opacity: 0.65;

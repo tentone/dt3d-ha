@@ -125,6 +125,15 @@ export class SpaceApi {
 	}
 
 	/**
+	 * Delete a space and all of its objects.
+	 */
+	public deleteSpace(spaceId: string): Promise<void> {
+		return this.fetchJson<void>(`/spaces/${spaceId}`, {
+			method: "DELETE",
+		});
+	}
+
+	/**
 	 * Fetch all object instances for a space.
 	 */
 	public listObjects(spaceId: string): Promise<ObjectInstanceResponse[]> {

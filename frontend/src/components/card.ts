@@ -13,8 +13,8 @@ import "./sync-progress-component/sync-progress-component.js";
 
 import {LitElement} from "lit";
 import {customElement} from "lit/decorators.js";
-import type {Camera, Group, Intersection, Mesh, Object3D, Scene} from "three";
-import {MeshStandardMaterial, Raycaster, Vector2, Vector3} from "three";
+import type {Camera, Intersection, Mesh, Object3D, Scene} from "three";
+import {Group, MeshStandardMaterial, Raycaster, Vector2, Vector3} from "three";
 import type {OrbitControls} from "three/examples/jsm/controls/OrbitControls";
 import type {TransformControls} from "three/examples/jsm/controls/TransformControls";
 import {DRACOLoader} from "three/examples/jsm/loaders/DRACOLoader.js";
@@ -269,6 +269,8 @@ export class DT3DCard extends LitElement {
 	private confirmationModal: DT3DConfirmationModal | null = null;
 
 	private gridConfigModal: DT3DFormModal | null = null;
+
+	private spaceFormModal: DT3DFormModal | null = null;
 
 	private persistSpaceConfigTimer: number | null = null;
 
@@ -558,6 +560,8 @@ export class DT3DCard extends LitElement {
 			this.confirmationModal = null;
 			this.gridConfigModal?.remove();
 			this.gridConfigModal = null;
+			this.spaceFormModal?.remove();
+			this.spaceFormModal = null;
 			this.content
 				?.querySelectorAll("dt3d-add-entity-modal")
 				.forEach((modal) => modal.remove());
@@ -1093,6 +1097,7 @@ export class DT3DCard extends LitElement {
 		return Boolean(
 			this.confirmationModal ||
 			this.gridConfigModal ||
+			this.spaceFormModal ||
 			this.spaceConfigMenu ||
 			this.meshMenu ||
 			this.content?.querySelector("dt3d-add-entity-modal"),
@@ -1324,6 +1329,144 @@ export class DT3DCard extends LitElement {
 		return count;
 	}
 
+	/**
+	 * Open the form used to create and activate a space.
+	 */
+	private openCreateSpaceModal(): void {
+		if (!this.content || this.spaceFormModal || this.isVisualizationOnly()) {
+			return;
+		}
+
+		const fields: DynamicFormField[] = [
+			{
+				label: localManager.get("spaceName"),
+				attribute: "name",
+				type: "string",
+				editable: true,
+				enabled: true,
+			},
+			{
+				label: localManager.get("spaceDescription"),
+				attribute: "description",
+				type: "string",
+				editable: true,
+				enabled: true,
+			},
+		];
+		const modal = document.createElement("dt3d-form-modal") as DT3DFormModal;
+		modal.heading = localManager.get("createSpace");
+		modal.description = localManager.get("createSpaceDescription");
+		modal.confirmLabel = localManager.get("createSpace");
+		modal.fields = fields;
+		modal.data = {
+			name: `${localManager.get("space")} ${(this.spaceSync?.availableSpaces.length ?? 0) + 1}`,
+			description: "",
+		};
+
+		const closeModal = () => {
+			modal.remove();
+			if (this.spaceFormModal === modal) {
+				this.spaceFormModal = null;
+			}
+		};
+
+		modal.addEventListener("form-submit", (event: Event) => {
+			const {values} = (event as CustomEvent<FormModalSubmitDetail>).detail;
+			const name = String(values.name ?? "").trim();
+			const description = String(values.description ?? "").trim();
+			if (!name) {
+				return;
+			}
+
+			void this.createSpace(name, description).then((created) => {
+				if (created) {
+					closeModal();
+				}
+			});
+		});
+		modal.addEventListener("modal-close", closeModal);
+
+		this.spaceFormModal = modal;
+		this.content.appendChild(modal);
+	}
+
+	private async createSpace(
+		name: string,
+		description: string,
+	): Promise<boolean> {
+		if (!this.spaceSync || this.isVisualizationOnly()) {
+			return false;
+		}
+
+		if (this.spaceSelector) {
+			this.spaceSelector.loading = true;
+		}
+
+		try {
+			this.attachTransform(null);
+			this.lastSelectedObject = null;
+			const space = await this.spaceSync.createSpace(name, description);
+			this.applySpaceConfigFromApi(space);
+			this.applyDefaultViewportOnLoad();
+			if (this.spaceSelector) {
+				this.spaceSelector.spaces = this.spaceSync.availableSpaces;
+				this.spaceSelector.selectedSpaceId = space.id;
+			}
+			return true;
+		} catch (error) {
+			console.error("DT3D: Failed to create space", error);
+			return false;
+		} finally {
+			if (this.spaceSelector) {
+				this.spaceSelector.loading = false;
+			}
+		}
+	}
+
+	private requestDeleteSpace(spaceId: string): void {
+		if (!spaceId || this.isVisualizationOnly()) {
+			return;
+		}
+
+		this.openConfirmationModal({
+			heading: localManager.get("deleteSpaceTitle"),
+			message: localManager.get("confirmDeleteSpace"),
+			confirmLabel: localManager.get("deleteSpace"),
+			actionType: "red",
+			onConfirm: () => {
+				void this.deleteSpace(spaceId);
+			},
+		});
+	}
+
+	private async deleteSpace(spaceId: string): Promise<void> {
+		if (!this.spaceSync || this.isVisualizationOnly()) {
+			return;
+		}
+
+		if (this.spaceSelector) {
+			this.spaceSelector.loading = true;
+		}
+
+		try {
+			this.attachTransform(null);
+			this.lastSelectedObject = null;
+			const space = await this.spaceSync.deleteSpace(spaceId);
+			this.applySpaceConfigFromApi(space);
+			this.applyDefaultViewportOnLoad();
+			if (this.spaceSelector) {
+				this.spaceSelector.spaces = this.spaceSync.availableSpaces;
+				this.spaceSelector.selectedSpaceId = space?.id ?? "";
+			}
+		} catch (error) {
+			console.error("DT3D: Failed to delete space", error);
+		} finally {
+			if (this.spaceSelector) {
+				this.spaceSelector.loading = false;
+			}
+		}
+	}
+
 	private getViewportById(objectId: string): ViewportObject | null {
 		const object = this.space?.getObjectByProperty(
 			"uuid",
@@ -1534,6 +1677,16 @@ export class DT3DCard extends LitElement {
 			this.selectFile();
 		} else if (type === "entity") {
 			this.addEntityModal();
+		} else if (type === "group") {
+			const group = new Group();
+			let groupCount = 0;
+			this.space.traverse((child) => {
+				if (child instanceof Group && child !== this.space) {
+					groupCount += 1;
+				}
+			});
+			group.name = `${localManager.get("group")} ${groupCount + 1}`;
+			this.addToScene(group);
 		}
 	}
 
@@ -1756,6 +1909,13 @@ export class DT3DCard extends LitElement {
 		this.spaceSelector.addEventListener("space-change", (event: Event) => {
 			const {spaceId} = (event as CustomEvent<{ spaceId: string }>).detail;
 			void this.changeActiveSpace(spaceId);
+		});
+		this.spaceSelector.addEventListener("space-create-request", () => {
+			this.openCreateSpaceModal();
+		});
+		this.spaceSelector.addEventListener("space-delete-request", (event: Event) => {
+			const {spaceId} = (event as CustomEvent<{ spaceId: string }>).detail;
+			this.requestDeleteSpace(spaceId);
 		});
 		this.content.appendChild(this.spaceSelector);
 
@@ -2106,6 +2266,8 @@ export class DT3DCard extends LitElement {
 		this.confirmationModal = null;
 		this.gridConfigModal?.remove();
 		this.gridConfigModal = null;
+		this.spaceFormModal?.remove();
+		this.spaceFormModal = null;
 	}
 
 	/**

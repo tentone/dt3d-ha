@@ -35,3 +35,14 @@ func (r *SpaceRepository) FindByID(id string) (*models.Space, error) {
 func (r *SpaceRepository) Update(space *models.Space) error {
 	return r.db.Save(space).Error
 }
+
+func (r *SpaceRepository) Delete(space *models.Space) error {
+	return r.db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Where("space_id = ?", space.ID).
+			Delete(&models.ObjectInstance{}).Error; err != nil {
+			return err
+		}
+
+		return tx.Delete(space).Error
+	})
+}

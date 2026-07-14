@@ -36,6 +36,15 @@ func (s *SpaceService) GetSpaceByID(id string) (*models.Space, error) {
 	return s.spaces.FindByID(id)
 }
 
+func (s *SpaceService) DeleteSpace(id string) error {
+	space, err := s.spaces.FindByID(id)
+	if err != nil {
+		return err
+	}
+
+	return s.spaces.Delete(space)
+}
+
 type UpdateSpaceInput struct {
 	Name        string
 	Description string

@@ -273,6 +273,46 @@ export class SpaceSync {
 		}
 	}
 
+	/**
+	 * Create and activate a new space.
+	 */
+	public async createSpace(
+		name: string,
+		description: string,
+	): Promise<SpaceResponse> {
+		const space = await this.apiClient.createSpace(name, description);
+		this.availableSpaces = [...this.availableSpaces, space];
+		return this.loadSpaceFromApi(space.id);
+	}
+
+	/**
+	 * Delete a space. When the active space is deleted, activate the next
+	 * available space or reset the editor to an unsaved default scene.
+	 */
+	public async deleteSpace(spaceId: string): Promise<SpaceResponse | null> {
+		await this.apiClient.deleteSpace(spaceId);
+		this.availableSpaces = this.availableSpaces.filter(
+			(space) => space.id !== spaceId,
+		);
+
+		if (this.activeSpaceId !== spaceId) {
+			return this.activeSpace;
+		}
+
+		this.activeSpaceId = null;
+		this.activeSpace = null;
+		this.clearSpace();
+
+		const nextSpace = this.availableSpaces[0];
+		if (nextSpace) {
+			return this.loadSpaceFromApi(nextSpace.id);
+		}
+
+		this.sceneManager.createDefaultScene();
+		this.tree.updateTreeFromScene(this.space, true);
+		return null;
+	}
+
 	private async loadSpace(space: SpaceResponse): Promise<SpaceResponse> {
 		const instances = await this.apiClient.listObjects(space.id);
 
