@@ -30,6 +30,7 @@ export type DynamicFormInputField = {
 	enabled: boolean;
 	step?: number;
 	min?: number;
+	max?: number;
 	options?: Array<{
 		label: string;
 		value: string | number | boolean;
@@ -375,6 +376,8 @@ export class DynamicForm extends LitElement {
 			case "number": {
 				const value = Number(this.getFieldValue(field, data) ?? 0);
 				const step = field.step ?? 0.01;
+				const decimals =
+					step >= 1 ? 0 : Math.min(6, Math.ceil(-Math.log10(step)));
 				return html`
 					<div class="field">
 						<label title=${field.tooltip ?? ""}>${field.label}</label>
@@ -382,7 +385,8 @@ export class DynamicForm extends LitElement {
 							type="number"
 							step=${String(step)}
 							min=${field.min == null ? undefined : String(field.min)}
-							.value=${this.formatNumber(value, step >= 1 ? 0 : 2)}
+							max=${field.max == null ? undefined : String(field.max)}
+							.value=${this.formatNumber(value, decimals)}
 							?disabled=${!field.editable}
 							@change=${(event: Event) => {
 								const rawValue = parseFloat(

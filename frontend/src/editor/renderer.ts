@@ -188,38 +188,38 @@ export class RendererManager {
 		}
 	}
 
-	private getBokehFocusDistance(): number {
-		return Math.max(this.camera.position.distanceTo(this.controls.target), 0.1);
-	}
-
 	private createPostProcessingPipeline(): PostProcessingPipeline {
+		const config = this.renderingConfig.postProcessing;
 		const renderPass = new RenderPass(this.scene, this.camera);
 		const passes: PostProcessingPasses = {
 			bokehDepth: new BokehPass(this.scene, this.camera, {
-				focus: this.getBokehFocusDistance(),
-				aperture: 0.0025,
-				maxblur: 0.01,
+				focus: config.bokehDepth.focus,
+				aperture: config.bokehDepth.aperture,
+				maxblur: config.bokehDepth.maxBlur,
 			}),
 			bloom: new UnrealBloomPass(
 				new Vector2(this.width, this.height),
-				0.8,
-				0.4,
-				0.85,
+				config.bloom.strength,
+				config.bloom.radius,
+				config.bloom.threshold,
 			),
 			gtao: new GTAOPass(this.scene, this.camera, this.width, this.height),
 			ssao: new SSAOPass(this.scene, this.camera, this.width, this.height),
 			halftone: new HalftonePass({
-				shape: 1,
-				radius: 4,
-				rotateR: Math.PI / 12,
-				rotateG: (Math.PI / 12) * 2,
-				rotateB: (Math.PI / 12) * 3,
-				scatter: 0,
-				blending: 1,
-				blendingMode: 1,
-				greyscale: false,
+				shape: config.halftone.shape,
+				radius: config.halftone.radius,
+				rotateR: config.halftone.rotateR,
+				rotateG: config.halftone.rotateG,
+				rotateB: config.halftone.rotateB,
+				scatter: config.halftone.scatter,
+				blending: config.halftone.blending,
+				blendingMode: config.halftone.blendingMode,
+				greyscale: config.halftone.greyscale,
 			}),
-			filmGrain: new FilmPass(0.35, false),
+			filmGrain: new FilmPass(
+				config.filmGrain.intensity,
+				config.filmGrain.grayscale,
+			),
 		};
 		const composer = new EffectComposer(this.renderer);
 
@@ -233,13 +233,7 @@ export class RendererManager {
 		composer.addPass(passes.filmGrain);
 		composer.addPass(new OutputPass());
 
-		const config = this.renderingConfig.postProcessing;
-		passes.bokehDepth.enabled = config.bokehDepth;
-		passes.bloom.enabled = config.bloom;
-		passes.gtao.enabled = config.gtao;
-		passes.ssao.enabled = config.ssao;
-		passes.halftone.enabled = config.halftone;
-		passes.filmGrain.enabled = config.filmGrain;
+		this.applyPostProcessingPassConfig(passes);
 
 		return {composer, renderPass, passes};
 	}
@@ -251,26 +245,61 @@ export class RendererManager {
 		this.composer.dispose();
 	}
 
-	private applyPostProcessingConfig(): void {
+	private applyPostProcessingPassConfig(
+		passes = this.postProcessingPasses,
+	): void {
 		const config = this.renderingConfig.postProcessing;
-		this.postProcessingPasses.bokehDepth.enabled = config.bokehDepth;
-		this.postProcessingPasses.bloom.enabled = config.bloom;
-		this.postProcessingPasses.gtao.enabled = config.gtao;
-		this.postProcessingPasses.ssao.enabled = config.ssao;
-		this.postProcessingPasses.halftone.enabled = config.halftone;
-		this.postProcessingPasses.filmGrain.enabled = config.filmGrain;
-	}
-
-	private updateBokehFocus(): void {
-		if (!this.postProcessingPasses.bokehDepth.enabled) {
-			return;
-		}
-
-		const uniforms = this.postProcessingPasses.bokehDepth.uniforms as Record<
+		const bokehUniforms = passes.bokehDepth.uniforms as Record<
 			string,
 			{ value: unknown }
 		>;
-		uniforms.focus.value = this.getBokehFocusDistance();
+		bokehUniforms.focus.value = config.bokehDepth.focus;
+		bokehUniforms.aperture.value = config.bokehDepth.aperture;
+		bokehUniforms.maxblur.value = config.bokehDepth.maxBlur;
+
+		passes.bloom.strength = config.bloom.strength;
+		passes.bloom.radius = config.bloom.radius;
+		passes.bloom.threshold = config.bloom.threshold;
+
+		passes.gtao.updateGtaoMaterial({
+			radius: config.gtao.radius,
+			distanceExponent: config.gtao.distanceExponent,
+			thickness: config.gtao.thickness,
+			distanceFallOff: config.gtao.distanceFallOff,
+			scale: config.gtao.scale,
+			samples: config.gtao.samples,
+			screenSpaceRadius: config.gtao.screenSpaceRadius,
+		});
+		passes.gtao.updatePdMaterial(config.gtao.denoise);
+		passes.gtao.blendIntensity = config.gtao.blendIntensity;
+
+		passes.ssao.kernelRadius = config.ssao.kernelRadius;
+		passes.ssao.minDistance = config.ssao.minDistance;
+		passes.ssao.maxDistance = config.ssao.maxDistance;
+
+		passes.halftone.uniforms.shape.value = config.halftone.shape;
+		passes.halftone.uniforms.radius.value = config.halftone.radius;
+		passes.halftone.uniforms.rotateR.value = config.halftone.rotateR;
+		passes.halftone.uniforms.rotateG.value = config.halftone.rotateG;
+		passes.halftone.uniforms.rotateB.value = config.halftone.rotateB;
+		passes.halftone.uniforms.scatter.value = config.halftone.scatter;
+		passes.halftone.uniforms.blending.value = config.halftone.blending;
+		passes.halftone.uniforms.blendingMode.value = config.halftone.blendingMode;
+		passes.halftone.uniforms.greyscale.value = config.halftone.greyscale;
+
+		const filmUniforms = passes.filmGrain.uniforms as Record<
+			string,
+			{ value: unknown }
+		>;
+		filmUniforms.intensity.value = config.filmGrain.intensity;
+		filmUniforms.grayscale.value = config.filmGrain.grayscale;
+
+		passes.bokehDepth.enabled = config.bokehDepth.enabled;
+		passes.bloom.enabled = config.bloom.enabled;
+		passes.gtao.enabled = config.gtao.enabled;
+		passes.ssao.enabled = config.ssao.enabled;
+		passes.halftone.enabled = config.halftone.enabled;
+		passes.filmGrain.enabled = config.filmGrain.enabled;
 	}
 
 	public setRenderingConfig(config: Partial<RenderingConfig>): void {
@@ -285,6 +314,34 @@ export class RendererManager {
 				postProcessing: {
 					...this.renderingConfig.postProcessing,
 					...(config.postProcessing ?? {}),
+					bokehDepth: {
+						...this.renderingConfig.postProcessing.bokehDepth,
+						...(config.postProcessing?.bokehDepth ?? {}),
+					},
+					bloom: {
+						...this.renderingConfig.postProcessing.bloom,
+						...(config.postProcessing?.bloom ?? {}),
+					},
+					gtao: {
+						...this.renderingConfig.postProcessing.gtao,
+						...(config.postProcessing?.gtao ?? {}),
+						denoise: {
+							...this.renderingConfig.postProcessing.gtao.denoise,
+							...(config.postProcessing?.gtao?.denoise ?? {}),
+						},
+					},
+					ssao: {
+						...this.renderingConfig.postProcessing.ssao,
+						...(config.postProcessing?.ssao ?? {}),
+					},
+					halftone: {
+						...this.renderingConfig.postProcessing.halftone,
+						...(config.postProcessing?.halftone ?? {}),
+					},
+					filmGrain: {
+						...this.renderingConfig.postProcessing.filmGrain,
+						...(config.postProcessing?.filmGrain ?? {}),
+					},
 				},
 			},
 		}).rendering;
@@ -305,7 +362,7 @@ export class RendererManager {
 		}
 
 		this.applyRenderingConfig(this.renderer, this.composer);
-		this.applyPostProcessingConfig();
+		this.applyPostProcessingPassConfig();
 	}
 
 	/**
@@ -324,7 +381,6 @@ export class RendererManager {
 			onUpdate?.(time);
 
 			this.cssRenderer.render(this.scene, this.camera);
-			this.updateBokehFocus();
 			this.composer.render();
 		};
 

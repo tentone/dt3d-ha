@@ -19,6 +19,358 @@ export class DT3DSpaceConfigMenu extends LitElement {
 	@property({attribute: false})
 	public config: SpaceConfiguration = normalizeSpaceConfiguration();
 
+	private postProcessingNumber(
+		label: string,
+		attribute: string,
+		step: number,
+		min: number,
+		max: number,
+		tooltip?: string,
+	): DynamicFormField {
+		return {
+			label: localManager.get(label),
+			attribute: `general.rendering.postProcessing.${attribute}`,
+			type: "number",
+			tooltip: tooltip ? localManager.get(tooltip) : undefined,
+			editable: true,
+			enabled: true,
+			step,
+			min,
+			max,
+		};
+	}
+
+	private postProcessingEnabled(
+		attribute: string,
+		tooltip: string,
+	): DynamicFormField {
+		return {
+			label: localManager.get("enabled"),
+			attribute: `general.rendering.postProcessing.${attribute}.enabled`,
+			type: "boolean",
+			tooltip: localManager.get(tooltip),
+			editable: true,
+			enabled: true,
+		};
+	}
+
+	private createPostProcessingFields(): DynamicFormField[] {
+		return [
+			{
+				label: localManager.get("bokehDepth"),
+				attribute: "post-processing-bokeh",
+				type: "sub-form",
+				enabled: true,
+				collapsed: true,
+				fields: [
+					this.postProcessingEnabled("bokehDepth", "bokehDepthTooltip"),
+					this.postProcessingNumber(
+						"focusDistance",
+						"bokehDepth.focus",
+						0.1,
+						0.1,
+						10000,
+						"focusDistanceTooltip",
+					),
+					this.postProcessingNumber(
+						"aperture",
+						"bokehDepth.aperture",
+						0.0001,
+						0,
+						1,
+						"apertureTooltip",
+					),
+					this.postProcessingNumber(
+						"maximumBlur",
+						"bokehDepth.maxBlur",
+						0.001,
+						0,
+						1,
+						"maximumBlurTooltip",
+					),
+				],
+			},
+			{
+				label: localManager.get("bloom"),
+				attribute: "post-processing-bloom",
+				type: "sub-form",
+				enabled: true,
+				collapsed: true,
+				fields: [
+					this.postProcessingEnabled("bloom", "bloomTooltip"),
+					this.postProcessingNumber(
+						"strength",
+						"bloom.strength",
+						0.1,
+						0,
+						10,
+					),
+					this.postProcessingNumber(
+						"radius",
+						"bloom.radius",
+						0.01,
+						0,
+						1,
+					),
+					this.postProcessingNumber(
+						"threshold",
+						"bloom.threshold",
+						0.01,
+						0,
+						1,
+					),
+				],
+			},
+			{
+				label: localManager.get("gtao"),
+				attribute: "post-processing-gtao",
+				type: "sub-form",
+				enabled: true,
+				collapsed: true,
+				fields: [
+					this.postProcessingEnabled("gtao", "gtaoTooltip"),
+					this.postProcessingNumber("radius", "gtao.radius", 0.01, 0.01, 10),
+					this.postProcessingNumber(
+						"distanceExponent",
+						"gtao.distanceExponent",
+						0.1,
+						0.1,
+						10,
+					),
+					this.postProcessingNumber(
+						"thickness",
+						"gtao.thickness",
+						0.1,
+						0.01,
+						10,
+					),
+					this.postProcessingNumber(
+						"distanceFalloff",
+						"gtao.distanceFallOff",
+						0.1,
+						0,
+						10,
+					),
+					this.postProcessingNumber("scale", "gtao.scale", 0.1, 0.01, 10),
+					this.postProcessingNumber("samples", "gtao.samples", 1, 2, 32),
+					{
+						label: localManager.get("screenSpaceRadius"),
+						attribute:
+							"general.rendering.postProcessing.gtao.screenSpaceRadius",
+						type: "boolean",
+						tooltip: localManager.get("screenSpaceRadiusTooltip"),
+						editable: true,
+						enabled: true,
+					},
+					this.postProcessingNumber(
+						"blendIntensity",
+						"gtao.blendIntensity",
+						0.1,
+						0,
+						5,
+					),
+					{
+						label: localManager.get("denoise"),
+						attribute: "post-processing-gtao-denoise",
+						type: "sub-form",
+						enabled: true,
+						collapsed: true,
+						fields: [
+							this.postProcessingNumber(
+								"lumaPhi",
+								"gtao.denoise.lumaPhi",
+								0.1,
+								0,
+								20,
+							),
+							this.postProcessingNumber(
+								"depthPhi",
+								"gtao.denoise.depthPhi",
+								0.1,
+								0,
+								20,
+							),
+							this.postProcessingNumber(
+								"normalPhi",
+								"gtao.denoise.normalPhi",
+								0.1,
+								0,
+								20,
+							),
+							this.postProcessingNumber(
+								"radius",
+								"gtao.denoise.radius",
+								0.1,
+								0,
+								32,
+							),
+							this.postProcessingNumber(
+								"radiusExponent",
+								"gtao.denoise.radiusExponent",
+								0.1,
+								1,
+								4,
+							),
+							this.postProcessingNumber(
+								"rings",
+								"gtao.denoise.rings",
+								1,
+								1,
+								4,
+							),
+							this.postProcessingNumber(
+								"samples",
+								"gtao.denoise.samples",
+								1,
+								4,
+								32,
+							),
+						],
+					},
+				],
+			},
+			{
+				label: localManager.get("ssao"),
+				attribute: "post-processing-ssao",
+				type: "sub-form",
+				enabled: true,
+				collapsed: true,
+				fields: [
+					this.postProcessingEnabled("ssao", "ssaoTooltip"),
+					this.postProcessingNumber(
+						"kernelRadius",
+						"ssao.kernelRadius",
+						0.1,
+						0,
+						64,
+					),
+					this.postProcessingNumber(
+						"minimumDistance",
+						"ssao.minDistance",
+						0.001,
+						0,
+						1,
+					),
+					this.postProcessingNumber(
+						"maximumDistance",
+						"ssao.maxDistance",
+						0.01,
+						0,
+						1,
+					),
+				],
+			},
+			{
+				label: localManager.get("halftone"),
+				attribute: "post-processing-halftone",
+				type: "sub-form",
+				enabled: true,
+				collapsed: true,
+				fields: [
+					this.postProcessingEnabled("halftone", "halftoneTooltip"),
+					{
+						label: localManager.get("shape"),
+						attribute: "general.rendering.postProcessing.halftone.shape",
+						type: "select",
+						editable: true,
+						enabled: true,
+						options: [
+							{label: localManager.get("dot"), value: 1},
+							{label: localManager.get("ellipse"), value: 2},
+							{label: localManager.get("line"), value: 3},
+							{label: localManager.get("square"), value: 4},
+						],
+					},
+					this.postProcessingNumber("radius", "halftone.radius", 0.1, 1, 25),
+					this.postProcessingNumber(
+						"redRotation",
+						"halftone.rotateR",
+						0.01,
+						0,
+						Math.PI * 2,
+						"rotationRadiansTooltip",
+					),
+					this.postProcessingNumber(
+						"greenRotation",
+						"halftone.rotateG",
+						0.01,
+						0,
+						Math.PI * 2,
+						"rotationRadiansTooltip",
+					),
+					this.postProcessingNumber(
+						"blueRotation",
+						"halftone.rotateB",
+						0.01,
+						0,
+						Math.PI * 2,
+						"rotationRadiansTooltip",
+					),
+					this.postProcessingNumber(
+						"scatter",
+						"halftone.scatter",
+						0.01,
+						0,
+						1,
+					),
+					this.postProcessingNumber(
+						"blending",
+						"halftone.blending",
+						0.01,
+						0,
+						1,
+					),
+					{
+						label: localManager.get("blendingMode"),
+						attribute:
+							"general.rendering.postProcessing.halftone.blendingMode",
+						type: "select",
+						editable: true,
+						enabled: true,
+						options: [
+							{label: localManager.get("linear"), value: 1},
+							{label: localManager.get("multiply"), value: 2},
+							{label: localManager.get("add"), value: 3},
+							{label: localManager.get("lighter"), value: 4},
+							{label: localManager.get("darker"), value: 5},
+						],
+					},
+					{
+						label: localManager.get("greyscale"),
+						attribute: "general.rendering.postProcessing.halftone.greyscale",
+						type: "boolean",
+						editable: true,
+						enabled: true,
+					},
+				],
+			},
+			{
+				label: localManager.get("filmGrain"),
+				attribute: "post-processing-film-grain",
+				type: "sub-form",
+				enabled: true,
+				collapsed: true,
+				fields: [
+					this.postProcessingEnabled("filmGrain", "filmGrainTooltip"),
+					this.postProcessingNumber(
+						"intensity",
+						"filmGrain.intensity",
+						0.01,
+						0,
+						1,
+					),
+					{
+						label: localManager.get("grayscale"),
+						attribute: "general.rendering.postProcessing.filmGrain.grayscale",
+						type: "boolean",
+						editable: true,
+						enabled: true,
+					},
+				],
+			},
+		];
+	}
+
 	private fields: DynamicFormField[] = [
 		{
 			label: localManager.get("rendering"),
@@ -103,56 +455,7 @@ export class DT3DSpaceConfigMenu extends LitElement {
 					label: localManager.get("postProcessing"),
 					type: "sub-form",
 					enabled: true,
-					fields: [
-						{
-							label: localManager.get("bokehDepth"),
-							attribute: "general.rendering.postProcessing.bokehDepth",
-							type: "boolean",
-							tooltip: localManager.get("bokehDepthTooltip"),
-							editable: true,
-							enabled: true,
-						},
-						{
-							label: localManager.get("bloom"),
-							attribute: "general.rendering.postProcessing.bloom",
-							type: "boolean",
-							tooltip: localManager.get("bloomTooltip"),
-							editable: true,
-							enabled: true,
-						},
-						{
-							label: localManager.get("gtao"),
-							attribute: "general.rendering.postProcessing.gtao",
-							type: "boolean",
-							tooltip: localManager.get("gtaoTooltip"),
-							editable: true,
-							enabled: true,
-						},
-						{
-							label: localManager.get("ssao"),
-							attribute: "general.rendering.postProcessing.ssao",
-							type: "boolean",
-							tooltip: localManager.get("ssaoTooltip"),
-							editable: true,
-							enabled: true,
-						},
-						{
-							label: localManager.get("halftone"),
-							attribute: "general.rendering.postProcessing.halftone",
-							type: "boolean",
-							tooltip: localManager.get("halftoneTooltip"),
-							editable: true,
-							enabled: true,
-						},
-						{
-							label: localManager.get("filmGrain"),
-							attribute: "general.rendering.postProcessing.filmGrain",
-							type: "boolean",
-							tooltip: localManager.get("filmGrainTooltip"),
-							editable: true,
-							enabled: true,
-						},
-					],
+					fields: this.createPostProcessingFields(),
 				},
 			],
 		},
@@ -265,12 +568,16 @@ export class DT3DSpaceConfigMenu extends LitElement {
 		);
 
 		if (event.detail.value === true) {
-			if (event.detail.attribute === "general.rendering.postProcessing.gtao") {
-				nextConfig.general.rendering.postProcessing.ssao = false;
-			} else if (
-				event.detail.attribute === "general.rendering.postProcessing.ssao"
+			if (
+				event.detail.attribute ===
+				"general.rendering.postProcessing.gtao.enabled"
 			) {
-				nextConfig.general.rendering.postProcessing.gtao = false;
+				nextConfig.general.rendering.postProcessing.ssao.enabled = false;
+			} else if (
+				event.detail.attribute ===
+				"general.rendering.postProcessing.ssao.enabled"
+			) {
+				nextConfig.general.rendering.postProcessing.gtao.enabled = false;
 			}
 		}
 
