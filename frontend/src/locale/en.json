@@ -149,7 +149,6 @@
 	"hintAddDoor": "Select a wall, then click to add a door",
 	"hintAddWindow": "Select a wall, then click to add a window",
 	"configuration": "Configuration",
-	"generalConfiguration": "General configuration",
 	"generalConfigurationDescription": "Rendering, debugging, and scene appearance settings.",
 	"transform": "Transform",
 	"address": "Address",

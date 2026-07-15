@@ -427,20 +427,18 @@ export class DT3DCard extends LitElement {
 			config.visualization_only ?? config.visualizationOnly,
 		);
 
+		const cardConfig = {...config};
+		delete cardConfig.general;
+
 		const mergedConfig = {
 			port: 8080,
 			service_key: "",
-			...config,
+			...cardConfig,
 		};
 		this.config = {
 			...mergedConfig,
 			visualization_only: visualizationOnly,
 		};
-		this.generalConfig = normalizeGeneralConfig(
-			this.config.general ?? this.config,
-		);
-
-		this.applyGeneralConfig(this.generalConfig);
 		this.applyVisualizationMode();
 
 		console.log("DT3D: Config set:", this.config);
@@ -2565,7 +2563,6 @@ export class DT3DCard extends LitElement {
 			service_key: "",
 			default_space: "",
 			default_viewport: "",
-			general: normalizeGeneralConfig(),
 		};
 	}
 }
