@@ -100,8 +100,20 @@ export type GeneralConfig = {
 	};
 };
 
+export type CardGeneralConfig = {
+	rendering: Pick<
+		RenderingConfig,
+		"antialiasing" | "resolution" | "shadowMap"
+	>;
+	developmentMode: GeneralConfig["developmentMode"];
+};
+
+export type SpaceGeneralConfig = {
+	rendering: Pick<RenderingConfig, "toneMapping" | "postProcessing">;
+};
+
 export type SpaceConfiguration = {
-	general: GeneralConfig;
+	general: SpaceGeneralConfig;
 	scene: SpaceSceneConfig;
 };
 
@@ -177,8 +189,24 @@ export const DEFAULT_GENERAL_CONFIG: GeneralConfig = {
 	},
 };
 
+export const DEFAULT_CARD_GENERAL_CONFIG: CardGeneralConfig = {
+	rendering: {
+		antialiasing: DEFAULT_GENERAL_CONFIG.rendering.antialiasing,
+		resolution: DEFAULT_GENERAL_CONFIG.rendering.resolution,
+		shadowMap: DEFAULT_GENERAL_CONFIG.rendering.shadowMap,
+	},
+	developmentMode: DEFAULT_GENERAL_CONFIG.developmentMode,
+};
+
+export const DEFAULT_SPACE_GENERAL_CONFIG: SpaceGeneralConfig = {
+	rendering: {
+		toneMapping: DEFAULT_GENERAL_CONFIG.rendering.toneMapping,
+		postProcessing: DEFAULT_GENERAL_CONFIG.rendering.postProcessing,
+	},
+};
+
 export const DEFAULT_SPACE_CONFIGURATION: SpaceConfiguration = {
-	general: DEFAULT_GENERAL_CONFIG,
+	general: DEFAULT_SPACE_GENERAL_CONFIG,
 	scene: normalizeSpaceSceneConfig(),
 };
 
@@ -604,25 +632,104 @@ export const normalizeGeneralConfig = (
 	};
 };
 
+export const normalizeCardGeneralConfig = (
+	config: Record<string, any> = {},
+): CardGeneralConfig => {
+	const normalized = normalizeGeneralConfig(config);
+
+	return {
+		rendering: {
+			antialiasing: normalized.rendering.antialiasing,
+			resolution: normalized.rendering.resolution,
+			shadowMap: normalized.rendering.shadowMap,
+		},
+		developmentMode: normalized.developmentMode,
+	};
+};
+
+export const normalizeSpaceGeneralConfig = (
+	config: Record<string, any> = {},
+): SpaceGeneralConfig => {
+	const normalized = normalizeGeneralConfig(config);
+
+	return {
+		rendering: {
+			toneMapping: normalized.rendering.toneMapping,
+			postProcessing: normalized.rendering.postProcessing,
+		},
+	};
+};
+
+export const mergeGeneralConfig = (
+	cardConfig: Record<string, any> = {},
+	spaceConfig: Record<string, any> = {},
+): GeneralConfig => {
+	const card = normalizeCardGeneralConfig(cardConfig);
+	const space = normalizeSpaceGeneralConfig(spaceConfig);
+
+	return {
+		rendering: {
+			...card.rendering,
+			...space.rendering,
+		},
+		developmentMode: card.developmentMode,
+	};
+};
+
 export const normalizeSpaceConfiguration = (
 	config: Record<string, any> = {},
 ): SpaceConfiguration => ({
-	general: normalizeGeneralConfig(config.general ?? {}),
+	general: normalizeSpaceGeneralConfig(config.general ?? {}),
 	scene: normalizeSpaceSceneConfig(config.scene ?? config.spaceScene ?? {}),
 });
 
-export const hasGeneralConfiguration = (config: unknown): boolean => {
+export const hasSpaceGeneralConfiguration = (config: unknown): boolean => {
 	if (!config || typeof config !== "object") {
 		return false;
 	}
 
 	const value = config as Record<string, unknown>;
-	return Boolean(
-		value.general ||
-		value.rendering ||
-		value.developmentMode ||
-		value.development_mode,
-	);
+	const general =
+		value.general && typeof value.general === "object"
+			? (value.general as Record<string, unknown>)
+			: value;
+	const rendering =
+		general.rendering && typeof general.rendering === "object"
+			? (general.rendering as Record<string, unknown>)
+			: {};
+
+	return [
+		rendering.toneMapping,
+		rendering.tone_mapping,
+		rendering.postProcessing,
+		rendering.post_processing,
+		rendering.postprocessing,
+	].some((entry) => entry !== undefined);
+};
+
+export const hasCardGeneralConfiguration = (config: unknown): boolean => {
+	if (!config || typeof config !== "object") {
+		return false;
+	}
+
+	const value = config as Record<string, unknown>;
+	const general =
+		value.general && typeof value.general === "object"
+			? (value.general as Record<string, unknown>)
+			: value;
+	const rendering =
+		general.rendering && typeof general.rendering === "object"
+			? (general.rendering as Record<string, unknown>)
+			: {};
+
+	return [
+		rendering.antialiasing,
+		rendering.resolution,
+		rendering.shadowMap,
+		rendering.shadow_map,
+		general.developmentMode,
+		general.development_mode,
+	].some((entry) => entry !== undefined);
 };
 
 export const hasSceneConfiguration = (config: unknown): boolean => {

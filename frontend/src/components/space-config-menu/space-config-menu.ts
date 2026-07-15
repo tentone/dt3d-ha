@@ -378,14 +378,6 @@ export class DT3DSpaceConfigMenu extends LitElement {
 			enabled: true,
 			fields: [
 				{
-					label: localManager.get("antialiasing"),
-					attribute: "general.rendering.antialiasing",
-					type: "boolean",
-					tooltip: localManager.get("antialiasingTooltip"),
-					editable: true,
-					enabled: true,
-				},
-				{
 					label: localManager.get("toneMapping"),
 					attribute: "general.rendering.toneMapping",
 					type: "select",
@@ -407,70 +399,10 @@ export class DT3DSpaceConfigMenu extends LitElement {
 					],
 				},
 				{
-					label: localManager.get("resolution"),
-					attribute: "general.rendering.resolution",
-					type: "select",
-					tooltip: localManager.get("resolutionTooltip"),
-					editable: true,
-					enabled: true,
-					options: [
-						{label: "100%", value: 1},
-						{label: "75%", value: 0.75},
-						{label: "50%", value: 0.5},
-					],
-				},
-				{
-					label: localManager.get("shadowMap"),
-					type: "sub-form",
-					enabled: true,
-					fields: [
-						{
-							label: localManager.get("enabled"),
-							attribute: "general.rendering.shadowMap.enabled",
-							type: "boolean",
-							tooltip: localManager.get("shadowMapEnabledTooltip"),
-							editable: true,
-							enabled: true,
-						},
-						{
-							label: localManager.get("shadowMapType"),
-							attribute: "general.rendering.shadowMap.type",
-							type: "select",
-							tooltip: localManager.get("shadowMapTypeTooltip"),
-							editable: true,
-							enabled: true,
-							options: [
-								{label: localManager.get("shadowMapBasic"), value: "basic"},
-								{label: localManager.get("shadowMapPcf"), value: "pcf"},
-								{
-									label: localManager.get("shadowMapPcfSoft"),
-									value: "pcf_soft",
-								},
-								{label: localManager.get("shadowMapVsm"), value: "vsm"},
-							],
-						},
-					],
-				},
-				{
 					label: localManager.get("postProcessing"),
 					type: "sub-form",
 					enabled: true,
 					fields: this.createPostProcessingFields(),
-				},
-			],
-		},
-		{
-			label: localManager.get("developmentMode"),
-			type: "sub-form",
-			enabled: true,
-			fields: [
-				{
-					label: localManager.get("enabled"),
-					attribute: "general.developmentMode.enabled",
-					type: "boolean",
-					tooltip: localManager.get("developmentModeTooltip"),
-					editable: true,
-					enabled: true,
 				},
 			],
 		},

@@ -54,6 +54,15 @@ service_key: <same-key-as-the-add-on>
 default_space: <space-id>
 default_viewport: <viewport-object-id>
 visualization_only: false
+general:
+  rendering:
+    antialiasing: false
+    resolution: 1
+    shadowMap:
+      enabled: false
+      type: pcf
+  developmentMode:
+    enabled: true
 ```
 
 Use an `https://` address when the add-on is configured to serve HTTPS.
@@ -68,6 +77,9 @@ way to choose the displayed space in visualization-only mode.
 `default_viewport` is optional. Select it in the visual card configuration to
 override the space's default saved camera position for this card. Leaving it
 empty keeps the viewport chosen as the default in the space editor.
+Anti-aliasing, render resolution, shadow maps, and development mode are scoped
+to each card. Tone mapping, post-processing, and scene appearance remain scoped
+to the selected space.
 
 ### Add-on
 

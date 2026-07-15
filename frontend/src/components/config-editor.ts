@@ -1,6 +1,7 @@
 import {html, LitElement, unsafeCSS} from "lit";
 import {customElement} from "lit/decorators.js";
 
+import {normalizeCardGeneralConfig} from "../editor/general-config.js";
 import {localManager} from "../locale/locale.js";
 import type {SpaceResponse} from "../service/space-api.js";
 import {SpaceApi} from "../service/space-api.js";
@@ -8,6 +9,23 @@ import componentStyles from "./config-editor.css?inline";
 
 const booleanConfig = (value: unknown): boolean =>
 	value === true || value === "true" || value === "1";
+
+const cloneConfig = (value: unknown): any => {
+	if (Array.isArray(value)) {
+		return value.map((item) => cloneConfig(item));
+	}
+
+	if (value && typeof value === "object") {
+		return Object.fromEntries(
+			Object.entries(value as Record<string, unknown>).map(([key, entry]) => [
+				key,
+				cloneConfig(entry),
+			]),
+		);
+	}
+
+	return value;
+};
 
 @customElement("dt3d-config-editor")
 export class DT3DConfigEditor extends LitElement {
@@ -29,9 +47,6 @@ export class DT3DConfigEditor extends LitElement {
 	 * @param config - Configuration object.
 	 */
 	public setConfig(config: any) {
-		const cardConfig = {...config};
-		delete cardConfig.general;
-
 		this._config = {
 			address: "localhost",
 			port: 8080,
@@ -39,7 +54,8 @@ export class DT3DConfigEditor extends LitElement {
 			default_space: "",
 			default_viewport: "",
 			visualization_only: false,
-			...cardConfig,
+			...config,
+			general: normalizeCardGeneralConfig(config?.general ?? config ?? {}),
 		};
 		this._config.default_space =
 			config?.default_space ?? config?.defaultSpace ?? "";
@@ -110,9 +126,7 @@ export class DT3DConfigEditor extends LitElement {
 	/**
 	 * Update the config and fire the "config-changed" event.
 	 *
-	 * This will update the card in the UI.
-	 *
-	 * @param {*} patch
+	 * @param patch - Card configuration patch.
 	 */
 	public updateConfig(patch: any) {
 		this._config = {...this._config, ...patch};
@@ -125,21 +139,48 @@ export class DT3DConfigEditor extends LitElement {
 		);
 	}
 
+	private updateNestedConfig(path: string, value: unknown): void {
+		const nextConfig = cloneConfig(this._config);
+		const keys = path.split(".");
+		let current = nextConfig;
+
+		for (let index = 0; index < keys.length - 1; index += 1) {
+			const key = keys[index];
+			current[key] =
+				current[key] && typeof current[key] === "object"
+					? {...current[key]}
+					: {};
+			current = current[key];
+		}
+
+		current[keys[keys.length - 1]] = value;
+		nextConfig.general = normalizeCardGeneralConfig(nextConfig.general ?? {});
+		this.updateConfig(nextConfig);
+	}
+
 	/**
 	 * Update the config on change.
 	 *
-	 * @param e - Event
+	 * @param event - Input event.
 	 */
-	public onValueChanged(e: any) {
-		const target = e.target as HTMLInputElement;
+	public onValueChanged(event: Event) {
+		const target = event.target as HTMLInputElement;
 		const key = target.dataset.key;
 		if (!key) {
 			return;
 		}
 
-		const value = target.type === "checkbox" ? target.checked : target.value;
+		const value =
+			target.type === "checkbox"
+				? target.checked
+				: target.dataset.valueType === "number"
+					? Number(target.value)
+					: target.value;
 
-		console.log("DT3d: Updating config", key, value);
+		if (key.includes(".")) {
+			this.updateNestedConfig(key, value);
+			return;
+		}
 
 		this.updateConfig({[key]: value});
 		if (key === "address" || key === "port" || key === "service_key") {
@@ -148,8 +189,8 @@ export class DT3DConfigEditor extends LitElement {
 		}
 	}
 
-	private onDefaultSpaceChanged(e: Event): void {
-		const target = e.target as HTMLSelectElement;
+	private onDefaultSpaceChanged(event: Event): void {
+		const target = event.target as HTMLSelectElement;
 		this.updateConfig({
 			default_space: target.value,
 			default_viewport: "",
@@ -176,98 +217,199 @@ export class DT3DConfigEditor extends LitElement {
 			(instance) => instance.type === "viewport",
 		);
 		const visualizationOnly = booleanConfig(this._config.visualization_only);
+		const general = normalizeCardGeneralConfig(this._config.general ?? {});
 
-		const content = html`
+		return html`
 			<div class="config-sections">
-				<section>
-					<h3>${localManager.get("configuration")}</h3>
-					<div>
-						<label>${localManager.get("port")}</label>
-						<input
-							type="number"
-							data-key="port"
-							.value=${port ?? ""}
-							@input=${this.onValueChanged}
-							placeholder="8080"
-						/>
-					</div>
-					<div>
-						<label>${localManager.get("address")}</label>
-						<input
-							type="text"
-							data-key="address"
-							.value=${address ?? ""}
-							@input=${this.onValueChanged}
-							placeholder="localhost"
-						/>
-					</div>
-					<div>
-						<label>${localManager.get("serviceKey")}</label>
-						<input
-							type="password"
-							data-key="service_key"
-							.value=${serviceKey ?? ""}
-							@input=${this.onValueChanged}
-							autocomplete="off"
-						/>
-					</div>
-					${this._spaces.length > 0
-						? html`
-								<div>
-									<label>${localManager.get("defaultSpace")}</label>
-									<select
-										data-key="default_space"
-										.value=${defaultSpace}
-										@change=${this.onDefaultSpaceChanged}>
-										<option value="">
-											${localManager.get("firstAvailableSpace")}
-										</option>
-										${this._spaces.map(
-											(space) => html`<option value=${space.id}>
-												${space.name}
-											</option>`,
-										)}
-									</select>
-									<p>${localManager.get("defaultSpaceDescription")}</p>
-								</div>
-								<div>
-									<label>${localManager.get("cardViewport")}</label>
-									<select
-										data-key="default_viewport"
-										.value=${defaultViewport}
-										@change=${this.onValueChanged}>
-										<option value="">
-											${localManager.get("spaceDefaultViewport")}
-										</option>
-										${viewports.map(
-											(viewport) => html`<option value=${viewport.id}>
-												${viewport.name}
-											</option>`,
-										)}
-									</select>
-									<p>${localManager.get("cardViewportDescription")}</p>
-								</div>
-							`
-						: ""}
-					<div class="checkbox-field">
-						<input
-							id="visualization-only"
-							type="checkbox"
-							data-key="visualization_only"
-							?checked=${visualizationOnly}
-							@change=${this.onValueChanged}
-						/>
-						<div>
-							<label for="visualization-only"
-								>${localManager.get("visualizationOnly")}</label
-							>
-							<p>${localManager.get("visualizationOnlyDescription")}</p>
+				<details open>
+					<summary>${localManager.get("connectionSettings")}</summary>
+					<div class="section-content">
+						<div class="field">
+							<label>${localManager.get("address")}</label>
+							<input
+								type="text"
+								data-key="address"
+								.value=${address ?? ""}
+								@input=${this.onValueChanged}
+								placeholder="http://localhost"
+							/>
+						</div>
+						<div class="field">
+							<label>${localManager.get("port")}</label>
+							<input
+								type="number"
+								data-key="port"
+								.value=${port ?? ""}
+								@input=${this.onValueChanged}
+								placeholder="8080"
+							/>
+						</div>
+						<div class="field">
+							<label>${localManager.get("serviceKey")}</label>
+							<input
+								type="password"
+								data-key="service_key"
+								.value=${serviceKey ?? ""}
+								@input=${this.onValueChanged}
+								autocomplete="off"
+							/>
 						</div>
 					</div>
-				</section>
+				</details>
+
+				<details open>
+					<summary>${localManager.get("viewAndBehavior")}</summary>
+					<div class="section-content">
+						${this._spaces.length > 0
+							? html`
+									<div class="field">
+										<label>${localManager.get("defaultSpace")}</label>
+										<select
+											data-key="default_space"
+											.value=${defaultSpace}
+											@change=${this.onDefaultSpaceChanged}>
+											<option value="">
+												${localManager.get("firstAvailableSpace")}
+											</option>
+											${this._spaces.map(
+												(space) => html`<option value=${space.id}>
+													${space.name}
+												</option>`,
+											)}
+										</select>
+										<p>${localManager.get("defaultSpaceDescription")}</p>
+									</div>
+									<div class="field">
+										<label>${localManager.get("cardViewport")}</label>
+										<select
+											data-key="default_viewport"
+											.value=${defaultViewport}
+											@change=${this.onValueChanged}>
+											<option value="">
+												${localManager.get("spaceDefaultViewport")}
+											</option>
+											${viewports.map(
+												(viewport) => html`<option value=${viewport.id}>
+													${viewport.name}
+												</option>`,
+											)}
+										</select>
+										<p>${localManager.get("cardViewportDescription")}</p>
+									</div>
+								`
+							: ""}
+						<div class="checkbox-field">
+							<input
+								id="visualization-only"
+								type="checkbox"
+								data-key="visualization_only"
+								?checked=${visualizationOnly}
+								@change=${this.onValueChanged}
+							/>
+							<div>
+								<label for="visualization-only"
+									>${localManager.get("visualizationOnly")}</label
+								>
+								<p>${localManager.get("visualizationOnlyDescription")}</p>
+							</div>
+						</div>
+					</div>
+				</details>
+
+				<details open>
+					<summary>${localManager.get("rendering")}</summary>
+					<div class="section-content">
+						<div class="checkbox-field">
+							<input
+								id="rendering-antialiasing"
+								type="checkbox"
+								data-key="general.rendering.antialiasing"
+								?checked=${general.rendering.antialiasing}
+								@change=${this.onValueChanged}
+							/>
+							<div>
+								<label for="rendering-antialiasing"
+									>${localManager.get("antialiasing")}</label
+								>
+								<p>${localManager.get("antialiasingTooltip")}</p>
+							</div>
+						</div>
+						<div class="field">
+							<label>${localManager.get("resolution")}</label>
+							<select
+								data-key="general.rendering.resolution"
+								data-value-type="number"
+								.value=${String(general.rendering.resolution)}
+								@change=${this.onValueChanged}>
+								<option value="1">100%</option>
+								<option value="0.75">75%</option>
+								<option value="0.5">50%</option>
+							</select>
+							<p>${localManager.get("resolutionTooltip")}</p>
+						</div>
+						<div class="subsection">
+							<h4>${localManager.get("shadowMap")}</h4>
+							<div class="checkbox-field">
+								<input
+									id="shadow-map-enabled"
+									type="checkbox"
+									data-key="general.rendering.shadowMap.enabled"
+									?checked=${general.rendering.shadowMap.enabled}
+									@change=${this.onValueChanged}
+								/>
+								<div>
+									<label for="shadow-map-enabled"
+										>${localManager.get("enabled")}</label
+									>
+									<p>${localManager.get("shadowMapEnabledTooltip")}</p>
+								</div>
+							</div>
+							<div class="field">
+								<label>${localManager.get("shadowMapType")}</label>
+								<select
+									data-key="general.rendering.shadowMap.type"
+									.value=${general.rendering.shadowMap.type}
+									@change=${this.onValueChanged}>
+									<option value="basic">
+										${localManager.get("shadowMapBasic")}
+									</option>
+									<option value="pcf">
+										${localManager.get("shadowMapPcf")}
+									</option>
+									<option value="pcf_soft">
+										${localManager.get("shadowMapPcfSoft")}
+									</option>
+									<option value="vsm">
+										${localManager.get("shadowMapVsm")}
+									</option>
+								</select>
+								<p>${localManager.get("shadowMapTypeTooltip")}</p>
+							</div>
+						</div>
+					</div>
+				</details>
+
+				<details>
+					<summary>${localManager.get("developmentMode")}</summary>
+					<div class="section-content">
+						<div class="checkbox-field">
+							<input
+								id="development-mode-enabled"
+								type="checkbox"
+								data-key="general.developmentMode.enabled"
+								?checked=${general.developmentMode.enabled}
+								@change=${this.onValueChanged}
+							/>
+							<div>
+								<label for="development-mode-enabled"
+									>${localManager.get("enabled")}</label
+								>
+								<p>${localManager.get("developmentModeTooltip")}</p>
+							</div>
+						</div>
+					</div>
+				</details>
 			</div>
 		`;
-
-		return content;
 	}
 }

@@ -24,14 +24,20 @@ import {GLTFLoader} from "three/examples/jsm/loaders/GLTFLoader.js";
 import {OBJLoader} from "three/examples/jsm/loaders/OBJLoader.js";
 
 import type {
+	CardGeneralConfig,
 	GeneralConfig,
 	SpaceConfiguration,
+	SpaceGeneralConfig,
 } from "../editor/general-config.js";
 import {
-	hasGeneralConfiguration,
+	hasCardGeneralConfiguration,
 	hasSceneConfiguration,
+	hasSpaceGeneralConfiguration,
+	mergeGeneralConfig,
+	normalizeCardGeneralConfig,
 	normalizeGeneralConfig,
 	normalizeSpaceConfiguration,
+	normalizeSpaceGeneralConfig,
 } from "../editor/general-config.js";
 import {applyImageTextureToMesh} from "../editor/material-texture.js";
 import {MeasurementManager} from "../editor/measurements.js";
@@ -255,6 +261,8 @@ export class DT3DCard extends LitElement {
 	 * Current general rendering/development configuration.
 	 */
 	private generalConfig: GeneralConfig = normalizeGeneralConfig();
+	private cardGeneralConfig: CardGeneralConfig = normalizeCardGeneralConfig();
+	private spaceGeneralConfig: SpaceGeneralConfig = normalizeSpaceGeneralConfig();
 
 	/**
 	 * Current space-level scene configuration.
@@ -427,18 +435,21 @@ export class DT3DCard extends LitElement {
 			config.visualization_only ?? config.visualizationOnly,
 		);
 
-		const cardConfig = {...config};
-		delete cardConfig.general;
+		this.cardGeneralConfig = normalizeCardGeneralConfig(
+			config.general ?? config,
+		);
 
 		const mergedConfig = {
 			port: 8080,
 			service_key: "",
-			...cardConfig,
+			...config,
+			general: this.cardGeneralConfig,
 		};
 		this.config = {
 			...mergedConfig,
 			visualization_only: visualizationOnly,
 		};
+		this.applyGeneralConfig();
 		this.applyVisualizationMode();
 
 		console.log("DT3D: Config set:", this.config);
@@ -470,8 +481,11 @@ export class DT3DCard extends LitElement {
 		}
 	}
 
-	private applyGeneralConfig(config: Partial<GeneralConfig>): void {
-		this.generalConfig = normalizeGeneralConfig(config as Record<string, any>);
+	private applyGeneralConfig(): void {
+		this.generalConfig = mergeGeneralConfig(
+			this.cardGeneralConfig,
+			this.spaceGeneralConfig,
+		);
 		this.rendererManager?.setRenderingConfig(this.generalConfig.rendering);
 		this.sceneManager?.setShadowsEnabled(
 			this.generalConfig.rendering.shadowMap.enabled,
@@ -481,7 +495,7 @@ export class DT3DCard extends LitElement {
 
 	private getSpaceConfiguration(): SpaceConfiguration {
 		return normalizeSpaceConfiguration({
-			general: this.generalConfig,
+			general: this.spaceGeneralConfig,
 			scene: this.spaceSceneConfig,
 		});
 	}
@@ -490,11 +504,12 @@ export class DT3DCard extends LitElement {
 		config: Partial<SpaceConfiguration>,
 	): SpaceConfiguration {
 		const normalized = normalizeSpaceConfiguration({
-			general: config.general ?? this.generalConfig,
+			general: config.general ?? this.spaceGeneralConfig,
 			scene: config.scene ?? this.spaceSceneConfig,
 		});
 
-		this.applyGeneralConfig(normalized.general);
+		this.spaceGeneralConfig = normalized.general;
+		this.applyGeneralConfig();
 		this.spaceSceneConfig = this.sceneManager
 			? this.sceneManager.setSpaceSceneConfig(normalized.scene)
 			: normalizeSpaceSceneConfig(normalized.scene);
@@ -505,12 +520,13 @@ export class DT3DCard extends LitElement {
 
 	private applySpaceConfigFromApi(space: SpaceResponse | null): void {
 		const apiConfig = space?.config ?? {};
-		const hasGeneral = hasGeneralConfiguration(apiConfig);
+		const hasCardGeneral = hasCardGeneralConfiguration(apiConfig);
+		const hasGeneral = hasSpaceGeneralConfiguration(apiConfig);
 		const hasScene = hasSceneConfiguration(apiConfig);
 		const nextConfig = normalizeSpaceConfiguration({
 			general: hasGeneral
 				? (apiConfig.general ?? apiConfig)
-				: this.generalConfig,
+				: normalizeSpaceGeneralConfig(),
 			scene: hasScene
 				? (apiConfig.scene ?? apiConfig.spaceScene)
 				: this.spaceSceneConfig,
@@ -518,7 +534,7 @@ export class DT3DCard extends LitElement {
 
 		this.applySpaceConfiguration(nextConfig);
 
-		if (space && (!hasGeneral || !hasScene)) {
+		if (space && (!hasGeneral || !hasScene || hasCardGeneral)) {
 			void this.persistSpaceConfiguration();
 		}
 	}
@@ -1979,7 +1995,7 @@ export class DT3DCard extends LitElement {
 			width,
 			this.generalConfig.rendering,
 		);
-		this.applyGeneralConfig(this.generalConfig);
+		this.applyGeneralConfig();
 
 		this.cameraToggle = document.createElement(
 			"dt3d-camera-toggle",
@@ -2563,6 +2579,7 @@ export class DT3DCard extends LitElement {
 			service_key: "",
 			default_space: "",
 			default_viewport: "",
+			general: normalizeCardGeneralConfig(),
 		};
 	}
 }
