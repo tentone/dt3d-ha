@@ -52,10 +52,15 @@ export class DT3DConfigEditor extends LitElement {
 			port: 8080,
 			service_key: "",
 			default_space: "",
+			default_viewport: "",
 			general: normalizeGeneralConfig(config?.general ?? {}),
 			visualization_only: false,
 			...config,
 		};
+		this._config.default_space =
+			config?.default_space ?? config?.defaultSpace ?? "";
+		this._config.default_viewport =
+			config?.default_viewport ?? config?.defaultViewport ?? "";
 		this._config.general = normalizeGeneralConfig(this._config.general ?? {});
 		const connectionKey = this.getSpacesConnectionKey();
 		if (connectionKey !== this.spacesConnectionKey) {
@@ -189,6 +194,14 @@ export class DT3DConfigEditor extends LitElement {
 		}
 	}
 
+	private onDefaultSpaceChanged(e: Event): void {
+		const target = e.target as HTMLSelectElement;
+		this.updateConfig({
+			default_space: target.value,
+			default_viewport: "",
+		});
+	}
+
 	/**
 	 * Presented to the user to configure the card.
 	 */
@@ -201,6 +214,13 @@ export class DT3DConfigEditor extends LitElement {
 		const address = this._config.address;
 		const serviceKey = this._config.service_key;
 		const defaultSpace = this._config.default_space ?? "";
+		const defaultViewport =
+			this._config.default_viewport ?? this._config.defaultViewport ?? "";
+		const selectedSpace =
+			this._spaces.find((space) => space.id === defaultSpace) ?? this._spaces[0];
+		const viewports = (selectedSpace?.object_instances ?? []).filter(
+			(instance) => instance.type === "viewport",
+		);
 		const visualizationOnly = booleanConfig(this._config.visualization_only);
 		const general = normalizeGeneralConfig(this._config.general ?? {});
 
@@ -245,7 +265,7 @@ export class DT3DConfigEditor extends LitElement {
 									<select
 										data-key="default_space"
 										.value=${defaultSpace}
-										@change=${this.onValueChanged}>
+										@change=${this.onDefaultSpaceChanged}>
 										<option value="">
 											${localManager.get("firstAvailableSpace")}
 										</option>
@@ -256,6 +276,23 @@ export class DT3DConfigEditor extends LitElement {
 										)}
 									</select>
 									<p>${localManager.get("defaultSpaceDescription")}</p>
+								</div>
+								<div>
+									<label>${localManager.get("cardViewport")}</label>
+									<select
+										data-key="default_viewport"
+										.value=${defaultViewport}
+										@change=${this.onValueChanged}>
+										<option value="">
+											${localManager.get("spaceDefaultViewport")}
+										</option>
+										${viewports.map(
+											(viewport) => html`<option value=${viewport.id}>
+												${viewport.name}
+											</option>`,
+										)}
+									</select>
+									<p>${localManager.get("cardViewportDescription")}</p>
 								</div>
 							`
 						: ""}

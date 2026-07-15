@@ -455,6 +455,11 @@ export class DT3DCard extends LitElement {
 		return typeof value === "string" && value.trim() ? value.trim() : undefined;
 	}
 
+	private getDefaultViewportId(): string | undefined {
+		const value = this.config?.default_viewport ?? this.config?.defaultViewport;
+		return typeof value === "string" && value.trim() ? value.trim() : undefined;
+	}
+
 	private isDevelopmentMode(): boolean {
 		return this.generalConfig.developmentMode.enabled;
 	}
@@ -1509,12 +1514,26 @@ export class DT3DCard extends LitElement {
 	}
 
 	private getViewportById(objectId: string): ViewportObject | null {
-		const object = this.space?.getObjectByProperty(
+		const objectByUuid = this.space?.getObjectByProperty(
 			"uuid",
 			objectId,
 		) as Object3D | null;
+		if (objectByUuid instanceof ViewportObject) {
+			return objectByUuid;
+		}
 
-		return object instanceof ViewportObject ? object : null;
+		let viewport: ViewportObject | null = null;
+		this.space?.traverse((child) => {
+			if (
+				!viewport &&
+				child instanceof ViewportObject &&
+				child.userData.apiId === objectId
+			) {
+				viewport = child;
+			}
+		});
+
+		return viewport;
 	}
 
 	private getDefaultViewport(): ViewportObject | null {
@@ -1573,9 +1592,12 @@ export class DT3DCard extends LitElement {
 			}
 		}
 
-		const defaultViewport = this.getDefaultViewport();
-		if (defaultViewport) {
-			this.activateViewport(defaultViewport);
+		const configuredViewportId = this.getDefaultViewportId();
+		const initialViewport = configuredViewportId
+			? this.getViewportById(configuredViewportId) ?? this.getDefaultViewport()
+			: this.getDefaultViewport();
+		if (initialViewport) {
+			this.activateViewport(initialViewport);
 		}
 	}
 
@@ -1796,6 +1818,7 @@ export class DT3DCard extends LitElement {
 			width: 100%;
 			height: 100%;
 			overflow: hidden;
+			min-height: 300px;
 		`;
 		this.appendChild(this.container);
 
@@ -2541,6 +2564,7 @@ export class DT3DCard extends LitElement {
 			port: 8080,
 			service_key: "",
 			default_space: "",
+			default_viewport: "",
 			general: normalizeGeneralConfig(),
 		};
 	}

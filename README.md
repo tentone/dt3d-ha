@@ -52,6 +52,7 @@ address: http://<home-assistant-host>
 port: 8080
 service_key: <same-key-as-the-add-on>
 default_space: <space-id>
+default_viewport: <viewport-object-id>
 visualization_only: false
 ```
 
@@ -64,6 +65,9 @@ Set `visualization_only: true` to hide editing controls and the object tree
 while keeping camera navigation and object interaction available. The
 `default_space` is selected in the visual card configuration and is the only
 way to choose the displayed space in visualization-only mode.
+`default_viewport` is optional. Select it in the visual card configuration to
+override the space's default saved camera position for this card. Leaving it
+empty keeps the viewport chosen as the default in the space editor.
 
 ### Add-on
 
