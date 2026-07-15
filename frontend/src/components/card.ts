@@ -4,6 +4,7 @@ import "./confirmation-modal/confirmation-modal.js";
 import "./connection-status/connection-status.js";
 import "./form-modal/form-modal.js";
 import "./hint-box/hint-box.js";
+import "./light-menu/light-menu.js";
 import "./mesh-menu/mesh-menu.js";
 import "./object-tree/object-tree.js";
 import "./side-bar/side-bar.js";
@@ -77,6 +78,7 @@ import type {
 	FormModalSubmitDetail,
 } from "./form-modal/form-modal.js";
 import type {DT3DHintBox} from "./hint-box/hint-box.js";
+import type {DT3DLightMenu} from "./light-menu/light-menu.js";
 import type {DT3DMeshMenu} from "./mesh-menu/mesh-menu.js";
 import type {DT3DTree} from "./object-tree/object-tree.js";
 import type {DT3DSidebar} from "./side-bar/side-bar.js";
@@ -87,6 +89,8 @@ import type {SyncProgressComponent} from "./sync-progress-component/sync-progres
 const SPACE_SCENE_CONFIG_STORAGE_KEY = "space-scene-config";
 const GRID_CONFIG_STORAGE_KEY = "grid-config";
 const MODEL_FILE_EXTENSIONS = new Set(["gltf", "glb", "obj", "fbx"]);
+const DEFAULT_CARD_HEIGHT = 300;
+const MASONRY_CARD_UNIT_HEIGHT = 50;
 
 const getFileExtension = (file: File): string | null =>
 	file.name.split(".").pop()?.toLowerCase() ?? null;
@@ -266,6 +270,8 @@ export class DT3DCard extends LitElement {
 	 * Active mesh add menu, if open.
 	 */
 	private meshMenu: DT3DMeshMenu | null = null;
+
+	private lightMenu: DT3DLightMenu | null = null;
 
 	private confirmationModal: DT3DConfirmationModal | null = null;
 
@@ -557,6 +563,8 @@ export class DT3DCard extends LitElement {
 			this.spaceConfigMenu = null;
 			this.meshMenu?.remove();
 			this.meshMenu = null;
+			this.lightMenu?.remove();
+			this.lightMenu = null;
 			this.confirmationModal?.remove();
 			this.confirmationModal = null;
 			this.gridConfigModal?.remove();
@@ -1101,6 +1109,7 @@ export class DT3DCard extends LitElement {
 			this.spaceFormModal ||
 			this.spaceConfigMenu ||
 			this.meshMenu ||
+			this.lightMenu ||
 			this.content?.querySelector("dt3d-add-entity-modal"),
 		);
 	}
@@ -1266,6 +1275,8 @@ export class DT3DCard extends LitElement {
 			this.meshMenu.remove();
 			this.meshMenu = null;
 		}
+		this.lightMenu?.remove();
+		this.lightMenu = null;
 
 		const contentRect = this.content.getBoundingClientRect();
 		const x = Math.max(
@@ -1328,6 +1339,35 @@ export class DT3DCard extends LitElement {
 		});
 
 		return count;
+	}
+
+	/** Open the static-light type menu at the top card level. */
+	private openLightMenu(anchor: { left: number; top: number } | null): void {
+		if (!this.content || this.isVisualizationOnly()) return;
+
+		this.meshMenu?.remove();
+		this.meshMenu = null;
+		this.lightMenu?.remove();
+		const contentRect = this.content.getBoundingClientRect();
+		const menu = document.createElement("dt3d-light-menu") as DT3DLightMenu;
+		menu.x = Math.max(8, Math.min(
+			(anchor?.left ?? contentRect.left + 8) - contentRect.left,
+			contentRect.width - 208,
+		));
+		menu.y = Math.max(8, Math.min(
+			(anchor?.top ?? contentRect.top + 8) - contentRect.top,
+			contentRect.height - 8,
+		));
+		menu.addEventListener("add-object", (event: Event) => {
+			const {type} = (event as CustomEvent<{ type: string }>).detail;
+			this.handleAddObject(type);
+		});
+		menu.addEventListener("modal-close", () => {
+			menu.remove();
+			this.lightMenu = null;
+		});
+		this.lightMenu = menu;
+		this.content.appendChild(menu);
 	}
 
 	/**
@@ -1678,15 +1718,31 @@ export class DT3DCard extends LitElement {
 			this.selectFile();
 		} else if (type === "entity") {
 			this.addEntityModal();
-		} else if (type === "static-light") {
-			const light = new StaticLightObject();
+		} else if (type === "static-light" || type.startsWith("light-")) {
+			const sourceType = type === "light-spot"
+				? "spot"
+				: type === "light-rect-area"
+					? "rect-area"
+					: "point";
+			const light = new StaticLightObject({
+				type: sourceType,
+				intensity: sourceType === "rect-area" ? 5 : 1,
+			});
+			if (sourceType !== "point") {
+				light.rotation.x = -Math.PI / 2;
+			}
 			let lightCount = 0;
 			this.space.traverse((child) => {
 				if (child instanceof StaticLightObject) {
 					lightCount += 1;
 				}
 			});
-			light.name = `${localManager.get("staticLight")} ${lightCount + 1}`;
+			const nameKey = sourceType === "spot"
+				? "spotLight"
+				: sourceType === "rect-area"
+					? "rectAreaLight"
+					: "pointLight";
+			light.name = `${localManager.get(nameKey)} ${lightCount + 1}`;
 			this.addToScene(light);
 		} else if (type === "group") {
 			const group = new Group();
@@ -1708,6 +1764,10 @@ export class DT3DCard extends LitElement {
 	 */
 	public connectedCallback() {
 		window.addEventListener("keydown", this.handleKeyDown);
+		const minimumHeight = this.isInsideMasonryView()
+			? `${DEFAULT_CARD_HEIGHT}px`
+			: "0";
+		this.style.minHeight = minimumHeight;
 
 		if (this.container) {
 			return;
@@ -1718,13 +1778,14 @@ export class DT3DCard extends LitElement {
 		const serviceKey = this.config?.service_key || "";
 
 		const width = 300;
-		const height = 300;
+		const height = DEFAULT_CARD_HEIGHT;
 		this.apiClient = new SpaceApi(address, port, serviceKey);
 
 		this.style.cssText = `
 			overflow: hidden;
 			width: 100%;
 			height: 100%;
+			min-height: ${minimumHeight};
 			display: block;
 			position: relative;
 			border-radius: 10px;
@@ -2103,6 +2164,13 @@ export class DT3DCard extends LitElement {
 			}
 		});
 
+		this.sidebar.addEventListener("light-menu-open", (event: Event) => {
+			if (this.isVisualizationOnly()) return;
+			this.openLightMenu(
+				(event as CustomEvent<{ left: number; top: number } | null>).detail,
+			);
+		});
+
 		this.tree.addEventListener("viewport-set-default", (e: any) => {
 			if (this.isVisualizationOnly()) {
 				return;
@@ -2292,6 +2360,10 @@ export class DT3DCard extends LitElement {
 		}
 		this.clearSceneLongPress();
 		this.clearCanvasClickSuppression();
+		this.meshMenu?.remove();
+		this.meshMenu = null;
+		this.lightMenu?.remove();
+		this.lightMenu = null;
 		this.confirmationModal?.remove();
 		this.confirmationModal = null;
 		this.gridConfigModal?.remove();
@@ -2406,6 +2478,33 @@ export class DT3DCard extends LitElement {
 			throw new Error("DT3D: API client not initialized");
 		}
 		return this.apiClient;
+	}
+
+	/**
+	 * Check whether Home Assistant mounted the card in its masonry view.
+	 *
+	 * Dashboard views use shadow DOM, so walk through the shadow hosts instead
+	 * of relying on `closest()`, which cannot cross those boundaries.
+	 */
+	private isInsideMasonryView(): boolean {
+		let root = this.getRootNode();
+
+		while (root instanceof ShadowRoot) {
+			if (root.host.localName === "hui-masonry-view") {
+				return true;
+			}
+			root = root.host.getRootNode();
+		}
+
+		return false;
+	}
+
+	/**
+	 * Height hint used by Home Assistant to balance masonry columns.
+	 * One masonry size unit is 50 pixels.
+	 */
+	public getCardSize(): number {
+		return Math.ceil(DEFAULT_CARD_HEIGHT / MASONRY_CARD_UNIT_HEIGHT);
 	}
 
 	/**

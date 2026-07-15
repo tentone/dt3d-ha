@@ -228,6 +228,20 @@ export class DT3DSidebar extends LitElement {
 		);
 	}
 
+	/** Open the static-light type menu at card level. */
+	private handleLightMenuOpen(event: MouseEvent) {
+		const target = event.currentTarget as HTMLElement | null;
+		const rect = target?.getBoundingClientRect();
+
+		this.dispatchEvent(
+			new CustomEvent("light-menu-open", {
+				detail: rect ? {left: rect.right + 8, top: rect.top} : null,
+				bubbles: true,
+				composed: true,
+			}),
+		);
+	}
+
 	/**
 	 * Open the space-level scene configuration menu.
 	 */
@@ -366,7 +380,7 @@ export class DT3DSidebar extends LitElement {
 						<ha-icon icon="mdi:state-machine"></ha-icon>
 					</button>
 					<button
-						@click=${() => this.handleAddObject("static-light")}
+						@click=${(event: MouseEvent) => this.handleLightMenuOpen(event)}
 						data-tooltip=${localManager.get("addStaticLight")}
 						aria-label=${localManager.get("addStaticLight")}>
 						<ha-icon icon="mdi:lightbulb-on-outline"></ha-icon>

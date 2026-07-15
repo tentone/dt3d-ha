@@ -9,6 +9,7 @@ import {applyImageTextureToMesh, clearMeshTexture} from "../../editor/material-t
 import {getMeshGeometryParameters, MESH_GEOMETRY_PARAMETER_DEFINITIONS, resolveMeshType, updateMeshGeometry} from "../../editor/mesh-handler.js";
 import {localManager} from "../../locale/locale.js";
 import {DTObject} from "../../objects/dt-object.js";
+import {EntityLight} from "../../objects/entity-light.js";
 import {EntityObject} from "../../objects/entity-object.js";
 import {DoorObject} from "../../objects/house/door.js";
 import {WallObject} from "../../objects/house/wall.js";
@@ -465,39 +466,60 @@ export class DT3DObjectInspector extends LitElement {
 		];
 	}
 
-	private getStaticLightFields(locked: boolean): DynamicFormField[] {
-		if (!(this.selectedObject instanceof StaticLightObject)) {
+	private getLightFields(locked: boolean): DynamicFormField[] {
+		const object = this.selectedObject;
+		if (!(object instanceof StaticLightObject) && !(object instanceof EntityLight)) {
 			return [];
 		}
 
-		return [
+		const fields: DynamicFormField[] = [
 			{
+				label: localManager.get("lightSourceType"),
+				attribute: "sourceType",
+				type: "select",
+				tooltip: localManager.get("lightSourceTypeTooltip"),
+				editable: !locked,
+				enabled: true,
+				options: [
+					{label: localManager.get("pointLight"), value: "point"},
+					{label: localManager.get("spotLight"), value: "spot"},
+					{label: localManager.get("rectAreaLight"), value: "rect-area"},
+				],
+			},
+		];
+
+		if (object instanceof StaticLightObject) {
+			fields.push({
 				label: localManager.get("lightEnabled"),
 				attribute: "enabled",
 				type: "boolean",
 				tooltip: localManager.get("lightEnabledTooltip"),
 				editable: !locked,
 				enabled: true,
-			},
-			{
+			});
+			fields.push({
 				label: localManager.get("lightColor"),
 				attribute: "color",
 				type: "color",
 				tooltip: localManager.get("lightColorTooltip"),
 				editable: !locked,
 				enabled: true,
-			},
-			{
-				label: localManager.get("lightIntensity"),
-				attribute: "intensity",
-				type: "number",
-				tooltip: localManager.get("lightIntensityTooltip"),
-				editable: !locked,
-				enabled: true,
-				min: 0,
-				step: 0.1,
-			},
-			{
+			});
+		}
+
+		fields.push({
+			label: localManager.get("lightIntensity"),
+			attribute: "intensity",
+			type: "number",
+			tooltip: localManager.get("lightIntensityTooltip"),
+			editable: !locked,
+			enabled: true,
+			min: 0,
+			step: 0.1,
+		});
+
+		if (object.sourceType === "point" || object.sourceType === "spot") {
+			fields.push({
 				label: localManager.get("lightDistance"),
 				attribute: "distance",
 				type: "number",
@@ -506,8 +528,8 @@ export class DT3DObjectInspector extends LitElement {
 				enabled: true,
 				min: 0,
 				step: 0.1,
-			},
-			{
+			});
+			fields.push({
 				label: localManager.get("lightDecay"),
 				attribute: "decay",
 				type: "number",
@@ -516,16 +538,16 @@ export class DT3DObjectInspector extends LitElement {
 				enabled: true,
 				min: 0,
 				step: 0.1,
-			},
-			{
+			});
+			fields.push({
 				label: localManager.get("lightCastsShadows"),
 				attribute: "castsShadows",
 				type: "boolean",
 				tooltip: localManager.get("lightCastsShadowsTooltip"),
 				editable: !locked,
 				enabled: true,
-			},
-			{
+			});
+			fields.push({
 				label: localManager.get("lightShadowBias"),
 				attribute: "shadowBias",
 				type: "number",
@@ -533,8 +555,62 @@ export class DT3DObjectInspector extends LitElement {
 				editable: !locked,
 				enabled: true,
 				step: 0.0001,
-			},
-		];
+			});
+		}
+
+		if (object.sourceType === "spot") {
+			fields.push(
+				{
+					label: localManager.get("lightAngle"),
+					attribute: "angle",
+					type: "number",
+					tooltip: localManager.get("lightAngleTooltip"),
+					editable: !locked,
+					enabled: true,
+					min: 1,
+					max: 90,
+					step: 1,
+				},
+				{
+					label: localManager.get("lightPenumbra"),
+					attribute: "penumbra",
+					type: "number",
+					tooltip: localManager.get("lightPenumbraTooltip"),
+					editable: !locked,
+					enabled: true,
+					min: 0,
+					max: 1,
+					step: 0.05,
+				},
+			);
+		}
+
+		if (object.sourceType === "rect-area") {
+			fields.push(
+				{
+					label: localManager.get("lightWidth"),
+					attribute: "width",
+					type: "number",
+					tooltip: localManager.get("lightWidthTooltip"),
+					editable: !locked,
+					enabled: true,
+					min: 0.01,
+					step: 0.1,
+				},
+				{
+					label: localManager.get("lightHeight"),
+					attribute: "height",
+					type: "number",
+					tooltip: localManager.get("lightHeightTooltip"),
+					editable: !locked,
+					enabled: true,
+					min: 0.01,
+					step: 0.1,
+				},
+			);
+		}
+
+		return fields;
 	}
 
 	private getEntityData(): Record<string, unknown> | null {
@@ -600,7 +676,7 @@ export class DT3DObjectInspector extends LitElement {
 			fields,
 			"light",
 			localManager.get("lighting"),
-			this.getStaticLightFields(locked),
+			this.getLightFields(locked),
 		);
 		this.addSubFormField(
 			fields,

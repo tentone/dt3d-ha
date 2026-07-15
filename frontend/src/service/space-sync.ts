@@ -6,6 +6,7 @@ import {applyTextureToMesh} from "../editor/material-texture.js";
 import {createMeshObject, getMeshGeometryParameters} from "../editor/mesh-handler.js";
 import type {CameraViewportConfig, SceneManager} from "../editor/scene.js";
 import {DTObject} from "../objects/dt-object.js";
+import {EntityLight} from "../objects/entity-light.js";
 import {EntityObject} from "../objects/entity-object.js";
 import {DoorObject} from "../objects/house/door.js";
 import {WallObject} from "../objects/house/wall.js";
@@ -510,6 +511,9 @@ export class SpaceSync {
 			object = this.createEntityObject(entityId);
 			if (object) {
 				object.userData.entityId = entityId;
+				if (object instanceof EntityLight && data.light) {
+					object.setLightSettings(data.light);
+				}
 			}
 		} else if (instanceType === "viewport") {
 			const viewport = data.viewport as Partial<CameraViewportConfig> | undefined;
@@ -581,7 +585,7 @@ export class SpaceSync {
 
 		if (object instanceof StaticLightObject) {
 			type = declaredType ?? "static-light";
-			data.light = object.getSettings();
+			data.light = object.getLightSettings();
 		} else if (object instanceof ViewportObject) {
 			type = declaredType ?? "viewport";
 			data.viewport = object.getViewportConfig();
@@ -589,6 +593,9 @@ export class SpaceSync {
 		} else if (object instanceof EntityObject) {
 			type = declaredType ?? "entity";
 			data.entityId = object.entityId;
+			if (object instanceof EntityLight) {
+				data.light = object.getLightSettings();
+			}
 		} else if (object instanceof WallObject) {
 			type = declaredType ?? "mesh";
 			data.meshType = "wall";

@@ -1,26 +1,30 @@
 import {mdiLightbulb} from "@mdi/js";
-import {Color, PointLight} from "three";
+import {Color} from "three";
 
 import {resolveHaIconPath} from "../utils/icon-utils.js";
 import type {DTInteractionEvent} from "./dt-object.js";
 import {EntityObject} from "./entity-object.js";
 import {IconSprite} from "./helpers/icon-sprite.js";
 import {TextSprite} from "./helpers/text-sprite.js";
+import type {LightSourceSettings, LightSourceType} from "./light-source.js";
+import {LightSource} from "./light-source.js";
 
 export class EntityLight extends EntityObject {
 	private icon: IconSprite;
 
-	/**
-	 * Point light to represent the light.
-	 */
-	private light: PointLight;
+	/** Configurable light source used to illuminate the scene. */
+	private lightSource: LightSource;
 
 	/**
 	 * Label with name of the entity.
 	 */
 	private label: TextSprite;
 
-	public constructor(entityId: string, entity: any) {
+	public constructor(
+		entityId: string,
+		entity: any,
+		settings: Partial<LightSourceSettings> = {},
+	) {
 		super(entityId);
 
 		const color = EntityLight.getLightColor(entity);
@@ -33,11 +37,9 @@ export class EntityLight extends EntityObject {
 		this.icon.position.y = 0.25;
 		this.add(this.icon);
 
-		this.light = new PointLight(0x555555, 0, 6, 2);
-		this.light.internal = true;
-		this.light.castShadow = true;
-		this.light.position.y = 0.6;
-		this.add(this.light);
+		this.lightSource = new LightSource({distance: 6, ...settings});
+		this.lightSource.position.y = 0.6;
+		this.add(this.lightSource);
 
 		const friendlyName = this.friendlyName(entity);
 
@@ -60,11 +62,46 @@ export class EntityLight extends EntityObject {
 		this.icon.setColor(color.getHex());
 		this.icon.setIcon(EntityLight.getIconPath(entity));
 
-		this.light.color = color;
-		this.light.intensity = entity.state === "on" ? 1 : 0;
+		this.lightSource.setColor(`#${color.getHexString()}`);
+		this.lightSource.enabled = entity.state === "on";
 
 		const friendlyName = entity.attributes?.friendly_name ?? this.name;
 		this.label.setText(friendlyName);
+	}
+
+	public get sourceType(): LightSourceType {return this.lightSource.sourceType;}
+	public set sourceType(value: LightSourceType) {this.lightSource.sourceType = value;}
+	public get intensity(): number {return this.lightSource.intensity;}
+	public set intensity(value: number) {this.lightSource.intensity = value;}
+	public get distance(): number {return this.lightSource.distance;}
+	public set distance(value: number) {this.lightSource.distance = value;}
+	public get decay(): number {return this.lightSource.decay;}
+	public set decay(value: number) {this.lightSource.decay = value;}
+	public get angle(): number {return this.lightSource.angle;}
+	public set angle(value: number) {this.lightSource.angle = value;}
+	public get penumbra(): number {return this.lightSource.penumbra;}
+	public set penumbra(value: number) {this.lightSource.penumbra = value;}
+	public get width(): number {return this.lightSource.width;}
+	public set width(value: number) {this.lightSource.width = value;}
+	public get height(): number {return this.lightSource.height;}
+	public set height(value: number) {this.lightSource.height = value;}
+	public get castsShadows(): boolean {return this.lightSource.castsShadows;}
+	public set castsShadows(value: boolean) {this.lightSource.castsShadows = value;}
+	public get shadowBias(): number {return this.lightSource.shadowBias;}
+	public set shadowBias(value: number) {this.lightSource.shadowBias = value;}
+
+	public setLightSettings(settings: Partial<LightSourceSettings>): void {
+		this.lightSource.applySettings(settings);
+		const entity = this.getEntity();
+		if (entity) this.updateFromEntity(entity);
+	}
+
+	public getLightSettings(): LightSourceSettings {
+		return this.lightSource.getSettings();
+	}
+
+	public override dispose(): void {
+		this.lightSource.dispose();
 	}
 
 	/**
