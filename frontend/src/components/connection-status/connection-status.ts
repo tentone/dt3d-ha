@@ -66,8 +66,11 @@ export class ConnectionStatus extends LitElement {
 	}
 
 	public render() {
-		return html`<div style="margin: 5px;" class="${this.success ? "connection-status-success" : "connection-status-error"}">
-			${this.msg}<br>${BUILD_TIMESTAMP}
+		return html`
+		<div class="connection-status-container">
+			<div style="margin: 5px;" class="${this.success ? "connection-status-success" : "connection-status-error"}">
+				${this.msg}<br>${BUILD_TIMESTAMP}
+			</div>
 		</div>`;
 	}
 }
