@@ -695,6 +695,30 @@ export class SceneManager {
 	}
 
 	/**
+	 * Position the camera on a world axis while preserving its orbit target and
+	 * distance from that target.
+	 *
+	 * @param direction - Axis pointing from the orbit target to the camera.
+	 */
+	public orientCamera(direction: Vector3): void {
+		if (direction.lengthSq() === 0) {
+			return;
+		}
+
+		const distance = Math.max(
+			this.controls.target.distanceTo(this.camera.position),
+			0.1,
+		);
+		this.camera.position
+			.copy(this.controls.target)
+			.add(direction.clone().normalize().multiplyScalar(distance));
+		this.camera.lookAt(this.controls.target);
+		this.camera.updateMatrixWorld();
+		this.controls.update();
+		this.updateGridPosition();
+	}
+
+	/**
 	 * Capture the current camera position, orientation and projection mode.
 	 */
 	public captureViewportConfig(): CameraViewportConfig {

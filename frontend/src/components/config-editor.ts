@@ -53,6 +53,7 @@ export class DT3DConfigEditor extends LitElement {
 			service_key: "",
 			default_space: "",
 			default_viewport: "",
+			orientation_cube: false,
 			visualization_only: false,
 			...config,
 			general: normalizeCardGeneralConfig(config?.general ?? config ?? {}),
@@ -61,6 +62,9 @@ export class DT3DConfigEditor extends LitElement {
 			config?.default_space ?? config?.defaultSpace ?? "";
 		this._config.default_viewport =
 			config?.default_viewport ?? config?.defaultViewport ?? "";
+		this._config.orientation_cube = booleanConfig(
+			config?.orientation_cube ?? config?.orientationCube,
+		);
 		const connectionKey = this.getSpacesConnectionKey();
 		if (connectionKey !== this.spacesConnectionKey) {
 			this.spacesConnectionKey = connectionKey;
@@ -217,6 +221,7 @@ export class DT3DConfigEditor extends LitElement {
 			(instance) => instance.type === "viewport",
 		);
 		const visualizationOnly = booleanConfig(this._config.visualization_only);
+		const orientationCube = booleanConfig(this._config.orientation_cube);
 		const general = normalizeCardGeneralConfig(this._config.general ?? {});
 
 		return html`
@@ -298,6 +303,21 @@ export class DT3DConfigEditor extends LitElement {
 									</div>
 								`
 							: ""}
+						<div class="checkbox-field">
+							<input
+								id="orientation-cube"
+								type="checkbox"
+								data-key="orientation_cube"
+								?checked=${orientationCube}
+								@change=${this.onValueChanged}
+							/>
+							<div>
+								<label for="orientation-cube"
+									>${localManager.get("orientationCube")}</label
+								>
+								<p>${localManager.get("orientationCubeDescription")}</p>
+							</div>
+						</div>
 						<div class="checkbox-field">
 							<input
 								id="visualization-only"

@@ -53,6 +53,7 @@ port: 8080
 service_key: <same-key-as-the-add-on>
 default_space: <space-id>
 default_viewport: <viewport-object-id>
+orientation_cube: false
 visualization_only: false
 general:
   rendering:
@@ -77,6 +78,9 @@ way to choose the displayed space in visualization-only mode.
 `default_viewport` is optional. Select it in the visual card configuration to
 override the space's default saved camera position for this card. Leaving it
 empty keeps the viewport chosen as the default in the space editor.
+Set `orientation_cube: true` to show a navigation cube. Double-click one of its
+faces to align the camera with the corresponding front, back, left, right, top,
+or bottom view. The cube is disabled by default.
 Anti-aliasing, render resolution, shadow maps, and development mode are scoped
 to each card. Tone mapping, post-processing, and scene appearance remain scoped
 to the selected space.

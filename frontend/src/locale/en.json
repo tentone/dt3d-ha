@@ -227,6 +227,8 @@
 	"cardViewport": "Viewport",
 	"spaceDefaultViewport": "Space default viewport",
 	"cardViewportDescription": "Saved camera position shown when the card opens. Leave this set to the space default to follow the viewport selected in the space editor.",
+	"orientationCube": "Orientation cube",
+	"orientationCubeDescription": "Show a 3D navigation cube. Double-click a face to align the camera to that view.",
 	"visualizationOnly": "Visualization only",
 	"visualizationOnlyDescription": "Hide editing controls and object tree, while allowing navigation and object interaction.",
 	"rendering": "Rendering",

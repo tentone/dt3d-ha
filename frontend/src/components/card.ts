@@ -7,6 +7,7 @@ import "./hint-box/hint-box.js";
 import "./light-menu/light-menu.js";
 import "./mesh-menu/mesh-menu.js";
 import "./object-tree/object-tree.js";
+import "./orientation-cube/orientation-cube.js";
 import "./side-bar/side-bar.js";
 import "./space-config-menu/space-config-menu.js";
 import "./space-selector/space-selector.js";
@@ -87,6 +88,10 @@ import type {DT3DHintBox} from "./hint-box/hint-box.js";
 import type {DT3DLightMenu} from "./light-menu/light-menu.js";
 import type {DT3DMeshMenu} from "./mesh-menu/mesh-menu.js";
 import type {DT3DTree} from "./object-tree/object-tree.js";
+import type {
+	DT3DOrientationCube,
+	OrientationCubeDirection,
+} from "./orientation-cube/orientation-cube.js";
 import type {DT3DSidebar} from "./side-bar/side-bar.js";
 import type {DT3DSpaceConfigMenu} from "./space-config-menu/space-config-menu.js";
 import type {DT3DSpaceSelector} from "./space-selector/space-selector.js";
@@ -174,6 +179,8 @@ export class DT3DCard extends LitElement {
 	private syncProgressComponent: SyncProgressComponent | null = null;
 
 	private cameraToggle: DT3DCameraToggle | null = null;
+
+	private orientationCube: DT3DOrientationCube | null = null;
 
 	private spaceSelector: DT3DSpaceSelector | null = null;
 
@@ -434,6 +441,9 @@ export class DT3DCard extends LitElement {
 		const visualizationOnly = booleanConfig(
 			config.visualization_only ?? config.visualizationOnly,
 		);
+		const orientationCube = booleanConfig(
+			config.orientation_cube ?? config.orientationCube,
+		);
 
 		this.cardGeneralConfig = normalizeCardGeneralConfig(
 			config.general ?? config,
@@ -447,6 +457,7 @@ export class DT3DCard extends LitElement {
 		};
 		this.config = {
 			...mergedConfig,
+			orientation_cube: orientationCube,
 			visualization_only: visualizationOnly,
 		};
 		this.applyGeneralConfig();
@@ -457,6 +468,43 @@ export class DT3DCard extends LitElement {
 
 	private isVisualizationOnly(): boolean {
 		return this.config?.visualization_only === true;
+	}
+
+	private isOrientationCubeEnabled(): boolean {
+		return this.config?.orientation_cube === true;
+	}
+
+	private applyOrientationCubeVisibility(): void {
+		if (!this.content || !this.sceneManager) {
+			return;
+		}
+
+		if (!this.isOrientationCubeEnabled()) {
+			this.orientationCube?.remove();
+			this.orientationCube = null;
+			return;
+		}
+
+		if (!this.orientationCube) {
+			this.orientationCube = document.createElement("dt3d-orientation-cube");
+			this.orientationCube.addEventListener(
+				"orientation-select",
+				(event: Event) => {
+					const direction = (event as CustomEvent<OrientationCubeDirection>)
+						.detail;
+					this.sceneManager.orientCamera(
+						new Vector3(direction.x, direction.y, direction.z),
+					);
+				},
+			);
+			this.content.appendChild(this.orientationCube);
+		}
+
+		this.orientationCube.camera = this.sceneManager.camera;
+		this.orientationCube.style.left = this.isVisualizationOnly()
+			? "16px"
+			: "146px";
+		this.orientationCube.style.bottom = "16px";
 	}
 
 	private getDefaultSpaceId(): string | undefined {
@@ -610,6 +658,7 @@ export class DT3DCard extends LitElement {
 
 		this.applyGridVisibility();
 		this.updateHintMessage();
+		this.applyOrientationCubeVisibility();
 	}
 
 	private applyGridVisibility(): void {
@@ -1721,6 +1770,9 @@ export class DT3DCard extends LitElement {
 		this.controls = this.sceneManager.controls;
 		this.transform = this.sceneManager.transform;
 		this.rendererManager.setCamera(this.camera);
+		if (this.orientationCube) {
+			this.orientationCube.camera = this.camera;
+		}
 
 		if (this.cameraToggle) {
 			this.cameraToggle.mode = this.sceneManager.getCameraMode();
@@ -1996,6 +2048,7 @@ export class DT3DCard extends LitElement {
 			this.generalConfig.rendering,
 		);
 		this.applyGeneralConfig();
+		this.applyOrientationCubeVisibility();
 
 		this.cameraToggle = document.createElement(
 			"dt3d-camera-toggle",
@@ -2007,6 +2060,9 @@ export class DT3DCard extends LitElement {
 			this.sceneManager.setCameraMode(mode);
 			this.camera = this.sceneManager.camera;
 			this.rendererManager.setCamera(this.camera);
+			if (this.orientationCube) {
+				this.orientationCube.camera = this.camera;
+			}
 		});
 
 		this.content.appendChild(this.cameraToggle);
@@ -2579,6 +2635,7 @@ export class DT3DCard extends LitElement {
 			service_key: "",
 			default_space: "",
 			default_viewport: "",
+			orientation_cube: false,
 			general: normalizeCardGeneralConfig(),
 		};
 	}
