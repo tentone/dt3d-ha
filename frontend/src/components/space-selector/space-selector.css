@@ -2,7 +2,6 @@
 	position: absolute;
 	top: 16px;
 	left: 50%;
-	z-index: 5;
 	max-width: min(360px, calc(100% - 160px));
 }
 

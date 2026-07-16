@@ -182,6 +182,8 @@ export class DT3DCard extends LitElement {
 
 	private orientationCube: DT3DOrientationCube | null = null;
 
+	private objectTreeResizeObserver: ResizeObserver | null = null;
+
 	private spaceSelector: DT3DSpaceSelector | null = null;
 
 	private connectionStatus: ConnectionStatus | null = null;
@@ -480,6 +482,8 @@ export class DT3DCard extends LitElement {
 		}
 
 		if (!this.isOrientationCubeEnabled()) {
+			this.objectTreeResizeObserver?.disconnect();
+			this.objectTreeResizeObserver = null;
 			this.orientationCube?.remove();
 			this.orientationCube = null;
 			return;
@@ -501,9 +505,23 @@ export class DT3DCard extends LitElement {
 		}
 
 		this.orientationCube.camera = this.sceneManager.camera;
-		this.orientationCube.style.left = this.isVisualizationOnly()
-			? "16px"
-			: "146px";
+		if (this.tree && !this.objectTreeResizeObserver) {
+			this.objectTreeResizeObserver = new ResizeObserver(() => {
+				this.updateOrientationCubePosition();
+			});
+			this.objectTreeResizeObserver.observe(this.tree);
+		}
+		this.updateOrientationCubePosition();
+	}
+
+	private updateOrientationCubePosition(): void {
+		if (!this.orientationCube) {
+			return;
+		}
+
+		const treeWidth = this.tree?.getBoundingClientRect().width ?? 0;
+		this.orientationCube.style.left = "auto";
+		this.orientationCube.style.right = `${treeWidth + 16}px`;
 		this.orientationCube.style.bottom = "16px";
 	}
 
@@ -1858,6 +1876,7 @@ export class DT3DCard extends LitElement {
 		this.style.minHeight = minimumHeight;
 
 		if (this.container) {
+			this.applyOrientationCubeVisibility();
 			return;
 		}
 
@@ -2447,6 +2466,8 @@ export class DT3DCard extends LitElement {
 
 	public disconnectedCallback(): void {
 		window.removeEventListener("keydown", this.handleKeyDown);
+		this.objectTreeResizeObserver?.disconnect();
+		this.objectTreeResizeObserver = null;
 		if (this.persistSpaceConfigTimer !== null) {
 			window.clearTimeout(this.persistSpaceConfigTimer);
 			this.persistSpaceConfigTimer = null;

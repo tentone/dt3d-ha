@@ -65,10 +65,6 @@ export class DT3DOrientationCube extends HTMLElement {
 						width: ${CUBE_SIZE}px;
 						height: ${CUBE_SIZE}px;
 						z-index: 5;
-						border-radius: 12px;
-						background: rgba(0, 0, 0, 0.48);
-						box-shadow: 0 4px 12px rgba(0, 0, 0, 0.24);
-						overflow: hidden;
 					}
 
 					canvas {
