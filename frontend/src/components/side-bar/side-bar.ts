@@ -1,7 +1,7 @@
-import {html, LitElement, type PropertyValues,unsafeCSS} from "lit";
+import {html, LitElement, type PropertyValues, unsafeCSS} from "lit";
 import {customElement} from "lit/decorators.js";
 import tippy, {type Instance, type Props} from "tippy.js";
-import tippyStyles from  "tippy.js/dist/tippy.css?inline";
+import tippyStyles from "tippy.js/dist/tippy.css?inline";
 
 import {localManager} from "../../locale/locale.js";
 import {LocalStorage} from "../../utils/local-storage.js";
@@ -264,8 +264,9 @@ export class DT3DSidebar extends LitElement {
 	private createTooltips() {
 		this.destroyTooltips();
 
-
-		const tooltipTargets: NodeListOf<HTMLElement> = this.renderRoot?.querySelectorAll<HTMLElement>("[data-tooltip]") ?? [];
+		const tooltipTargets: NodeListOf<HTMLElement> =
+			this.renderRoot?.querySelectorAll<HTMLElement>("[data-tooltip]") ??
+			[];
 
 		tooltipTargets.forEach((element) => {
 			const content = element.dataset.tooltip;
@@ -277,7 +278,8 @@ export class DT3DSidebar extends LitElement {
 			const instance = tippy(element, {
 				content,
 				placement: "right",
-				appendTo: document.body
+				theme: "dt3d-sidebar",
+				appendTo: () => this.renderRoot as unknown as Element,
 			});
 
 			this.tooltipInstances.push(instance);

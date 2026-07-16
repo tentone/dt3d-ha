@@ -101,3 +101,28 @@ button.selected {
 	background: var(--ha-color-primary-30);
 }
 
+.tippy-box[data-theme~="dt3d-sidebar"] {
+	background-color: var(--ha-color-neutral-10, #1c1c1c);
+	color: var(--ha-color-neutral-95, #f5f5f5);
+}
+
+.tippy-box[data-theme~="dt3d-sidebar"][data-placement^="top"]
+	> .tippy-arrow::before {
+	border-top-color: var(--ha-color-neutral-10, #1c1c1c);
+}
+
+.tippy-box[data-theme~="dt3d-sidebar"][data-placement^="bottom"]
+	> .tippy-arrow::before {
+	border-bottom-color: var(--ha-color-neutral-10, #1c1c1c);
+}
+
+.tippy-box[data-theme~="dt3d-sidebar"][data-placement^="left"]
+	> .tippy-arrow::before {
+	border-left-color: var(--ha-color-neutral-10, #1c1c1c);
+}
+
+.tippy-box[data-theme~="dt3d-sidebar"][data-placement^="right"]
+	> .tippy-arrow::before {
+	border-right-color: var(--ha-color-neutral-10, #1c1c1c);
+}
+
