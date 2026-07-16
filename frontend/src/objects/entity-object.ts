@@ -1,5 +1,6 @@
 import type {Object3D} from "three";
 
+import type {EntityActionOverride} from "../editor/entity-actions.js";
 import type {DTInteractionEvent} from "./dt-object.js";
 import {DTObject} from "./dt-object.js";
 
@@ -27,6 +28,11 @@ export abstract class EntityObject extends DTObject {
 	 * ID of the HA entity associated.
 	 */
 	public readonly entityId: string;
+
+	/** Per-entity action overrides; "default" inherits the card setting. */
+	public clickAction: EntityActionOverride = "default";
+
+	public doubleClickAction: EntityActionOverride = "default";
 
 	/**
 	 * Entity data.
@@ -70,6 +76,13 @@ export abstract class EntityObject extends DTObject {
 
 	public override onInteraction(event: DTInteractionEvent): void {
 		this.updateHoverLabel(event);
+	}
+
+	public override copy(source: this, recursive: boolean = true): this {
+		super.copy(source, recursive);
+		this.clickAction = source.clickAction;
+		this.doubleClickAction = source.doubleClickAction;
+		return this;
 	}
 
 	/**

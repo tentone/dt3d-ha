@@ -1,7 +1,6 @@
 import {mdiToggleSwitch, mdiToggleSwitchOff} from "@mdi/js";
 
 import {resolveHaIconPath} from "../utils/icon-utils.js";
-import type {DTInteractionEvent} from "./dt-object.js";
 import {EntityObject} from "./entity-object.js";
 import {CSSText} from "./helpers/css-text.js";
 import {IconSprite} from "./helpers/icon-sprite.js";
@@ -38,14 +37,6 @@ export class EntitySwitch extends EntityObject {
 
 		this.icon.setColor(EntitySwitch.getStateColor(entity.state));
 		this.icon.setIcon(EntitySwitch.getIconPath(entity));
-	}
-
-	public onInteraction(event: DTInteractionEvent): void {
-		super.onInteraction(event);
-
-		if (event.type === "dblclick") {
-			this.toggle((event as any).hass ?? null);
-		}
 	}
 
 	/**

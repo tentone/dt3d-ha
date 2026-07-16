@@ -55,6 +55,8 @@ default_space: <space-id>
 default_viewport: <viewport-object-id>
 orientation_cube: false
 visualization_only: false
+entity_click_action: nothing
+entity_double_click_action: toggle
 general:
   rendering:
     antialiasing: false
@@ -81,6 +83,12 @@ empty keeps the viewport chosen as the default in the space editor.
 Set `orientation_cube: true` to show a navigation cube. Double-click one of its
 faces to align the camera with the corresponding front, back, left, right, top,
 or bottom view. The cube is disabled by default.
+Use `entity_click_action` and `entity_double_click_action` to choose the default
+entity interaction for each gesture. Supported values are `open`, `toggle`, and
+`nothing`. The defaults are `nothing` for a click and `toggle` for a double-click.
+Each entity can override these settings in the object inspector. The inspector
+only offers Toggle for entity types that support it; other entity types can use
+Open entity, Nothing, or inherit the card default.
 Anti-aliasing, render resolution, shadow maps, and development mode are scoped
 to each card. Tone mapping, post-processing, and scene appearance remain scoped
 to the selected space.

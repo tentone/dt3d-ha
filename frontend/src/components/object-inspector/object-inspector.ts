@@ -5,6 +5,7 @@ import {customElement, property} from "lit/decorators.js";
 import type {Object3D} from "three";
 import {Mesh} from "three";
 
+import {normalizeEntityActionOverride} from "../../editor/entity-actions.js";
 import {
 	changeMaterialType,
 	findMaterialObject,
@@ -26,7 +27,7 @@ import {
 import {localManager} from "../../locale/locale.js";
 import {DTObject} from "../../objects/dt-object.js";
 import {EntityLight} from "../../objects/entity-light.js";
-import {EntityObject} from "../../objects/entity-object.js";
+import {EntityObject, isToggleable} from "../../objects/entity-object.js";
 import {DoorObject} from "../../objects/house/door.js";
 import {WallObject} from "../../objects/house/wall.js";
 import {WindowObject} from "../../objects/house/window.js";
@@ -187,6 +188,18 @@ export class DT3DObjectInspector extends LitElement {
 			} else if (this.selectedObject instanceof WindowObject) {
 				this.selectedObject.setOpen(Boolean(value));
 			}
+		} else if (
+			attribute === "clickAction" ||
+			attribute === "doubleClickAction"
+		) {
+			if (!(this.selectedObject instanceof EntityObject)) {
+				return;
+			}
+			const action = normalizeEntityActionOverride(value);
+			if (action === "toggle" && !isToggleable(this.selectedObject)) {
+				return;
+			}
+			this.selectedObject[attribute] = action;
 		} else {
 			this.setNestedAttribute(this.selectedObject, attribute, value);
 		}
@@ -450,10 +463,18 @@ export class DT3DObjectInspector extends LitElement {
 		}));
 	}
 
-	private getEntityFields(): DynamicFormField[] {
+	private getEntityFields(locked: boolean): DynamicFormField[] {
 		if (!(this.selectedObject instanceof EntityObject)) {
 			return [];
 		}
+		const actionOptions = [
+			{label: localManager.get("cardDefaultAction"), value: "default"},
+			{label: localManager.get("openEntity"), value: "open"},
+			...(isToggleable(this.selectedObject)
+				? [{label: localManager.get("toggleEntity"), value: "toggle"}]
+				: []),
+			{label: localManager.get("nothing"), value: "nothing"},
+		];
 
 		return [
 			{
@@ -476,6 +497,24 @@ export class DT3DObjectInspector extends LitElement {
 				type: "info",
 				editable: false,
 				enabled: true,
+			},
+			{
+				label: localManager.get("entityClickAction"),
+				attribute: "clickAction",
+				type: "select",
+				tooltip: localManager.get("entityClickActionDescription"),
+				editable: !locked,
+				enabled: true,
+				options: actionOptions,
+			},
+			{
+				label: localManager.get("entityDoubleClickAction"),
+				attribute: "doubleClickAction",
+				type: "select",
+				tooltip: localManager.get("entityDoubleClickActionDescription"),
+				editable: !locked,
+				enabled: true,
+				options: actionOptions,
 			},
 		];
 	}
@@ -661,6 +700,8 @@ export class DT3DObjectInspector extends LitElement {
 			entityId: this.selectedObject.entityId,
 			entityName: friendlyName,
 			entityState: String(stateValue),
+			clickAction: this.selectedObject.clickAction,
+			doubleClickAction: this.selectedObject.doubleClickAction,
 		};
 	}
 
@@ -730,7 +771,7 @@ export class DT3DObjectInspector extends LitElement {
 			fields,
 			"entity",
 			localManager.get("entity"),
-			this.getEntityFields(),
+			this.getEntityFields(locked),
 			entityData,
 		);
 

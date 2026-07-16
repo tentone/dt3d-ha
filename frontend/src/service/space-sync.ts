@@ -10,6 +10,7 @@ import {
 } from "three";
 
 import type {DT3DTree} from "../components/object-tree/object-tree.js";
+import {normalizeEntityActionOverride} from "../editor/entity-actions.js";
 import {applyTextureToMesh} from "../editor/material-texture.js";
 import {
 	createMeshObject,
@@ -566,6 +567,12 @@ export class SpaceSync {
 			object = this.createEntityObject(entityId);
 			if (object) {
 				object.userData.entityId = entityId;
+				if (object instanceof EntityObject) {
+					object.clickAction = normalizeEntityActionOverride(data.clickAction);
+					object.doubleClickAction = normalizeEntityActionOverride(
+						data.doubleClickAction,
+					);
+				}
 				if (object instanceof EntityLight && data.light) {
 					object.setLightSettings(data.light);
 				}
@@ -657,6 +664,8 @@ export class SpaceSync {
 		} else if (object instanceof EntityObject) {
 			type = declaredType ?? "entity";
 			data.entityId = object.entityId;
+			data.clickAction = object.clickAction;
+			data.doubleClickAction = object.doubleClickAction;
 			if (object instanceof EntityLight) {
 				data.light = object.getLightSettings();
 			}

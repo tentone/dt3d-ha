@@ -25,6 +25,11 @@ import {GLTFLoader} from "three/examples/jsm/loaders/GLTFLoader.js";
 import {OBJLoader} from "three/examples/jsm/loaders/OBJLoader.js";
 
 import type {
+	EntityAction,
+	EntityInteractionConfig,
+} from "../editor/entity-actions.js";
+import {normalizeEntityInteractionConfig} from "../editor/entity-actions.js";
+import type {
 	CardGeneralConfig,
 	GeneralConfig,
 	SpaceConfiguration,
@@ -102,6 +107,7 @@ const GRID_CONFIG_STORAGE_KEY = "grid-config";
 const MODEL_FILE_EXTENSIONS = new Set(["gltf", "glb", "obj", "fbx"]);
 const DEFAULT_CARD_HEIGHT = 300;
 const MASONRY_CARD_UNIT_HEIGHT = 50;
+const ENTITY_CLICK_DELAY = 300;
 
 const getFileExtension = (file: File): string | null =>
 	file.name.split(".").pop()?.toLowerCase() ?? null;
@@ -239,6 +245,11 @@ export class DT3DCard extends LitElement {
 	private suppressNextCanvasClick = false;
 
 	private suppressNextCanvasClickTimer: number | null = null;
+
+	private pendingEntityClickTimer: number | null = null;
+
+	private entityInteractions: EntityInteractionConfig =
+		normalizeEntityInteractionConfig();
 
 	private readonly handleKeyDown = (event: KeyboardEvent): void => {
 		if (event.key !== "Delete" || event.defaultPrevented || event.repeat) {
@@ -446,6 +457,7 @@ export class DT3DCard extends LitElement {
 		const orientationCube = booleanConfig(
 			config.orientation_cube ?? config.orientationCube,
 		);
+		this.entityInteractions = normalizeEntityInteractionConfig(config);
 
 		this.cardGeneralConfig = normalizeCardGeneralConfig(
 			config.general ?? config,
@@ -461,7 +473,10 @@ export class DT3DCard extends LitElement {
 			...mergedConfig,
 			orientation_cube: orientationCube,
 			visualization_only: visualizationOnly,
+			entity_click_action: this.entityInteractions.click,
+			entity_double_click_action: this.entityInteractions.doubleClick,
 		};
+		this.clearPendingEntityClickAction();
 		this.applyGeneralConfig();
 		this.applyVisualizationMode();
 
@@ -965,6 +980,8 @@ export class DT3DCard extends LitElement {
 			return;
 		}
 
+		this.clearPendingEntityClickAction();
+
 		// Pick object and trigger click interaction
 		const {object} = this.pickObjectFromEvent(event);
 		this.lastSelectedObject = object;
@@ -973,6 +990,68 @@ export class DT3DCard extends LitElement {
 			event: event,
 			hass: this.hassInstance,
 		});
+
+		if (!(object instanceof EntityObject)) {
+			return;
+		}
+
+		// A browser emits click events before dblclick. Delay the single-click
+		// action so a double-click can cancel it and run only its own action.
+		const action = this.resolveEntityAction(object, "click");
+		if (event.detail > 1 || action === "nothing") {
+			return;
+		}
+
+		this.pendingEntityClickTimer = window.setTimeout(() => {
+			this.pendingEntityClickTimer = null;
+			this.performEntityAction(object, action);
+		}, ENTITY_CLICK_DELAY);
+	}
+
+	private clearPendingEntityClickAction(): void {
+		if (this.pendingEntityClickTimer !== null) {
+			window.clearTimeout(this.pendingEntityClickTimer);
+			this.pendingEntityClickTimer = null;
+		}
+	}
+
+	private openEntity(entityId: string): void {
+		this.dispatchEvent(
+			new CustomEvent("hass-more-info", {
+				detail: {entityId},
+				bubbles: true,
+				composed: true,
+			}),
+		);
+	}
+
+	private performEntityAction(object: EntityObject, action: EntityAction): void {
+		switch (action) {
+			case "open":
+				this.openEntity(object.entityId);
+				break;
+			case "toggle":
+				if (isToggleable(object)) {
+					void object.toggle(this.hassInstance);
+				}
+				break;
+			case "nothing":
+				break;
+		}
+	}
+
+	private resolveEntityAction(
+		object: EntityObject,
+		interaction: "click" | "doubleClick",
+	): EntityAction {
+		const override =
+			interaction === "click" ? object.clickAction : object.doubleClickAction;
+		const action =
+			override === "default"
+				? this.entityInteractions[interaction]
+				: override;
+
+		return action === "toggle" && !isToggleable(object) ? "nothing" : action;
 	}
 
 	/**
@@ -2259,13 +2338,7 @@ export class DT3DCard extends LitElement {
 
 		this.tree.addEventListener("entity-open", (e: any) => {
 			const entityId = e.detail.entityId as string;
-			this.dispatchEvent(
-				new CustomEvent("hass-more-info", {
-					detail: {entityId},
-					bubbles: true,
-					composed: true,
-				}),
-			);
+			this.openEntity(entityId);
 		});
 
 		this.tree.addEventListener("entity-toggle", (e: any) => {
@@ -2353,6 +2426,8 @@ export class DT3DCard extends LitElement {
 		});
 
 		this.canvas.addEventListener("dblclick", (event: MouseEvent) => {
+			this.clearPendingEntityClickAction();
+
 			if (!this.isVisualizationOnly()) {
 				// Handle measurement points on double click
 				if (this.measurementManager?.handleClick(event)) {
@@ -2382,6 +2457,13 @@ export class DT3DCard extends LitElement {
 				event: event,
 				hass: this.hassInstance,
 			});
+
+			if (object instanceof EntityObject) {
+				this.performEntityAction(
+					object,
+					this.resolveEntityAction(object, "doubleClick"),
+				);
+			}
 		});
 
 		this.canvas.addEventListener("click", (event: MouseEvent) => {
@@ -2474,6 +2556,7 @@ export class DT3DCard extends LitElement {
 		}
 		this.clearSceneLongPress();
 		this.clearCanvasClickSuppression();
+		this.clearPendingEntityClickAction();
 		this.meshMenu?.remove();
 		this.meshMenu = null;
 		this.lightMenu?.remove();

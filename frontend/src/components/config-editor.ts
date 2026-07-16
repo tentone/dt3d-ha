@@ -1,6 +1,7 @@
 import {html, LitElement, unsafeCSS} from "lit";
 import {customElement} from "lit/decorators.js";
 
+import {normalizeEntityInteractionConfig} from "../editor/entity-actions.js";
 import {normalizeCardGeneralConfig} from "../editor/general-config.js";
 import {localManager} from "../locale/locale.js";
 import type {SpaceResponse} from "../service/space-api.js";
@@ -47,6 +48,7 @@ export class DT3DConfigEditor extends LitElement {
 	 * @param config - Configuration object.
 	 */
 	public setConfig(config: any) {
+		const entityInteractions = normalizeEntityInteractionConfig(config);
 		this._config = {
 			address: "localhost",
 			port: 8080,
@@ -55,6 +57,8 @@ export class DT3DConfigEditor extends LitElement {
 			default_viewport: "",
 			orientation_cube: false,
 			visualization_only: false,
+			entity_click_action: entityInteractions.click,
+			entity_double_click_action: entityInteractions.doubleClick,
 			...config,
 			general: normalizeCardGeneralConfig(config?.general ?? config ?? {}),
 		};
@@ -65,6 +69,8 @@ export class DT3DConfigEditor extends LitElement {
 		this._config.orientation_cube = booleanConfig(
 			config?.orientation_cube ?? config?.orientationCube,
 		);
+		this._config.entity_click_action = entityInteractions.click;
+		this._config.entity_double_click_action = entityInteractions.doubleClick;
 		const connectionKey = this.getSpacesConnectionKey();
 		if (connectionKey !== this.spacesConnectionKey) {
 			this.spacesConnectionKey = connectionKey;
@@ -222,6 +228,7 @@ export class DT3DConfigEditor extends LitElement {
 		);
 		const visualizationOnly = booleanConfig(this._config.visualization_only);
 		const orientationCube = booleanConfig(this._config.orientation_cube);
+		const entityInteractions = normalizeEntityInteractionConfig(this._config);
 		const general = normalizeCardGeneralConfig(this._config.general ?? {});
 
 		return html`
@@ -332,6 +339,30 @@ export class DT3DConfigEditor extends LitElement {
 								>
 								<p>${localManager.get("visualizationOnlyDescription")}</p>
 							</div>
+						</div>
+						<div class="field">
+							<label>${localManager.get("entityClickAction")}</label>
+							<select
+								data-key="entity_click_action"
+								.value=${entityInteractions.click}
+								@change=${this.onValueChanged}>
+								<option value="open">${localManager.get("openEntity")}</option>
+								<option value="toggle">${localManager.get("toggleEntity")}</option>
+								<option value="nothing">${localManager.get("nothing")}</option>
+							</select>
+							<p>${localManager.get("entityClickActionDescription")}</p>
+						</div>
+						<div class="field">
+							<label>${localManager.get("entityDoubleClickAction")}</label>
+							<select
+								data-key="entity_double_click_action"
+								.value=${entityInteractions.doubleClick}
+								@change=${this.onValueChanged}>
+								<option value="open">${localManager.get("openEntity")}</option>
+								<option value="toggle">${localManager.get("toggleEntity")}</option>
+								<option value="nothing">${localManager.get("nothing")}</option>
+							</select>
+							<p>${localManager.get("entityDoubleClickActionDescription")}</p>
 						</div>
 					</div>
 				</details>
