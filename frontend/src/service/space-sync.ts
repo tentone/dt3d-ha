@@ -1,9 +1,20 @@
 import type {Material, Object3D, Texture} from "three";
-import {BoxGeometry, BufferGeometryLoader, Group, MaterialLoader, Mesh, MeshStandardMaterial, ObjectLoader} from "three";
+import {
+	BoxGeometry,
+	BufferGeometryLoader,
+	Group,
+	MaterialLoader,
+	Mesh,
+	MeshStandardMaterial,
+	ObjectLoader,
+} from "three";
 
 import type {DT3DTree} from "../components/object-tree/object-tree.js";
 import {applyTextureToMesh} from "../editor/material-texture.js";
-import {createMeshObject, getMeshGeometryParameters} from "../editor/mesh-handler.js";
+import {
+	createMeshObject,
+	getMeshGeometryParameters,
+} from "../editor/mesh-handler.js";
 import type {CameraViewportConfig, SceneManager} from "../editor/scene.js";
 import {DTObject} from "../objects/dt-object.js";
 import {EntityLight} from "../objects/entity-light.js";
@@ -13,14 +24,16 @@ import {WallObject} from "../objects/house/wall.js";
 import {WindowObject} from "../objects/house/window.js";
 import {StaticLightObject} from "../objects/static-light.js";
 import {ViewportObject} from "../objects/viewport-object.js";
-import {deserializeGeometryBinary, serializeGeometryToBinary} from "./geometry-binary.js";
+import {
+	deserializeGeometryBinary,
+	serializeGeometryToBinary,
+} from "./geometry-binary.js";
 import type {
 	ObjectInstancePayload,
 	ObjectInstanceResponse,
 	SpaceApi,
 	SpaceResponse,
 } from "./space-api.js";
-
 
 type SpaceSyncDependencies = {
 	apiClient: SpaceApi;
@@ -50,7 +63,9 @@ const OBJECT_INSTANCE_TYPE_USER_DATA_KEY = "objectInstanceType";
 const GEOMETRY_FILE_ID_DATA_KEY = "geometryFileId";
 const GEOMETRY_FILE_GEOMETRY_UUID_USER_DATA_KEY = "geometryFileGeometryUuid";
 
-function serializeMaterial(material: Material | Material[]): Record<string, any> | Record<string, any>[] | null {
+function serializeMaterial(
+	material: Material | Material[],
+): Record<string, any> | Record<string, any>[] | null {
 	try {
 		if (Array.isArray(material)) {
 			return material.map((item) => item.toJSON() as Record<string, any>);
@@ -71,7 +86,10 @@ function parseSerializedMaterial(data: unknown): Material | null {
 	const materialData = data as Record<string, any>;
 	const materialLoader = new MaterialLoader();
 
-	if (Array.isArray(materialData.images) && Array.isArray(materialData.textures)) {
+	if (
+		Array.isArray(materialData.images) &&
+		Array.isArray(materialData.textures)
+	) {
 		const objectLoader = new ObjectLoader();
 		let textures: Record<string, Texture> = {};
 		const images = objectLoader.parseImages(materialData.images, () => {
@@ -86,12 +104,18 @@ function parseSerializedMaterial(data: unknown): Material | null {
 	return materialLoader.parse(materialData);
 }
 
-function deserializeMaterial(data: unknown, fallbackColor: number): Material | Material[] {
+function deserializeMaterial(
+	data: unknown,
+	fallbackColor: number,
+): Material | Material[] {
 	try {
 		if (Array.isArray(data)) {
 			const materials = data
 				.map((item) => parseSerializedMaterial(item))
-				.filter((material): material is Material => material instanceof MeshStandardMaterial || Boolean(material));
+				.filter(
+					(material): material is Material =>
+						material instanceof MeshStandardMaterial || Boolean(material),
+				);
 			if (materials.length > 0) {
 				return materials;
 			}
@@ -108,7 +132,15 @@ function deserializeMaterial(data: unknown, fallbackColor: number): Material | M
 	return new MeshStandardMaterial({color: fallbackColor});
 }
 
-function normalizeObjectInstanceType(type: string): "mesh" | "entity" | "group" | "viewport" | "static-light" | null {
+function replaceMeshMaterial(mesh: Mesh, material: Material | Material[]): void {
+	const oldMaterials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+	mesh.material = material;
+	for (const oldMaterial of oldMaterials) oldMaterial.dispose();
+}
+
+function normalizeObjectInstanceType(
+	type: string,
+): "mesh" | "entity" | "group" | "viewport" | "static-light" | null {
 	switch (type.trim().toLowerCase()) {
 		case "mesh":
 			return "mesh";
@@ -153,7 +185,8 @@ export class SpaceSync {
 	private progressCompleted = 0;
 	private progressFailed = 0;
 	private progressItems: Map<string, SyncProgressItem> = new Map();
-	private progressListeners: Set<(progress: SyncProgressSnapshot) => void> = new Set();
+	private progressListeners: Set<(progress: SyncProgressSnapshot) => void> =
+		new Set();
 	private progressResetTimer: number | null = null;
 	private progressSequence = 0;
 	private progressTotal = 0;
@@ -187,7 +220,9 @@ export class SpaceSync {
 		this.readOnly = readOnly;
 	}
 
-	public addProgressListener(listener: (progress: SyncProgressSnapshot) => void): () => void {
+	public addProgressListener(
+		listener: (progress: SyncProgressSnapshot) => void,
+	): () => void {
 		this.progressListeners.add(listener);
 		listener(this.getProgressSnapshot());
 
@@ -341,7 +376,9 @@ export class SpaceSync {
 		return space;
 	}
 
-	public async updateActiveSpaceConfig(config: Record<string, any>): Promise<SpaceResponse | null> {
+	public async updateActiveSpaceConfig(
+		config: Record<string, any>,
+	): Promise<SpaceResponse | null> {
 		if (!this.activeSpaceId || !this.activeSpace) {
 			return null;
 		}
@@ -396,12 +433,14 @@ export class SpaceSync {
 			const rightOrder = right.data?.sortOrder;
 			const leftIndex = originalOrder.get(left.id) ?? 0;
 			const rightIndex = originalOrder.get(right.id) ?? 0;
-			const normalizedLeft = typeof leftOrder === "number" && Number.isFinite(leftOrder)
-				? leftOrder
-				: leftIndex;
-			const normalizedRight = typeof rightOrder === "number" && Number.isFinite(rightOrder)
-				? rightOrder
-				: rightIndex;
+			const normalizedLeft =
+				typeof leftOrder === "number" && Number.isFinite(leftOrder)
+					? leftOrder
+					: leftIndex;
+			const normalizedRight =
+				typeof rightOrder === "number" && Number.isFinite(rightOrder)
+					? rightOrder
+					: rightIndex;
 
 			return normalizedLeft - normalizedRight || leftIndex - rightIndex;
 		});
@@ -439,8 +478,11 @@ export class SpaceSync {
 
 		if (instanceType === "mesh") {
 			const meshType = data.meshType as string | undefined;
-			const color = typeof data.color === "string" ? parseInt(data.color, 16) : 0xffffff;
-			const geometryFileId = data[GEOMETRY_FILE_ID_DATA_KEY] as string | undefined;
+			const color =
+				typeof data.color === "string" ? parseInt(data.color, 16) : 0xffffff;
+			const geometryFileId = data[GEOMETRY_FILE_ID_DATA_KEY] as
+				| string
+				| undefined;
 			if (typeof geometryFileId === "string" && geometryFileId) {
 				const material = deserializeMaterial(data.material, color);
 				const mesh = new Mesh(new BoxGeometry(1, 1, 1), material);
@@ -459,8 +501,10 @@ export class SpaceSync {
 			} else if (!meshType) {
 				return null;
 			} else if (meshType === "wall") {
-				const wallData = data.wall as { length?: number; height?: number; thickness?: number } | undefined;
-				object = new WallObject(
+				const wallData = data.wall as
+					| { length?: number; height?: number; thickness?: number }
+					| undefined;
+				const wall = new WallObject(
 					{
 						length: wallData?.length,
 						height: wallData?.height,
@@ -468,8 +512,12 @@ export class SpaceSync {
 					},
 					color,
 				);
+				replaceMeshMaterial(wall.wallMesh, deserializeMaterial(data.material, color));
+				object = wall;
 			} else if (meshType === "door" || meshType === "window") {
-				const dims = data.dimensions as { width?: number; height?: number; thickness?: number } | undefined;
+				const dims = data.dimensions as
+					| { width?: number; height?: number; thickness?: number }
+					| undefined;
 				const openState = data.open === true;
 				if (meshType === "door") {
 					const door = new DoorObject(
@@ -480,6 +528,7 @@ export class SpaceSync {
 						},
 						color,
 					);
+					replaceMeshMaterial(door.doorMesh, deserializeMaterial(data.material, color));
 					door.setOpen(openState);
 					object = door;
 				} else {
@@ -491,12 +540,18 @@ export class SpaceSync {
 						},
 						color,
 					);
+					const windowMesh = windowObj.getObjectByName(
+						"Window Panel",
+					) as Mesh | null;
+					if (windowMesh) replaceMeshMaterial(windowMesh, deserializeMaterial(data.material, color));
 					windowObj.setOpen(openState);
 					object = windowObj;
 				}
 			} else {
-				const material = new MeshStandardMaterial({color});
-				const geometryParameters = data.geometryParameters as Record<string, number | boolean> | undefined;
+				const material = deserializeMaterial(data.material, color);
+				const geometryParameters = data.geometryParameters as
+					| Record<string, number | boolean>
+					| undefined;
 				object = createMeshObject(meshType, material, geometryParameters);
 			}
 			if (object && meshType) {
@@ -516,7 +571,9 @@ export class SpaceSync {
 				}
 			}
 		} else if (instanceType === "viewport") {
-			const viewport = data.viewport as Partial<CameraViewportConfig> | undefined;
+			const viewport = data.viewport as
+				| Partial<CameraViewportConfig>
+				| undefined;
 			object = new ViewportObject(
 				viewport,
 				instance.name || "Viewport",
@@ -533,11 +590,16 @@ export class SpaceSync {
 		}
 
 		object.name = instance.name || object.name;
-		object.userData[OBJECT_INSTANCE_TYPE_USER_DATA_KEY] = declaredType || instance.type;
+		object.userData[OBJECT_INSTANCE_TYPE_USER_DATA_KEY] =
+			declaredType || instance.type;
 		this.applyObjectTransform(object, data);
 
 		if (object instanceof Mesh && typeof data.textureDataUrl === "string") {
-			void applyTextureToMesh(object, data.textureDataUrl, typeof data.textureName === "string" ? data.textureName : "Texture");
+			void applyTextureToMesh(
+				object,
+				data.textureDataUrl,
+				typeof data.textureName === "string" ? data.textureName : "Texture",
+			);
 		}
 
 		if (object instanceof DTObject && typeof data.locked === "boolean") {
@@ -553,7 +615,9 @@ export class SpaceSync {
 	 * @param object - The three.js object to convert into an API payload.
 	 * @returns The API payload representing the object, or null if the object should not be persisted.
 	 */
-	public async buildObjectPayload(object: Object3D): Promise<ObjectInstancePayload | null> {
+	public async buildObjectPayload(
+		object: Object3D,
+	): Promise<ObjectInstancePayload | null> {
 		if (!this.activeSpaceId || !this.shouldPersistObject(object)) {
 			return null;
 		}
@@ -604,10 +668,11 @@ export class SpaceSync {
 				height: object.height,
 				thickness: object.thickness,
 			};
-			const material = (object.wallMesh.material as any);
+			const material = object.wallMesh.material as any;
 			if (material?.color?.getHexString) {
 				data.color = material.color.getHexString();
 			}
+			data.material = serializeMaterial(object.wallMesh.material);
 		} else if (object instanceof DoorObject) {
 			type = declaredType ?? "mesh";
 			data.meshType = "door";
@@ -617,10 +682,11 @@ export class SpaceSync {
 				height: object.height,
 				thickness: object.thickness,
 			};
-			const material = (object.doorMesh.material as any);
+			const material = object.doorMesh.material as any;
 			if (material?.color?.getHexString) {
 				data.color = material.color.getHexString();
 			}
+			data.material = serializeMaterial(object.doorMesh.material);
 		} else if (object instanceof WindowObject) {
 			type = declaredType ?? "mesh";
 			data.meshType = "window";
@@ -634,6 +700,7 @@ export class SpaceSync {
 			if (material?.color?.getHexString) {
 				data.color = material.color.getHexString();
 			}
+			data.material = serializeMaterial(material);
 		} else if (object instanceof Mesh) {
 			const meshType = this.resolveMeshType(object);
 			if (meshType) {
@@ -649,6 +716,8 @@ export class SpaceSync {
 					data.textureDataUrl = object.userData.textureDataUrl;
 					data.textureName = object.userData.textureName;
 				}
+
+				data.material = serializeMaterial(object.material);
 
 				if (object instanceof Mesh) {
 					const geometryParameters = getMeshGeometryParameters(object);
@@ -669,8 +738,14 @@ export class SpaceSync {
 					data.material = material;
 				}
 
-				const materialWithColor = Array.isArray(object.material) ? object.material[0] : object.material;
-				if (materialWithColor && "color" in materialWithColor && materialWithColor.color?.getHexString) {
+				const materialWithColor = Array.isArray(object.material)
+					? object.material[0]
+					: object.material;
+				if (
+					materialWithColor &&
+					"color" in materialWithColor &&
+					materialWithColor.color?.getHexString
+				) {
 					data.color = materialWithColor.color.getHexString();
 				}
 			}
@@ -680,7 +755,8 @@ export class SpaceSync {
 			data.locked = object.locked;
 		}
 
-		const parent = object.parent && object.parent !== this.space ? object.parent : null;
+		const parent =
+			object.parent && object.parent !== this.space ? object.parent : null;
 		const parentId = parent ? this.getObjectApiId(parent) : null;
 
 		return {
@@ -695,7 +771,11 @@ export class SpaceSync {
 	 * Sync a full object subtree to the API (creates/updates as needed).
 	 */
 	public async syncObjectHierarchyCreate(object: Object3D): Promise<void> {
-		if (this.readOnly || this.isSyncingFromApi || !this.shouldPersistObject(object)) {
+		if (
+			this.readOnly ||
+			this.isSyncingFromApi ||
+			!this.shouldPersistObject(object)
+		) {
 			return;
 		}
 
@@ -733,11 +813,12 @@ export class SpaceSync {
 		const createPromise = this.trackProgress(
 			"Create object",
 			this.getObjectLabel(object),
-			() => this.apiClient
-				.createObject(this.activeSpaceId, payload)
-				.then((response) => {
-					this.setObjectApiId(object, response.id);
-				}),
+			() =>
+				this.apiClient
+					.createObject(this.activeSpaceId, payload)
+					.then((response) => {
+						this.setObjectApiId(object, response.id);
+					}),
 		);
 
 		this.pendingObjectCreates.set(object.uuid, createPromise);
@@ -777,10 +858,8 @@ export class SpaceSync {
 			return;
 		}
 
-		await this.trackProgress(
-			"Update object",
-			this.getObjectLabel(object),
-			() => this.apiClient.updateObject(this.activeSpaceId, objectId, payload),
+		await this.trackProgress("Update object", this.getObjectLabel(object), () =>
+			this.apiClient.updateObject(this.activeSpaceId, objectId, payload),
 		);
 	}
 
@@ -797,10 +876,8 @@ export class SpaceSync {
 			return;
 		}
 
-		await this.trackProgress(
-			"Delete object",
-			this.getObjectLabel(object),
-			() => this.apiClient.deleteObject(this.activeSpaceId, objectId),
+		await this.trackProgress("Delete object", this.getObjectLabel(object), () =>
+			this.apiClient.deleteObject(this.activeSpaceId, objectId),
 		);
 		this.clearObjectMapping(object);
 	}
@@ -810,21 +887,32 @@ export class SpaceSync {
 			return Promise.resolve([]);
 		}
 
-		return Promise.all(this.space.children.map((child) => this.syncObjectHierarchyCreate(child)));
+		return Promise.all(
+			this.space.children.map((child) => this.syncObjectHierarchyCreate(child)),
+		);
 	}
 
-	private applyObjectTransform(object: Object3D, data: Record<string, any>): void {
-		const position = data.position as { x?: number; y?: number; z?: number } | undefined;
+	private applyObjectTransform(
+		object: Object3D,
+		data: Record<string, any>,
+	): void {
+		const position = data.position as
+			| { x?: number; y?: number; z?: number }
+			| undefined;
 		if (position) {
 			object.position.set(position.x ?? 0, position.y ?? 0, position.z ?? 0);
 		}
 
-		const rotation = data.rotation as { x?: number; y?: number; z?: number } | undefined;
+		const rotation = data.rotation as
+			| { x?: number; y?: number; z?: number }
+			| undefined;
 		if (rotation) {
 			object.rotation.set(rotation.x ?? 0, rotation.y ?? 0, rotation.z ?? 0);
 		}
 
-		const scale = data.scale as { x?: number; y?: number; z?: number } | undefined;
+		const scale = data.scale as
+			| { x?: number; y?: number; z?: number }
+			| undefined;
 		if (scale) {
 			object.scale.set(scale.x ?? 1, scale.y ?? 1, scale.z ?? 1);
 		}
@@ -836,7 +924,8 @@ export class SpaceSync {
 		}
 
 		const existingGeometryFileId = object.userData[GEOMETRY_FILE_ID_DATA_KEY];
-		const uploadedGeometryUuid = object.userData[GEOMETRY_FILE_GEOMETRY_UUID_USER_DATA_KEY];
+		const uploadedGeometryUuid =
+			object.userData[GEOMETRY_FILE_GEOMETRY_UUID_USER_DATA_KEY];
 		if (
 			typeof existingGeometryFileId === "string" &&
 			(!uploadedGeometryUuid || uploadedGeometryUuid === object.geometry.uuid)
@@ -851,12 +940,17 @@ export class SpaceSync {
 			() => this.apiClient.uploadGeometry(this.activeSpaceId, geometryData),
 		);
 		object.userData[GEOMETRY_FILE_ID_DATA_KEY] = response.id;
-		object.userData[GEOMETRY_FILE_GEOMETRY_UUID_USER_DATA_KEY] = object.geometry.uuid;
+		object.userData[GEOMETRY_FILE_GEOMETRY_UUID_USER_DATA_KEY] =
+			object.geometry.uuid;
 
 		return response.id;
 	}
 
-	private async loadMeshGeometryFile(object: Mesh, geometryFileId: string, label?: string): Promise<void> {
+	private async loadMeshGeometryFile(
+		object: Mesh,
+		geometryFileId: string,
+		label?: string,
+	): Promise<void> {
 		if (!this.activeSpaceId) {
 			return;
 		}
@@ -875,7 +969,8 @@ export class SpaceSync {
 
 			const placeholderGeometry = object.geometry;
 			object.geometry = geometry;
-			object.userData[GEOMETRY_FILE_GEOMETRY_UUID_USER_DATA_KEY] = geometry.uuid;
+			object.userData[GEOMETRY_FILE_GEOMETRY_UUID_USER_DATA_KEY] =
+				geometry.uuid;
 			placeholderGeometry.dispose();
 			this.tree.refreshSelectedObject();
 		} catch (error) {
@@ -966,7 +1061,9 @@ export class SpaceSync {
 			return false;
 		}
 
-		return object.parent === this.space || this.isDescendant(object, this.space);
+		return (
+			object.parent === this.space || this.isDescendant(object, this.space)
+		);
 	}
 
 	private isDescendant(object: Object3D, ancestor: Object3D): boolean {

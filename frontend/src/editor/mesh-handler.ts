@@ -287,7 +287,7 @@ export function resolveMeshType(object: Object3D): string | null {
  * @param parameters - Optional geometry constructor parameter overrides.
  * @returns Mesh object of the requested type, or null when the type is unsupported.
  */
-export function createMeshObject(type: string, material: Material, parameters: MeshGeometryParameters = {}): Mesh {
+export function createMeshObject(type: string, material: Material | Material[], parameters: MeshGeometryParameters = {}): Mesh {
 	const geometry = createGeometry(type, parameters);
 	let object: Mesh = null;
 

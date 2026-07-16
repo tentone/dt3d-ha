@@ -3,10 +3,26 @@ import "../dynamic-form/dynamic-form.js";
 import {html, LitElement, unsafeCSS} from "lit";
 import {customElement, property} from "lit/decorators.js";
 import type {Object3D} from "three";
-import {Color, Mesh} from "three";
+import {Mesh} from "three";
 
-import {applyImageTextureToMesh, clearMeshTexture} from "../../editor/material-texture.js";
-import {getMeshGeometryParameters, MESH_GEOMETRY_PARAMETER_DEFINITIONS, resolveMeshType, updateMeshGeometry} from "../../editor/mesh-handler.js";
+import {
+	changeMaterialType,
+	findMaterialObject,
+	getCompatibleMaterialTypes,
+	getMaterialPropertyDefinitions,
+	getPrimaryMaterial,
+	setMaterialProperty,
+} from "../../editor/material-handler.js";
+import {
+	applyImageTextureToMesh,
+	clearMeshTexture,
+} from "../../editor/material-texture.js";
+import {
+	getMeshGeometryParameters,
+	MESH_GEOMETRY_PARAMETER_DEFINITIONS,
+	resolveMeshType,
+	updateMeshGeometry,
+} from "../../editor/mesh-handler.js";
 import {localManager} from "../../locale/locale.js";
 import {DTObject} from "../../objects/dt-object.js";
 import {EntityLight} from "../../objects/entity-light.js";
@@ -16,7 +32,6 @@ import {WallObject} from "../../objects/house/wall.js";
 import {WindowObject} from "../../objects/house/window.js";
 import {StaticLightObject} from "../../objects/static-light.js";
 import {ViewportObject} from "../../objects/viewport-object.js";
-import {findMesh} from "../../utils/object3d-utils.js";
 import type {
 	DynamicFormChangeDetail,
 	DynamicFormField,
@@ -30,24 +45,9 @@ export class DT3DObjectInspector extends LitElement {
 	@property({attribute: false})
 	public selectedObject: Object3D | null = null;
 
-	/**
-	 * Check if object has a material with a color.
-	 *
-	 * @param object - Object attached to the inspector.
-	 * @returns True if the object has a material color to edit.
-	 */
-	private hasEditableColor(
-		object: Object3D | null,
-	): object is Object3D & { material: { color: Color } } {
-		if (!object || !("material" in object)) {
-			return false;
-		}
-
-		const material = (object as any).material;
-		return Boolean(material?.color && material.color instanceof Color);
-	}
-
-	private isLocked(object: Object3D | null = this.selectedObject): object is DTObject {
+	private isLocked(
+		object: Object3D | null = this.selectedObject,
+	): object is DTObject {
 		return object instanceof DTObject && object.locked;
 	}
 
@@ -113,15 +113,14 @@ export class DT3DObjectInspector extends LitElement {
 			const rawValue = Number(value);
 			if (Number.isNaN(rawValue)) return;
 			this.selectedObject.rotation[axis] = (rawValue * Math.PI) / 180;
-		} else if (attribute === "material.color") {
-			if (!this.hasEditableColor(this.selectedObject)) {
+		} else if (attribute === "material.type") {
+			const materialObject = findMaterialObject(this.selectedObject);
+			if (
+				!materialObject ||
+				!changeMaterialType(materialObject, String(value))
+			) {
 				return;
 			}
-			const colorValue = String(value);
-			if (!/^#[0-9a-fA-F]{6}$/.test(colorValue)) {
-				return;
-			}
-			this.selectedObject.material.color.set(colorValue);
 		} else if (attribute === "color") {
 			if (!(this.selectedObject instanceof StaticLightObject)) {
 				return;
@@ -132,21 +131,32 @@ export class DT3DObjectInspector extends LitElement {
 			}
 			this.selectedObject.setColor(colorValue);
 		} else if (attribute === "material.texture") {
-			const mesh = findMesh(this.selectedObject);
+			const mesh = findMaterialObject(this.selectedObject);
 			if (!mesh || !(value instanceof File)) {
 				return;
 			}
+			if (!(mesh instanceof Mesh)) return;
 			void applyImageTextureToMesh(mesh, value).then(() => {
 				this.dispatchUpdated();
 				this.requestUpdate();
 			});
 			return;
 		} else if (attribute === "material.clearTexture") {
-			const mesh = findMesh(this.selectedObject);
+			const mesh = findMaterialObject(this.selectedObject);
 			if (!mesh || value !== true) {
 				return;
 			}
+			if (!(mesh instanceof Mesh)) return;
 			clearMeshTexture(mesh);
+		} else if (attribute.startsWith("material.")) {
+			const materialObject = findMaterialObject(this.selectedObject);
+			const materialProperty = attribute.slice("material.".length);
+			if (
+				!materialObject ||
+				!setMaterialProperty(materialObject, materialProperty, value)
+			) {
+				return;
+			}
 		} else if (attribute === "height" || attribute === "thickness") {
 			if (!(this.selectedObject instanceof WallObject)) {
 				return;
@@ -210,16 +220,14 @@ export class DT3DObjectInspector extends LitElement {
 			});
 		}
 
-		fields.push(
-			{
-				label: localManager.get("objectUUID"),
-				attribute: "uuid",
-				type: "info",
-				tooltip: localManager.get("objectUUIDTooltip"),
-				editable: false,
-				enabled: true,
-			},
-		);
+		fields.push({
+			label: localManager.get("objectUUID"),
+			attribute: "uuid",
+			type: "info",
+			tooltip: localManager.get("objectUUIDTooltip"),
+			editable: false,
+			enabled: true,
+		});
 
 		return fields;
 	}
@@ -256,22 +264,40 @@ export class DT3DObjectInspector extends LitElement {
 	}
 
 	private getMaterialFields(locked: boolean): DynamicFormField[] {
-		if (!this.selectedObject) return [];
+		const materialObject = findMaterialObject(this.selectedObject);
+		if (!materialObject) return [];
+		const material = getPrimaryMaterial(materialObject);
+		if (!material) return [];
 
-		const fields: DynamicFormField[] = [];
+		const materialTypes = getCompatibleMaterialTypes(materialObject);
+		const fields: DynamicFormField[] = [
+			{
+				label: localManager.get("materialType"),
+				attribute: "material.type",
+				type: "select",
+				tooltip: localManager.get("materialTypeTooltip"),
+				editable: !locked && materialTypes.length > 1,
+				enabled: true,
+				options: materialTypes.map((type) => ({label: type, value: type})),
+			},
+		];
 
-		if (this.hasEditableColor(this.selectedObject)) {
-			fields.push({
-				label: localManager.get("materialColor"),
-				attribute: "material.color",
-				type: "color",
-				tooltip: localManager.get("materialColorTooltip"),
+		fields.push(
+			...getMaterialPropertyDefinitions(material).map((definition) => ({
+				label: localManager.get(definition.label),
+				attribute: `material.${definition.property}`,
+				type: definition.type,
+				tooltip: localManager.get("materialPropertyTooltip"),
 				editable: !locked,
 				enabled: true,
-			});
-		}
+				step: definition.step,
+				min: definition.min,
+				max: definition.max,
+				options: definition.options,
+			})),
+		);
 
-		if (findMesh(this.selectedObject)) {
+		if (materialObject instanceof Mesh && "map" in material) {
 			fields.push(
 				{
 					label: localManager.get("materialTexture"),
@@ -329,20 +355,22 @@ export class DT3DObjectInspector extends LitElement {
 			<div class="field">
 				<label>${localManager.get("attributes")}</label>
 				${attributeEntries.length
-		? html`<div class="attribute-list">
+					? html`<div class="attribute-list">
 							${attributeEntries.map(
-		([key, value]) =>
-			html`<div class="attribute-row">
+								([key, value]) =>
+									html`<div class="attribute-row">
 										<span class="attr-key">${key}</span>
 										<span class="attr-value">
 											${typeof value === "object"
-		? JSON.stringify(value)
-		: String(value)}
+												? JSON.stringify(value)
+												: String(value)}
 										</span>
 									</div>`,
-	)}
+							)}
 						</div>`
-		: html`<div class="placeholder">${localManager.get("noAttributes")}</div>`}
+					: html`<div class="placeholder">
+							${localManager.get("noAttributes")}
+						</div>`}
 			</div>
 		`;
 	}
@@ -373,7 +401,10 @@ export class DT3DObjectInspector extends LitElement {
 	}
 
 	private getOpeningFields(locked: boolean): DynamicFormField[] {
-		if (!(this.selectedObject instanceof DoorObject) && !(this.selectedObject instanceof WindowObject)) {
+		if (
+			!(this.selectedObject instanceof DoorObject) &&
+			!(this.selectedObject instanceof WindowObject)
+		) {
 			return [];
 		}
 
@@ -468,7 +499,10 @@ export class DT3DObjectInspector extends LitElement {
 
 	private getLightFields(locked: boolean): DynamicFormField[] {
 		const object = this.selectedObject;
-		if (!(object instanceof StaticLightObject) && !(object instanceof EntityLight)) {
+		if (
+			!(object instanceof StaticLightObject) &&
+			!(object instanceof EntityLight)
+		) {
 			return [];
 		}
 
@@ -632,7 +666,12 @@ export class DT3DObjectInspector extends LitElement {
 
 	private getInspectorFields(locked: boolean): DynamicFormField[] {
 		const fields: DynamicFormField[] = [];
-		const geometryData = this.selectedObject instanceof Mesh ? this.selectedObject.userData : null;
+		const geometryData =
+			this.selectedObject instanceof Mesh ? this.selectedObject.userData : null;
+		const materialObject = findMaterialObject(this.selectedObject);
+		const materialData = materialObject
+			? {material: getPrimaryMaterial(materialObject)}
+			: null;
 		const entityData = this.getEntityData();
 
 		this.addSubFormField(
@@ -652,6 +691,7 @@ export class DT3DObjectInspector extends LitElement {
 			"material",
 			localManager.get("material"),
 			this.getMaterialFields(locked),
+			materialData,
 		);
 		this.addSubFormField(
 			fields,
@@ -662,7 +702,9 @@ export class DT3DObjectInspector extends LitElement {
 		this.addSubFormField(
 			fields,
 			"opening",
-			this.selectedObject instanceof DoorObject ? localManager.get("door") : localManager.get("window"),
+			this.selectedObject instanceof DoorObject
+				? localManager.get("door")
+				: localManager.get("window"),
 			this.getOpeningFields(locked),
 		);
 		this.addSubFormField(
@@ -702,21 +744,21 @@ export class DT3DObjectInspector extends LitElement {
 		return html`
 			<h4>${localManager.get("selectedObject")}</h4>
 			${this.selectedObject
-		? html`
+				? html`
 						<dt3d-dynamic-form
 							.fields=${inspectorFields}
 							.data=${this.selectedObject}
 							@field-change=${(event: CustomEvent<DynamicFormChangeDetail>) =>
-		this.handleFormFieldChange(event)}
+								this.handleFormFieldChange(event)}
 						></dt3d-dynamic-form>
 						${locked
-		? html`<div class="placeholder">
+							? html`<div class="placeholder">
 									${localManager.get("objectLocked")}
 								</div>`
-		: null}
+							: null}
 						${this.renderEntityDetails()}
 					`
-		: html`<div class="placeholder">
+				: html`<div class="placeholder">
 						${localManager.get("selectObjectPrompt")}
 					</div>`}
 		`;
