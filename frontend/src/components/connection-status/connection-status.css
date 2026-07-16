@@ -4,9 +4,10 @@
 	width: 100%;
 	height: 60px;
 	position: absolute;
-	bottom: 0;
+	bottom: 10px;
 	left: 0;
-	z-index: 100;
+	z-index: 0;
+	justify-content: center;
 }
 
 .connection-status-container {

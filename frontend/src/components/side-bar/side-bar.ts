@@ -228,7 +228,11 @@ export class DT3DSidebar extends LitElement {
 		);
 	}
 
-	/** Open the static-light type menu at card level. */
+	/**
+	 * Open the static-light type menu at card level.
+	 *
+	 * @param event - Click event from the static-light button.
+	 */
 	private handleLightMenuOpen(event: MouseEvent) {
 		const target = event.currentTarget as HTMLElement | null;
 		const rect = target?.getBoundingClientRect();
@@ -273,7 +277,7 @@ export class DT3DSidebar extends LitElement {
 			const instance = tippy(element, {
 				content,
 				placement: "right",
-				appendTo: document.body,
+				appendTo: document.body
 			});
 
 			this.tooltipInstances.push(instance);
