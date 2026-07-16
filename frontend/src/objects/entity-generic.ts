@@ -1,12 +1,12 @@
 import {EntityObject} from "./entity-object.js";
 import {CircleIconSprite} from "./helpers/circle-icon-sprite.js";
-import {TextSprite} from "./helpers/text-sprite.js";
+import {CSSText} from "./helpers/css-text.js";
 
 /**
  * Generic entity implementation used to represent entities of type that are not supported or have no specific interaction.
  */
 export class EntityGeneric extends EntityObject {
-	public label: TextSprite;
+	public label: CSSText;
 
 	public constructor(entityId: string, entity: any) {
 		super(entityId);
@@ -18,7 +18,7 @@ export class EntityGeneric extends EntityObject {
 
 		const friendlyName = this.friendlyName(entity);
 
-		this.label = new TextSprite(friendlyName);
+		this.label = new CSSText(friendlyName);
 		this.label.internal = true;
 		this.label.position.y = 0.55;
 		this.setHoverLabel(this.label);

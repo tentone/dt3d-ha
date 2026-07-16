@@ -2,14 +2,14 @@ import {mdiEye} from "@mdi/js";
 
 import {resolveHaIconPath} from "../utils/icon-utils.js";
 import {EntityObject} from "./entity-object.js";
+import {CSSText} from "./helpers/css-text.js";
 import {IconSprite} from "./helpers/icon-sprite.js";
-import {TextSprite} from "./helpers/text-sprite.js";
 
 /**
  * Creates a entity sensor representation.
  */
 export class EntitySensor extends EntityObject {
-	public label: TextSprite;
+	public label: CSSText;
 
 	private icon: IconSprite;
 
@@ -25,7 +25,7 @@ export class EntitySensor extends EntityObject {
 		this.icon.position.y = 0.2;
 		this.add(this.icon);
 
-		this.label = new TextSprite("Loading\n...");
+		this.label = new CSSText("Loading\n...");
 		this.label.internal = true;
 		this.label.position.y = 0.55;
 		this.setHoverLabel(this.label);

@@ -3,11 +3,11 @@ import {mdiToggleSwitch, mdiToggleSwitchOff} from "@mdi/js";
 import {resolveHaIconPath} from "../utils/icon-utils.js";
 import type {DTInteractionEvent} from "./dt-object.js";
 import {EntityObject} from "./entity-object.js";
+import {CSSText} from "./helpers/css-text.js";
 import {IconSprite} from "./helpers/icon-sprite.js";
-import {TextSprite} from "./helpers/text-sprite.js";
 
 export class EntitySwitch extends EntityObject {
-	public label: TextSprite;
+	public label: CSSText;
 	private icon: IconSprite;
 
 	public constructor(entityId: string, entity: any) {
@@ -22,7 +22,7 @@ export class EntitySwitch extends EntityObject {
 		this.icon.position.y = 0.22;
 		this.add(this.icon);
 
-		this.label = new TextSprite("Loading\n...");
+		this.label = new CSSText("Loading\n...");
 		this.label.internal = true;
 		this.label.position.y = 0.58;
 		this.setHoverLabel(this.label);

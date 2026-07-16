@@ -3,8 +3,8 @@ import type {BufferGeometry, Color, Material, Object3D, Texture} from "three";
 
 import type {DTInteractionEvent} from "./dt-object.js";
 import {DTObject} from "./dt-object.js";
+import {CSSText} from "./helpers/css-text.js";
 import {IconSprite} from "./helpers/icon-sprite.js";
-import {TextSprite} from "./helpers/text-sprite.js";
 import type {LightSourceSettings, LightSourceType} from "./light-source.js";
 import {LightSource} from "./light-source.js";
 
@@ -14,7 +14,7 @@ const STATIC_LIGHT_OBJECT_TYPE = "static-light";
 export class StaticLightObject extends DTObject {
 	private readonly icon: IconSprite;
 
-	private readonly label: TextSprite;
+	private readonly label: CSSText;
 
 	private readonly lightSource: LightSource;
 
@@ -35,13 +35,7 @@ export class StaticLightObject extends DTObject {
 		this.icon.position.y = 0.16;
 		this.add(this.icon);
 
-		this.label = new TextSprite(this.name, 44, {
-			background: "rgba(14, 22, 34, 0.82)",
-			borderRadius: 6,
-			color: "#ffffff",
-			fontWeight: "600",
-			padding: 7,
-		});
+		this.label = new CSSText(this.name);
 		this.label.internal = true;
 		this.label.position.y = 0.5;
 		this.label.visible = false;

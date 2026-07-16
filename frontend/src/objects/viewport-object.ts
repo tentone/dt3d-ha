@@ -10,8 +10,8 @@ import {
 import type {CameraViewportConfig} from "../editor/scene.js";
 import type {DTInteractionEvent} from "./dt-object.js";
 import {DTObject} from "./dt-object.js";
+import {CSSText} from "./helpers/css-text.js";
 import {IconSprite} from "./helpers/icon-sprite.js";
-import {TextSprite} from "./helpers/text-sprite.js";
 
 const DEFAULT_VIEWPORT_CONFIG: CameraViewportConfig = {
 	direction: {
@@ -119,7 +119,7 @@ export class ViewportObject extends DTObject {
 	 */
 	public defaultViewport: boolean;
 
-	private readonly label: TextSprite;
+	private readonly label: CSSText;
 
 
 	public constructor(
@@ -141,13 +141,7 @@ export class ViewportObject extends DTObject {
 		this.add(icon);
 
 
-		this.label = new TextSprite(name, 44, {
-			background: "rgba(14, 22, 34, 0.82)",
-			borderRadius: 6,
-			color: "#ffffff",
-			fontWeight: "600",
-			padding: 7,
-		});
+		this.label = new CSSText(name);
 		this.label.internal = true;
 		this.label.position.y = 0.48;
 		this.label.visible = false;

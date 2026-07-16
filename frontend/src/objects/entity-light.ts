@@ -4,8 +4,8 @@ import {Color} from "three";
 import {resolveHaIconPath} from "../utils/icon-utils.js";
 import type {DTInteractionEvent} from "./dt-object.js";
 import {EntityObject} from "./entity-object.js";
+import {CSSText} from "./helpers/css-text.js";
 import {IconSprite} from "./helpers/icon-sprite.js";
-import {TextSprite} from "./helpers/text-sprite.js";
 import type {LightSourceSettings, LightSourceType} from "./light-source.js";
 import {LightSource} from "./light-source.js";
 
@@ -18,7 +18,7 @@ export class EntityLight extends EntityObject {
 	/**
 	 * Label with name of the entity.
 	 */
-	private label: TextSprite;
+	private label: CSSText;
 
 	public constructor(
 		entityId: string,
@@ -43,7 +43,7 @@ export class EntityLight extends EntityObject {
 
 		const friendlyName = this.friendlyName(entity);
 
-		this.label = new TextSprite(friendlyName);
+		this.label = new CSSText(friendlyName);
 		this.label.internal = true;
 		this.label.position.y = 0.68;
 		this.setHoverLabel(this.label);
