@@ -1,3 +1,5 @@
+import type {Camera} from "three";
+import {Vector3} from "three";
 import {CSS3DSprite} from "three/examples/jsm/renderers/CSS3DRenderer.js";
 
 export type CSSTextOptions = {
@@ -10,6 +12,12 @@ export type CSSTextOptions = {
  */
 export class CSSText extends CSS3DSprite {
 	public element: HTMLDivElement;
+
+	private readonly cameraSpacePosition = new Vector3();
+
+	private readonly parentWorldScale = new Vector3();
+
+	private readonly worldPosition = new Vector3();
 
 	public constructor(text: string, options: CSSTextOptions = {}) {
 		const element = document.createElement("div");
@@ -36,6 +44,9 @@ export class CSSText extends CSS3DSprite {
 		this.element.style.whiteSpace = "pre-line";
 		this.element.textContent = text;
 		this.scale.setScalar(0.004);
+		this.onBeforeRender = (renderer, _scene, camera) => {
+			this.updateScreenScale(renderer, camera);
+		};
 
 		if (options?.style) {
 			this.applyStyle(options.style);
@@ -72,5 +83,54 @@ export class CSSText extends CSS3DSprite {
 
 			(this.element.style as any)[property] = value;
 		});
+	}
+
+	/**
+	 * Counteract camera projection so the DOM text keeps a constant screen size.
+	 *
+	 * @param renderer - Active CSS renderer.
+	 * @param camera - Active scene camera.
+	 */
+	private updateScreenScale(renderer: unknown, camera: Camera): void {
+		if (!CSSText.hasSize(renderer)) {
+			return;
+		}
+
+		const {height} = renderer.getSize();
+		const projectionScale = Math.abs(camera.projectionMatrix.elements[5]) * height / 2;
+		if (!Number.isFinite(projectionScale) || projectionScale <= 0) {
+			return;
+		}
+
+		this.getWorldPosition(this.worldPosition);
+		this.cameraSpacePosition
+			.copy(this.worldPosition)
+			.applyMatrix4(camera.matrixWorldInverse);
+
+		const isPerspectiveCamera = (camera as Camera & {isPerspectiveCamera?: boolean})
+			.isPerspectiveCamera === true;
+		const depth = isPerspectiveCamera
+			? Math.max(Math.abs(this.cameraSpacePosition.z), 0.0001)
+			: 1;
+		const worldScale = depth / projectionScale;
+
+		if (this.parent) {
+			this.parent.getWorldScale(this.parentWorldScale);
+		} else {
+			this.parentWorldScale.set(1, 1, 1);
+		}
+
+		this.scale.set(
+			worldScale / Math.max(Math.abs(this.parentWorldScale.x), 0.0001),
+			worldScale / Math.max(Math.abs(this.parentWorldScale.y), 0.0001),
+			worldScale / Math.max(Math.abs(this.parentWorldScale.z), 0.0001),
+		);
+		this.updateMatrixWorld(true);
+	}
+
+	private static hasSize(renderer: unknown): renderer is {
+		getSize(): {height: number; width: number};
+	} {
+		return typeof (renderer as {getSize?: unknown})?.getSize === "function";
 	}
 }
