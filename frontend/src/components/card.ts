@@ -647,6 +647,10 @@ export class DT3DCard extends LitElement {
 
 		if (this.sidebar) {
 			this.sidebar.style.display = visualizationOnly ? "none" : "";
+			if (this.syncProgressComponent) {
+				this.syncProgressComponent.sidebarCollapsed =
+					visualizationOnly || this.sidebar.collapsed;
+			}
 		}
 
 		if (this.tree) {
@@ -2041,6 +2045,12 @@ export class DT3DCard extends LitElement {
 		this.syncProgressComponent = document.createElement(
 			"sync-progress-component",
 		) as SyncProgressComponent;
+		this.syncProgressComponent.sidebarCollapsed = this.sidebar.collapsed;
+		this.sidebar.addEventListener("sidebar-collapse-changed", (event: Event) => {
+			this.syncProgressComponent!.sidebarCollapsed = (
+				event as CustomEvent<{collapsed: boolean}>
+			).detail.collapsed;
+		});
 		this.content.appendChild(this.syncProgressComponent);
 
 		const cssElem = document.createElement("div");

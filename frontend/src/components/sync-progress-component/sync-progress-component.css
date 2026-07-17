@@ -1,10 +1,18 @@
 :host {
 	position: absolute;
-	top: 12px;
-	right: 72px;
+	bottom: 12px;
+	left: 142px;
 	z-index: 110;
-	width: min(320px, calc(100% - 150px));
+	width: min(320px, calc(100% - 154px));
 	pointer-events: none;
+	transition:
+		left 0.2s ease,
+		width 0.2s ease;
+}
+
+:host([sidebar-collapsed]) {
+	left: 12px;
+	width: min(320px, calc(100% - 24px));
 }
 
 :host([hidden]) {

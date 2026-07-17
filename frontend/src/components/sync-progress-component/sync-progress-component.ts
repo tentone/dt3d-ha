@@ -19,6 +19,9 @@ export class SyncProgressComponent extends LitElement {
 	@property({attribute: false})
 	public progress: SyncProgressSnapshot = EMPTY_PROGRESS;
 
+	@property({type: Boolean, reflect: true, attribute: "sidebar-collapsed"})
+	public sidebarCollapsed = true;
+
 	protected render() {
 		const progress = this.progress ?? EMPTY_PROGRESS;
 		if (!progress.active) {

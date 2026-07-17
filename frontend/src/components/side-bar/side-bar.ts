@@ -94,10 +94,17 @@ export class DT3DSidebar extends LitElement {
 	/**
 	 * Toggle collapsed state of the side bar.
 	 */
-	private toggleCollapse() {
+	private toggleCollapse(): void {
 		this.collapsed = !this.collapsed;
 
 		LocalStorage.write(SIDEBAR_COLLAPSED_STORAGE_KEY, this.collapsed);
+		this.dispatchEvent(
+			new CustomEvent("sidebar-collapse-changed", {
+				detail: {collapsed: this.collapsed},
+				bubbles: true,
+				composed: true,
+			}),
+		);
 
 		this.requestUpdate();
 	}
