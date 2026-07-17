@@ -1,176 +1,276 @@
-# Digital Twin 3D Home Assistant (DT3DHA)
+# Digital Twin 3D for Home Assistant (DT3D)
 
-This repository provides a minimal Home Assistant integration composed of:
+DT3D is a Home Assistant custom dashboard card for building and viewing a
+persistent 3D representation of a home. The project is split into a browser
+frontend and a Home Assistant app/add-on that stores 3D scene data.
 
-- **Frontend card** (`frontend/`): A custom card built with [Vite](https://vitejs.dev) and [three.js](https://threejs.org) that renders a spinning 3D cube. The built card registers the `dt3d-card` element.
-- **Backend add-on** (`addon/`): A Go server using SQLite intended to run as a Home Assistant add-on. It exposes a simple `/api/hello` endpoint.
+For installation and end-user instructions, see the
+[setup and usage manual](MANUAL.md).
 
-## Frontend development
+## System architecture
+
+DT3D deliberately keeps 3D scene storage separate from Home Assistant entity
+data:
+
+```text
+┌──────────────────────────────── Home Assistant browser tab ────────────────────────────────┐
+│                                                                                             │
+│  Home Assistant frontend                                                                   │
+│    │                                                                                        │
+│    │ hass.states, entity metadata, camera images, callService()                            │
+│    ▼                                                                                        │
+│  custom:dt3d-card ────────────────────────────────┐                                        │
+│    │                                              │                                        │
+└────│──────────────────────────────────────────────│────────────────────────────────────────┘
+     │ Home Assistant's normal frontend card API   │ HTTPS + X-DT3D-Service-Key
+     │                                              ▼
+     │                                  DT3D Home Assistant app/add-on
+     │                                    │
+     │                                    ├── Space and object REST API
+     │                                    ├── Imported geometry storage
+     │                                    └── SQLite scene database
+     │
+     └── Home Assistant remains the source of entity states and services
+```
+
+The responsibilities are:
+
+- **DT3D frontend card:** renders the scene, provides the editor, consumes Home
+  Assistant entity states, opens entity dialogs, and calls Home Assistant
+  services in the same way as any other custom frontend card.
+- **DT3D backend app/add-on:** provides the 3D space API and persists spaces,
+  object hierarchies, transforms, materials, viewports, space configuration,
+  and uploaded geometry. It does not replace or proxy Home Assistant's entity
+  APIs.
+- **Home Assistant:** remains the source of truth for entities, their current
+  state and attributes, camera image URLs, and service calls such as
+  `light.toggle` and `switch.toggle`.
+
+The card therefore has two connections. Home Assistant supplies its normal
+frontend `hass` object, while the card connects directly to the DT3D backend's
+HTTP(S) API using the configured address, port, and service key.
+
+## Technology stack
+
+### Frontend
+
+- TypeScript
+- [Lit](https://lit.dev/) custom elements
+- [three.js](https://threejs.org/) for WebGL rendering, controls, model loaders,
+  CSS 3D overlays, and post-processing
+- Vite library-mode build producing one ES module
+- Material Design Icons via `@mdi/js`
+- Troika text rendering
+- ESLint, TypeScript, and Prettier for development checks
+
+The built custom element is registered as `dt3d-card` and is used in Home
+Assistant as `custom:dt3d-card`.
+
+### Backend
+
+- Go
+- Gin HTTP router
+- GORM
+- SQLite through the pure-Go `glebarez/sqlite` driver
+- Home Assistant base container on Alpine Linux
+- Header-based API authentication with `X-DT3D-Service-Key`
+- Optional TLS using a configured certificate/key pair or a generated
+  self-signed certificate
+
+## Repository structure
+
+```text
+.
+├── addon/
+│   ├── backend/
+│   │   ├── handlers/       HTTP authentication and space/object routes
+│   │   ├── models/         GORM database models
+│   │   ├── repository/     SQLite persistence
+│   │   └── service/        Space and object business logic
+│   ├── config.yaml         Home Assistant app/add-on metadata and options
+│   ├── Dockerfile          Home Assistant app/add-on image
+│   └── deploy.sh           SSH-based local deployment helper
+├── frontend/
+│   ├── src/
+│   │   ├── components/     Card, editor UI, menus, tree, and inspectors
+│   │   ├── editor/         Scene, renderer, walls, materials, and measurements
+│   │   ├── objects/        Persistable 3D and Home Assistant entity objects
+│   │   ├── service/        DT3D API client and scene synchronization
+│   │   └── locale/         UI strings
+│   └── vite.config.js      Single-module production build
+├── sample/                 Sample 3D assets
+├── MANUAL.md               Installation and user documentation
+└── README.md               Architecture and development documentation
+```
+
+## Build and test locally
+
+### Frontend
+
+Requirements: a current Node.js installation and npm.
 
 ```bash
 cd frontend
 npm install
+npm run lint
 npm run build
 ```
 
-The build output is placed in `frontend/dist/dt3d-card.js` and can be served as a Home Assistant custom card.
+The production bundle is written to:
 
-## Backend add-on
-
-The add-on source lives in `addon/` and is built with the Home Assistant add-on system.
-
-- `config.yaml` – metadata for the add-on
-- `Dockerfile` – builds the Go server inside a minimal Alpine image
-
-The Go server listens on port `8080` and uses a local SQLite database (`data.db`).
-Requests must include the service key configured in the add-on options using
-the `X-DT3D-Service-Key` header.
-
-## Repository structure
-
-```
-frontend/   - Vite project for the custom card
-addon/      - Go backend and Home Assistant add-on files
+```text
+frontend/dist/dt3d-card.js
 ```
 
-## Home Assistant installation
+Other available commands:
 
-### Custom card
+```bash
+npm run dev       # start the Vite development server
+npm run format    # format the frontend source with Prettier
+npm run lint-fix  # apply safe ESLint fixes
+```
 
-1. Build the frontend as shown above to produce `frontend/dist/dt3d-card.js`.
-2. Copy the file to your Home Assistant configuration directory, e.g.
-   `config/www/dt3d-card.js`.
-3. In Home Assistant, navigate to **Settings → Dashboards → Resources** and add
-   `/local/dt3d-card.js` as a JavaScript resource.
-4. Add a manual card in the dashboard using the `custom:dt3d-card` element.
+### Backend
 
-Example card configuration:
+Requirements: Go with the version supported by `addon/backend/go.mod`.
+
+```bash
+cd addon/backend
+go mod download
+go test ./...
+go build -o dt3d-backend .
+```
+
+The Home Assistant container build performs the Go build automatically. To
+verify the same container definition locally, build from the `addon` directory:
+
+```bash
+docker build -t dt3d-addon-local ./addon
+```
+
+## Test in your own Home Assistant deployment
+
+The fastest development loop is to deploy the backend as a local app/add-on and
+serve the frontend bundle from Home Assistant's `/config/www` directory.
+
+### 1. Deploy the backend as a local app/add-on
+
+This requires Home Assistant OS or Home Assistant Supervised.
+
+1. Copy the complete repository `addon/` directory to
+   `/addons/dt3d` on the Home Assistant host.
+2. Open **Settings → Apps** (or **Settings → Add-ons** on older versions), open
+   the store, and reload it from the three-dot menu.
+3. Open the local **DT3D** entry and select **Install** or **Rebuild**.
+4. Configure at least a non-empty `service_key`, then start the app/add-on.
+
+Example development configuration:
+
+```yaml
+port: 8080
+service_key: replace-with-a-development-secret
+ssl_certificate: ""
+ssl_key: ""
+use_self_signed_certificate: false
+```
+
+For HTTPS and certificates, follow the
+[network and TLS section of the manual](MANUAL.md#network-and-tls-setup).
+
+The deployment helper copies the backend over SSH, reloads the store, and then
+installs, rebuilds, or restarts the local app/add-on:
+
+```bash
+bash ./addon/deploy.sh <ssh-user> '<ssh-password>' [ha-host] [ssh-port]
+
+# Example
+bash ./addon/deploy.sh root '<ssh-password>' homeassistant.local 22
+```
+
+It requires the Home Assistant **Terminal & SSH** app/add-on and `sshpass` on
+the development computer.
+
+Verify the backend before loading the frontend:
+
+```bash
+curl -H "X-DT3D-Service-Key: replace-with-a-development-secret" \
+  http://homeassistant.local:8080/api/hello
+```
+
+### 2. Deploy the frontend bundle
+
+After `npm run build`, copy:
+
+```text
+frontend/dist/dt3d-card.js
+```
+
+to:
+
+```text
+/config/www/dt3d-card.js
+```
+
+In Home Assistant, open **Settings → Dashboards → three-dot menu → Resources**
+and register the following as a JavaScript module:
+
+```text
+/local/dt3d-card.js
+```
+
+Hard-refresh the browser after replacing the bundle. If the previous JavaScript
+is still cached during rapid development, temporarily add or change a query
+string in the resource URL, for example `/local/dt3d-card.js?v=2`.
+
+### 3. Create a development card
+
+Add a manual dashboard card:
 
 ```yaml
 type: custom:dt3d-card
-address: http://<home-assistant-host>
+address: http://homeassistant.local
 port: 8080
-service_key: <same-key-as-the-add-on>
-default_space: <space-id>
-default_viewport: <viewport-object-id>
-orientation_cube: false
+service_key: replace-with-a-development-secret
 visualization_only: false
-entity_click_action: nothing
-entity_double_click_action: toggle
 general:
-  rendering:
-    antialiasing: false
-    resolution: 1
-    shadowMap:
-      enabled: false
-      type: pcf
   developmentMode:
     enabled: true
 ```
 
-Use an `https://` address when the add-on is configured to serve HTTPS.
-In edit mode, use the space selector at the top of the card to switch the
-space being edited. The adjacent actions create spaces and delete the active
-space. Use **Create group** in the sidebar to add an empty group, then organize
-objects beneath it in the object tree.
-Set `visualization_only: true` to hide editing controls and the object tree
-while keeping camera navigation and object interaction available. The
-`default_space` is selected in the visual card configuration and is the only
-way to choose the displayed space in visualization-only mode.
-`default_viewport` is optional. Select it in the visual card configuration to
-override the space's default saved camera position for this card. Leaving it
-empty keeps the viewport chosen as the default in the space editor.
-Set `orientation_cube: true` to show a navigation cube. Double-click one of its
-faces to align the camera with the corresponding front, back, left, right, top,
-or bottom view. The cube is disabled by default.
-Use `entity_click_action` and `entity_double_click_action` to choose the default
-entity interaction for each gesture. Supported values are `open`, `toggle`, and
-`nothing`. The defaults are `nothing` for a click and `toggle` for a double-click.
-Each entity can override these settings in the object inspector. The inspector
-only offers Toggle for entity types that support it; other entity types can use
-Open entity, Nothing, or inherit the card default.
-Anti-aliasing, render resolution, shadow maps, and development mode are scoped
-to each card. Tone mapping, post-processing, and scene appearance remain scoped
-to the selected space.
+Use HTTPS for the backend when the Home Assistant page uses HTTPS; browsers
+block calls from a secure page to an insecure backend.
 
-### Add-on
+### 4. Development verification checklist
 
-1. Copy the `addon` directory into your Home Assistant `addons` folder or add
-   this repository as a custom add-on repository.
-2. Install the add-on from **Settings → Add-ons → Add-on Store**.
-3. Set the `service_key` option to a private key and start the add-on.
-4. Verify the add-on is running by visiting
-   `http://<home-assistant>:8080/api/hello` with the service key header.
+- The backend log reports that it is listening on the configured port.
+- `/api/hello` responds when the service-key header is present.
+- The browser loads `dt3d-card.js` without a 404 or JavaScript module error.
+- Development mode displays a successful backend connection.
+- A new space can be created and still exists after refreshing the page.
+- Adding or moving an object updates the backend without authorization or CORS
+  errors in the browser network panel.
+- Home Assistant entities update in the scene and light/switch actions call the
+  corresponding Home Assistant services.
 
-```bash
-curl -H "X-DT3D-Service-Key: <service_key>" \
-  http://<home-assistant>:8080/api/hello
-```
+## Data and runtime paths
 
-#### HTTPS
+Inside the Home Assistant app/add-on:
 
-To serve the backend over HTTPS with your own certificate, place the certificate
-and key in Home Assistant's `/ssl` directory and configure the add-on options:
+- SQLite uses `data.db` in the backend process's working directory. In the
+  current container image that directory is `/app`.
+- Generated or normalized TLS files live under `/data`.
+- Imported binary geometry lives under `/data/dt3d-geometries`.
+- Certificates mounted from Home Assistant are available under `/ssl`.
+- The backend listens on `0.0.0.0` using the configured port, which defaults to
+  `8080`.
 
-```yaml
-ssl_certificate: /ssl/fullchain.pem
-ssl_key: /ssl/privkey.pem
-use_self_signed_certificate: false
-```
+The frontend stores only local editor preferences, such as grid and collapsed
+panel state, in browser storage. Persistent spaces and objects are synchronized
+to the backend. Home Assistant entity state is consumed live and is not copied
+into the DT3D database as an alternative entity registry.
 
-The `ssl_certificate` and `ssl_key` options also accept PEM content directly.
-Multi-line PEM is supported, as are single-line pasted values with spaces
-between the `BEGIN`/`END` markers and the base64 body:
+## Documentation
 
-```yaml
-ssl_certificate: |
-  -----BEGIN CERTIFICATE-----
-  ...
-  -----END CERTIFICATE-----
-ssl_key: |
-  -----BEGIN PRIVATE KEY-----
-  ...
-  -----END PRIVATE KEY-----
-use_self_signed_certificate: false
-```
-
-If no certificate/key pair is available, set `use_self_signed_certificate: true`.
-The backend will generate and reuse a self-signed certificate under `/data`.
-Browsers and clients will need to trust or explicitly accept that certificate.
-
-```bash
-curl -k -H "X-DT3D-Service-Key: <service_key>" \
-  https://<home-assistant>:8080/api/hello
-```
-
-### Development deploy script
-
-`addon/deploy.sh` copies the local add-on source to a running Home Assistant
-instance over SSH and triggers a rebuild and restart, allowing a fast edit→deploy
-cycle.
-
-**Prerequisites**
-
-- The **Terminal & SSH** add-on is installed and running on Home Assistant
-  (it exposes SSH on port 22 by default).
-- `sshpass` is installed on the machine running the script.
-
-**Usage**
-
-```bash
-bash ./addon/deploy.sh <ssh-user> <ssh-password> [ha-host] [ssh-port]
-
-# Example
-bash ./addon/deploy.sh root '<ssh-password>' 192.168.1.100 22
-```
-
-Optional environment variables:
-
-| Variable   | Default               | Description                           |
-|------------|-----------------------|---------------------------------------|
-| `HA_HOST`  | `homeassistant.local` | IP or hostname of HA                  |
-| `SSH_PORT` | `22`                  | SSH port of the Terminal & SSH add-on |
-
-The script copies `addon/` to `/addons/dt3d`, reloads the Home Assistant add-on
-store, then rebuilds and restarts `local_dt3d` if it is installed. If the add-on
-is not installed yet, it installs and starts `local_dt3d`.
+- [Setup and usage manual](MANUAL.md)
+- [Home Assistant custom app repositories](https://developers.home-assistant.io/docs/apps/repository/)
+- [Home Assistant dashboard views](https://www.home-assistant.io/dashboards/views/)
