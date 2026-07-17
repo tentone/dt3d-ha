@@ -1,5 +1,4 @@
-import type {
-	Object3D} from "three";
+import type {Object3D} from "three";
 import {
 	AmbientLight,
 	BoxGeometry,
@@ -15,6 +14,8 @@ import {
 	Vector3,
 } from "three";
 import {Sky} from "three/examples/jsm/Addons.js";
+import {FlyControls} from "three/examples/jsm/controls/FlyControls.js";
+import {MapControls} from "three/examples/jsm/controls/MapControls.js";
 import {OrbitControls} from "three/examples/jsm/controls/OrbitControls";
 import {TransformControls} from "three/examples/jsm/controls/TransformControls";
 
@@ -22,6 +23,31 @@ import {TransformControls} from "three/examples/jsm/controls/TransformControls";
  * Editor camera mode (2D or 3D)
  */
 export type CameraMode = "perspective" | "orthographic";
+
+/**
+ * Navigation controller used to move the camera.
+ */
+export type NavigationControlsType = "fly" | "map" | "orbit";
+
+export type NavigationControls = OrbitControls | FlyControls;
+
+export const DEFAULT_NAVIGATION_CONTROLS: NavigationControlsType = "orbit";
+
+/**
+ * Normalize a card navigation control setting.
+ */
+export const normalizeNavigationControlsType = (
+	value: unknown,
+): NavigationControlsType => {
+	if (typeof value !== "string") {
+		return DEFAULT_NAVIGATION_CONTROLS;
+	}
+
+	const normalized = value.trim().toLowerCase().replace(/controls?$/, "");
+	return normalized === "fly" || normalized === "map" || normalized === "orbit"
+		? normalized
+		: DEFAULT_NAVIGATION_CONTROLS;
+};
 
 export type CameraViewportConfig = {
 	direction: {
@@ -243,9 +269,20 @@ export class SceneManager {
 	public measurements: Group = null;
 
 	/**
-	 * Orbit controls to navigate the scene.
+	 * Controls used to navigate the scene.
 	 */
-	public controls: OrbitControls = null;
+	public controls: NavigationControls = null;
+
+	private navigationControlsType: NavigationControlsType =
+		DEFAULT_NAVIGATION_CONTROLS;
+
+	/**
+	 * FlyControls has no target, so retain a focus point for saved viewports and
+	 * orientation-cube actions.
+	 */
+	private navigationTarget = new Vector3();
+
+	private navigationTargetDistance = 3;
 
 	/**
 	 * Transform controls for object manipulation.
@@ -307,7 +344,12 @@ export class SceneManager {
 	 */
 	private spaceSceneConfig: SpaceSceneConfig = normalizeSpaceSceneConfig();
 
-	constructor(canvas: HTMLCanvasElement, height: number, width: number) {
+	constructor(
+		canvas: HTMLCanvasElement,
+		height: number,
+		width: number,
+		navigationControls: NavigationControlsType = DEFAULT_NAVIGATION_CONTROLS,
+	) {
 		this.scene = new Scene();
 
 		this.canvas = canvas;
@@ -326,12 +368,8 @@ export class SceneManager {
 
 		this.addSky();
 
-		this.controls = new OrbitControls(this.camera, canvas);
-		this.controls.enableDamping = true;
-		this.controls.dampingFactor = 0.05;
-		this.controls.addEventListener("change", () => {
-			this.updateGridPosition();
-		});
+		this.navigationTargetDistance = this.camera.position.length();
+		this.controls = this.createNavigationControls(navigationControls);
 
 		this.transform = new TransformControls(this.camera, canvas);
 		this.transform.addEventListener("dragging-changed", (event: any) => {
@@ -340,6 +378,84 @@ export class SceneManager {
 		this.scene.add(this.transform.getHelper());
 
 		this.createGrid();
+	}
+
+	private createNavigationControls(
+		type: NavigationControlsType,
+	): NavigationControls {
+		this.navigationControlsType = type;
+		const controls =
+			type === "fly"
+				? new FlyControls(this.camera, this.canvas)
+				: type === "map"
+					? new MapControls(this.camera, this.canvas)
+					: new OrbitControls(this.camera, this.canvas);
+
+		if (controls instanceof OrbitControls) {
+			controls.target.copy(this.navigationTarget);
+			controls.enableDamping = true;
+			controls.dampingFactor = 0.05;
+		}
+
+		controls.addEventListener("change", () => {
+			this.syncNavigationTarget();
+			this.updateGridPosition();
+		});
+
+		return controls;
+	}
+
+	private syncNavigationTarget(): void {
+		if (this.controls instanceof OrbitControls) {
+			this.navigationTarget.copy(this.controls.target);
+			this.navigationTargetDistance = Math.max(
+				this.controls.target.distanceTo(this.camera.position),
+				0.1,
+			);
+			return;
+		}
+
+		const direction = new Vector3();
+		this.camera.getWorldDirection(direction);
+		this.navigationTarget
+			.copy(this.camera.position)
+			.add(direction.multiplyScalar(this.navigationTargetDistance));
+	}
+
+	private setNavigationTarget(target: Vector3): void {
+		this.navigationTarget.copy(target);
+		this.navigationTargetDistance = Math.max(
+			target.distanceTo(this.camera.position),
+			0.1,
+		);
+		if (this.controls instanceof OrbitControls) {
+			this.controls.target.copy(target);
+		}
+	}
+
+	/**
+	 * Replace the active navigation controller while preserving the current view.
+	 */
+	public setNavigationControlsType(
+		type: NavigationControlsType,
+	): NavigationControls {
+		const normalizedType = normalizeNavigationControlsType(type);
+		if (normalizedType === this.navigationControlsType) {
+			return this.controls;
+		}
+
+		this.syncNavigationTarget();
+		const enabled = this.controls.enabled;
+		this.controls.dispose();
+		this.controls = this.createNavigationControls(normalizedType);
+		this.controls.enabled = enabled;
+		this.controls.update(0);
+
+		return this.controls;
+	}
+
+	public getNavigationControlsType(): NavigationControlsType {
+		return this.navigationControlsType;
 	}
 
 	/**
@@ -670,7 +786,7 @@ export class SceneManager {
 		this.camera.updateMatrixWorld();
 
 		this.controls.object = this.camera;
-		this.controls.update();
+		this.controls.update(0);
 
 		this.transform.camera = this.camera;
 		this.updateSize(this.width, this.height);
@@ -705,16 +821,16 @@ export class SceneManager {
 			return;
 		}
 
-		const distance = Math.max(
-			this.controls.target.distanceTo(this.camera.position),
-			0.1,
-		);
+		this.syncNavigationTarget();
+		const target = this.navigationTarget.clone();
+		const distance = Math.max(this.navigationTargetDistance, 0.1);
 		this.camera.position
-			.copy(this.controls.target)
+			.copy(target)
 			.add(direction.clone().normalize().multiplyScalar(distance));
-		this.camera.lookAt(this.controls.target);
+		this.camera.lookAt(target);
 		this.camera.updateMatrixWorld();
-		this.controls.update();
+		this.setNavigationTarget(target);
+		this.controls.update(0);
 		this.updateGridPosition();
 	}
 
@@ -722,6 +838,7 @@ export class SceneManager {
 	 * Capture the current camera position, orientation and projection mode.
 	 */
 	public captureViewportConfig(): CameraViewportConfig {
+		this.syncNavigationTarget();
 		const direction = new Vector3();
 		this.camera.getWorldDirection(direction);
 
@@ -746,11 +863,11 @@ export class SceneManager {
 				z: this.camera.quaternion.z,
 			},
 			target: {
-				x: this.controls.target.x,
-				y: this.controls.target.y,
-				z: this.controls.target.z,
+				x: this.navigationTarget.x,
+				y: this.navigationTarget.y,
+				z: this.navigationTarget.z,
 			},
-			targetDistance: this.controls.target.distanceTo(this.camera.position),
+			targetDistance: this.navigationTargetDistance,
 			zoom: this.camera.zoom,
 		};
 	}
@@ -801,10 +918,8 @@ export class SceneManager {
 		}
 
 		if (config.target) {
-			this.controls.target.set(
-				config.target.x,
-				config.target.y,
-				config.target.z,
+			this.setNavigationTarget(
+				new Vector3(config.target.x, config.target.y, config.target.z),
 			);
 		} else {
 			const direction = new Vector3(
@@ -813,14 +928,14 @@ export class SceneManager {
 				config.direction.z,
 			).normalize();
 			const distance = config.targetDistance ?? 10;
-			this.controls.target
-				.copy(this.camera.position)
-				.add(direction.multiplyScalar(distance));
+			this.setNavigationTarget(
+				this.camera.position.clone().add(direction.multiplyScalar(distance)),
+			);
 		}
 
 		this.camera.updateProjectionMatrix();
 		this.camera.updateMatrixWorld();
-		this.controls.update();
+		this.controls.update(0);
 		this.updateGridPosition();
 	}
 

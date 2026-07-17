@@ -12,7 +12,6 @@ import {
 	VSMShadowMap,
 	WebGLRenderer,
 } from "three";
-import type {OrbitControls} from "three/examples/jsm/controls/OrbitControls";
 import {BokehPass} from "three/examples/jsm/postprocessing/BokehPass.js";
 import {EffectComposer} from "three/examples/jsm/postprocessing/EffectComposer.js";
 import {FilmPass} from "three/examples/jsm/postprocessing/FilmPass.js";
@@ -31,6 +30,7 @@ import type {
 	ToneMappingMode,
 } from "./general-config.js";
 import {normalizeGeneralConfig} from "./general-config.js";
+import type {NavigationControls} from "./scene.js";
 
 type PostProcessingPasses = {
 	bokehDepth: BokehPass;
@@ -107,7 +107,7 @@ export class RendererManager {
 	/**
 	 * Control object used to move around the scene.
 	 */
-	public controls: OrbitControls;
+	public controls: NavigationControls;
 
 	private canvas: HTMLCanvasElement;
 
@@ -129,7 +129,7 @@ export class RendererManager {
 	constructor(
 		camera: Camera,
 		canvas: HTMLCanvasElement,
-		controls: OrbitControls,
+		controls: NavigationControls,
 		cssElement: HTMLElement,
 		height: number,
 		scene: Scene,
@@ -372,12 +372,15 @@ export class RendererManager {
 	 */
 	public start(onUpdate?: (time: number) => void): void {
 		this.running = true;
+		let previousTime = 0;
 		const animate = (time: number) => {
 			if (this.running) {
 				requestAnimationFrame(animate);
 			}
 
-			this.controls?.update();
+			const delta = previousTime === 0 ? 0 : (time - previousTime) / 1000;
+			previousTime = time;
+			this.controls?.update(delta);
 			onUpdate?.(time);
 
 			this.cssRenderer.render(this.scene, this.camera);
@@ -436,5 +439,9 @@ export class RendererManager {
 			PERSPECTIVE_CAMERA: perspectiveCamera,
 		};
 		this.postProcessingPasses.gtao.gtaoMaterial.needsUpdate = true;
+	}
+
+	public setControls(controls: NavigationControls): void {
+		this.controls = controls;
 	}
 }

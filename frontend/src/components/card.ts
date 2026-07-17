@@ -17,7 +17,6 @@ import {LitElement} from "lit";
 import {customElement} from "lit/decorators.js";
 import type {Camera, Intersection, Object3D, Scene} from "three";
 import {Group, MeshStandardMaterial, Raycaster, Vector2, Vector3} from "three";
-import type {OrbitControls} from "three/examples/jsm/controls/OrbitControls";
 import type {TransformControls} from "three/examples/jsm/controls/TransformControls";
 import {DRACOLoader} from "three/examples/jsm/loaders/DRACOLoader.js";
 import {FBXLoader} from "three/examples/jsm/loaders/FBXLoader.js";
@@ -52,10 +51,13 @@ import {RendererManager} from "../editor/renderer.js";
 import type {
 	CameraMode,
 	GridConfig,
+	NavigationControls,
+	NavigationControlsType,
 	SpaceSceneConfig,
 } from "../editor/scene.js";
 import {
 	normalizeGridConfig,
+	normalizeNavigationControlsType,
 	normalizeSpaceSceneConfig,
 	SceneManager,
 } from "../editor/scene.js";
@@ -153,7 +155,7 @@ export class DT3DCard extends LitElement {
 	/**
 	 * Renderer for the 3D content.
 	 */
-	private controls: OrbitControls;
+	private controls: NavigationControls;
 
 	/**
 	 * Transform controls are used to manipulate objects.
@@ -457,6 +459,12 @@ export class DT3DCard extends LitElement {
 		const orientationCube = booleanConfig(
 			config.orientation_cube ?? config.orientationCube,
 		);
+		const navigationControls = normalizeNavigationControlsType(
+			config.navigation_controls ??
+				config.navigationControls ??
+				config.navigation_control ??
+				config.navigationControl,
+		);
 		this.entityInteractions = normalizeEntityInteractionConfig(config);
 
 		this.cardGeneralConfig = normalizeCardGeneralConfig(
@@ -472,11 +480,13 @@ export class DT3DCard extends LitElement {
 		this.config = {
 			...mergedConfig,
 			orientation_cube: orientationCube,
+			navigation_controls: navigationControls,
 			visualization_only: visualizationOnly,
 			entity_click_action: this.entityInteractions.click,
 			entity_double_click_action: this.entityInteractions.doubleClick,
 		};
 		this.clearPendingEntityClickAction();
+		this.applyNavigationControls();
 		this.applyGeneralConfig();
 		this.applyVisualizationMode();
 
@@ -485,6 +495,21 @@ export class DT3DCard extends LitElement {
 
 	private isVisualizationOnly(): boolean {
 		return this.config?.visualization_only === true;
+	}
+
+	private getNavigationControlsType(): NavigationControlsType {
+		return normalizeNavigationControlsType(this.config?.navigation_controls);
+	}
+
+	private applyNavigationControls(): void {
+		if (!this.sceneManager) {
+			return;
+		}
+
+		this.controls = this.sceneManager.setNavigationControlsType(
+			this.getNavigationControlsType(),
+		);
+		this.rendererManager?.setControls(this.controls);
 	}
 
 	private isOrientationCubeEnabled(): boolean {
@@ -2065,7 +2090,12 @@ export class DT3DCard extends LitElement {
 		`;
 		this.content.appendChild(cssElem);
 
-		this.sceneManager = new SceneManager(this.canvas, height, width);
+		this.sceneManager = new SceneManager(
+			this.canvas,
+			height,
+			width,
+			this.getNavigationControlsType(),
+		);
 		this.sceneManager.setGridConfig(
 			normalizeGridConfig(LocalStorage.read(GRID_CONFIG_STORAGE_KEY, {}) ?? {}),
 		);
@@ -2750,6 +2780,7 @@ export class DT3DCard extends LitElement {
 			default_space: "",
 			default_viewport: "",
 			orientation_cube: false,
+			navigation_controls: "orbit",
 			general: normalizeCardGeneralConfig(),
 		};
 	}

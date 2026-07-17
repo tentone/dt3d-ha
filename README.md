@@ -231,6 +231,7 @@ type: custom:dt3d-card
 address: http://homeassistant.local
 port: 8080
 service_key: replace-with-a-development-secret
+navigation_controls: orbit
 visualization_only: false
 general:
   developmentMode:

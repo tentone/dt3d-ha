@@ -3,6 +3,7 @@ import {customElement} from "lit/decorators.js";
 
 import {normalizeEntityInteractionConfig} from "../editor/entity-actions.js";
 import {normalizeCardGeneralConfig} from "../editor/general-config.js";
+import {normalizeNavigationControlsType} from "../editor/scene.js";
 import {localManager} from "../locale/locale.js";
 import type {SpaceResponse} from "../service/space-api.js";
 import {SpaceApi} from "../service/space-api.js";
@@ -55,6 +56,7 @@ export class DT3DConfigEditor extends LitElement {
 			service_key: "",
 			default_space: "",
 			default_viewport: "",
+			navigation_controls: "orbit",
 			orientation_cube: false,
 			visualization_only: false,
 			entity_click_action: entityInteractions.click,
@@ -68,6 +70,12 @@ export class DT3DConfigEditor extends LitElement {
 			config?.default_viewport ?? config?.defaultViewport ?? "";
 		this._config.orientation_cube = booleanConfig(
 			config?.orientation_cube ?? config?.orientationCube,
+		);
+		this._config.navigation_controls = normalizeNavigationControlsType(
+			config?.navigation_controls ??
+				config?.navigationControls ??
+				config?.navigation_control ??
+				config?.navigationControl,
 		);
 		this._config.entity_click_action = entityInteractions.click;
 		this._config.entity_double_click_action = entityInteractions.doubleClick;
@@ -228,6 +236,9 @@ export class DT3DConfigEditor extends LitElement {
 		);
 		const visualizationOnly = booleanConfig(this._config.visualization_only);
 		const orientationCube = booleanConfig(this._config.orientation_cube);
+		const navigationControls = normalizeNavigationControlsType(
+			this._config.navigation_controls,
+		);
 		const entityInteractions = normalizeEntityInteractionConfig(this._config);
 		const general = normalizeCardGeneralConfig(this._config.general ?? {});
 
@@ -272,6 +283,18 @@ export class DT3DConfigEditor extends LitElement {
 				<details open>
 					<summary>${localManager.get("viewAndBehavior")}</summary>
 					<div class="section-content">
+						<div class="field">
+							<label>${localManager.get("navigationControls")}</label>
+							<select
+								data-key="navigation_controls"
+								.value=${navigationControls}
+								@change=${this.onValueChanged}>
+								<option value="orbit">${localManager.get("orbitControls")}</option>
+								<option value="map">${localManager.get("mapControls")}</option>
+								<option value="fly">${localManager.get("flyControls")}</option>
+							</select>
+							<p>${localManager.get("navigationControlsDescription")}</p>
+						</div>
 						${this._spaces.length > 0
 							? html`
 									<div class="field">

@@ -212,6 +212,7 @@ port: 8080
 service_key: replace-with-the-backend-service-key
 default_space: ""
 default_viewport: ""
+navigation_controls: orbit
 orientation_cube: true
 visualization_only: false
 entity_click_action: nothing
@@ -389,6 +390,7 @@ port: 8080
 service_key: replace-with-the-backend-service-key
 default_space: 7b9b4c3d-choose-a-space-id
 default_viewport: 6a8a2d10-optional-viewport-object-id
+navigation_controls: orbit
 orientation_cube: false
 visualization_only: true
 entity_click_action: open
@@ -416,6 +418,7 @@ spaces there. Leave `default_viewport` empty to follow the space's default.
 | `service_key` | empty | Must exactly match the backend `service_key`. |
 | `default_space` | first available | Space ID opened by this card. |
 | `default_viewport` | space default | Viewport object ID opened by this card. |
+| `navigation_controls` | `orbit` | Camera interaction style: `orbit`, `map`, or `fly`. |
 | `orientation_cube` | `false` | Shows the camera orientation cube. |
 | `visualization_only` | `false` | Hides all editing and space-management controls. |
 | `entity_click_action` | `nothing` | `open`, `toggle`, or `nothing`. |
