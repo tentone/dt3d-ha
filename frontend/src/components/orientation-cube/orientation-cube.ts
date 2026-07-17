@@ -9,11 +9,13 @@ import {
 	Mesh,
 	MeshBasicMaterial,
 	OrthographicCamera,
+	PlaneGeometry,
 	Quaternion,
 	Raycaster,
 	Scene,
 	SRGBColorSpace,
 	Vector2,
+	Vector3,
 	WebGLRenderer,
 } from "three";
 
@@ -23,7 +25,7 @@ export type OrientationCubeDirection = {
 	z: number;
 };
 
-const CUBE_SIZE = 88;
+const CUBE_SIZE = 88 * 1.3;
 
 const FACES: Array<{
 	color: string;
@@ -53,6 +55,9 @@ export class DT3DOrientationCube extends HTMLElement {
 	private readonly viewCamera = new OrthographicCamera(-1.7, 1.7, 1.7, -1.7, 0.1, 10);
 	private readonly viewGroup = new Group();
 	private readonly inverseCameraQuaternion = new Quaternion();
+	private readonly faceNormal = new Vector3();
+	private hoverHighlight: Mesh<PlaneGeometry, MeshBasicMaterial> | null = null;
+	private readonly planeNormal = new Vector3(0, 0, 1);
 
 	public connectedCallback(): void {
 		if (!this.shadowRoot) {
@@ -113,6 +118,17 @@ export class DT3DOrientationCube extends HTMLElement {
 		);
 		this.cube = new Mesh(new BoxGeometry(2, 2, 2), materials);
 		this.viewGroup.add(this.cube);
+		this.hoverHighlight = new Mesh(
+			new PlaneGeometry(2, 2),
+			new MeshBasicMaterial({
+				color: 0xffffff,
+				depthWrite: false,
+				opacity: 0.28,
+				transparent: true,
+			}),
+		);
+		this.hoverHighlight.visible = false;
+		this.viewGroup.add(this.hoverHighlight);
 
 		const edges = new LineSegments(
 			new EdgesGeometry(this.cube.geometry),
@@ -124,6 +140,8 @@ export class DT3DOrientationCube extends HTMLElement {
 		this.viewCamera.lookAt(0, 0, 0);
 
 		canvas.addEventListener("dblclick", this.handleDoubleClick);
+		canvas.addEventListener("pointermove", this.handlePointerMove);
+		canvas.addEventListener("pointerleave", this.handlePointerLeave);
 		this.renderFrame();
 	}
 
@@ -148,13 +166,14 @@ export class DT3DOrientationCube extends HTMLElement {
 		return texture;
 	}
 
-	private readonly handleDoubleClick = (event: MouseEvent): void => {
+	private getHoveredFace(event: MouseEvent): {
+		face: (typeof FACES)[number];
+		normal: Vector3;
+	} | null {
 		if (!this.cube || !this.renderer) {
-			return;
+			return null;
 		}
 
-		event.preventDefault();
-		event.stopPropagation();
 		const rect = this.renderer.domElement.getBoundingClientRect();
 		this.pointer.set(
 			((event.clientX - rect.left) / rect.width) * 2 - 1,
@@ -164,6 +183,42 @@ export class DT3DOrientationCube extends HTMLElement {
 		const intersection = this.raycaster.intersectObject(this.cube, false)[0];
 		const materialIndex = intersection?.face?.materialIndex;
 		const face = typeof materialIndex === "number" ? FACES[materialIndex] : null;
+
+		if (!face || !intersection.face) {
+			return null;
+		}
+
+		return {face, normal: intersection.face.normal};
+	}
+
+	private readonly handlePointerMove = (event: PointerEvent): void => {
+		const hoveredFace = this.getHoveredFace(event);
+		if (!hoveredFace || !this.hoverHighlight) {
+			if (this.hoverHighlight) {
+				this.hoverHighlight.visible = false;
+			}
+			return;
+		}
+
+		this.faceNormal.copy(hoveredFace.normal);
+		this.hoverHighlight.position.copy(this.faceNormal).multiplyScalar(1.001);
+		this.hoverHighlight.quaternion.setFromUnitVectors(
+			this.planeNormal,
+			this.faceNormal,
+		);
+		this.hoverHighlight.visible = true;
+	};
+
+	private readonly handlePointerLeave = (): void => {
+		if (this.hoverHighlight) {
+			this.hoverHighlight.visible = false;
+		}
+	};
+
+	private readonly handleDoubleClick = (event: MouseEvent): void => {
+		event.preventDefault();
+		event.stopPropagation();
+		const face = this.getHoveredFace(event)?.face;
 
 		if (!face) {
 			return;
@@ -200,6 +255,8 @@ export class DT3DOrientationCube extends HTMLElement {
 
 		const canvas = this.shadowRoot?.querySelector("canvas");
 		canvas?.removeEventListener("dblclick", this.handleDoubleClick);
+		canvas?.removeEventListener("pointermove", this.handlePointerMove);
+		canvas?.removeEventListener("pointerleave", this.handlePointerLeave);
 		this.cube?.geometry.dispose();
 		for (const material of this.cube?.material ?? []) {
 			material.map?.dispose();
@@ -226,6 +283,7 @@ export class DT3DOrientationCube extends HTMLElement {
 		this.viewGroup.clear();
 		this.scene.remove(this.viewGroup);
 		this.cube = null;
+		this.hoverHighlight = null;
 		this.renderer?.dispose();
 		this.renderer = null;
 	}
