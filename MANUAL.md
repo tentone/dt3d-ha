@@ -1,23 +1,15 @@
 # DT3D setup and usage manual
 
-This manual covers installation, networking, configuration, editing, and
-dashboard usage for Digital Twin 3D for Home Assistant (DT3D). The system has
-two parts:
+ - This manual covers installation, networking, configuration, editing, and dashboard usage for Digital Twin 3D for Home Assistant (DT3D). The system has two parts:
+ - For architecture, source layout, and development instructions, see the [project README](README.md).
 
-For architecture, source layout, and development instructions, see the
-[project README](README.md).
+   - `addon/`: the backend app/add-on. It stores spaces and objects in SQLite and
+   exposes them over an authenticated HTTP(S) API.
+   - `frontend/`: the `custom:dt3d-card` dashboard card. It contains both the
+   editor and the read-only visualization mode.
 
-- `addon/`: the backend app/add-on. It stores spaces and objects in SQLite and
-  exposes them over an authenticated HTTP(S) API.
-- `frontend/`: the `custom:dt3d-card` dashboard card. It contains both the
-  editor and the read-only visualization mode.
-
-> [!IMPORTANT]
-> Home Assistant apps/add-ons are installed from the **Apps/Add-ons store**, not
-> from HACS. HACS is only used for dashboard frontend resources. The current
-> source checkout does not yet contain the `repository.yaml`, `hacs.json`, and
-> built release asset needed for one-click store/HACS installation. The manual
-> installation paths below work with the repository as it is today.
+> Home Assistant apps/add-ons are installed from the **Apps/Add-ons store**.
+> HACS is used for dashboard frontend resources.
 
 ## Requirements
 
@@ -28,15 +20,11 @@ For architecture, source layout, and development instructions, see the
 
 ## Installation
 
-### 1. Install the backend app/add-on
+### 1. Install DT3D add-on
 
-#### From a custom app/add-on repository
+Use these steps when DT3D is published with Home Assistant app repository metadata:
 
-Use these steps when DT3D is published with Home Assistant app repository
-metadata:
-
-1. Open **Settings → Apps** (called **Add-ons** in older Home Assistant
-   versions), then open the **App store**.
+1. Open **Settings → Apps** (called **Add-ons** in older Home Assistant versions), then open the **App store**.
 2. Open the three-dot menu, choose **Repositories**, and add:
 
    ```text
@@ -49,129 +37,32 @@ metadata:
 6. Configure TLS as described in [Network and TLS setup](#network-and-tls-setup),
    then start the app and enable **Start on boot**.
 
-> **Screenshot placeholder — adding the DT3D repository to the Apps/Add-ons store**
->
-> _Replace this block with a screenshot._
-
-> **Screenshot placeholder — installing and configuring the DT3D backend**
->
-> _Replace this block with a screenshot._
-
-#### Manual installation from this checkout
-
-Copy the repository's `addon` directory to `/addons/dt3d` on Home Assistant,
-reload the app/add-on store, and install the local **DT3D** app. The included
-development script can perform that copy, rebuild, and restart over SSH:
-
-```bash
-bash ./addon/deploy.sh <ssh-user> '<ssh-password>' [ha-host] [ssh-port]
-
-# Example
-bash ./addon/deploy.sh root '<ssh-password>' homeassistant.local 22
-```
-
-The script requires the **Terminal & SSH** app/add-on on Home Assistant and
-`sshpass` on the development computer. It defaults to `homeassistant.local`
-and SSH port `22`.
-
-The backend listens on the configured port (default `8080`) and requires the
-same service key used by every DT3D card. After starting it, test the API:
-
-```bash
-curl -H "X-DT3D-Service-Key: <service-key>" \
-  http://homeassistant.local:8080/api/hello
-```
-
-Use `https://` after TLS is enabled. Add `-k` only while testing a self-signed
-certificate; it is not a browser-side fix.
-
 ### 2. Install the frontend
-
-#### HACS installation
 
 Once DT3D publishes a built `dt3d-card.js` as a HACS Dashboard repository:
 
 1. Open **HACS → three-dot menu → Custom repositories**.
 2. Add `https://github.com/tentone/dt3d-ha` with category **Dashboard**.
-3. Open **Digital Twin 3D**, select **Download**, and restart or hard-refresh
-   the browser when prompted.
-4. If HACS does not register the resource automatically, add the downloaded JS
-   file under **Settings → Dashboards → three-dot menu → Resources** as a
-   JavaScript module. HACS dashboard files are normally served below
-   `/hacsfiles/`.
+3. Open **Digital Twin 3D**, select **Download**, and restart or hard-refresh the browser when prompted.
+4. If HACS does not register the resource automatically, add the downloaded JS file under **Settings → Dashboards → three-dot menu → Resources** as a  JavaScript module. HACS dashboard files are normally served below `/hacsfiles/`.
 
-> **Screenshot placeholder — adding DT3D as a HACS Dashboard repository**
->
-> _Replace this block with a screenshot._
 
-> **Screenshot placeholder — downloading the DT3D frontend in HACS**
->
-> _Replace this block with a screenshot._
 
-#### Build and install manually from this checkout
+## Setup
+### Addon
+#### Configuration Reference
 
-```bash
-cd frontend
-npm install
-npm run build
-```
-
-Copy `frontend/dist/dt3d-card.js` to Home Assistant's
-`/config/www/dt3d-card.js`. Then open **Settings → Dashboards → three-dot menu
-→ Resources**, add `/local/dt3d-card.js`, and select **JavaScript module**.
-Hard-refresh every browser that had the dashboard open after updating the file.
-
-> **Screenshot placeholder — registering `/local/dt3d-card.js` as a dashboard resource**
->
-> _Replace this block with a screenshot._
-
-## Network and TLS setup
-
-The card runs in the user's browser and connects directly to the backend. The
-backend therefore must be reachable from every phone, tablet, and computer that
-opens the dashboard; `localhost` normally points to that client device and is
-not a suitable production address.
-
-### Recommended layout: one hostname and one trusted certificate
-
-For example:
-
-```text
-Home Assistant UI: https://home.example.com
-DT3D backend:      https://home.example.com:8080
-Card address:      https://home.example.com
-Card port:         8080
-```
-
-The ports make these different browser origins, but the backend includes CORS
-support. Using the same hostname and certificate keeps DNS and certificate
-trust consistent.
-
-1. Make `home.example.com` resolve to the Home Assistant host on the local
-   network. If the dashboard is used remotely, configure external DNS and the
-   router/reverse proxy as appropriate.
-2. Make TCP port `8080` (or the configured port) reachable from dashboard
-   clients. Do not expose it publicly unless remote access requires it; the
-   service key protects the API but should still be treated as a password.
-3. Put the certificate and private key already used for Home Assistant in its
-   `/ssl` directory. The certificate's subject alternative names must contain
-   the hostname entered in the card.
-4. Configure DT3D with the same pair:
-
+ - Below is a sample configuration for the DT3D backend add-on.
+.
    ```yaml
-   port: 8080
-   service_key: "replace-with-a-long-random-secret"
-   ssl_certificate: /ssl/fullchain.pem
-   ssl_key: /ssl/privkey.pem
-   use_self_signed_certificate: false
+   port: 8080 # Exposed TCP port for the backend API
+   service_key: "<secret>"  # Must match the card configuration
+   ssl_certificate: /ssl/fullchain.pem # Path to the certificate file, or empty for no TLS
+   ssl_key: /ssl/privkey.pem # Path to the private key file, or empty for no TLS
+   use_self_signed_certificate: false # Set to true if no trusted certificate is available
    ```
 
-5. Restart DT3D and open `https://home.example.com:8080/api/hello` once in a
-   browser or test it with `curl`. A `401 Unauthorized` response without the
-   header still proves that DNS, routing, and TLS are working.
-6. Use `address: https://home.example.com` and `port: 8080` in every card.
-
-The certificate and key options also accept PEM content directly:
+ - The certificate and key options also accept PEM content directly:
 
 ```yaml
 ssl_certificate: |
@@ -185,14 +76,24 @@ ssl_key: |
 use_self_signed_certificate: false
 ```
 
-If no trusted certificate is available, set
-`use_self_signed_certificate: true`. DT3D generates and reuses a certificate in
-`/data`, but every client must trust it. A Home Assistant page loaded over HTTPS
-cannot call an HTTP backend because browsers block mixed content.
 
-> **Screenshot placeholder — Home Assistant and DT3D using the same hostname and certificate**
->
-> _Replace this block with a screenshot or network diagram._
+#### Network and TLS setup
+
+ - The card runs in the user's browser and connects directly to the backend.
+ - The backend therefore must be reachable from every phone, tablet, and computer that opens the dashboard.
+ - A Home Assistant page loaded over HTTPS cannot call an HTTP backend because browsers block mixed content.
+   - Put the certificate and private key already used for Home Assistant in its `/ssl` directory.
+ - If no trusted certificate is available, set `use_self_signed_certificate: true`.
+ - DT3D generates and reuses a certificate in `/data`, but every client must trust it.
+ - Recommended layout: one hostname and one trusted certificate.
+   - Using the same hostname and certificate keeps DNS and certificate trust consistent.
+
+```text
+Home Assistant UI: https://home.example.com:8123
+DT3D backend:      https://home.example.com:8080
+```
+ - The ports make these different browser origins, but the backend includes CORS support.
+ - Make sure TCP port `8080` (or the configured port) is reachable from dashboard clients.
 
 ## Create the fullscreen editor
 
@@ -232,9 +133,7 @@ The visual card editor exposes the same settings. After the connection fields
 are valid, its **Default space** and **Viewport** lists are loaded from the
 backend.
 
-> **Screenshot placeholder — a DT3D editor card in a Panel (one card) view**
->
-> _Replace this block with a screenshot._
+<img src="readme/1_editor_panel.png" width="500">
 
 ## Using the editor
 
@@ -266,9 +165,7 @@ tone mapping, and post-processing configuration.
 Space creation, switching, and deletion are hidden when
 `visualization_only: true`.
 
-> **Screenshot placeholder — the space selector with create and delete actions**
->
-> _Replace this block with a screenshot._
+<img src="readme/2_editor.png" width="500">
 
 ### Add 3D elements
 
@@ -288,9 +185,7 @@ After adding a mesh, select it to edit constructor dimensions, transform,
 material properties, or apply an image texture. Keep imported geometry and
 texture sizes modest because they are downloaded and uploaded by each client.
 
-> **Screenshot placeholder — the Add menu and a selected mesh inspector**
->
-> _Replace this block with a screenshot._
+<img src="readme/3_add_objects.png" width="500">
 
 ### Add Home Assistant entities
 
@@ -332,9 +227,7 @@ The wall inspector exposes height and thickness; the live wall label helps with
 length. The distance and angle tools in the **Measure** section are useful for
 checking the plan.
 
-> **Screenshot placeholder — drawing walls and adding a door/window**
->
-> _Replace this block with a screenshot._
+<img src="readme/5_layout_editor.png" width="500">
 
 ### Set up viewports
 
@@ -353,10 +246,6 @@ view, and zoom.
 The optional orientation cube is separate from saved viewports. Double-click a
 cube face to align the camera to the front, back, left, right, top, or bottom.
 
-> **Screenshot placeholder — viewport objects and their tree actions**
->
-> _Replace this block with a screenshot._
-
 ### Configure a space
 
 Open **Space configuration** (sun icon) in the left toolbar. These values are
@@ -373,9 +262,7 @@ style but is usually the largest GPU cost after high resolution and shadows.
 Grid visibility, grid size, and snap size are local editor aids rather than
 space appearance settings.
 
-> **Screenshot placeholder — the Space configuration dialog**
->
-> _Replace this block with a screenshot._
+<img src="readme/4_create_space.png" width="500">
 
 ## Configure visualization cards
 
@@ -432,13 +319,14 @@ spaces there. Leave `default_viewport` empty to follow the space's default.
 Connection, antialiasing, resolution, shadow maps, and development mode are
 per-card. Tone mapping, post-processing, and daylight are per-space.
 
-> **Screenshot placeholder — a read-only DT3D visualization card in a dashboard**
->
-> _Replace this block with a screenshot._
+<img src="readme/6_card_configuration.png" width="500">
+
+<img src="readme/7_dashboard.png" width="500">+
 
 ## Performance optimization
 
-Start with the following profile on phones, wall tablets, and integrated GPUs:
+ - The digital twin 3D renderer is GPU-bound. The following settings and practices can improve performance on low-end devices, integrated GPUs, and mobile phones.
+ - Start with the following profile on phones, wall tablets, and integrated GPUs:
 
 ```yaml
 general:
