@@ -2,6 +2,7 @@ import { defineConfig } from "vite";
 
 export default defineConfig({
 	build: {
+		outDir: "..",
 		lib: {
 			entry: "src/main.ts",
 			name: "DT3DCard",
