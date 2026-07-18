@@ -1,5 +1,8 @@
 # Digital Twin 3D for Home Assistant (DT3D)
 
+[![Add the DT3D add-on repository to Home Assistant](https://my.home-assistant.io/badges/supervisor_add_addon_repository.svg)](https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2Ftentone%2Fdt3d-ha)
+[![Add the DT3D frontend to HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=tentone&repository=dt3d-ha&category=plugin)
+
  - DT3D is a Home Assistant addon and dashboard card to create a digital twin of a home.
  - Features a integrated 3D editor to create and modify the digital twin, add 3D elements, and link them with HA entities.
  - The project is split into a HA frontend card and a Home Assistant app/add-on that stores 3D scene data.
