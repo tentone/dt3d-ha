@@ -7,7 +7,7 @@
 h4 {
 	margin: 4px 0 8px 0;
 	font-size: 14px;
-	color: var(--ha-color-primary-60);
+	color: var(--primary-color, #03a9f4);
 }
 .field {
 	display: flex;
@@ -17,15 +17,17 @@ h4 {
 }
 .field label {
 	font-size: 12px;
-	color: var(--ha-color-neutral-80);
+	color: var(--secondary-text-color, #727272);
 }
 .field input {
-	background: color-mix(in srgb, var(--ha-color-neutral-10) 95%, transparent);
-	border: 1px solid
-		color-mix(in srgb, var(--ha-color-neutral-30) 80%, transparent);
+	background: var(
+		--input-fill-color,
+		var(--secondary-background-color, #f5f5f5)
+	);
+	border: 1px solid var(--divider-color, rgba(0, 0, 0, 0.12));
 	border-radius: 4px;
 	padding: 6px 8px;
-	color: var(--ha-color-neutral-90);
+	color: var(--input-ink-color, var(--primary-text-color, #212121));
 }
 .attribute-list {
 	display: flex;
@@ -38,16 +40,18 @@ h4 {
 	align-items: center;
 	padding: 6px 8px;
 	border-radius: 4px;
-	border: 1px solid
-		color-mix(in srgb, var(--ha-color-neutral-30) 80%, transparent);
-	background: color-mix(in srgb, var(--ha-color-neutral-10) 95%, transparent);
+	border: 1px solid var(--divider-color, rgba(0, 0, 0, 0.12));
+	background: var(
+		--input-fill-color,
+		var(--secondary-background-color, #f5f5f5)
+	);
 }
 .attribute-row .attr-key {
 	font-weight: 600;
-	color: var(--ha-color-neutral-80);
+	color: var(--secondary-text-color, #727272);
 }
 .attribute-row .attr-value {
-	color: var(--ha-color-neutral-90);
+	color: var(--primary-text-color, #212121);
 	word-break: break-all;
 	text-align: right;
 }
@@ -61,17 +65,19 @@ h4 {
 	flex-direction: column;
 	gap: 4px;
 	font-size: 12px;
-	color: var(--ha-color-neutral-80);
+	color: var(--secondary-text-color, #727272);
 }
 .group-row input {
 	width: 100%;
 	padding: 6px 8px;
 	box-sizing: border-box;
 	border-radius: 4px;
-	border: 1px solid
-		color-mix(in srgb, var(--ha-color-neutral-30) 80%, transparent);
-	background: color-mix(in srgb, var(--ha-color-neutral-10) 95%, transparent);
-	color: var(--ha-color-neutral-90);
+	border: 1px solid var(--divider-color, rgba(0, 0, 0, 0.12));
+	background: var(
+		--input-fill-color,
+		var(--secondary-background-color, #f5f5f5)
+	);
+	color: var(--input-ink-color, var(--primary-text-color, #212121));
 }
 .color-field input[type="color"] {
 	width: 100%;
@@ -81,7 +87,7 @@ h4 {
 	cursor: pointer;
 }
 .placeholder {
-	color: var(--ha-color-neutral-70);
+	color: var(--secondary-text-color, #727272);
 	font-size: 13px;
 	line-height: 1.4;
 }

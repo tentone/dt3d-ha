@@ -30,10 +30,13 @@ export class CSSText extends CSS3DSprite {
 		this.element.style.willChange = "transform";
 
 		this.element.className = options.className ?? "";
-		this.element.style.background = "rgba(0, 0, 0, 0.65)";
+		this.element.style.background =
+			"color-mix(in srgb, var(--card-background-color, #ffffff) 90%, transparent)";
+		this.element.style.border =
+			"1px solid var(--divider-color, rgba(0, 0, 0, 0.12))";
 		this.element.style.borderRadius = "4px";
 		this.element.style.boxSizing = "border-box";
-		this.element.style.color = "#ffffff";
+		this.element.style.color = "var(--primary-text-color, #212121)";
 		this.element.style.fontFamily = "sans-serif";
 		this.element.style.fontSize = "12px";
 		this.element.style.fontWeight = "600";
@@ -97,7 +100,8 @@ export class CSSText extends CSS3DSprite {
 		}
 
 		const {height} = renderer.getSize();
-		const projectionScale = Math.abs(camera.projectionMatrix.elements[5]) * height / 2;
+		const projectionScale =
+			(Math.abs(camera.projectionMatrix.elements[5]) * height) / 2;
 		if (!Number.isFinite(projectionScale) || projectionScale <= 0) {
 			return;
 		}
@@ -107,8 +111,9 @@ export class CSSText extends CSS3DSprite {
 			.copy(this.worldPosition)
 			.applyMatrix4(camera.matrixWorldInverse);
 
-		const isPerspectiveCamera = (camera as Camera & {isPerspectiveCamera?: boolean})
-			.isPerspectiveCamera === true;
+		const isPerspectiveCamera =
+			(camera as Camera & { isPerspectiveCamera?: boolean })
+				.isPerspectiveCamera === true;
 		const depth = isPerspectiveCamera
 			? Math.max(Math.abs(this.cameraSpacePosition.z), 0.0001)
 			: 1;
@@ -129,8 +134,8 @@ export class CSSText extends CSS3DSprite {
 	}
 
 	private static hasSize(renderer: unknown): renderer is {
-		getSize(): {height: number; width: number};
+		getSize(): { height: number; width: number };
 	} {
-		return typeof (renderer as {getSize?: unknown})?.getSize === "function";
+		return typeof (renderer as { getSize?: unknown })?.getSize === "function";
 	}
 }

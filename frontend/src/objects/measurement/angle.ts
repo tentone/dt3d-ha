@@ -1,5 +1,4 @@
-import type {
-	Vector3} from "three";
+import type {Vector3} from "three";
 import {
 	BufferGeometry,
 	Color,
@@ -31,7 +30,7 @@ export class AngleMeasurement extends Group {
 		this.add(new Marker(vertex));
 		this.add(new Marker(last));
 
-		const color = new Color(getCSSVar("--ha-color-primary-60"));
+		const color = new Color(getCSSVar("--primary-color") || "#03a9f4");
 
 		// Lines
 		const line1 = new Line(

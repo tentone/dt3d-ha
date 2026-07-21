@@ -1,5 +1,5 @@
 import type {Vector3} from "three";
-import {Color, Mesh, MeshBasicMaterial,SphereGeometry} from "three";
+import {Color, Mesh, MeshBasicMaterial, SphereGeometry} from "three";
 
 import {getCSSVar} from "../../utils/css-utils";
 
@@ -11,7 +11,7 @@ export class Marker extends Mesh {
 	 * @returns - The marker mesh.
 	 */
 	constructor(position: Vector3) {
-		const color = new Color(getCSSVar("--ha-color-primary-60"));
+		const color = new Color(getCSSVar("--primary-color") || "#03a9f4");
 
 		const geometry = new SphereGeometry(0.02, 16, 16);
 		const material = new MeshBasicMaterial({color: color});

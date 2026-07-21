@@ -1,12 +1,5 @@
-import type {
-	Vector3} from "three";
-import {
-	BufferGeometry,
-	Color,
-	Group,
-	Line,
-	LineBasicMaterial,
-} from "three";
+import type {Vector3} from "three";
+import {BufferGeometry, Color, Group, Line, LineBasicMaterial} from "three";
 
 import {getCSSVar} from "../../utils/css-utils";
 import {TextSprite} from "../helpers/text-sprite";
@@ -23,7 +16,7 @@ export class DistanceMeasurement extends Group {
 
 		super();
 
-		const color = new Color(getCSSVar("--ha-color-primary-60"));
+		const color = new Color(getCSSVar("--primary-color") || "#03a9f4");
 
 		const [start, end] = points;
 		this.add(new Marker(start));
@@ -37,7 +30,6 @@ export class DistanceMeasurement extends Group {
 		this.add(line);
 
 		const distance = start.distanceTo(end);
-
 
 		const label = new TextSprite(`${distance.toFixed(2)}m`);
 		label.position.copy(start.clone().add(end).multiplyScalar(0.5));

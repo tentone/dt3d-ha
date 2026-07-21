@@ -22,22 +22,28 @@ export class DT3DFloatingButton extends LitElement {
 			width: 48px;
 			height: 48px;
 			border-radius: 999px;
-			border: none;
-			background: rgba(0, 0, 0, 0.65);
-			color: #ffffff;
+			border: 1px solid var(--divider-color, rgba(0, 0, 0, 0.12));
+			background: color-mix(
+				in srgb,
+				var(--card-background-color, #ffffff) 92%,
+				transparent
+			);
+			color: var(--primary-text-color, #212121);
 			font-size: 12px;
 			font-weight: 600;
 			letter-spacing: 0.5px;
-			box-shadow: 0 6px 16px rgba(0, 0, 0, 0.25);
+			box-shadow: 0 6px 16px var(--shadow-color, rgba(0, 0, 0, 0.25));
 			cursor: pointer;
 			display: flex;
 			align-items: center;
 			justify-content: center;
-			transition: transform 0.15s ease, background 0.15s ease;
+			transition:
+				transform 0.15s ease,
+				background 0.15s ease;
 		}
 
 		button:hover {
-			background: rgba(0, 0, 0, 0.8);
+			background: var(--secondary-background-color, #e5e5e5);
 			transform: translateY(-1px);
 		}
 
@@ -46,7 +52,7 @@ export class DT3DFloatingButton extends LitElement {
 		}
 
 		button:focus-visible {
-			outline: 2px solid rgba(255, 255, 255, 0.9);
+			outline: 2px solid var(--primary-color, #03a9f4);
 			outline-offset: 2px;
 		}
 	`;
@@ -66,7 +72,8 @@ export class DT3DFloatingButton extends LitElement {
 			<button
 				@click=${this.handleClick}
 				aria-label=${this.ariaLabel}
-				title=${this.titleText}>
+				title=${this.titleText}
+			>
 				<slot></slot>
 			</button>
 		`;

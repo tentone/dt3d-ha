@@ -1,8 +1,12 @@
 :host {
 	display: block;
 	width: 130px;
-	background: color-mix(in srgb, var(--ha-color-neutral-10) 90%, transparent);
-	color: var(--ha-color-neutral-95);
+	background: color-mix(
+		in srgb,
+		var(--card-background-color, #ffffff) 90%,
+		transparent
+	);
+	color: var(--primary-text-color, #212121);
 	height: 100%;
 	padding: 16px 0;
 	z-index: 1;
@@ -18,25 +22,27 @@
 	padding: 16px 0 16px 0;
 }
 
-
-
 .collapse-btn {
-    position: absolute;
-    top: 12px;
-    right: -32px;
-    background: color-mix(in srgb, var(--ha-color-neutral-10) 90%, transparent);
-    border-width: medium;
-    border-style: none;
-    border-color: currentcolor;
-    border-image: none;
-    color: var(--ha-color-neutral-95);
-    cursor: pointer;
-    font-size: 1.2em;
-    width: 32px;
-    height: 32px;
-    padding: 0px;
-    z-index: 10;
-    border-radius: 0px 10px 10px 0px;
+	position: absolute;
+	top: 12px;
+	right: -32px;
+	background: color-mix(
+		in srgb,
+		var(--card-background-color, #ffffff) 90%,
+		transparent
+	);
+	border-width: medium;
+	border-style: none;
+	border-color: currentcolor;
+	border-image: none;
+	color: var(--primary-text-color, #212121);
+	cursor: pointer;
+	font-size: 1.2em;
+	width: 32px;
+	height: 32px;
+	padding: 0px;
+	z-index: 10;
+	border-radius: 0px 10px 10px 0px;
 }
 
 .sidebar-content {
@@ -63,7 +69,7 @@
 	margin-bottom: 8px;
 	font-weight: bold;
 	letter-spacing: 1px;
-	color: var(--ha-color-primary-60);
+	color: var(--primary-color, #03a9f4);
 }
 
 button {
@@ -71,8 +77,8 @@ button {
 	width: 100%;
 	margin-bottom: 8px;
 	padding: 10px 0;
-	background: var(--ha-color-primary-60);
-	color: var(--ha-color-neutral-95);
+	background: var(--primary-color, #03a9f4);
+	color: var(--text-primary-color, #ffffff);
 	border: none;
 	border-radius: 4px;
 	cursor: pointer;
@@ -80,49 +86,62 @@ button {
 	transition:
 		background 0.2s,
 		transform 0.2s;
-	box-shadow: 0 2px 4px
-		color-mix(in srgb, var(--ha-color-neutral-10) 20%, transparent);
+	box-shadow: 0 2px 4px var(--shadow-color, rgba(0, 0, 0, 0.2));
 }
 
 .transform-btn.selected,
 .toggle-btn.selected {
-	background: var(--ha-color-primary-30);
+	background: var(--dark-primary-color, #0288d1);
 }
 
 button:hover {
-	background: var(--ha-color-primary-40);
+	background: var(--dark-primary-color, #0288d1);
 }
 
 button:active {
-	background: var(--ha-color-primary-40);
+	background: var(--darker-primary-color, var(--dark-primary-color, #0288d1));
 }
 
 button.selected {
-	background: var(--ha-color-primary-30);
+	background: var(--dark-primary-color, #0288d1);
 }
 
 .tippy-box[data-theme~="dt3d-sidebar"] {
-	background-color: var(--ha-color-neutral-10, #1c1c1c);
-	color: var(--ha-color-neutral-95, #f5f5f5);
+	background-color: var(
+		--ha-dialog-surface-background,
+		var(--mdc-theme-surface, var(--card-background-color, #ffffff))
+	);
+	color: var(--primary-text-color, #212121);
 }
 
 .tippy-box[data-theme~="dt3d-sidebar"][data-placement^="top"]
 	> .tippy-arrow::before {
-	border-top-color: var(--ha-color-neutral-10, #1c1c1c);
+	border-top-color: var(
+		--ha-dialog-surface-background,
+		var(--mdc-theme-surface, var(--card-background-color, #ffffff))
+	);
 }
 
 .tippy-box[data-theme~="dt3d-sidebar"][data-placement^="bottom"]
 	> .tippy-arrow::before {
-	border-bottom-color: var(--ha-color-neutral-10, #1c1c1c);
+	border-bottom-color: var(
+		--ha-dialog-surface-background,
+		var(--mdc-theme-surface, var(--card-background-color, #ffffff))
+	);
 }
 
 .tippy-box[data-theme~="dt3d-sidebar"][data-placement^="left"]
 	> .tippy-arrow::before {
-	border-left-color: var(--ha-color-neutral-10, #1c1c1c);
+	border-left-color: var(
+		--ha-dialog-surface-background,
+		var(--mdc-theme-surface, var(--card-background-color, #ffffff))
+	);
 }
 
 .tippy-box[data-theme~="dt3d-sidebar"][data-placement^="right"]
 	> .tippy-arrow::before {
-	border-right-color: var(--ha-color-neutral-10, #1c1c1c);
+	border-right-color: var(
+		--ha-dialog-surface-background,
+		var(--mdc-theme-surface, var(--card-background-color, #ffffff))
+	);
 }
-

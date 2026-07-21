@@ -79,11 +79,11 @@ export class EntityCamera extends EntityObject {
 		this.root.style.cssText = `
 			width: 180px;
 			overflow: hidden;
-			border: 1px solid rgba(255, 255, 255, 0.75);
+			border: 1px solid var(--divider-color, rgba(0, 0, 0, 0.12));
 			border-radius: 8px;
-			background: rgba(12, 16, 22, 0.86);
-			box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
-			color: #ffffff;
+			background: color-mix(in srgb, var(--card-background-color, #ffffff) 90%, transparent);
+			box-shadow: 0 8px 24px var(--shadow-color, rgba(0, 0, 0, 0.35));
+			color: var(--primary-text-color, #212121);
 			font-family: sans-serif;
 			pointer-events: none;
 			transform-style: preserve-3d;
@@ -96,10 +96,12 @@ export class EntityCamera extends EntityObject {
 			width: 180px;
 			height: 112px;
 			object-fit: cover;
-			background: #111827;
+			background: var(--secondary-background-color, #e5e5e5);
 		`;
 		this.image.addEventListener("load", () => this.setStatus(""));
-		this.image.addEventListener("error", () => this.setStatus("Camera image unavailable"));
+		this.image.addEventListener("error", () =>
+			this.setStatus("Camera image unavailable"),
+		);
 		this.root.appendChild(this.image);
 
 		this.title = document.createElement("div");
@@ -118,7 +120,7 @@ export class EntityCamera extends EntityObject {
 		this.status.style.cssText = `
 			display: none;
 			padding: 0 8px 7px;
-			color: #d1d5db;
+			color: var(--secondary-text-color, #727272);
 			font-size: 11px;
 			line-height: 1.3;
 		`;

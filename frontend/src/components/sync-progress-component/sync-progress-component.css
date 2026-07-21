@@ -20,11 +20,15 @@
 }
 
 .sync-progress {
-	background: color-mix(in srgb, var(--ha-color-neutral-10, #15171c) 90%, transparent);
-	border: 1px solid color-mix(in srgb, var(--ha-color-neutral-70, #a9b0bc) 18%, transparent);
+	background: color-mix(
+		in srgb,
+		var(--card-background-color, #ffffff) 92%,
+		transparent
+	);
+	border: 1px solid var(--divider-color, rgba(0, 0, 0, 0.12));
 	border-radius: 6px;
-	box-shadow: 0 8px 24px rgba(0, 0, 0, 0.32);
-	color: var(--ha-color-neutral-95, #f6f7f9);
+	box-shadow: 0 8px 24px var(--shadow-color, rgba(0, 0, 0, 0.32));
+	color: var(--primary-text-color, #212121);
 	font-size: 12px;
 	line-height: 1.35;
 	padding: 10px 12px;
@@ -47,20 +51,24 @@
 }
 
 .sync-count {
-	color: var(--ha-color-neutral-80, #c8ced8);
+	color: var(--secondary-text-color, #727272);
 	flex: 0 0 auto;
 	font-variant-numeric: tabular-nums;
 }
 
 .sync-bar {
-	background: rgba(255, 255, 255, 0.16);
+	background: color-mix(
+		in srgb,
+		var(--primary-text-color, #212121) 16%,
+		transparent
+	);
 	border-radius: 999px;
 	height: 6px;
 	overflow: hidden;
 }
 
 .sync-bar-fill {
-	background: var(--ha-color-primary-60, #4a90d9);
+	background: var(--primary-color, #03a9f4);
 	border-radius: inherit;
 	height: 100%;
 	min-width: 5%;
@@ -75,7 +83,7 @@
 
 .sync-item {
 	align-items: center;
-	color: var(--ha-color-neutral-85, #d8dde6);
+	color: var(--primary-text-color, #212121);
 	display: grid;
 	gap: 6px;
 	grid-template-columns: minmax(86px, auto) minmax(0, 1fr);
@@ -83,7 +91,7 @@
 }
 
 .sync-operation {
-	color: var(--ha-color-neutral-75, #b7bfca);
+	color: var(--secondary-text-color, #727272);
 	overflow: hidden;
 	text-overflow: ellipsis;
 	white-space: nowrap;

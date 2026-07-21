@@ -1,8 +1,12 @@
 :host {
 	display: flex;
 	flex-direction: column;
-	background: color-mix(in srgb, var(--ha-color-neutral-10) 90%, transparent);
-	color: var(--ha-color-neutral-95);
+	background: color-mix(
+		in srgb,
+		var(--card-background-color, #ffffff) 90%,
+		transparent
+	);
+	color: var(--primary-text-color, #212121);
 	height: 100%;
 	padding: 12px 0;
 	z-index: 1;
@@ -18,20 +22,23 @@
 	width: 32px;
 	height: 32px;
 	padding: 0;
-	background: color-mix(in srgb, var(--ha-color-neutral-10) 90%, transparent);
+	background: color-mix(
+		in srgb,
+		var(--card-background-color, #ffffff) 90%,
+		transparent
+	);
 	border: none;
-	color: var(--ha-color-neutral-95);
+	color: var(--primary-text-color, #212121);
 	cursor: pointer;
 	font-size: 1.2em;
 	z-index: 10;
-    padding: 0px;
-    z-index: 10;
-    border-radius: 10px 0px 0px 10px;
-
+	padding: 0px;
+	z-index: 10;
+	border-radius: 10px 0px 0px 10px;
 }
 
 .collapse-btn:focus-visible {
-	outline: 2px solid var(--ha-color-primary-60);
+	outline: 2px solid var(--primary-color, #03a9f4);
 	outline-offset: 2px;
 }
 
@@ -55,21 +62,25 @@
 	white-space: nowrap;
 	width: 100%;
 	height: 30px;
-	color: var(--ha-color-neutral-95);
+	color: var(--primary-text-color, #212121);
 	display: flex;
 	align-items: center;
 	gap: 4px;
 }
 
 .tree-node.selected {
-	background: color-mix(in srgb, var(--ha-color-primary-60) 40%, transparent);
-	color: var(--ha-color-neutral-95);
+	background: color-mix(
+		in srgb,
+		var(--primary-color, #03a9f4) 24%,
+		transparent
+	);
+	color: var(--primary-text-color, #212121);
 }
 
 .toggle {
 	cursor: pointer;
 	margin-right: 4px;
-	color: var(--ha-color-primary-60);
+	color: var(--primary-color, #03a9f4);
 	flex: 0 0 16px;
 	text-align: center;
 }
@@ -81,19 +92,19 @@
 }
 
 .node-icon {
-	color: var(--ha-color-neutral-70);
+	color: var(--secondary-text-color, #727272);
 	flex: 0 0 16px;
 	width: 16px;
 	height: 16px;
 	font-size: 16px;
 	line-height: 1;
-    padding-bottom: 6px;
-    padding-right: 10px;
+	padding-bottom: 6px;
+	padding-right: 10px;
 }
 
 .tree-node.selected .node-icon {
-	color: var(--ha-color-neutral-95);
-	 padding-right: 5px;
+	color: var(--primary-text-color, #212121);
+	padding-right: 5px;
 }
 
 .node-label {
@@ -113,7 +124,7 @@
 }
 
 .lock-icon {
-	color: var(--ha-color-warning-50, #f0ad4e);
+	color: var(--warning-color, #ffa600);
 	flex: 0 0 14px;
 	width: 14px;
 	height: 14px;
@@ -130,8 +141,12 @@
 }
 
 .tree-node.drop-inside {
-	background: color-mix(in srgb, var(--ha-color-primary-60) 28%, transparent);
-	outline: 1px solid var(--ha-color-primary-60);
+	background: color-mix(
+		in srgb,
+		var(--primary-color, #03a9f4) 20%,
+		transparent
+	);
+	outline: 1px solid var(--primary-color, #03a9f4);
 	outline-offset: -1px;
 }
 
@@ -142,7 +157,7 @@
 	left: calc(8px + (var(--tree-depth, 0) * 16px));
 	right: 4px;
 	height: 2px;
-	background: var(--ha-color-primary-60);
+	background: var(--primary-color, #03a9f4);
 	pointer-events: none;
 	z-index: 1;
 }
@@ -156,7 +171,7 @@
 }
 
 .default-viewport-icon {
-	color: var(--ha-color-primary-60);
+	color: var(--primary-color, #03a9f4);
 	flex: 0 0 14px;
 	width: 14px;
 	height: 14px;
@@ -170,8 +185,7 @@
 	overflow-y: auto;
 	overflow-x: hidden;
 	padding-right: 8px;
-	border-bottom: 1px solid
-		color-mix(in srgb, var(--ha-color-neutral-20) 60%, transparent);
+	border-bottom: 1px solid var(--divider-color, rgba(0, 0, 0, 0.12));
 	margin-bottom: 8px;
 }
 
@@ -179,7 +193,7 @@ dt3d-object-inspector {
 	flex: 1 1 45%;
 	padding: 0 12px;
 	overflow-y: auto;
-	color: var(--ha-color-neutral-90);
+	color: var(--primary-text-color, #212121);
 }
 
 .context-overlay {
@@ -192,10 +206,12 @@ dt3d-object-inspector {
 .context-menu {
 	position: fixed;
 	min-width: 140px;
-	background: color-mix(in srgb, var(--ha-color-neutral-10) 90%, transparent);
-	border: 1px solid
-		color-mix(in srgb, var(--ha-color-neutral-30) 80%, transparent);
-	box-shadow: 0 6px 16px rgba(0, 0, 0, 0.18);
+	background: var(
+		--ha-dialog-surface-background,
+		var(--mdc-theme-surface, var(--card-background-color, #ffffff))
+	);
+	border: 1px solid var(--divider-color, rgba(0, 0, 0, 0.12));
+	box-shadow: 0 6px 16px var(--shadow-color, rgba(0, 0, 0, 0.18));
 	border-radius: 6px;
 	padding: 4px 0;
 	z-index: 11;
@@ -207,13 +223,17 @@ dt3d-object-inspector {
 	padding: 8px 12px;
 	background: transparent;
 	border: none;
-	color: var(--ha-color-neutral-95);
+	color: var(--primary-text-color, #212121);
 	text-align: left;
 	cursor: pointer;
 }
 
 .context-menu button:hover {
-	background: color-mix(in srgb, var(--ha-color-primary-60) 25%, transparent);
+	background: color-mix(
+		in srgb,
+		var(--primary-color, #03a9f4) 16%,
+		transparent
+	);
 }
 
 .resize-handle {

@@ -13,17 +13,19 @@
 
 .field label {
 	font-size: 12px;
-	color: var(--ha-color-neutral-80);
+	color: var(--secondary-text-color, #727272);
 }
 
 .field input,
 .field select {
-	background: color-mix(in srgb, var(--ha-color-neutral-10) 95%, transparent);
-	border: 1px solid
-		color-mix(in srgb, var(--ha-color-neutral-30) 80%, transparent);
+	background: var(
+		--input-fill-color,
+		var(--secondary-background-color, #f5f5f5)
+	);
+	border: 1px solid var(--divider-color, rgba(0, 0, 0, 0.12));
 	border-radius: 4px;
 	padding: 6px 8px;
-	color: var(--ha-color-neutral-90);
+	color: var(--input-ink-color, var(--primary-text-color, #212121));
 }
 
 .group-row {
@@ -45,7 +47,7 @@
 	flex-direction: column;
 	gap: 4px;
 	font-size: 12px;
-	color: var(--ha-color-neutral-80);
+	color: var(--secondary-text-color, #727272);
 }
 
 .group-row input {
@@ -53,10 +55,12 @@
 	padding: 6px 8px;
 	box-sizing: border-box;
 	border-radius: 4px;
-	border: 1px solid
-		color-mix(in srgb, var(--ha-color-neutral-30) 80%, transparent);
-	background: color-mix(in srgb, var(--ha-color-neutral-10) 95%, transparent);
-	color: var(--ha-color-neutral-90);
+	border: 1px solid var(--divider-color, rgba(0, 0, 0, 0.12));
+	background: var(
+		--input-fill-color,
+		var(--secondary-background-color, #f5f5f5)
+	);
+	color: var(--input-ink-color, var(--primary-text-color, #212121));
 }
 
 .vector-link-button {
@@ -67,18 +71,20 @@
 	height: 30px;
 	padding: 0;
 	box-sizing: border-box;
-	border: 1px solid
-		color-mix(in srgb, var(--ha-color-neutral-30) 80%, transparent);
+	border: 1px solid var(--divider-color, rgba(0, 0, 0, 0.12));
 	border-radius: 4px;
-	background: color-mix(in srgb, var(--ha-color-neutral-10) 95%, transparent);
-	color: var(--ha-color-neutral-60);
+	background: var(
+		--input-fill-color,
+		var(--secondary-background-color, #f5f5f5)
+	);
+	color: var(--secondary-text-color, #727272);
 	cursor: pointer;
 	flex: 0 0 auto;
 }
 
 .vector-link-button.linked {
-	border-color: var(--ha-color-primary-60);
-	color: var(--ha-color-primary-60);
+	border-color: var(--primary-color, #03a9f4);
+	color: var(--primary-color, #03a9f4);
 }
 
 .vector-link-button:disabled {
@@ -103,10 +109,13 @@
 }
 
 .sub-form {
-	border: 1px solid
-		color-mix(in srgb, var(--ha-color-neutral-30) 80%, transparent);
+	border: 1px solid var(--divider-color, rgba(0, 0, 0, 0.12));
 	border-radius: 6px;
-	background: color-mix(in srgb, var(--ha-color-neutral-10) 70%, transparent);
+	background: color-mix(
+		in srgb,
+		var(--secondary-background-color, #f5f5f5) 70%,
+		transparent
+	);
 	overflow: hidden;
 }
 
@@ -116,7 +125,7 @@
 	justify-content: space-between;
 	gap: 8px;
 	padding: 8px 10px;
-	color: var(--ha-color-primary-60);
+	color: var(--primary-color, #03a9f4);
 	font-size: 14px;
 	font-weight: 600;
 	cursor: pointer;
@@ -148,8 +157,7 @@
 	flex-direction: column;
 	gap: 8px;
 	padding: 8px 10px 10px;
-	border-top: 1px solid
-		color-mix(in srgb, var(--ha-color-neutral-30) 70%, transparent);
+	border-top: 1px solid var(--divider-color, rgba(0, 0, 0, 0.12));
 }
 
 .sub-form-fields > .field:last-child {

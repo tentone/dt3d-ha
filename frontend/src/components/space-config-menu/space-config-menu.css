@@ -2,7 +2,7 @@
 	position: absolute;
 	inset: 0;
 	z-index: 20;
-	color: var(--ha-color-neutral-95);
+	color: var(--primary-text-color, #212121);
 }
 
 .overlay {
@@ -20,11 +20,13 @@
 	width: min(360px, 100%);
 	max-height: 100%;
 	overflow-y: auto;
-	background: color-mix(in srgb, var(--ha-color-neutral-10) 95%, transparent);
-	border: 1px solid
-		color-mix(in srgb, var(--ha-color-neutral-30) 80%, transparent);
+	background: var(
+		--ha-dialog-surface-background,
+		var(--mdc-theme-surface, var(--card-background-color, #ffffff))
+	);
+	border: 1px solid var(--divider-color, rgba(0, 0, 0, 0.12));
 	border-radius: 8px;
-	box-shadow: 0 12px 28px rgba(0, 0, 0, 0.3);
+	box-shadow: 0 12px 28px var(--shadow-color, rgba(0, 0, 0, 0.3));
 	padding: 16px;
 	box-sizing: border-box;
 }
@@ -40,13 +42,13 @@ header {
 h3 {
 	margin: 0 0 4px 0;
 	font-size: 16px;
-	color: var(--ha-color-primary-60);
+	color: var(--primary-color, #03a9f4);
 }
 
 p {
 	margin: 0;
 	font-size: 13px;
-	color: var(--ha-color-neutral-75);
+	color: var(--secondary-text-color, #727272);
 }
 
 .close-button {
@@ -59,10 +61,14 @@ p {
 	border-radius: 4px;
 	padding: 0;
 	background: transparent;
-	color: var(--ha-color-neutral-95);
+	color: var(--primary-text-color, #212121);
 	cursor: pointer;
 }
 
 .close-button:hover {
-	background: color-mix(in srgb, var(--ha-color-primary-60) 25%, transparent);
+	background: color-mix(
+		in srgb,
+		var(--primary-color, #03a9f4) 16%,
+		transparent
+	);
 }
