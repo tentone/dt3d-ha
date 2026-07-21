@@ -176,9 +176,9 @@ The **Add** section of the left toolbar provides:
   knot.
 - Uploaded models: `.gltf`, `.glb`, `.obj`, `.fbx`, `.dae` (Collada), `.stl`,
   and `.3ds`. Models can also be dragged onto the canvas. Select or drop
-  companion material and texture files with the model, or use the directory
-  upload button to preserve their relative paths. Prefer a self-contained
-  `.glb` when possible for reliable results.
+  companion material and texture files with the model, or choose the folder
+  option in the upload menu to preserve their relative paths. Prefer a
+  self-contained `.glb` when possible for reliable results.
 - Static lights: point, spot, and rectangular area lights.
 - Groups, saved viewports, and Home Assistant entities.
 

@@ -12,6 +12,7 @@ import "./side-bar/side-bar.js";
 import "./space-config-menu/space-config-menu.js";
 import "./space-selector/space-selector.js";
 import "./sync-progress-component/sync-progress-component.js";
+import "./upload-menu/upload-menu.js";
 
 import {LitElement} from "lit";
 import {customElement} from "lit/decorators.js";
@@ -105,6 +106,7 @@ import type {DT3DSidebar} from "./side-bar/side-bar.js";
 import type {DT3DSpaceConfigMenu} from "./space-config-menu/space-config-menu.js";
 import type {DT3DSpaceSelector} from "./space-selector/space-selector.js";
 import type {SyncProgressComponent} from "./sync-progress-component/sync-progress-component.js";
+import type {DT3DUploadMenu} from "./upload-menu/upload-menu.js";
 
 const SPACE_SCENE_CONFIG_STORAGE_KEY = "space-scene-config";
 const GRID_CONFIG_STORAGE_KEY = "grid-config";
@@ -300,6 +302,8 @@ export class DT3DCard extends LitElement {
 	private meshMenu: DT3DMeshMenu | null = null;
 
 	private lightMenu: DT3DLightMenu | null = null;
+
+	private uploadMenu: DT3DUploadMenu | null = null;
 
 	private confirmationModal: DT3DConfirmationModal | null = null;
 
@@ -612,6 +616,8 @@ export class DT3DCard extends LitElement {
 			this.meshMenu = null;
 			this.lightMenu?.remove();
 			this.lightMenu = null;
+			this.uploadMenu?.remove();
+			this.uploadMenu = null;
 			this.confirmationModal?.remove();
 			this.confirmationModal = null;
 			this.gridConfigModal?.remove();
@@ -1383,6 +1389,8 @@ export class DT3DCard extends LitElement {
 		}
 		this.lightMenu?.remove();
 		this.lightMenu = null;
+		this.uploadMenu?.remove();
+		this.uploadMenu = null;
 
 		const contentRect = this.content.getBoundingClientRect();
 		const x = Math.max(
@@ -1454,6 +1462,8 @@ export class DT3DCard extends LitElement {
 		this.meshMenu?.remove();
 		this.meshMenu = null;
 		this.lightMenu?.remove();
+		this.uploadMenu?.remove();
+		this.uploadMenu = null;
 		const contentRect = this.content.getBoundingClientRect();
 		const menu = document.createElement("dt3d-light-menu") as DT3DLightMenu;
 		menu.x = Math.max(8, Math.min(
@@ -1473,6 +1483,39 @@ export class DT3DCard extends LitElement {
 			this.lightMenu = null;
 		});
 		this.lightMenu = menu;
+		this.content.appendChild(menu);
+	}
+
+	/** Open the model upload menu at the top card level. */
+	private openUploadMenu(anchor: { left: number; top: number } | null): void {
+		if (!this.content || this.isVisualizationOnly()) return;
+
+		this.meshMenu?.remove();
+		this.meshMenu = null;
+		this.lightMenu?.remove();
+		this.lightMenu = null;
+		this.uploadMenu?.remove();
+
+		const contentRect = this.content.getBoundingClientRect();
+		const menu = document.createElement("dt3d-upload-menu") as DT3DUploadMenu;
+		menu.x = Math.max(8, Math.min(
+			(anchor?.left ?? contentRect.left + 8) - contentRect.left,
+			contentRect.width - 208,
+		));
+		menu.y = Math.max(8, Math.min(
+			(anchor?.top ?? contentRect.top + 8) - contentRect.top,
+			contentRect.height - 8,
+		));
+		menu.addEventListener("upload-model", (event: Event) => {
+			const {directory} = (event as CustomEvent<{ directory: boolean }>).detail;
+			this.selectFiles(directory);
+		});
+		menu.addEventListener("modal-close", () => {
+			menu.remove();
+			this.uploadMenu = null;
+		});
+
+		this.uploadMenu = menu;
 		this.content.appendChild(menu);
 	}
 
@@ -1840,10 +1883,6 @@ export class DT3DCard extends LitElement {
 			this.addToScene(object);
 		} else if (type === "viewport") {
 			this.addViewportFromCurrentCamera();
-		} else if (type === "upload") {
-			this.selectFiles();
-		} else if (type === "upload-directory") {
-			this.selectFiles(true);
 		} else if (type === "entity") {
 			this.addEntityModal();
 		} else if (type === "static-light" || type.startsWith("light-")) {
@@ -2224,6 +2263,13 @@ export class DT3DCard extends LitElement {
 			);
 		});
 
+		this.sidebar.addEventListener("upload-menu-open", (event: Event) => {
+			if (this.isVisualizationOnly()) return;
+			this.openUploadMenu(
+				(event as CustomEvent<{ left: number; top: number } | null>).detail,
+			);
+		});
+
 		this.sidebar.addEventListener("add-object", (e: any) => {
 			if (this.isVisualizationOnly()) {
 				return;
@@ -2515,6 +2561,8 @@ export class DT3DCard extends LitElement {
 		this.meshMenu = null;
 		this.lightMenu?.remove();
 		this.lightMenu = null;
+		this.uploadMenu?.remove();
+		this.uploadMenu = null;
 		this.confirmationModal?.remove();
 		this.confirmationModal = null;
 		this.gridConfigModal?.remove();

@@ -27,22 +27,30 @@ export class IconSprite extends Sprite {
 	private backgroundColor: IconCanvasColor;
 
 	/**
+	 * Optional text rendered below the icon inside the same circle.
+	 */
+	private label: string;
+
+	/**
 	 * @param iconPath - SVG path data for the icon.
 	 * @param backgroundColor - Circle color.
 	 * @param size - Size of the sprite.
+	 * @param label - Optional text rendered below the icon.
 	 */
 	public constructor(
 		iconPath: string,
 		backgroundColor: IconCanvasColor,
 		size = 0.35,
+		label = "",
 	) {
-		const texture = IconSprite.createTexture(iconPath, backgroundColor);
+		const texture = IconSprite.createTexture(iconPath, backgroundColor, label);
 		const material = new SpriteMaterial({map: texture, transparent: true});
 
 		super(material);
 
 		this.iconPath = iconPath;
 		this.backgroundColor = backgroundColor;
+		this.label = label;
 		this.scale.set(size, size, size);
 	}
 
@@ -52,6 +60,10 @@ export class IconSprite extends Sprite {
 	 * @param color - New circle color.
 	 */
 	public setColor(color: IconCanvasColor): void {
+		if (this.backgroundColor === color) {
+			return;
+		}
+
 		this.backgroundColor = color;
 		this.refreshTexture();
 	}
@@ -62,7 +74,37 @@ export class IconSprite extends Sprite {
 	 * @param iconPath - SVG path data of the icon.
 	 */
 	public setIcon(iconPath: string): void {
+		if (this.iconPath === iconPath) {
+			return;
+		}
+
 		this.iconPath = iconPath;
+		this.refreshTexture();
+	}
+
+	/**
+	 * Update the icon, circle color, and optional label with one texture refresh.
+	 *
+	 * @param iconPath - SVG path data of the icon.
+	 * @param backgroundColor - Circle color.
+	 * @param label - Optional text rendered below the icon.
+	 */
+	public setAppearance(
+		iconPath: string,
+		backgroundColor: IconCanvasColor,
+		label = "",
+	): void {
+		if (
+			this.iconPath === iconPath &&
+			this.backgroundColor === backgroundColor &&
+			this.label === label
+		) {
+			return;
+		}
+
+		this.iconPath = iconPath;
+		this.backgroundColor = backgroundColor;
+		this.label = label;
 		this.refreshTexture();
 	}
 
@@ -70,7 +112,11 @@ export class IconSprite extends Sprite {
 	 * Refresh the texture of the sprite after changes.
 	 */
 	private refreshTexture(): void {
-		const texture = IconSprite.createTexture(this.iconPath, this.backgroundColor);
+		const texture = IconSprite.createTexture(
+			this.iconPath,
+			this.backgroundColor,
+			this.label,
+		);
 		const spriteMaterial = this.material as SpriteMaterial;
 
 		if (spriteMaterial.map) {
@@ -84,8 +130,12 @@ export class IconSprite extends Sprite {
 	private static createTexture(
 		iconPath: string,
 		backgroundColor: IconCanvasColor,
+		label = "",
 	): CanvasTexture {
-		const canvas = renderIconPathToCanvas(iconPath, {backgroundColor});
+		const canvas = renderIconPathToCanvas(iconPath, {
+			backgroundColor,
+			label,
+		});
 		const texture = new CanvasTexture(canvas);
 		texture.colorSpace = SRGBColorSpace;
 		texture.magFilter = LinearFilter;

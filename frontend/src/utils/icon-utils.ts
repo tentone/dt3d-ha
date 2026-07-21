@@ -13,6 +13,7 @@ export type IconCanvasOptions = {
 	canvasSize?: number;
 	circleRadius?: number;
 	iconColor?: string;
+	label?: string;
 	strokeColor?: string;
 	strokeWidth?: number;
 };
@@ -82,8 +83,11 @@ export function renderIconPathToCanvas(
 	const canvasSize = options.canvasSize ?? HA_ICON_CANVAS_SIZE;
 	const circleRadius = options.circleRadius ?? canvasSize * 0.328125;
 	const strokeWidth = options.strokeWidth ?? canvasSize * 0.03125;
-	const iconSize = circleRadius * 1.38;
+	const label = options.label?.trim() ?? "";
+	const hasLabel = label.length > 0;
+	const iconSize = circleRadius * (hasLabel ? 0.9 : 1.38);
 	const center = canvasSize / 2;
+	const iconCenterY = hasLabel ? center - circleRadius * 0.27 : center;
 
 	const canvas = document.createElement("canvas");
 	canvas.width = canvasSize;
@@ -111,10 +115,27 @@ export function renderIconPathToCanvas(
 		const path = new Path2D(iconPath);
 		ctx.save();
 		ctx.fillStyle = options.iconColor ?? "#ffffff";
-		ctx.translate(center, center);
+		ctx.translate(center, iconCenterY);
 		ctx.scale(iconSize / ICON_VIEWBOX_SIZE, iconSize / ICON_VIEWBOX_SIZE);
 		ctx.translate(-ICON_VIEWBOX_SIZE / 2, -ICON_VIEWBOX_SIZE / 2);
 		ctx.fill(path);
+		ctx.restore();
+	}
+
+	if (hasLabel) {
+		const maxWidth = circleRadius * 1.55;
+		let fontSize = circleRadius * 0.34;
+
+		ctx.save();
+		ctx.fillStyle = options.iconColor ?? "#ffffff";
+		ctx.font = `600 ${fontSize}px sans-serif`;
+		while (ctx.measureText(label).width > maxWidth && fontSize > 14) {
+			fontSize -= 1;
+			ctx.font = `600 ${fontSize}px sans-serif`;
+		}
+		ctx.textAlign = "center";
+		ctx.textBaseline = "middle";
+		ctx.fillText(label, center, center + circleRadius * 0.5, maxWidth);
 		ctx.restore();
 	}
 

@@ -235,6 +235,24 @@ export class DT3DSidebar extends LitElement {
 	}
 
 	/**
+	 * Open the model upload menu at card level.
+	 *
+	 * @param event - Click event from the upload button.
+	 */
+	private handleUploadMenuOpen(event: MouseEvent) {
+		const target = event.currentTarget as HTMLElement | null;
+		const rect = target?.getBoundingClientRect();
+
+		this.dispatchEvent(
+			new CustomEvent("upload-menu-open", {
+				detail: rect ? {left: rect.right + 8, top: rect.top} : null,
+				bubbles: true,
+				composed: true,
+			}),
+		);
+	}
+
+	/**
 	 * Open the static-light type menu at card level.
 	 *
 	 * @param event - Click event from the static-light button.
@@ -391,18 +409,11 @@ export class DT3DSidebar extends LitElement {
 						<ha-icon icon="mdi:shape-outline"></ha-icon>
 					</button>
 					<button
-						@click=${() => this.handleAddObject("upload")}
+						@click=${(event: MouseEvent) => this.handleUploadMenuOpen(event)}
 						data-tooltip=${localManager.get("uploadModel")}
 						aria-label=${localManager.get("uploadModel")}
 					>
 						<ha-icon icon="mdi:upload-box-outline"></ha-icon>
-					</button>
-					<button
-						@click=${() => this.handleAddObject("upload-directory")}
-						data-tooltip=${localManager.get("uploadModelDirectory")}
-						aria-label=${localManager.get("uploadModelDirectory")}
-					>
-						<ha-icon icon="mdi:folder-upload-outline"></ha-icon>
 					</button>
 					<button
 						@click=${() => this.handleAddObject("entity")}
