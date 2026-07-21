@@ -1,10 +1,13 @@
 import type {Object3D} from "three";
-import {LoadingManager} from "three";
+import {LoadingManager, Mesh, MeshStandardMaterial} from "three";
+import {ColladaLoader} from "three/examples/jsm/loaders/ColladaLoader.js";
 import {DRACOLoader} from "three/examples/jsm/loaders/DRACOLoader.js";
 import {FBXLoader} from "three/examples/jsm/loaders/FBXLoader.js";
 import {GLTFLoader} from "three/examples/jsm/loaders/GLTFLoader.js";
 import {MTLLoader} from "three/examples/jsm/loaders/MTLLoader.js";
 import {OBJLoader} from "three/examples/jsm/loaders/OBJLoader.js";
+import {STLLoader} from "three/examples/jsm/loaders/STLLoader.js";
+import {TDSLoader} from "three/examples/jsm/loaders/TDSLoader.js";
 
 import {
 	getFileExtension,
@@ -12,7 +15,15 @@ import {
 	readFileAsText,
 } from "./file-utils.js";
 
-const MODEL_FILE_EXTENSIONS = new Set(["gltf", "glb", "obj", "fbx"]);
+const MODEL_FILE_EXTENSIONS = new Set([
+	"gltf",
+	"glb",
+	"obj",
+	"fbx",
+	"dae",
+	"stl",
+	"3ds",
+]);
 
 export type LoadedModelHandler = (object: Object3D, file: File) => void;
 
@@ -113,6 +124,34 @@ function loadModelFromFile(
 
 		if (extension === "fbx") {
 			new FBXLoader(manager).load(url, addLoadedModel, undefined, onError);
+			return;
+		}
+
+		if (extension === "dae") {
+			new ColladaLoader(manager).load(
+				url,
+				(collada) => addLoadedModel(collada.scene),
+				undefined,
+				onError,
+			);
+			return;
+		}
+
+		if (extension === "stl") {
+			new STLLoader(manager).load(
+				url,
+				(geometry) => {
+					const material = new MeshStandardMaterial({color: 0xb2b2b2});
+					addLoadedModel(new Mesh(geometry, material));
+				},
+				undefined,
+				onError,
+			);
+			return;
+		}
+
+		if (extension === "3ds") {
+			new TDSLoader(manager).load(url, addLoadedModel, undefined, onError);
 			return;
 		}
 

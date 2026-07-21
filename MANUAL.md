@@ -174,10 +174,11 @@ The **Add** section of the left toolbar provides:
 - Built-in meshes: cube, sphere, plane, capsule, circle, cone, cylinder,
   dodecahedron, icosahedron, octahedron, ring, tetrahedron, torus, and torus
   knot.
-- Uploaded models: `.gltf`, `.glb`, `.obj`, and `.fbx`. Models can also be
-  dragged onto the canvas. A standalone `.obj` is supported, but companion MTL
-  or external texture selection is not part of the file picker; prefer a
-  self-contained `.glb` for reliable results.
+- Uploaded models: `.gltf`, `.glb`, `.obj`, `.fbx`, `.dae` (Collada), `.stl`,
+  and `.3ds`. Models can also be dragged onto the canvas. Select or drop
+  companion material and texture files with the model, or use the directory
+  upload button to preserve their relative paths. Prefer a self-contained
+  `.glb` when possible for reliable results.
 - Static lights: point, spot, and rectangular area lights.
 - Groups, saved viewports, and Home Assistant entities.
 
