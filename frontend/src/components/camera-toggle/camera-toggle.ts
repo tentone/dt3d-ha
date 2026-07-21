@@ -1,13 +1,28 @@
 import "../floating-button/floating-button.js";
 
-import {html, LitElement} from "lit";
+import {css, html, LitElement} from "lit";
 import {customElement, property} from "lit/decorators.js";
 
-import {localManager} from "../../locale/locale.js";
 import type {CameraMode} from "../../editor/scene.js";
+import {localManager} from "../../locale/locale.js";
 
 @customElement("dt3d-camera-toggle")
 export class DT3DCameraToggle extends LitElement {
+	static styles = css`
+		:host {
+			display: block;
+			position: absolute;
+			width: 48px;
+			height: 48px;
+			z-index: 5;
+		}
+
+		dt3d-floating-button {
+			right: 0;
+			bottom: 0;
+		}
+	`;
+
 	@property({type: String})
 	public mode: CameraMode = "perspective";
 

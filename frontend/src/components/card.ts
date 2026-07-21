@@ -113,6 +113,8 @@ const GRID_CONFIG_STORAGE_KEY = "grid-config";
 const DEFAULT_CARD_HEIGHT = 300;
 const MASONRY_CARD_UNIT_HEIGHT = 50;
 const ENTITY_CLICK_DELAY = 300;
+const VIEWER_CONTROL_MARGIN = 16;
+const VIEWER_CONTROL_GAP = 8;
 
 const booleanConfig = (value: unknown): boolean =>
 	value === true || value === "true" || value === "1";
@@ -444,10 +446,9 @@ export class DT3DCard extends LitElement {
 		}
 
 		if (!this.isOrientationCubeEnabled()) {
-			this.objectTreeResizeObserver?.disconnect();
-			this.objectTreeResizeObserver = null;
 			this.orientationCube?.remove();
 			this.orientationCube = null;
+			this.updateViewerControlPositions();
 			return;
 		}
 
@@ -467,24 +468,40 @@ export class DT3DCard extends LitElement {
 		}
 
 		this.orientationCube.camera = this.sceneManager.camera;
-		if (this.tree && !this.objectTreeResizeObserver) {
-			this.objectTreeResizeObserver = new ResizeObserver(() => {
-				this.updateOrientationCubePosition();
-			});
-			this.objectTreeResizeObserver.observe(this.tree);
-		}
-		this.updateOrientationCubePosition();
+		this.observeObjectTreeSize();
+		this.updateViewerControlPositions();
 	}
 
-	private updateOrientationCubePosition(): void {
-		if (!this.orientationCube) {
+	private observeObjectTreeSize(): void {
+		if (!this.tree || this.objectTreeResizeObserver) {
 			return;
 		}
 
+		this.objectTreeResizeObserver = new ResizeObserver(() => {
+			this.updateViewerControlPositions();
+		});
+		this.objectTreeResizeObserver.observe(this.tree);
+	}
+
+	private updateViewerControlPositions(): void {
 		const treeWidth = this.tree?.getBoundingClientRect().width ?? 0;
-		this.orientationCube.style.left = "auto";
-		this.orientationCube.style.right = `${treeWidth + 16}px`;
-		this.orientationCube.style.bottom = "16px";
+		const right = `${treeWidth + VIEWER_CONTROL_MARGIN}px`;
+
+		if (this.orientationCube) {
+			this.orientationCube.style.left = "auto";
+			this.orientationCube.style.right = right;
+			this.orientationCube.style.bottom = `${VIEWER_CONTROL_MARGIN}px`;
+		}
+
+		if (this.cameraToggle) {
+			const cubeHeight = this.orientationCube?.getBoundingClientRect().height ?? 0;
+			const bottom = this.orientationCube
+				? VIEWER_CONTROL_MARGIN + cubeHeight + VIEWER_CONTROL_GAP
+				: VIEWER_CONTROL_MARGIN;
+			this.cameraToggle.style.left = "auto";
+			this.cameraToggle.style.right = right;
+			this.cameraToggle.style.bottom = `${bottom}px`;
+		}
 	}
 
 	private getDefaultSpaceId(): string | undefined {
@@ -2009,6 +2026,7 @@ export class DT3DCard extends LitElement {
 			height: 100%;
 		`;
 		this.content.appendChild(this.tree);
+		this.observeObjectTreeSize();
 
 		const connection = document.createElement(
 			"dt3d-connection-status",
@@ -2157,6 +2175,7 @@ export class DT3DCard extends LitElement {
 		});
 
 		this.content.appendChild(this.cameraToggle);
+		this.updateViewerControlPositions();
 
 		this.spaceSelector = document.createElement(
 			"dt3d-space-selector",
