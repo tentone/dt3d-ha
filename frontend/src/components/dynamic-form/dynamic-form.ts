@@ -31,6 +31,11 @@ export type DynamicFormInputField = {
 	step?: number;
 	min?: number;
 	max?: number;
+	/**
+	 * Whether a Vector3 field should offer linked, proportional axis editing.
+	 * The value also controls the initial linked state.
+	 */
+	linked?: boolean;
 	options?: Array<{
 		label: string;
 		value: string | number | boolean;
@@ -85,6 +90,7 @@ export class DynamicForm extends LitElement {
 	public data: unknown = null;
 
 	private subFormOpenState = new Map<string, boolean>();
+	private vectorLinkedState = new Map<string, boolean>();
 
 	private getFieldValue(
 		field: DynamicFormInputField,
@@ -190,6 +196,43 @@ export class DynamicForm extends LitElement {
 		}
 	}
 
+	private isVectorLinked(field: DynamicFormInputField): boolean {
+		return this.vectorLinkedState.get(field.attribute) ?? field.linked === true;
+	}
+
+	private toggleVectorLinked(field: DynamicFormInputField): void {
+		this.vectorLinkedState.set(field.attribute, !this.isVectorLinked(field));
+		this.requestUpdate();
+	}
+
+	private handleVectorChange(
+		field: DynamicFormInputField,
+		vector: VectorValue,
+		axis: "x" | "y" | "z",
+		rawValue: number,
+	): void {
+		if (!this.isVectorLinked(field) || vector[axis] === 0) {
+			this.dispatchFieldChange(
+				`${field.attribute}.${axis}`,
+				field.type,
+				rawValue,
+			);
+			return;
+		}
+
+		const ratio = rawValue / vector[axis];
+		const value: VectorValue = {
+			x: axis === "x" ? rawValue : vector.x * ratio,
+			y: axis === "y" ? rawValue : vector.y * ratio,
+			z: axis === "z" ? rawValue : vector.z * ratio,
+		};
+		this.dispatchFieldChange(field.attribute, field.type, value);
+
+		// Consumers update the backing data in response to the event. Refresh this
+		// component too so that the other two inputs immediately show their values.
+		this.requestUpdate();
+	}
+
 	private getSubFormKey(field: DynamicFormSubFormField): string {
 		return field.attribute ?? field.label;
 	}
@@ -244,35 +287,58 @@ export class DynamicForm extends LitElement {
 				if (!vector) {
 					return null;
 				}
+				const linked = this.isVectorLinked(field);
 
 				return html`
 					<div class="field">
 						<label title=${field.tooltip ?? ""}>${field.label}</label>
-						<div class="group-row">
-							${(["x", "y", "z"] as const).map(
-								(axis) => html`
-									<label style="color: ${this.getAxisColor(axis)}">
-										${axis.toUpperCase()}
-										<input
-											type="number"
-											step="0.01"
-											.value=${this.formatNumber(vector[axis])}
+						<div class="vector-row">
+							<div class="group-row">
+								${(["x", "y", "z"] as const).map(
+									(axis) => html`
+										<label style="color: ${this.getAxisColor(axis)}">
+											${axis.toUpperCase()}
+											<input
+												type="number"
+												step="0.01"
+												.value=${this.formatNumber(vector[axis])}
+												?disabled=${!field.editable || !field.enabled}
+												@change=${(event: Event) => {
+													const rawValue = parseFloat(
+														(event.target as HTMLInputElement).value,
+													);
+													if (Number.isNaN(rawValue)) return;
+													this.handleVectorChange(
+														field,
+														vector,
+														axis,
+														rawValue,
+													);
+												}}
+											/>
+										</label>
+									`,
+								)}
+							</div>
+							${field.linked === undefined
+								? null
+								: html`
+										<button
+											type="button"
+											class=${`vector-link-button${linked ? " linked" : ""}`}
 											?disabled=${!field.editable || !field.enabled}
-											@change=${(event: Event) => {
-												const rawValue = parseFloat(
-													(event.target as HTMLInputElement).value,
-												);
-												if (Number.isNaN(rawValue)) return;
-												this.dispatchFieldChange(
-													`${field.attribute}.${axis}`,
-													field.type,
-													rawValue,
-												);
-											}}
-										/>
-									</label>
-								`,
-							)}
+											aria-label=${linked ? "Unlink values" : "Link values"}
+											aria-pressed=${linked ? "true" : "false"}
+											title=${linked ? "Unlink values" : "Link values"}
+											@click=${() => this.toggleVectorLinked(field)}
+										>
+											<ha-icon
+												icon=${linked
+													? "mdi:link-variant"
+													: "mdi:link-variant-off"}
+											></ha-icon>
+										</button>
+									`}
 						</div>
 					</div>
 				`;

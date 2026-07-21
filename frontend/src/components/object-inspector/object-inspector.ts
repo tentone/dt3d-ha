@@ -86,6 +86,50 @@ export class DT3DObjectInspector extends LitElement {
 		current[keys[keys.length - 1]] = value;
 	}
 
+	private setVectorAttribute(
+		target: any,
+		attribute: string,
+		value: unknown,
+	): boolean {
+		if (!value || typeof value !== "object") {
+			return false;
+		}
+
+		const vectorValue = value as {x?: unknown; y?: unknown; z?: unknown};
+		if (
+			typeof vectorValue.x !== "number" ||
+			typeof vectorValue.y !== "number" ||
+			typeof vectorValue.z !== "number"
+		) {
+			return false;
+		}
+
+		const keys = attribute.split(".");
+		let vector = target;
+		for (const key of keys) {
+			if (vector == null) return false;
+			vector = vector[key];
+		}
+
+		if (!vector || typeof vector !== "object") {
+			return false;
+		}
+
+		const factor = vector.isEuler ? Math.PI / 180 : 1;
+		const x = vectorValue.x * factor;
+		const y = vectorValue.y * factor;
+		const z = vectorValue.z * factor;
+		if (typeof vector.set === "function") {
+			vector.set(x, y, z);
+		} else {
+			vector.x = x;
+			vector.y = y;
+			vector.z = z;
+		}
+
+		return true;
+	}
+
 	/**
 	 * Handle changes to the form fields and update the selected object's properties accordingly.
 	 *
@@ -94,7 +138,7 @@ export class DT3DObjectInspector extends LitElement {
 	private handleFormFieldChange(event: CustomEvent<DynamicFormChangeDetail>) {
 		if (!this.selectedObject) return;
 
-		const {attribute, value} = event.detail;
+		const {attribute, type, value} = event.detail;
 		if (this.isLocked() && attribute !== "locked") {
 			return;
 		}
@@ -109,6 +153,10 @@ export class DT3DObjectInspector extends LitElement {
 			}
 
 			this.selectedObject.defaultViewport = Boolean(value);
+		} else if (type === "Vector3" && typeof value === "object") {
+			if (!this.setVectorAttribute(this.selectedObject, attribute, value)) {
+				return;
+			}
 		} else if (attribute.startsWith("rotation.")) {
 			const axis = attribute.split(".")[1] as "x" | "y" | "z";
 			const rawValue = Number(value);
@@ -264,6 +312,7 @@ export class DT3DObjectInspector extends LitElement {
 				tooltip: localManager.get("scaleTooltip"),
 				editable: !locked,
 				enabled: true,
+				linked: true,
 			},
 			{
 				label: localManager.get("rotation"),
