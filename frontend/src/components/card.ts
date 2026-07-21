@@ -18,10 +18,6 @@ import {customElement} from "lit/decorators.js";
 import type {Camera, Intersection, Object3D, Scene} from "three";
 import {Group, MeshStandardMaterial, Raycaster, Vector2, Vector3} from "three";
 import type {TransformControls} from "three/examples/jsm/controls/TransformControls";
-import {DRACOLoader} from "three/examples/jsm/loaders/DRACOLoader.js";
-import {FBXLoader} from "three/examples/jsm/loaders/FBXLoader.js";
-import {GLTFLoader} from "three/examples/jsm/loaders/GLTFLoader.js";
-import {OBJLoader} from "three/examples/jsm/loaders/OBJLoader.js";
 
 import type {
 	EntityAction,
@@ -77,6 +73,12 @@ import {ViewportObject} from "../objects/viewport-object.js";
 import type {SpaceResponse} from "../service/space-api.js";
 import {SpaceApi} from "../service/space-api.js";
 import {SpaceSync} from "../service/space-sync.js";
+import {
+	collectDroppedFiles,
+	findImageFile,
+	pickLocalFiles,
+} from "../utils/file-utils.js";
+import {isModelFile, loadModelsFromFiles} from "../utils/loader-utils.js";
 import {LocalStorage} from "../utils/local-storage.js";
 import {findMesh} from "../utils/object3d-utils.js";
 import type {DT3DAddEntityModal} from "./add-entity-modal/add-entity-modal.js";
@@ -106,13 +108,9 @@ import type {SyncProgressComponent} from "./sync-progress-component/sync-progres
 
 const SPACE_SCENE_CONFIG_STORAGE_KEY = "space-scene-config";
 const GRID_CONFIG_STORAGE_KEY = "grid-config";
-const MODEL_FILE_EXTENSIONS = new Set(["gltf", "glb", "obj", "fbx"]);
 const DEFAULT_CARD_HEIGHT = 300;
 const MASONRY_CARD_UNIT_HEIGHT = 50;
 const ENTITY_CLICK_DELAY = 300;
-
-const getFileExtension = (file: File): string | null =>
-	file.name.split(".").pop()?.toLowerCase() ?? null;
 
 const booleanConfig = (value: unknown): boolean =>
 	value === true || value === "true" || value === "1";
@@ -330,116 +328,36 @@ export class DT3DCard extends LitElement {
 	}
 
 	/**
-	 * Select a 3D model file to upload.
+	 * Select 3D model files or a model directory to upload.
 	 *
-	 * Presents a file picker dialog to the user and loads the selected model into the scene.
+	 * All selected files are made available to the model loaders so external
+	 * material, texture, and buffer references can be resolved.
+	 *
+	 * @param directory - Whether to select a complete directory instead of files.
 	 */
-	private selectFile() {
+	private selectFiles(directory = false): void {
 		if (!this.space || this.isVisualizationOnly()) {
 			return;
 		}
-
-		const input = document.createElement("input");
-		input.type = "file";
-		input.accept = ".gltf,.glb,.obj,.fbx";
-		input.style.display = "none";
-
-		input.addEventListener("change", () => {
-			const file = input.files?.[0];
-			if (file) {
-				this.loadModelFromFile(file);
-			}
-			input.remove();
-		});
 
 		const host = this.content ?? this;
-		host.appendChild(input);
-		input.click();
+		void pickLocalFiles(host, directory).then((files) =>
+			this.importModels(files),
+		);
 	}
 
-	/**
-	 * Loads a 3D model from a file.
-	 *
-	 * @param file - The model file to load.
-	 */
-	private loadModelFromFile(file: File, position?: Vector3) {
+	private importModels(
+		files: File[],
+		position?: Vector3,
+	): Promise<void> {
 		if (!this.space || this.isVisualizationOnly()) {
-			return;
+			return Promise.resolve();
 		}
 
-		const extension = getFileExtension(file);
-
-		if (!extension) {
-			console.warn("Unable to detect model file extension:", file.name);
-			return;
-		}
-
-		const url = URL.createObjectURL(file);
-
-		const cleanup = () => {
-			URL.revokeObjectURL(url);
-		};
-
-		const onError = (error: any) => {
-			console.error(`Failed to load ${extension} model`, error);
-			cleanup();
-		};
-
-		const addLoadedModel = (object: Object3D | null | undefined) => {
-			if (position && object) {
-				object.position.copy(position);
-			}
-
+		return loadModelsFromFiles(files, (object, file) => {
+			if (position) object.position.copy(position);
 			this.addToScene(object, file.name);
-		};
-
-		if (extension === "gltf" || extension === "glb") {
-			const loader = new GLTFLoader();
-			const dracoLoader = new DRACOLoader();
-			dracoLoader.setDecoderPath("https://www.gstatic.com/draco/v1/decoders/");
-			loader.setDRACOLoader(dracoLoader);
-			loader.load(
-				url,
-				(gltf: any) => {
-					dracoLoader.dispose();
-					cleanup();
-					addLoadedModel(gltf.scene ?? gltf.scenes?.[0]);
-				},
-				undefined,
-				(error: any) => {
-					onError(error);
-					dracoLoader.dispose();
-				},
-			);
-			return;
-		} else if (extension === "obj") {
-			const loader = new OBJLoader();
-			loader.load(
-				url,
-				(obj: any) => {
-					cleanup();
-					addLoadedModel(obj);
-				},
-				undefined,
-				onError,
-			);
-			return;
-		} else if (extension === "fbx") {
-			const loader = new FBXLoader();
-			loader.load(
-				url,
-				(fbx: any) => {
-					cleanup();
-					addLoadedModel(fbx);
-				},
-				undefined,
-				onError,
-			);
-			return;
-		}
-
-		console.warn("DT3D: Unsupported model format:", extension);
-		cleanup();
+		});
 	}
 
 	/**
@@ -934,12 +852,6 @@ export class DT3DCard extends LitElement {
 		void this.spaceSync?.syncObjectHierarchyCreate(clone);
 	}
 
-	private isModelFile(file: File): boolean {
-		const extension = getFileExtension(file);
-
-		return extension !== null && MODEL_FILE_EXTENSIONS.has(extension);
-	}
-
 	private pickDropPositionFromEvent(event: MouseEvent): Vector3 {
 		const {intersection} = this.pickObjectFromEvent(event);
 
@@ -953,29 +865,29 @@ export class DT3DCard extends LitElement {
 			return;
 		}
 
-		const files = Array.from(event.dataTransfer?.files ?? []);
-		const modelFiles = files.filter((file) => this.isModelFile(file));
+		const files = event.dataTransfer
+			? await collectDroppedFiles(event.dataTransfer)
+			: [];
+		const modelFiles = files.filter(isModelFile);
 
 		if (modelFiles.length > 0) {
 			const position = this.pickDropPositionFromEvent(event as MouseEvent);
-			for (const file of modelFiles) {
-				this.loadModelFromFile(file, position);
-			}
+			await this.importModels(files, position);
 			return;
 		}
 
-		await this.handleTextureDrop(event);
+		await this.handleTextureDrop(event, findImageFile(files));
 	}
 
-	private async handleTextureDrop(event: DragEvent): Promise<void> {
+	private async handleTextureDrop(
+		event: DragEvent,
+		file: File | null,
+	): Promise<void> {
 		event.preventDefault();
 		if (this.isVisualizationOnly()) {
 			return;
 		}
 
-		const file = Array.from(event.dataTransfer?.files ?? []).find((candidate) =>
-			candidate.type.startsWith("image/"),
-		);
 		if (!file) {
 			return;
 		}
@@ -1929,7 +1841,9 @@ export class DT3DCard extends LitElement {
 		} else if (type === "viewport") {
 			this.addViewportFromCurrentCamera();
 		} else if (type === "upload") {
-			this.selectFile();
+			this.selectFiles();
+		} else if (type === "upload-directory") {
+			this.selectFiles(true);
 		} else if (type === "entity") {
 			this.addEntityModal();
 		} else if (type === "static-light" || type.startsWith("light-")) {
@@ -2217,7 +2131,7 @@ export class DT3DCard extends LitElement {
 			this.openCreateSpaceModal();
 		});
 		this.spaceSelector.addEventListener("space-delete-request", (event: Event) => {
-			const {spaceId} = (event as CustomEvent<{ spaceId: string }>).detail;
+			const {spaceId} = (event as CustomEvent<{spaceId: string}>).detail;
 			this.requestDeleteSpace(spaceId);
 		});
 		this.content.appendChild(this.spaceSelector);

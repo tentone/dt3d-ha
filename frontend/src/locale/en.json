@@ -162,6 +162,7 @@
 	"add": "Add",
 	"addMesh": "Add mesh",
 	"uploadModel": "Upload model",
+	"uploadModelDirectory": "Upload model directory",
 	"addEntity": "Add entity",
 	"addStaticLight": "Add static light",
 	"staticLight": "Static Light",

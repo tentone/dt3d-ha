@@ -44,8 +44,7 @@ export class DT3DSidebar extends LitElement {
 	 * Indicates if the sidebar is collapsed or open.
 	 */
 	public collapsed =
-		LocalStorage.read(SIDEBAR_COLLAPSED_STORAGE_KEY, true) ??
-		true;
+		LocalStorage.read(SIDEBAR_COLLAPSED_STORAGE_KEY, true) ?? true;
 
 	/**
 	 * Tooltip instances to preview the option name.
@@ -272,8 +271,7 @@ export class DT3DSidebar extends LitElement {
 		this.destroyTooltips();
 
 		const tooltipTargets: NodeListOf<HTMLElement> =
-			this.renderRoot?.querySelectorAll<HTMLElement>("[data-tooltip]") ??
-			[];
+			this.renderRoot?.querySelectorAll<HTMLElement>("[data-tooltip]") ?? [];
 
 		tooltipTargets.forEach((element) => {
 			const content = element.dataset.tooltip;
@@ -308,58 +306,68 @@ export class DT3DSidebar extends LitElement {
 				@click=${this.toggleCollapse}
 				data-tooltip=${localManager.get("collapseSidebar")}
 				aria-label=${localManager.get("collapseSidebar")}
-				title=${localManager.get("collapseSidebar")}>
-			${this.collapsed ?  html`<ha-icon icon="mdi:arrow-right-drop-circle-outline"></ha-icon>` :  html`<ha-icon icon="mdi:arrow-left-drop-circle-outline"></ha-icon>`}
+				title=${localManager.get("collapseSidebar")}
+			>
+				${this.collapsed
+					? html`<ha-icon icon="mdi:arrow-right-drop-circle-outline"></ha-icon>`
+					: html`<ha-icon icon="mdi:arrow-left-drop-circle-outline"></ha-icon>`}
 			</button>
 			<div class="sidebar-content">
 				<div class="sidebar-section">
 					<div class="sidebar-title">${localManager.get("controls")}</div>
 					<button
 						@click=${() => this.handleTransformSelect("translate")}
-          class=${`transform-btn ${this.transformTool === "translate" ? "selected" : ""}`.trim()}
+						class=${`transform-btn ${this.transformTool === "translate" ? "selected" : ""}`.trim()}
 						data-tooltip=${localManager.get("translateObject")}
-						aria-label=${localManager.get("translateObject")}>
+						aria-label=${localManager.get("translateObject")}
+					>
 						<ha-icon icon="mdi:cursor-move"></ha-icon>
 					</button>
 					<button
 						@click=${() => this.handleTransformSelect("rotate")}
-          	class=${`transform-btn ${this.transformTool === "rotate" ? "selected" : ""}`.trim()}
+						class=${`transform-btn ${this.transformTool === "rotate" ? "selected" : ""}`.trim()}
 						data-tooltip=${localManager.get("rotateObject")}
-						aria-label=${localManager.get("rotateObject")}>
+						aria-label=${localManager.get("rotateObject")}
+					>
 						<ha-icon icon="mdi:rotate-right"></ha-icon>
 					</button>
 					<button
-          class=${`transform-btn ${this.transformTool === "scale" ? "selected" : ""}`.trim()}
+						class=${`transform-btn ${this.transformTool === "scale" ? "selected" : ""}`.trim()}
 						@click=${() => this.handleTransformSelect("scale")}
 						data-tooltip=${localManager.get("scaleObject")}
-						aria-label=${localManager.get("scaleObject")}>
+						aria-label=${localManager.get("scaleObject")}
+					>
 						<ha-icon icon="mdi:resize"></ha-icon>
 					</button>
 					<button
-          class=${`transform-btn ${this.transformTool === "none" ? "selected" : ""}`.trim()}
+						class=${`transform-btn ${this.transformTool === "none" ? "selected" : ""}`.trim()}
 						@click=${() => this.handleTransformSelect("none")}
 						data-tooltip=${localManager.get("disableTransformControls")}
-						aria-label=${localManager.get("disableTransformControls")}>
+						aria-label=${localManager.get("disableTransformControls")}
+					>
 						<ha-icon icon="mdi:cursor-default-outline"></ha-icon>
 					</button>
 					<button
 						@click=${() => this.handleGridSnapToggle()}
 						class=${`toggle-btn ${this.gridSnapEnabled ? "selected" : ""}`.trim()}
 						data-tooltip=${localManager.get("snapToGrid")}
-						aria-label=${localManager.get("snapToGrid")}>
+						aria-label=${localManager.get("snapToGrid")}
+					>
 						<ha-icon icon="mdi:magnet"></ha-icon>
 					</button>
 					<button
 						@click=${() => this.handleGridToggle()}
 						class=${`toggle-btn ${this.gridEnabled ? "selected" : ""}`.trim()}
 						data-tooltip=${localManager.get("toggleGrid")}
-						aria-label=${localManager.get("toggleGrid")}>
+						aria-label=${localManager.get("toggleGrid")}
+					>
 						<ha-icon icon="mdi:grid"></ha-icon>
 					</button>
 					<button
 						@click=${() => this.handleGridConfigOpen()}
 						data-tooltip=${localManager.get("configureGrid")}
-						aria-label=${localManager.get("configureGrid")}>
+						aria-label=${localManager.get("configureGrid")}
+					>
 						<ha-icon icon="mdi:grid-large"></ha-icon>
 					</button>
 				</div>
@@ -368,7 +376,8 @@ export class DT3DSidebar extends LitElement {
 					<button
 						@click=${() => this.handleSpaceConfigOpen()}
 						data-tooltip=${localManager.get("spaceConfiguration")}
-						aria-label=${localManager.get("spaceConfiguration")}>
+						aria-label=${localManager.get("spaceConfiguration")}
+					>
 						<ha-icon icon="mdi:white-balance-sunny"></ha-icon>
 					</button>
 				</div>
@@ -377,37 +386,50 @@ export class DT3DSidebar extends LitElement {
 					<button
 						@click=${(event: MouseEvent) => this.handleMeshMenuOpen(event)}
 						data-tooltip=${localManager.get("addMesh")}
-						aria-label=${localManager.get("addMesh")}>
+						aria-label=${localManager.get("addMesh")}
+					>
 						<ha-icon icon="mdi:shape-outline"></ha-icon>
 					</button>
 					<button
 						@click=${() => this.handleAddObject("upload")}
 						data-tooltip=${localManager.get("uploadModel")}
-						aria-label=${localManager.get("uploadModel")}>
+						aria-label=${localManager.get("uploadModel")}
+					>
 						<ha-icon icon="mdi:upload-box-outline"></ha-icon>
+					</button>
+					<button
+						@click=${() => this.handleAddObject("upload-directory")}
+						data-tooltip=${localManager.get("uploadModelDirectory")}
+						aria-label=${localManager.get("uploadModelDirectory")}
+					>
+						<ha-icon icon="mdi:folder-upload-outline"></ha-icon>
 					</button>
 					<button
 						@click=${() => this.handleAddObject("entity")}
 						data-tooltip=${localManager.get("addEntity")}
-						aria-label=${localManager.get("addEntity")}>
+						aria-label=${localManager.get("addEntity")}
+					>
 						<ha-icon icon="mdi:state-machine"></ha-icon>
 					</button>
 					<button
 						@click=${(event: MouseEvent) => this.handleLightMenuOpen(event)}
 						data-tooltip=${localManager.get("addStaticLight")}
-						aria-label=${localManager.get("addStaticLight")}>
+						aria-label=${localManager.get("addStaticLight")}
+					>
 						<ha-icon icon="mdi:lightbulb-on-outline"></ha-icon>
 					</button>
 					<button
 						@click=${() => this.handleAddObject("group")}
 						data-tooltip=${localManager.get("addGroup")}
-						aria-label=${localManager.get("addGroup")}>
+						aria-label=${localManager.get("addGroup")}
+					>
 						<ha-icon icon="mdi:folder-plus-outline"></ha-icon>
 					</button>
 					<button
 						@click=${() => this.handleAddObject("viewport")}
 						data-tooltip=${localManager.get("addViewport")}
-						aria-label=${localManager.get("addViewport")}>
+						aria-label=${localManager.get("addViewport")}
+					>
 						<ha-icon icon="mdi:camera-plus-outline"></ha-icon>
 					</button>
 				</div>
@@ -418,21 +440,26 @@ export class DT3DSidebar extends LitElement {
 						@click=${() => this.handleMeasurementSelect("distance")}
 						class=${this.measurementTool === "distance" ? "selected" : ""}
 						data-tooltip=${localManager.get("measureDistance")}
-						aria-label=${localManager.get("measureDistance")}>
+						aria-label=${localManager.get("measureDistance")}
+					>
 						<ha-icon icon="mdi:social-distance-2-meters"></ha-icon>
 					</button>
 					<button
 						@click=${() => this.handleMeasurementSelect("angle")}
 						class=${this.measurementTool === "angle" ? "selected" : ""}
 						data-tooltip=${localManager.get("measureAngle")}
-						aria-label=${localManager.get("measureAngle")}>
+						aria-label=${localManager.get("measureAngle")}
+					>
 						<ha-icon icon="mdi:angle-acute"></ha-icon>
 					</button>
 					<button
 						@click=${() => this.handleMeasurementSelect("none")}
-						class=${this.measurementTool === "none" && this.wallTool === "none" ? "selected" : ""}
+						class=${this.measurementTool === "none" && this.wallTool === "none"
+							? "selected"
+							: ""}
 						data-tooltip=${localManager.get("clearMeasurements")}
-						aria-label=${localManager.get("clearMeasurements")}>
+						aria-label=${localManager.get("clearMeasurements")}
+					>
 						<ha-icon icon="mdi:cancel"></ha-icon>
 					</button>
 				</div>
@@ -442,28 +469,34 @@ export class DT3DSidebar extends LitElement {
 						@click=${() => this.handleWallSelect("wall")}
 						class=${this.wallTool === "wall" ? "selected" : ""}
 						data-tooltip=${localManager.get("drawWall")}
-						aria-label=${localManager.get("drawWall")}>
+						aria-label=${localManager.get("drawWall")}
+					>
 						<ha-icon icon="mdi:vector-line"></ha-icon>
 					</button>
 					<button
 						@click=${() => this.handleWallSelect("door")}
 						class=${this.wallTool === "door" ? "selected" : ""}
 						data-tooltip=${localManager.get("addDoor")}
-						aria-label=${localManager.get("addDoor")}>
+						aria-label=${localManager.get("addDoor")}
+					>
 						<ha-icon icon="mdi:door"></ha-icon>
 					</button>
 					<button
 						@click=${() => this.handleWallSelect("window")}
 						class=${this.wallTool === "window" ? "selected" : ""}
 						data-tooltip=${localManager.get("addWindow")}
-						aria-label=${localManager.get("addWindow")}>
+						aria-label=${localManager.get("addWindow")}
+					>
 						<ha-icon icon="mdi:window-closed-variant"></ha-icon>
 					</button>
 					<button
 						@click=${() => this.handleWallSelect("none")}
-						class=${this.measurementTool === "none" && this.wallTool === "none" ? "selected" : ""}
+						class=${this.measurementTool === "none" && this.wallTool === "none"
+							? "selected"
+							: ""}
 						data-tooltip=${localManager.get("exitWallTools")}
-						aria-label=${localManager.get("exitWallTools")}>
+						aria-label=${localManager.get("exitWallTools")}
+					>
 						<ha-icon icon="mdi:cancel"></ha-icon>
 					</button>
 				</div>
