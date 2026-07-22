@@ -92,6 +92,12 @@ export type DaylightConfig = {
 
 export type SkyConfig = {
 	enabled: boolean;
+	followDateTime: boolean;
+};
+
+export type SunPosition = {
+	elevation: number;
+	azimuth: number;
 };
 
 export type BackgroundType = "solid" | "transparent";
@@ -129,6 +135,7 @@ export const DEFAULT_DAYLIGHT_CONFIG: DaylightConfig = {
 
 export const DEFAULT_SKY_CONFIG: SkyConfig = {
 	enabled: true,
+	followDateTime: false,
 };
 
 export const DEFAULT_BACKGROUND_CONFIG: BackgroundConfig = {
@@ -250,6 +257,10 @@ export const normalizeSpaceSceneConfig = (
 		daylight: normalizeDaylightConfig(config.daylight),
 		sky: {
 			enabled: booleanOrDefault(sky.enabled, DEFAULT_SKY_CONFIG.enabled),
+			followDateTime: booleanOrDefault(
+				sky.followDateTime,
+				DEFAULT_SKY_CONFIG.followDateTime,
+			),
 		},
 	};
 };
@@ -392,6 +403,11 @@ export class SceneManager {
 	 * Sky dome used by daylight configuration.
 	 */
 	private sky: Sky | null = null;
+
+	/**
+	 * Current solar position supplied by Home Assistant's date/time configuration.
+	 */
+	private dateTimeSunPosition: SunPosition | null = null;
 
 	/**
 	 * Current space-level scene configuration.
@@ -552,6 +568,27 @@ export class SceneManager {
 			daylight: {...this.spaceSceneConfig.daylight},
 			sky: {...this.spaceSceneConfig.sky},
 		};
+	}
+
+	/**
+	 * Update the solar position derived from Home Assistant's current date, time,
+	 * and location. Manual daylight angles remain the fallback when unavailable.
+	 */
+	public setDateTimeSunPosition(position: SunPosition | null): void {
+		if (
+			position &&
+			Number.isFinite(position.elevation) &&
+			Number.isFinite(position.azimuth)
+		) {
+			this.dateTimeSunPosition = {
+				elevation: clamp(position.elevation, -90, 90),
+				azimuth: ((position.azimuth % 360) + 360) % 360,
+			};
+		} else {
+			this.dateTimeSunPosition = null;
+		}
+
+		this.applyDaylightConfig(this.spaceSceneConfig.daylight);
 	}
 
 	/**
@@ -1056,8 +1093,13 @@ export class SceneManager {
 			this.ambientLight.intensity = config.ambientIntensity;
 		}
 
-		const phi = MathUtils.degToRad(90 - config.sunElevation);
-		const theta = MathUtils.degToRad(config.sunAzimuth);
+		const followedPosition = this.spaceSceneConfig.sky.followDateTime
+			? this.dateTimeSunPosition
+			: null;
+		const elevation = followedPosition?.elevation ?? config.sunElevation;
+		const azimuth = followedPosition?.azimuth ?? config.sunAzimuth;
+		const phi = MathUtils.degToRad(90 - elevation);
+		const theta = MathUtils.degToRad(azimuth);
 		const sunPosition = new Vector3().setFromSphericalCoords(1, phi, theta);
 
 		if (this.sunlight) {

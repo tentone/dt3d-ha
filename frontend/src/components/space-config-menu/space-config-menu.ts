@@ -386,6 +386,14 @@ export class DT3DSpaceConfigMenu extends LitElement {
 					enabled: true,
 				},
 				{
+					label: localManager.get("skyFollowDateTime"),
+					attribute: "scene.sky.followDateTime",
+					type: "boolean",
+					tooltip: localManager.get("skyFollowDateTimeTooltip"),
+					editable: true,
+					enabled: true,
+				},
+				{
 					label: localManager.get("backgroundType"),
 					attribute: "scene.background.type",
 					type: "select",

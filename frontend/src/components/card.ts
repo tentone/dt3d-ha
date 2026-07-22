@@ -330,7 +330,25 @@ export class DT3DCard extends LitElement {
 
 		this.hassInstance = hass;
 
+		this.updateSkyFromDateTime();
 		this.updateEntityObjects();
+	}
+
+	/**
+	 * Apply Home Assistant's local solar position to date/time-following skies.
+	 * The sun integration calculates these values from HA's configured clock and
+	 * location and refreshes them as the current time changes.
+	 */
+	private updateSkyFromDateTime(): void {
+		const attributes = this.hassInstance?.states?.["sun.sun"]?.attributes;
+		const elevation = Number(attributes?.elevation);
+		const azimuth = Number(attributes?.azimuth);
+
+		this.sceneManager?.setDateTimeSunPosition(
+			Number.isFinite(elevation) && Number.isFinite(azimuth)
+				? {elevation, azimuth}
+				: null,
+		);
 	}
 
 	/**
@@ -2076,6 +2094,7 @@ export class DT3DCard extends LitElement {
 		this.spaceSceneConfig = this.sceneManager.setSpaceSceneConfig(
 			this.spaceSceneConfig,
 		);
+		this.updateSkyFromDateTime();
 		let transformedObject: Object3D | null = null;
 		this.sceneManager.transform.addEventListener("objectChange", () => {
 			if (this.isVisualizationOnly()) {

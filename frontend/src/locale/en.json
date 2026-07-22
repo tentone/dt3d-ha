@@ -149,6 +149,8 @@
 	"appearance": "Appearance",
 	"skyEnabled": "Sky enabled",
 	"skyEnabledTooltip": "Show the procedural daylight sky around the scene.",
+	"skyFollowDateTime": "Follow Home Assistant date and time",
+	"skyFollowDateTimeTooltip": "Use Home Assistant's current sun position so the sky follows the configured local daylight and night cycle. Manual sun angles are used if sun data is unavailable.",
 	"backgroundType": "Background",
 	"backgroundTypeTooltip": "Choose what appears behind the scene when the sky is disabled: a solid color or the card background.",
 	"solidColor": "Solid color",
