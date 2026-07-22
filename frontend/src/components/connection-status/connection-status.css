@@ -13,20 +13,16 @@
 .connection-status-container {
 	width: auto;
 	height: 60px;
-	background: color-mix(
-		in srgb,
-		var(--card-background-color, #ffffff) 90%,
-		transparent
-	);
-	border: 1px solid var(--divider-color, rgba(0, 0, 0, 0.12));
-	box-shadow: 0 4px 12px var(--shadow-color, rgba(0, 0, 0, 0.2));
+	background: color-mix(in srgb, var(--card-background-color) 90%, transparent);
+	border: 1px solid var(--divider-color);
+	box-shadow: 0 4px 12px var(--shadow-color);
 	border-radius: 5px;
 }
 
 .connection-status-success {
-	color: var(--success-color, #43a047);
+	color: var(--success-color);
 }
 
 .connection-status-error {
-	color: var(--error-color, #db4437);
+	color: var(--error-color);
 }

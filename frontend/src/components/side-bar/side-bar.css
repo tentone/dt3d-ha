@@ -1,12 +1,8 @@
 :host {
 	display: block;
 	width: 130px;
-	background: color-mix(
-		in srgb,
-		var(--card-background-color, #ffffff) 90%,
-		transparent
-	);
-	color: var(--primary-text-color, #212121);
+	background: color-mix(in srgb, var(--card-background-color) 90%, transparent);
+	color: var(--primary-text-color);
 	height: 100%;
 	padding: 16px 0;
 	z-index: 1;
@@ -26,16 +22,12 @@
 	position: absolute;
 	top: 12px;
 	right: -32px;
-	background: color-mix(
-		in srgb,
-		var(--card-background-color, #ffffff) 90%,
-		transparent
-	);
+	background: color-mix(in srgb, var(--card-background-color) 90%, transparent);
 	border-width: medium;
 	border-style: none;
 	border-color: currentcolor;
 	border-image: none;
-	color: var(--primary-text-color, #212121);
+	color: var(--primary-text-color);
 	cursor: pointer;
 	font-size: 1.2em;
 	width: 32px;
@@ -69,7 +61,7 @@
 	margin-bottom: 8px;
 	font-weight: bold;
 	letter-spacing: 1px;
-	color: var(--primary-color, #03a9f4);
+	color: var(--primary-color);
 }
 
 button {
@@ -77,8 +69,8 @@ button {
 	width: 100%;
 	margin-bottom: 8px;
 	padding: 10px 0;
-	background: var(--primary-color, #03a9f4);
-	color: var(--text-primary-color, #ffffff);
+	background: var(--primary-color);
+	color: var(--text-primary-color);
 	border: none;
 	border-radius: 4px;
 	cursor: pointer;
@@ -86,62 +78,47 @@ button {
 	transition:
 		background 0.2s,
 		transform 0.2s;
-	box-shadow: 0 2px 4px var(--shadow-color, rgba(0, 0, 0, 0.2));
+	box-shadow: 0 2px 4px var(--shadow-color);
 }
 
 .transform-btn.selected,
 .toggle-btn.selected {
-	background: var(--dark-primary-color, #0288d1);
+	background: var(--dark-primary-color);
 }
 
 button:hover {
-	background: var(--dark-primary-color, #0288d1);
+	background: var(--dark-primary-color);
 }
 
 button:active {
-	background: var(--darker-primary-color, var(--dark-primary-color, #0288d1));
+	background: var(--darker-primary-color);
 }
 
 button.selected {
-	background: var(--dark-primary-color, #0288d1);
+	background: var(--dark-primary-color);
 }
 
 .tippy-box[data-theme~="dt3d-sidebar"] {
-	background-color: var(
-		--ha-dialog-surface-background,
-		var(--mdc-theme-surface, var(--card-background-color, #ffffff))
-	);
-	color: var(--primary-text-color, #212121);
+	background-color: var(--card-background-color);
+	color: var(--primary-text-color);
 }
 
 .tippy-box[data-theme~="dt3d-sidebar"][data-placement^="top"]
 	> .tippy-arrow::before {
-	border-top-color: var(
-		--ha-dialog-surface-background,
-		var(--mdc-theme-surface, var(--card-background-color, #ffffff))
-	);
+	border-top-color: var(--card-background-color);
 }
 
 .tippy-box[data-theme~="dt3d-sidebar"][data-placement^="bottom"]
 	> .tippy-arrow::before {
-	border-bottom-color: var(
-		--ha-dialog-surface-background,
-		var(--mdc-theme-surface, var(--card-background-color, #ffffff))
-	);
+	border-bottom-color: var(--card-background-color);
 }
 
 .tippy-box[data-theme~="dt3d-sidebar"][data-placement^="left"]
 	> .tippy-arrow::before {
-	border-left-color: var(
-		--ha-dialog-surface-background,
-		var(--mdc-theme-surface, var(--card-background-color, #ffffff))
-	);
+	border-left-color: var(--card-background-color);
 }
 
 .tippy-box[data-theme~="dt3d-sidebar"][data-placement^="right"]
 	> .tippy-arrow::before {
-	border-right-color: var(
-		--ha-dialog-surface-background,
-		var(--mdc-theme-surface, var(--card-background-color, #ffffff))
-	);
+	border-right-color: var(--card-background-color);
 }

@@ -1,12 +1,8 @@
 :host {
 	display: flex;
 	flex-direction: column;
-	background: color-mix(
-		in srgb,
-		var(--card-background-color, #ffffff) 90%,
-		transparent
-	);
-	color: var(--primary-text-color, #212121);
+	background: color-mix(in srgb, var(--card-background-color) 90%, transparent);
+	color: var(--primary-text-color);
 	height: 100%;
 	padding: 12px 0;
 	z-index: 1;
@@ -22,13 +18,9 @@
 	width: 32px;
 	height: 32px;
 	padding: 0;
-	background: color-mix(
-		in srgb,
-		var(--card-background-color, #ffffff) 90%,
-		transparent
-	);
+	background: color-mix(in srgb, var(--card-background-color) 90%, transparent);
 	border: none;
-	color: var(--primary-text-color, #212121);
+	color: var(--primary-text-color);
 	cursor: pointer;
 	font-size: 1.2em;
 	z-index: 10;
@@ -38,16 +30,16 @@
 }
 
 .collapse-btn:focus-visible {
-	outline: 2px solid var(--primary-color, #03a9f4);
+	outline: 2px solid var(--primary-color);
 	outline-offset: 2px;
 }
 
 .collapse-btn:hover {
-	background: var(--dark-primary-color, #0288d1);
+	background: var(--dark-primary-color);
 }
 
 .collapse-btn:active {
-	background: var(--darker-primary-color, var(--dark-primary-color, #0288d1));
+	background: var(--darker-primary-color);
 }
 
 :host([collapsed]) .panel,
@@ -70,25 +62,21 @@
 	white-space: nowrap;
 	width: 100%;
 	height: 30px;
-	color: var(--primary-text-color, #212121);
+	color: var(--primary-text-color);
 	display: flex;
 	align-items: center;
 	gap: 4px;
 }
 
 .tree-node.selected {
-	background: color-mix(
-		in srgb,
-		var(--primary-color, #03a9f4) 24%,
-		transparent
-	);
-	color: var(--primary-text-color, #212121);
+	background: color-mix(in srgb, var(--primary-color) 24%, transparent);
+	color: var(--primary-text-color);
 }
 
 .toggle {
 	cursor: pointer;
 	margin-right: 4px;
-	color: var(--primary-color, #03a9f4);
+	color: var(--primary-color);
 	flex: 0 0 16px;
 	text-align: center;
 }
@@ -100,7 +88,7 @@
 }
 
 .node-icon {
-	color: var(--secondary-text-color, #727272);
+	color: var(--secondary-text-color);
 	flex: 0 0 16px;
 	width: 16px;
 	height: 16px;
@@ -111,7 +99,7 @@
 }
 
 .tree-node.selected .node-icon {
-	color: var(--primary-text-color, #212121);
+	color: var(--primary-text-color);
 	padding-right: 5px;
 }
 
@@ -132,7 +120,7 @@
 }
 
 .lock-icon {
-	color: var(--warning-color, #ffa600);
+	color: var(--warning-color);
 	flex: 0 0 14px;
 	width: 14px;
 	height: 14px;
@@ -149,12 +137,8 @@
 }
 
 .tree-node.drop-inside {
-	background: color-mix(
-		in srgb,
-		var(--primary-color, #03a9f4) 20%,
-		transparent
-	);
-	outline: 1px solid var(--primary-color, #03a9f4);
+	background: color-mix(in srgb, var(--primary-color) 20%, transparent);
+	outline: 1px solid var(--primary-color);
 	outline-offset: -1px;
 }
 
@@ -165,7 +149,7 @@
 	left: calc(8px + (var(--tree-depth, 0) * 16px));
 	right: 4px;
 	height: 2px;
-	background: var(--primary-color, #03a9f4);
+	background: var(--primary-color);
 	pointer-events: none;
 	z-index: 1;
 }
@@ -179,7 +163,7 @@
 }
 
 .default-viewport-icon {
-	color: var(--primary-color, #03a9f4);
+	color: var(--primary-color);
 	flex: 0 0 14px;
 	width: 14px;
 	height: 14px;
@@ -193,7 +177,7 @@
 	overflow-y: auto;
 	overflow-x: hidden;
 	padding-right: 8px;
-	border-bottom: 1px solid var(--divider-color, rgba(0, 0, 0, 0.12));
+	border-bottom: 1px solid var(--divider-color);
 	margin-bottom: 8px;
 }
 
@@ -201,7 +185,7 @@ dt3d-object-inspector {
 	flex: 1 1 45%;
 	padding: 0 12px;
 	overflow-y: auto;
-	color: var(--primary-text-color, #212121);
+	color: var(--primary-text-color);
 }
 
 .context-overlay {
@@ -214,12 +198,9 @@ dt3d-object-inspector {
 .context-menu {
 	position: fixed;
 	min-width: 140px;
-	background: var(
-		--ha-dialog-surface-background,
-		var(--mdc-theme-surface, var(--card-background-color, #ffffff))
-	);
-	border: 1px solid var(--divider-color, rgba(0, 0, 0, 0.12));
-	box-shadow: 0 6px 16px var(--shadow-color, rgba(0, 0, 0, 0.18));
+	background: var(--card-background-color);
+	border: 1px solid var(--divider-color);
+	box-shadow: 0 6px 16px var(--shadow-color);
 	border-radius: 6px;
 	padding: 4px 0;
 	z-index: 11;
@@ -231,17 +212,13 @@ dt3d-object-inspector {
 	padding: 8px 12px;
 	background: transparent;
 	border: none;
-	color: var(--primary-text-color, #212121);
+	color: var(--primary-text-color);
 	text-align: left;
 	cursor: pointer;
 }
 
 .context-menu button:hover {
-	background: color-mix(
-		in srgb,
-		var(--primary-color, #03a9f4) 16%,
-		transparent
-	);
+	background: color-mix(in srgb, var(--primary-color) 16%, transparent);
 }
 
 .resize-handle {

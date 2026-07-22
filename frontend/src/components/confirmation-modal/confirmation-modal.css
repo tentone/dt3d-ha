@@ -2,7 +2,7 @@
 	position: absolute;
 	inset: 0;
 	z-index: 1000;
-	color: var(--primary-text-color, #212121);
+	color: var(--primary-text-color);
 }
 
 .overlay {
@@ -18,13 +18,10 @@
 
 .dialog {
 	width: min(360px, 100%);
-	background: var(
-		--ha-dialog-surface-background,
-		var(--mdc-theme-surface, var(--card-background-color, #ffffff))
-	);
-	border: 1px solid var(--divider-color, rgba(0, 0, 0, 0.12));
+	background: var(--card-background-color);
+	border: 1px solid var(--divider-color);
 	border-radius: 8px;
-	box-shadow: 0 12px 28px var(--shadow-color, rgba(0, 0, 0, 0.3));
+	box-shadow: 0 12px 28px var(--shadow-color);
 	padding: 16px;
 	box-sizing: border-box;
 }
@@ -36,14 +33,14 @@ header {
 h3 {
 	margin: 0;
 	font-size: 16px;
-	color: var(--primary-text-color, #212121);
+	color: var(--primary-text-color);
 }
 
 p {
 	margin: 0;
 	font-size: 13px;
 	line-height: 1.4;
-	color: var(--secondary-text-color, #727272);
+	color: var(--secondary-text-color);
 }
 
 .actions {
@@ -65,37 +62,33 @@ button {
 
 .cancel-button {
 	background: transparent;
-	color: var(--primary-text-color, #212121);
+	color: var(--primary-text-color);
 }
 
 .cancel-button:hover {
-	background: color-mix(
-		in srgb,
-		var(--primary-text-color, #212121) 12%,
-		transparent
-	);
+	background: color-mix(in srgb, var(--primary-text-color) 12%, transparent);
 }
 
 .confirm-button {
-	color: var(--text-primary-color, #ffffff);
+	color: var(--text-primary-color);
 }
 
 .confirm-button:focus-visible,
 .cancel-button:focus-visible {
-	outline: 2px solid var(--primary-color, #03a9f4);
+	outline: 2px solid var(--primary-color);
 	outline-offset: 2px;
 }
 
 .confirm-button.blue {
-	background: var(--primary-color, #03a9f4);
+	background: var(--primary-color);
 }
 
 .confirm-button.green {
-	background: var(--success-color, #43a047);
+	background: var(--success-color);
 }
 
 .confirm-button.red {
-	background: var(--error-color, #db4437);
+	background: var(--error-color);
 }
 
 .confirm-button:hover {

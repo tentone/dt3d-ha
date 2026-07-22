@@ -11,14 +11,10 @@
 	gap: 8px;
 	padding: 8px 10px;
 	border-radius: 8px;
-	background: color-mix(
-		in srgb,
-		var(--card-background-color, #ffffff) 92%,
-		transparent
-	);
-	color: var(--primary-text-color, #212121);
-	border: 1px solid var(--divider-color, rgba(0, 0, 0, 0.12));
-	box-shadow: 0 4px 12px var(--shadow-color, rgba(0, 0, 0, 0.25));
+	background: color-mix(in srgb, var(--card-background-color) 92%, transparent);
+	color: var(--primary-text-color);
+	border: 1px solid var(--divider-color);
+	box-shadow: 0 4px 12px var(--shadow-color);
 	transform: translateX(-50%);
 }
 
@@ -31,13 +27,10 @@ select {
 	min-width: 0;
 	max-width: 260px;
 	padding: 5px 28px 5px 8px;
-	border: 1px solid var(--divider-color, rgba(0, 0, 0, 0.12));
+	border: 1px solid var(--divider-color);
 	border-radius: 5px;
-	background: var(
-		--input-fill-color,
-		var(--secondary-background-color, #f5f5f5)
-	);
-	color: var(--input-ink-color, var(--primary-text-color, #212121));
+	background: var(--input-fill-color);
+	color: var(--input-ink-color);
 	font: inherit;
 	cursor: pointer;
 }
@@ -49,23 +42,20 @@ button {
 	width: 30px;
 	height: 30px;
 	padding: 0;
-	border: 1px solid var(--divider-color, rgba(0, 0, 0, 0.12));
+	border: 1px solid var(--divider-color);
 	border-radius: 5px;
-	background: var(
-		--input-fill-color,
-		var(--secondary-background-color, #f5f5f5)
-	);
-	color: var(--primary-text-color, #212121);
+	background: var(--input-fill-color);
+	color: var(--primary-text-color);
 	cursor: pointer;
 }
 
 button:hover:not(:disabled) {
-	background: var(--secondary-background-color, #e5e5e5);
+	background: var(--secondary-background-color);
 }
 
 button.delete-button:hover:not(:disabled) {
-	background: var(--error-color, #db4437);
-	color: var(--ha-color-on-danger-loud, #ffffff);
+	background: var(--error-color);
+	color: var(--ha-color-on-danger-loud);
 }
 
 button:disabled {
@@ -74,7 +64,7 @@ button:disabled {
 }
 
 button:focus-visible {
-	outline: 2px solid var(--primary-color, #03a9f4);
+	outline: 2px solid var(--primary-color);
 	outline-offset: 2px;
 }
 
@@ -88,6 +78,6 @@ select:disabled {
 }
 
 select:focus-visible {
-	outline: 2px solid var(--primary-color, #03a9f4);
+	outline: 2px solid var(--primary-color);
 	outline-offset: 2px;
 }

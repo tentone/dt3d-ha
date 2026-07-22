@@ -13,19 +13,16 @@
 
 .field label {
 	font-size: 12px;
-	color: var(--secondary-text-color, #727272);
+	color: var(--secondary-text-color);
 }
 
 .field input,
 .field select {
-	background: var(
-		--input-fill-color,
-		var(--secondary-background-color, #f5f5f5)
-	);
-	border: 1px solid var(--divider-color, rgba(0, 0, 0, 0.12));
+	background: var(--input-fill-color);
+	border: 1px solid var(--divider-color);
 	border-radius: 4px;
 	padding: 6px 8px;
-	color: var(--input-ink-color, var(--primary-text-color, #212121));
+	color: var(--input-ink-color);
 }
 
 .group-row {
@@ -47,7 +44,7 @@
 	flex-direction: column;
 	gap: 4px;
 	font-size: 12px;
-	color: var(--secondary-text-color, #727272);
+	color: var(--secondary-text-color);
 }
 
 .group-row input {
@@ -55,12 +52,9 @@
 	padding: 6px 8px;
 	box-sizing: border-box;
 	border-radius: 4px;
-	border: 1px solid var(--divider-color, rgba(0, 0, 0, 0.12));
-	background: var(
-		--input-fill-color,
-		var(--secondary-background-color, #f5f5f5)
-	);
-	color: var(--input-ink-color, var(--primary-text-color, #212121));
+	border: 1px solid var(--divider-color);
+	background: var(--input-fill-color);
+	color: var(--input-ink-color);
 }
 
 .vector-link-button {
@@ -71,20 +65,17 @@
 	height: 30px;
 	padding: 0;
 	box-sizing: border-box;
-	border: 1px solid var(--divider-color, rgba(0, 0, 0, 0.12));
+	border: 1px solid var(--divider-color);
 	border-radius: 4px;
-	background: var(
-		--input-fill-color,
-		var(--secondary-background-color, #f5f5f5)
-	);
-	color: var(--secondary-text-color, #727272);
+	background: var(--input-fill-color);
+	color: var(--secondary-text-color);
 	cursor: pointer;
 	flex: 0 0 auto;
 }
 
 .vector-link-button.linked {
-	border-color: var(--primary-color, #03a9f4);
-	color: var(--primary-color, #03a9f4);
+	border-color: var(--primary-color);
+	color: var(--primary-color);
 }
 
 .vector-link-button:disabled {
@@ -109,11 +100,11 @@
 }
 
 .sub-form {
-	border: 1px solid var(--divider-color, rgba(0, 0, 0, 0.12));
+	border: 1px solid var(--divider-color);
 	border-radius: 6px;
 	background: color-mix(
 		in srgb,
-		var(--secondary-background-color, #f5f5f5) 70%,
+		var(--secondary-background-color) 70%,
 		transparent
 	);
 	overflow: hidden;
@@ -125,7 +116,7 @@
 	justify-content: space-between;
 	gap: 8px;
 	padding: 8px 10px;
-	color: var(--primary-color, #03a9f4);
+	color: var(--primary-color);
 	font-size: 14px;
 	font-weight: 600;
 	cursor: pointer;
@@ -157,7 +148,7 @@
 	flex-direction: column;
 	gap: 8px;
 	padding: 8px 10px 10px;
-	border-top: 1px solid var(--divider-color, rgba(0, 0, 0, 0.12));
+	border-top: 1px solid var(--divider-color);
 }
 
 .sub-form-fields > .field:last-child {

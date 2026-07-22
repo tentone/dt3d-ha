@@ -10,14 +10,11 @@
 
 .dialog {
 	width: 60%;
-	background: var(
-		--ha-dialog-surface-background,
-		var(--mdc-theme-surface, var(--card-background-color, #ffffff))
-	);
-	color: var(--primary-text-color, #212121);
+	background: var(--card-background-color);
+	color: var(--primary-text-color);
 	padding: 20px;
 	border-radius: 10px;
-	box-shadow: 0 2px 10px var(--shadow-color, rgba(0, 0, 0, 0.3));
+	box-shadow: 0 2px 10px var(--shadow-color);
 }
 
 h3 {
@@ -29,12 +26,9 @@ input {
 	padding: 6px 8px;
 	margin: 8px 0 12px 0;
 	border-radius: 6px;
-	border: 1px solid var(--divider-color, rgba(0, 0, 0, 0.12));
-	background: var(
-		--input-fill-color,
-		var(--secondary-background-color, #f5f5f5)
-	);
-	color: var(--input-ink-color, var(--primary-text-color, #212121));
+	border: 1px solid var(--divider-color);
+	background: var(--input-fill-color);
+	color: var(--input-ink-color);
 	box-sizing: border-box;
 }
 
@@ -49,18 +43,14 @@ ul {
 li {
 	padding: 6px;
 	cursor: pointer;
-	border-bottom: 1px solid var(--divider-color, rgba(0, 0, 0, 0.12));
+	border-bottom: 1px solid var(--divider-color);
 	display: flex;
 	gap: 6px;
 	min-width: 0;
 }
 
 li:hover {
-	background: color-mix(
-		in srgb,
-		var(--primary-color, #03a9f4) 16%,
-		transparent
-	);
+	background: color-mix(in srgb, var(--primary-color) 16%, transparent);
 }
 
 .entity-name,
@@ -75,15 +65,15 @@ li:hover {
 }
 
 .entity-id {
-	color: var(--secondary-text-color, #727272);
+	color: var(--secondary-text-color);
 	flex: 1 1 auto;
 }
 
 button {
 	margin-top: 10px;
 	padding: 5px 10px;
-	background: var(--error-color, #db4437);
-	color: var(--ha-color-on-danger-loud, #ffffff);
+	background: var(--error-color);
+	color: var(--ha-color-on-danger-loud);
 	border: none;
 	border-radius: 5px;
 	cursor: pointer;

@@ -79,11 +79,11 @@ export class EntityCamera extends EntityObject {
 		this.root.style.cssText = `
 			width: 180px;
 			overflow: hidden;
-			border: 1px solid var(--divider-color, rgba(0, 0, 0, 0.12));
+			border: 1px solid var(--divider-color);
 			border-radius: 8px;
-			background: color-mix(in srgb, var(--card-background-color, #ffffff) 90%, transparent);
-			box-shadow: 0 8px 24px var(--shadow-color, rgba(0, 0, 0, 0.35));
-			color: var(--primary-text-color, #212121);
+			background: color-mix(in srgb, var(--card-background-color) 90%, transparent);
+			box-shadow: 0 8px 24px var(--shadow-color);
+			color: var(--primary-text-color);
 			font-family: sans-serif;
 			pointer-events: none;
 			transform-style: preserve-3d;
@@ -96,7 +96,7 @@ export class EntityCamera extends EntityObject {
 			width: 180px;
 			height: 112px;
 			object-fit: cover;
-			background: var(--secondary-background-color, #e5e5e5);
+			background: var(--secondary-background-color);
 		`;
 		this.image.addEventListener("load", () => this.setStatus(""));
 		this.image.addEventListener("error", () =>
@@ -120,7 +120,7 @@ export class EntityCamera extends EntityObject {
 		this.status.style.cssText = `
 			display: none;
 			padding: 0 8px 7px;
-			color: var(--secondary-text-color, #727272);
+			color: var(--secondary-text-color);
 			font-size: 11px;
 			line-height: 1.3;
 		`;

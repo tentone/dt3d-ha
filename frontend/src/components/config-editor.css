@@ -1,6 +1,6 @@
 :host {
 	display: block;
-	color: var(--primary-text-color, #212121);
+	color: var(--primary-text-color);
 	font-family: var(--paper-font-body1_-_font-family, "Roboto", sans-serif);
 }
 
@@ -12,12 +12,9 @@
 
 details {
 	overflow: hidden;
-	border: 1px solid var(--divider-color, rgba(0, 0, 0, 0.12));
+	border: 1px solid var(--divider-color);
 	border-radius: var(--ha-card-border-radius, 12px);
-	background: var(
-		--ha-card-background,
-		var(--card-background-color, var(--primary-background-color, #fff))
-	);
+	background: var(--ha-card-background);
 }
 
 summary {
@@ -28,7 +25,7 @@ summary {
 	padding: 0 16px;
 	font-size: 14px;
 	font-weight: 500;
-	color: var(--primary-text-color, #212121);
+	color: var(--primary-text-color);
 	cursor: pointer;
 	list-style: none;
 	user-select: none;
@@ -42,8 +39,8 @@ summary::before {
 	display: inline-block;
 	width: 8px;
 	height: 8px;
-	border-right: 2px solid var(--secondary-text-color, #727272);
-	border-bottom: 2px solid var(--secondary-text-color, #727272);
+	border-right: 2px solid var(--secondary-text-color);
+	border-bottom: 2px solid var(--secondary-text-color);
 	content: "";
 	transform: rotate(-45deg);
 	transition: transform 160ms ease;
@@ -54,16 +51,16 @@ details[open] > summary::before {
 }
 
 details[open] > summary {
-	border-bottom: 1px solid var(--divider-color, rgba(0, 0, 0, 0.12));
+	border-bottom: 1px solid var(--divider-color);
 }
 
 summary:hover,
 summary:focus-visible {
-	background: var(--secondary-background-color, rgba(0, 0, 0, 0.04));
+	background: var(--secondary-background-color);
 }
 
 summary:focus-visible {
-	outline: 2px solid var(--primary-color, #03a9f4);
+	outline: 2px solid var(--primary-color);
 	outline-offset: -2px;
 }
 
@@ -81,7 +78,7 @@ h4 {
 	margin: 0 0 6px;
 	font-size: 14px;
 	font-weight: 500;
-	color: var(--primary-text-color, #212121);
+	color: var(--primary-text-color);
 }
 
 input,
@@ -89,24 +86,24 @@ select {
 	width: 100%;
 	min-height: 40px;
 	padding: 8px 12px;
-	border: 1px solid var(--divider-color, rgba(0, 0, 0, 0.24));
+	border: 1px solid var(--divider-color);
 	border-radius: 6px;
 	box-sizing: border-box;
-	background: var(--input-fill-color, var(--secondary-background-color, #f5f5f5));
-	color: var(--input-ink-color, var(--primary-text-color, #212121));
+	background: var(--input-fill-color);
+	color: var(--input-ink-color);
 	font: inherit;
 }
 
 input:hover,
 select:hover {
-	border-color: var(--secondary-text-color, #727272);
+	border-color: var(--secondary-text-color);
 }
 
 input:focus,
 select:focus {
-	border-color: var(--primary-color, #03a9f4);
+	border-color: var(--primary-color);
 	outline: none;
-	box-shadow: 0 0 0 1px var(--primary-color, #03a9f4);
+	box-shadow: 0 0 0 1px var(--primary-color);
 }
 
 .checkbox-field {
@@ -120,7 +117,7 @@ select:focus {
 	min-height: 18px;
 	margin: 2px 0 0;
 	padding: 0;
-	accent-color: var(--primary-color, #03a9f4);
+	accent-color: var(--primary-color);
 }
 
 .checkbox-field label {
@@ -130,7 +127,7 @@ select:focus {
 .field p,
 .checkbox-field p {
 	margin: 6px 0 0;
-	color: var(--secondary-text-color, #727272);
+	color: var(--secondary-text-color);
 	font-size: 12px;
 	line-height: 1.4;
 }
@@ -144,7 +141,7 @@ select:focus {
 	flex-direction: column;
 	gap: 14px;
 	padding-top: 14px;
-	border-top: 1px solid var(--divider-color, rgba(0, 0, 0, 0.12));
+	border-top: 1px solid var(--divider-color);
 }
 
 h4 {

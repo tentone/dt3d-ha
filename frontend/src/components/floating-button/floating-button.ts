@@ -22,17 +22,17 @@ export class DT3DFloatingButton extends LitElement {
 			width: 48px;
 			height: 48px;
 			border-radius: 999px;
-			border: 1px solid var(--divider-color, rgba(0, 0, 0, 0.12));
+			border: 1px solid var(--divider-color);
 			background: color-mix(
 				in srgb,
-				var(--card-background-color, #ffffff) 92%,
+				var(--card-background-color) 92%,
 				transparent
 			);
-			color: var(--primary-text-color, #212121);
+			color: var(--primary-text-color);
 			font-size: 12px;
 			font-weight: 600;
 			letter-spacing: 0.5px;
-			box-shadow: 0 6px 16px var(--shadow-color, rgba(0, 0, 0, 0.25));
+			box-shadow: 0 6px 16px var(--shadow-color);
 			cursor: pointer;
 			display: flex;
 			align-items: center;
@@ -43,7 +43,7 @@ export class DT3DFloatingButton extends LitElement {
 		}
 
 		button:hover {
-			background: var(--secondary-background-color, #e5e5e5);
+			background: var(--secondary-background-color);
 			transform: translateY(-1px);
 		}
 
@@ -52,7 +52,7 @@ export class DT3DFloatingButton extends LitElement {
 		}
 
 		button:focus-visible {
-			outline: 2px solid var(--primary-color, #03a9f4);
+			outline: 2px solid var(--primary-color);
 			outline-offset: 2px;
 		}
 	`;

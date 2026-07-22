@@ -7,7 +7,7 @@
 h4 {
 	margin: 4px 0 8px 0;
 	font-size: 14px;
-	color: var(--primary-color, #03a9f4);
+	color: var(--primary-color);
 }
 .field {
 	display: flex;
@@ -17,17 +17,14 @@ h4 {
 }
 .field label {
 	font-size: 12px;
-	color: var(--secondary-text-color, #727272);
+	color: var(--secondary-text-color);
 }
 .field input {
-	background: var(
-		--input-fill-color,
-		var(--secondary-background-color, #f5f5f5)
-	);
-	border: 1px solid var(--divider-color, rgba(0, 0, 0, 0.12));
+	background: var(--input-fill-color);
+	border: 1px solid var(--divider-color);
 	border-radius: 4px;
 	padding: 6px 8px;
-	color: var(--input-ink-color, var(--primary-text-color, #212121));
+	color: var(--input-ink-color);
 }
 .attribute-list {
 	display: flex;
@@ -40,18 +37,15 @@ h4 {
 	align-items: center;
 	padding: 6px 8px;
 	border-radius: 4px;
-	border: 1px solid var(--divider-color, rgba(0, 0, 0, 0.12));
-	background: var(
-		--input-fill-color,
-		var(--secondary-background-color, #f5f5f5)
-	);
+	border: 1px solid var(--divider-color);
+	background: var(--input-fill-color);
 }
 .attribute-row .attr-key {
 	font-weight: 600;
-	color: var(--secondary-text-color, #727272);
+	color: var(--secondary-text-color);
 }
 .attribute-row .attr-value {
-	color: var(--primary-text-color, #212121);
+	color: var(--primary-text-color);
 	word-break: break-all;
 	text-align: right;
 }
@@ -65,19 +59,16 @@ h4 {
 	flex-direction: column;
 	gap: 4px;
 	font-size: 12px;
-	color: var(--secondary-text-color, #727272);
+	color: var(--secondary-text-color);
 }
 .group-row input {
 	width: 100%;
 	padding: 6px 8px;
 	box-sizing: border-box;
 	border-radius: 4px;
-	border: 1px solid var(--divider-color, rgba(0, 0, 0, 0.12));
-	background: var(
-		--input-fill-color,
-		var(--secondary-background-color, #f5f5f5)
-	);
-	color: var(--input-ink-color, var(--primary-text-color, #212121));
+	border: 1px solid var(--divider-color);
+	background: var(--input-fill-color);
+	color: var(--input-ink-color);
 }
 .color-field input[type="color"] {
 	width: 100%;
@@ -87,7 +78,7 @@ h4 {
 	cursor: pointer;
 }
 .placeholder {
-	color: var(--secondary-text-color, #727272);
+	color: var(--secondary-text-color);
 	font-size: 13px;
 	line-height: 1.4;
 }

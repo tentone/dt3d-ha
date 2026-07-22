@@ -31,12 +31,11 @@ export class CSSText extends CSS3DSprite {
 
 		this.element.className = options.className ?? "";
 		this.element.style.background =
-			"color-mix(in srgb, var(--card-background-color, #ffffff) 90%, transparent)";
-		this.element.style.border =
-			"1px solid var(--divider-color, rgba(0, 0, 0, 0.12))";
+			"color-mix(in srgb, var(--card-background-color) 90%, transparent)";
+		this.element.style.border = "1px solid var(--divider-color)";
 		this.element.style.borderRadius = "4px";
 		this.element.style.boxSizing = "border-box";
-		this.element.style.color = "var(--primary-text-color, #212121)";
+		this.element.style.color = "var(--primary-text-color)";
 		this.element.style.fontFamily = "sans-serif";
 		this.element.style.fontSize = "12px";
 		this.element.style.fontWeight = "600";
