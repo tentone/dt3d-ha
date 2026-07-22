@@ -42,6 +42,14 @@
 	outline-offset: 2px;
 }
 
+.collapse-btn:hover {
+	background: var(--dark-primary-color, #0288d1);
+}
+
+.collapse-btn:active {
+	background: var(--darker-primary-color, var(--dark-primary-color, #0288d1));
+}
+
 :host([collapsed]) .panel,
 :host([collapsed]) .resize-handle {
 	display: none;
