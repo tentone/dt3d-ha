@@ -256,6 +256,7 @@ saved with the active space and therefore affect every card that displays it:
 | --- | --- |
 | Tone mapping | None, Linear, Reinhard, Cineon, ACES Filmic |
 | Post-processing | Bokeh depth of field, Bloom, GTAO, SSAO, Halftone, Film grain |
+| Appearance | Enable or disable the procedural sky and choose a solid-color or transparent background |
 | Daylight | Ambient color/intensity, sunlight color/intensity, sun elevation/azimuth |
 
 GTAO and SSAO are mutually exclusive. Post-processing can improve depth and

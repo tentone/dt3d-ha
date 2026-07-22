@@ -162,7 +162,9 @@ export class RendererManager {
 			antialias: this.renderingConfig.antialiasing,
 			canvas: this.canvas,
 		});
-		renderer.setClearColor(0x446644, 1);
+		// Scene.background supplies solid backgrounds. Keep the renderer clear
+		// transparent so spaces configured without one expose the card behind them.
+		renderer.setClearColor(0x000000, 0);
 		this.applyRenderingConfig(renderer);
 
 		return renderer;

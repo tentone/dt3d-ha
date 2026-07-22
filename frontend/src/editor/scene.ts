@@ -2,6 +2,7 @@ import type {Object3D} from "three";
 import {
 	AmbientLight,
 	BoxGeometry,
+	Color,
 	DirectionalLight,
 	GridHelper,
 	Group,
@@ -89,11 +90,24 @@ export type DaylightConfig = {
 	sunAzimuth: number;
 };
 
+export type SkyConfig = {
+	enabled: boolean;
+};
+
+export type BackgroundType = "solid" | "transparent";
+
+export type BackgroundConfig = {
+	type: BackgroundType;
+	color: string;
+};
+
 /**
  * General configuration for the active space.
  */
 export type SpaceSceneConfig = {
+	background: BackgroundConfig;
 	daylight: DaylightConfig;
+	sky: SkyConfig;
 };
 
 /**
@@ -113,8 +127,19 @@ export const DEFAULT_DAYLIGHT_CONFIG: DaylightConfig = {
 	sunAzimuth: 180,
 };
 
+export const DEFAULT_SKY_CONFIG: SkyConfig = {
+	enabled: true,
+};
+
+export const DEFAULT_BACKGROUND_CONFIG: BackgroundConfig = {
+	type: "solid",
+	color: "#446644",
+};
+
 export const DEFAULT_SPACE_SCENE_CONFIG: SpaceSceneConfig = {
+	background: DEFAULT_BACKGROUND_CONFIG,
 	daylight: DEFAULT_DAYLIGHT_CONFIG,
+	sky: DEFAULT_SKY_CONFIG,
 };
 
 export const DEFAULT_GRID_CONFIG: GridConfig = {
@@ -142,6 +167,23 @@ const normalizeColor = (value: unknown, fallback: string): string => {
 
 	return fallback;
 };
+
+const booleanOrDefault = (value: unknown, fallback: boolean): boolean => {
+	if (value === true || value === "true" || value === "1" || value === 1) {
+		return true;
+	}
+
+	if (value === false || value === "false" || value === "0" || value === 0) {
+		return false;
+	}
+
+	return fallback;
+};
+
+const normalizeBackgroundType = (value: unknown): BackgroundType =>
+	typeof value === "string" && value.trim().toLowerCase() === "transparent"
+		? "transparent"
+		: "solid";
 
 /**
  * Merge partial daylight settings with defaults and constrain numeric values.
@@ -196,9 +238,21 @@ export const normalizeDaylightConfig = (
  */
 export const normalizeSpaceSceneConfig = (
 	config: Partial<SpaceSceneConfig> = {},
-): SpaceSceneConfig => ({
-	daylight: normalizeDaylightConfig(config.daylight),
-});
+): SpaceSceneConfig => {
+	const background: Partial<BackgroundConfig> = config.background ?? {};
+	const sky: Partial<SkyConfig> = config.sky ?? {};
+
+	return {
+		background: {
+			type: normalizeBackgroundType(background.type),
+			color: normalizeColor(background.color, DEFAULT_BACKGROUND_CONFIG.color),
+		},
+		daylight: normalizeDaylightConfig(config.daylight),
+		sky: {
+			enabled: booleanOrDefault(sky.enabled, DEFAULT_SKY_CONFIG.enabled),
+		},
+	};
+};
 
 /**
  * Merge partial grid settings with defaults and constrain numeric values.
@@ -469,13 +523,22 @@ export class SceneManager {
 		this.spaceSceneConfig = normalizeSpaceSceneConfig({
 			...this.spaceSceneConfig,
 			...config,
+			background: {
+				...this.spaceSceneConfig.background,
+				...config.background,
+			},
 			daylight: {
 				...this.spaceSceneConfig.daylight,
 				...config.daylight,
 			},
+			sky: {
+				...this.spaceSceneConfig.sky,
+				...config.sky,
+			},
 		});
 
 		this.applyDaylightConfig(this.spaceSceneConfig.daylight);
+		this.applyAppearanceConfig();
 
 		return this.getSpaceSceneConfig();
 	}
@@ -485,7 +548,9 @@ export class SceneManager {
 	 */
 	public getSpaceSceneConfig(): SpaceSceneConfig {
 		return {
+			background: {...this.spaceSceneConfig.background},
 			daylight: {...this.spaceSceneConfig.daylight},
+			sky: {...this.spaceSceneConfig.sky},
 		};
 	}
 
@@ -963,6 +1028,21 @@ export class SceneManager {
 
 		this.scene.add(this.sky);
 		this.applyDaylightConfig(this.spaceSceneConfig.daylight);
+		this.applyAppearanceConfig();
+	}
+
+	/**
+	 * Apply the sky visibility and fallback scene background.
+	 */
+	private applyAppearanceConfig(): void {
+		if (this.sky) {
+			this.sky.visible = this.spaceSceneConfig.sky.enabled;
+		}
+
+		this.scene.background =
+			this.spaceSceneConfig.background.type === "transparent"
+				? null
+				: new Color(this.spaceSceneConfig.background.color);
 	}
 
 	/**

@@ -373,6 +373,41 @@ export class DT3DSpaceConfigMenu extends LitElement {
 
 	private fields: DynamicFormField[] = [
 		{
+			label: localManager.get("appearance"),
+			type: "sub-form",
+			enabled: true,
+			fields: [
+				{
+					label: localManager.get("skyEnabled"),
+					attribute: "scene.sky.enabled",
+					type: "boolean",
+					tooltip: localManager.get("skyEnabledTooltip"),
+					editable: true,
+					enabled: true,
+				},
+				{
+					label: localManager.get("backgroundType"),
+					attribute: "scene.background.type",
+					type: "select",
+					tooltip: localManager.get("backgroundTypeTooltip"),
+					editable: true,
+					enabled: true,
+					options: [
+						{label: localManager.get("solidColor"), value: "solid"},
+						{label: localManager.get("transparent"), value: "transparent"},
+					],
+				},
+				{
+					label: localManager.get("backgroundColor"),
+					attribute: "scene.background.color",
+					type: "color",
+					tooltip: localManager.get("backgroundColorTooltip"),
+					editable: true,
+					enabled: true,
+				},
+			],
+		},
+		{
 			label: localManager.get("rendering"),
 			type: "sub-form",
 			enabled: true,
