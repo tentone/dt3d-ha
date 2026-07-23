@@ -1,4 +1,4 @@
-import {DEFAULT_HA_ICON, resolveHaIconPath} from "../utils/icon-utils.js";
+import {resolveEntityIconPath} from "../utils/icon-utils.js";
 import {EntityObject} from "./entity-object.js";
 import {CSSText} from "./helpers/css-text.js";
 import {IconSprite} from "./helpers/icon-sprite.js";
@@ -20,7 +20,7 @@ export class EntityBinary extends EntityObject {
 	public constructor(entityId: string, entity: any) {
 		super(entityId);
 
-		const iconPath = resolveHaIconPath(entity?.attributes?.icon, DEFAULT_HA_ICON);
+		const iconPath = resolveEntityIconPath(entityId, entity?.attributes?.icon);
 		const color = EntityBinary.getStateColor(entity?.state);
 
 		this.icon = new IconSprite(iconPath, color, 0.64);
@@ -43,7 +43,9 @@ export class EntityBinary extends EntityObject {
 		this.label.setText(`${friendlyName}\n${entity.state ?? "unknown"}`);
 
 		this.icon.setColor(EntityBinary.getStateColor(entity.state));
-		this.icon.setIcon(resolveHaIconPath(entity.attributes?.icon, DEFAULT_HA_ICON));
+		this.icon.setIcon(
+			resolveEntityIconPath(this.entityId, entity?.attributes?.icon),
+		);
 	}
 
 	/**

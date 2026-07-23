@@ -1,6 +1,4 @@
-import {mdiEye} from "@mdi/js";
-
-import {resolveHaIconPath} from "../utils/icon-utils.js";
+import {resolveEntityIconPath} from "../utils/icon-utils.js";
 import {EntityObject} from "./entity-object.js";
 import {CSSText} from "./helpers/css-text.js";
 import {IconSprite} from "./helpers/icon-sprite.js";
@@ -104,7 +102,7 @@ export class EntitySensor extends EntityObject {
 	}
 
 	private static getIconPath(entity: any): string {
-		return resolveHaIconPath(entity?.attributes?.icon, mdiEye);
+		return resolveEntityIconPath("sensor", entity?.attributes?.icon);
 	}
 
 	private static getStateColor(state?: string): number {

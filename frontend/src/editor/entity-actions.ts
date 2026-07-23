@@ -9,7 +9,7 @@ export type EntityInteractionConfig = {
 
 export const DEFAULT_ENTITY_INTERACTION_CONFIG: EntityInteractionConfig = {
 	click: "nothing",
-	doubleClick: "toggle",
+	doubleClick: "open",
 };
 
 export const normalizeEntityAction = (

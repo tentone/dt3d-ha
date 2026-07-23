@@ -183,7 +183,7 @@
 
 dt3d-object-inspector {
 	flex: 1 1 45%;
-	padding: 0 12px;
+	padding: 0px 5px 0px 10px;
 	overflow-y: auto;
 	color: var(--primary-text-color);
 }

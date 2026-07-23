@@ -1,12 +1,11 @@
-import * as mdiIcons from "@mdi/js";
 import {CSS3DSprite} from "three/examples/jsm/renderers/CSS3DRenderer.js";
 
+import {resolveEntityIconPath} from "../utils/icon-utils.js";
 import type {DTInteractionEvent} from "./dt-object.js";
 import {EntityObject} from "./entity-object.js";
 import {IconSprite} from "./helpers/icon-sprite.js";
 
 const CAMERA_REFRESH_INTERVAL_MS = 5000;
-const CAMERA_ICON = mdiIcons.mdiCctv;
 
 /**
  * Camera entity representation with an always-visible image overlay.
@@ -70,7 +69,11 @@ export class EntityCamera extends EntityObject {
 	public constructor(entityId: string, entity: any) {
 		super(entityId);
 
-		this.icon = new IconSprite(CAMERA_ICON, 0x1e90ff, 0.64);
+		this.icon = new IconSprite(
+			resolveEntityIconPath(entityId, entity?.attributes?.icon),
+			0x1e90ff,
+			0.64,
+		);
 		this.icon.internal = true;
 		this.icon.position.y = 0.32;
 		this.add(this.icon);
@@ -171,6 +174,9 @@ export class EntityCamera extends EntityObject {
 		const friendlyName = this.friendlyName(entity);
 		this.title.textContent = friendlyName;
 		this.image.alt = friendlyName;
+		this.icon.setIcon(
+			resolveEntityIconPath(this.entityId, entity?.attributes?.icon),
+		);
 
 		const nextUrl = EntityCamera.resolveImageUrl(entity);
 		if (!nextUrl) {

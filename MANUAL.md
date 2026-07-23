@@ -117,7 +117,7 @@ navigation_controls: orbit
 orientation_cube: true
 visualization_only: false
 entity_click_action: nothing
-entity_double_click_action: toggle
+entity_double_click_action: open
 general:
   rendering:
     antialiasing: false
@@ -199,6 +199,7 @@ Home Assistant state supplied to the card.
 | `sensor` | State-aware icon and name/state hover label | No |
 | `binary_sensor` | Icon and color derived from the binary state | No |
 | `camera` | Still-image panel refreshed approximately every 5 seconds | No |
+| `climate` | HVAC-mode color and target temperature while active | No |
 | `light` | State/color icon plus a configurable 3D light source | Yes |
 | `switch` | State icon and name/state hover label | Yes |
 | Any other domain | Generic marker and friendly-name label | No |
@@ -283,7 +284,7 @@ navigation_controls: orbit
 orientation_cube: false
 visualization_only: true
 entity_click_action: open
-entity_double_click_action: toggle
+entity_double_click_action: open
 general:
   rendering:
     antialiasing: false
@@ -311,7 +312,7 @@ spaces there. Leave `default_viewport` empty to follow the space's default.
 | `orientation_cube` | `false` | Shows the camera orientation cube. |
 | `visualization_only` | `false` | Hides all editing and space-management controls. |
 | `entity_click_action` | `nothing` | `open`, `toggle`, or `nothing`. |
-| `entity_double_click_action` | `toggle` | `open`, `toggle`, or `nothing`. |
+| `entity_double_click_action` | `open` | `open`, `toggle`, or `nothing`. |
 | `general.rendering.antialiasing` | `false` | Smooths geometry edges; changing it recreates the WebGL renderer. |
 | `general.rendering.resolution` | `1` | Internal scale: `1`, `0.75`, or `0.5`. |
 | `general.rendering.shadowMap.enabled` | `false` | Enables shadows for compatible lights and meshes. |

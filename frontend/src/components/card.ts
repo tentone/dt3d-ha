@@ -64,6 +64,7 @@ import {localManager} from "../locale/locale.js";
 import {DTObject} from "../objects/dt-object.js";
 import {EntityBinary} from "../objects/entity-binary.js";
 import {EntityCamera} from "../objects/entity-camera.js";
+import {EntityClimate} from "../objects/entity-climate.js";
 import {EntityGeneric} from "../objects/entity-generic.js";
 import {EntityLight} from "../objects/entity-light.js";
 import {EntityObject, isToggleable} from "../objects/entity-object.js";
@@ -2678,6 +2679,12 @@ export class DT3DCard extends LitElement {
 			return new EntityBinary(id, entity);
 		} else if (domain === "camera") {
 			return new EntityCamera(id, entity);
+		} else if (domain === "climate") {
+			return new EntityClimate(
+				id,
+				entity,
+				this.hassInstance?.config?.unit_system?.temperature,
+			);
 		} else if (domain === "light") {
 			return new EntityLight(id, entity);
 		} else if (domain === "switch") {

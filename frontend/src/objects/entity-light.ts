@@ -1,7 +1,6 @@
-import {mdiLightbulb} from "@mdi/js";
 import {Color} from "three";
 
-import {resolveHaIconPath} from "../utils/icon-utils.js";
+import {resolveEntityIconPath} from "../utils/icon-utils.js";
 import {EntityObject} from "./entity-object.js";
 import {CSSText} from "./helpers/css-text.js";
 import {IconSprite} from "./helpers/icon-sprite.js";
@@ -126,7 +125,7 @@ export class EntityLight extends EntityObject {
 	}
 
 	private static getIconPath(entity: any): string {
-		return resolveHaIconPath(entity?.attributes?.icon, mdiLightbulb);
+		return resolveEntityIconPath("light", entity?.attributes?.icon);
 	}
 
 	/**

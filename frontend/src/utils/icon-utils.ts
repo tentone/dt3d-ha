@@ -6,6 +6,73 @@ export const HA_ICON_CANVAS_SIZE = 256;
 
 const ICON_VIEWBOX_SIZE = 24;
 
+/**
+ * Default icons for Home Assistant entities, keyed by entity domain.
+ *
+ * These are used only when an entity does not provide an `attributes.icon`
+ * value (or when that value cannot be resolved).
+ */
+export const DEFAULT_ENTITY_ICONS: Readonly<Record<string, string>> = Object.freeze({
+	air_quality: mdiIcons.mdiAirFilter,
+	alarm_control_panel: mdiIcons.mdiAlarmPanel,
+	assist_satellite: mdiIcons.mdiSatelliteUplink,
+	automation: mdiIcons.mdiRobot,
+	binary_sensor: mdiIcons.mdiCheckboxBlankCircleOutline,
+	button: mdiIcons.mdiGestureTapButton,
+	calendar: mdiIcons.mdiCalendar,
+	camera: mdiIcons.mdiVideo,
+	climate: mdiIcons.mdiThermostat,
+	conversation: mdiIcons.mdiMessageText,
+	counter: mdiIcons.mdiCounter,
+	cover: mdiIcons.mdiWindowShutter,
+	date: mdiIcons.mdiCalendar,
+	datetime: mdiIcons.mdiCalendarClock,
+	device_tracker: mdiIcons.mdiMapMarker,
+	event: mdiIcons.mdiCalendarAlert,
+	fan: mdiIcons.mdiFan,
+	group: mdiIcons.mdiGoogleCirclesCommunities,
+	humidifier: mdiIcons.mdiAirHumidifier,
+	image: mdiIcons.mdiImage,
+	image_processing: mdiIcons.mdiImageSearch,
+	input_boolean: mdiIcons.mdiToggleSwitch,
+	input_button: mdiIcons.mdiGestureTapButton,
+	input_datetime: mdiIcons.mdiCalendarClock,
+	input_number: mdiIcons.mdiNumeric,
+	input_select: mdiIcons.mdiFormatListBulleted,
+	input_text: mdiIcons.mdiFormTextbox,
+	lawn_mower: mdiIcons.mdiRobotMower,
+	light: mdiIcons.mdiLightbulb,
+	lock: mdiIcons.mdiLock,
+	media_player: mdiIcons.mdiCast,
+	notify: mdiIcons.mdiBell,
+	number: mdiIcons.mdiNumeric,
+	person: mdiIcons.mdiAccount,
+	plant: mdiIcons.mdiFlower,
+	proximity: mdiIcons.mdiMapMarkerDistance,
+	remote: mdiIcons.mdiRemote,
+	scene: mdiIcons.mdiPalette,
+	schedule: mdiIcons.mdiCalendarClock,
+	script: mdiIcons.mdiScriptText,
+	select: mdiIcons.mdiFormatListBulleted,
+	sensor: mdiIcons.mdiGauge,
+	siren: mdiIcons.mdiBullhorn,
+	stt: mdiIcons.mdiMicrophoneMessage,
+	sun: mdiIcons.mdiWhiteBalanceSunny,
+	switch: mdiIcons.mdiToggleSwitch,
+	tag: mdiIcons.mdiTag,
+	text: mdiIcons.mdiFormTextbox,
+	time: mdiIcons.mdiClockOutline,
+	timer: mdiIcons.mdiTimerOutline,
+	todo: mdiIcons.mdiFormatListChecks,
+	tts: mdiIcons.mdiSpeakerMessage,
+	update: mdiIcons.mdiPackageUp,
+	vacuum: mdiIcons.mdiRobotVacuum,
+	valve: mdiIcons.mdiValve,
+	water_heater: mdiIcons.mdiWaterBoiler,
+	weather: mdiIcons.mdiWeatherPartlyCloudy,
+	zone: mdiIcons.mdiMapMarkerRadius,
+});
+
 export type IconCanvasColor = Color | number | string;
 
 export type IconCanvasOptions = {
@@ -50,6 +117,32 @@ export function resolveHaIconPath(
 			.join("");
 
 	return (mdiIcons as Record<string, string>)[exportName] ?? fallbackIcon;
+}
+
+/**
+ * Get the default icon for an entity ID or domain.
+ *
+ * @param entityIdOrDomain - Entity ID such as "climate.living_room", or a domain.
+ * @returns SVG path data for the domain's default icon.
+ */
+export function getDefaultEntityIconPath(entityIdOrDomain?: string): string {
+	if (typeof entityIdOrDomain !== "string") {
+		return DEFAULT_HA_ICON;
+	}
+
+	const domain = entityIdOrDomain.split(".", 1)[0].trim().toLowerCase();
+	return DEFAULT_ENTITY_ICONS[domain] ?? DEFAULT_HA_ICON;
+}
+
+/**
+ * Resolve an entity's assigned icon, falling back to its domain default.
+ *
+ * @param entityId - Home Assistant entity ID.
+ * @param icon - Icon assigned through the entity's `attributes.icon` value.
+ * @returns SVG path data for the assigned or default icon.
+ */
+export function resolveEntityIconPath(entityId: string, icon?: string): string {
+	return resolveHaIconPath(icon, getDefaultEntityIconPath(entityId));
 }
 
 /**
