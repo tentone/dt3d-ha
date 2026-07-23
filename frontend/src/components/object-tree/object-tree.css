@@ -8,7 +8,6 @@
 	z-index: 1;
 	overflow: visible;
 	position: relative;
-	transition: width 0.2s;
 }
 
 .collapse-btn {
@@ -43,7 +42,8 @@
 }
 
 :host([collapsed]) .panel,
-:host([collapsed]) .resize-handle {
+:host([collapsed]) .resize-handle,
+:host([collapsed]) .panel-resize-handle {
 	display: none;
 }
 
@@ -172,17 +172,38 @@
 }
 
 .tree-section {
-	flex: 1 1 55%;
-	min-height: 40%;
+	flex: 0 0 var(--tree-section-height, 55%);
+	min-height: 80px;
 	overflow-y: auto;
 	overflow-x: hidden;
 	padding-right: 8px;
-	border-bottom: 1px solid var(--divider-color);
-	margin-bottom: 8px;
+}
+
+.panel-resize-handle {
+	position: relative;
+	flex: 0 0 9px;
+	height: 9px;
+	cursor: ns-resize;
+	background: transparent;
+}
+
+.panel-resize-handle::before {
+	content: "";
+	position: absolute;
+	top: 4px;
+	right: 0;
+	left: 0;
+	height: 1px;
+	background: var(--divider-color);
+}
+
+.panel-resize-handle:hover::before {
+	background: var(--primary-color);
 }
 
 dt3d-object-inspector {
-	flex: 1 1 45%;
+	flex: 1 1 auto;
+	min-height: 80px;
 	padding: 0 5px 20px 10px;
 	overflow-y: auto;
 	color: var(--primary-text-color);

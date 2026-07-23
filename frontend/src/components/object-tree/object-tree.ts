@@ -120,6 +120,9 @@ interface TreeNode {
 
 const TREE_WIDTH_STORAGE_KEY = "object-tree-width";
 const TREE_COLLAPSED_STORAGE_KEY = "object-tree-collapsed";
+const TREE_SPLIT_STORAGE_KEY = "object-tree-split";
+const DEFAULT_TREE_SPLIT = 0.55;
+const MIN_PANEL_SECTION_HEIGHT = 80;
 
 @customElement("dt3d-tree")
 export class DT3DTree extends LitElement {
@@ -176,7 +179,7 @@ export class DT3DTree extends LitElement {
 	private dropTarget: { id: UUID; position: DropPosition } | null = null;
 
 	/**
-	 * Object tree resizing flag. Set true when the
+	 * Object tree width resizing flag.
 	 */
 	private resizing = false;
 
@@ -191,6 +194,27 @@ export class DT3DTree extends LitElement {
 	private width = LocalStorage.read(TREE_WIDTH_STORAGE_KEY, 220) ?? 220;
 
 	private resizeInitialSize = 0;
+
+	/**
+	 * Tree/inspector split resizing state.
+	 */
+	private splitResizing = false;
+	private splitResizeStartY = 0;
+	private splitResizeInitialSize = 0;
+	private splitResizeContainerSize = 0;
+	private splitResizeHandleSize = 0;
+	private splitRatio = this.getStoredSplitRatio();
+
+	private getStoredSplitRatio(): number {
+		const storedRatio = LocalStorage.read(
+			TREE_SPLIT_STORAGE_KEY,
+			DEFAULT_TREE_SPLIT,
+		);
+
+		return typeof storedRatio === "number" && storedRatio > 0 && storedRatio < 1
+			? storedRatio
+			: DEFAULT_TREE_SPLIT;
+	}
 
 	/**
 	 * Toggle the visibility of the object tree explorer.
@@ -250,6 +274,7 @@ export class DT3DTree extends LitElement {
 	 * @param event - Pointer event
 	 */
 	private handleResizeStart(event: MouseEvent) {
+		event.preventDefault();
 		this.resizing = true;
 		this.resizeStartX = event.clientX;
 		this.resizeInitialSize = this.width;
@@ -260,16 +285,97 @@ export class DT3DTree extends LitElement {
 		window.addEventListener("mouseup", this.handleResizeEnd);
 	}
 
+	/**
+	 * Resize the tree section as the pointer moves.
+	 */
+	private handleSplitResizeMove = (event: MouseEvent) => {
+		if (!this.splitResizing) {
+			return;
+		}
+
+		const minimumHeight = Math.min(
+			MIN_PANEL_SECTION_HEIGHT,
+			(this.splitResizeContainerSize - this.splitResizeHandleSize) / 2,
+		);
+		const maximumHeight =
+			this.splitResizeContainerSize -
+			this.splitResizeHandleSize -
+			minimumHeight;
+		const newHeight = Math.min(
+			maximumHeight,
+			Math.max(
+				minimumHeight,
+				this.splitResizeInitialSize + (event.clientY - this.splitResizeStartY),
+			),
+		);
+
+		this.splitRatio = newHeight / this.splitResizeContainerSize;
+		this.style.setProperty("--tree-section-height", `${newHeight}px`);
+	};
+
+	/**
+	 * Stop resizing the tree/inspector split.
+	 */
+	private handleSplitResizeEnd = () => {
+		if (!this.splitResizing) {
+			return;
+		}
+
+		this.splitResizing = false;
+		this.style.setProperty(
+			"--tree-section-height",
+			`${this.splitRatio * 100}%`,
+		);
+		LocalStorage.write(TREE_SPLIT_STORAGE_KEY, this.splitRatio);
+
+		document.body.style.cursor = "";
+		window.removeEventListener("mousemove", this.handleSplitResizeMove);
+		window.removeEventListener("mouseup", this.handleSplitResizeEnd);
+	};
+
+	/**
+	 * Start resizing the space shared by the tree and object inspector.
+	 */
+	private handleSplitResizeStart(event: MouseEvent) {
+		const panel = this.renderRoot.querySelector<HTMLElement>(".panel");
+		const treeSection =
+			this.renderRoot.querySelector<HTMLElement>(".tree-section");
+		const resizeHandle = this.renderRoot.querySelector<HTMLElement>(
+			".panel-resize-handle",
+		);
+
+		if (!panel || !treeSection || !resizeHandle || panel.clientHeight <= 0) {
+			return;
+		}
+
+		event.preventDefault();
+		this.splitResizing = true;
+		this.splitResizeStartY = event.clientY;
+		this.splitResizeInitialSize = treeSection.getBoundingClientRect().height;
+		this.splitResizeContainerSize = panel.clientHeight;
+		this.splitResizeHandleSize = resizeHandle.getBoundingClientRect().height;
+
+		document.body.style.cursor = "ns-resize";
+
+		window.addEventListener("mousemove", this.handleSplitResizeMove);
+		window.addEventListener("mouseup", this.handleSplitResizeEnd);
+	}
+
 	public connectedCallback(): void {
 		super.connectedCallback();
 
 		this.style.width = this.collapsed ? "0px" : this.width + "px";
+		this.style.setProperty(
+			"--tree-section-height",
+			`${this.splitRatio * 100}%`,
+		);
 	}
 
 	public disconnectedCallback(): void {
 		super.disconnectedCallback();
 
 		this.handleResizeEnd();
+		this.handleSplitResizeEnd();
 	}
 
 	/**
@@ -1145,6 +1251,14 @@ export class DT3DTree extends LitElement {
 			></div>
 			<div class="panel">
 				<div class="tree-section">${this.renderTree(this.tree)}</div>
+				<div
+					class="panel-resize-handle"
+					role="separator"
+					aria-orientation="horizontal"
+					aria-label="Resize object tree and inspector"
+					@mousedown=${(event: MouseEvent) =>
+						this.handleSplitResizeStart(event)}
+				></div>
 				<dt3d-object-inspector
 					.selectedObject=${this.selectedObject}
 					@object-updated=${this.handleObjectUpdated}
