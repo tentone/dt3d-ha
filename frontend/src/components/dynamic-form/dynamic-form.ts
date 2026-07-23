@@ -79,6 +79,8 @@ type VectorValue = {
 	isEuler?: boolean;
 };
 
+const INPUT_DEBOUNCE_MS = 300;
+
 @customElement("dt3d-dynamic-form")
 export class DynamicForm extends LitElement {
 	static styles = unsafeCSS(componentStyles);
@@ -91,6 +93,18 @@ export class DynamicForm extends LitElement {
 
 	private subFormOpenState = new Map<string, boolean>();
 	private vectorLinkedState = new Map<string, boolean>();
+	private inputDebounceTimers = new Map<string, number>();
+	private pendingInputChanges = new Map<string, DynamicFormChangeDetail>();
+
+	public disconnectedCallback(): void {
+		super.disconnectedCallback();
+
+		for (const timer of this.inputDebounceTimers.values()) {
+			window.clearTimeout(timer);
+		}
+		this.inputDebounceTimers.clear();
+		this.pendingInputChanges.clear();
+	}
 
 	private getFieldValue(
 		field: DynamicFormInputField,
@@ -197,6 +211,53 @@ export class DynamicForm extends LitElement {
 				composed: true,
 			}),
 		);
+	}
+
+	private getInputDebounceKey(
+		attribute: string,
+		type: DynamicInputFieldType,
+	): string {
+		return `${type}:${attribute}`;
+	}
+
+	private debounceFieldChange(
+		attribute: string,
+		type: DynamicInputFieldType,
+		value: unknown,
+	): void {
+		const key = this.getInputDebounceKey(attribute, type);
+		const existingTimer = this.inputDebounceTimers.get(key);
+		if (existingTimer !== undefined) {
+			window.clearTimeout(existingTimer);
+		}
+
+		this.pendingInputChanges.set(key, {attribute, type, value});
+		this.inputDebounceTimers.set(
+			key,
+			window.setTimeout(() => {
+				this.flushDebouncedFieldChange(attribute, type);
+			}, INPUT_DEBOUNCE_MS),
+		);
+	}
+
+	private flushDebouncedFieldChange(
+		attribute: string,
+		type: DynamicInputFieldType,
+	): void {
+		const key = this.getInputDebounceKey(attribute, type);
+		const timer = this.inputDebounceTimers.get(key);
+		if (timer !== undefined) {
+			window.clearTimeout(timer);
+			this.inputDebounceTimers.delete(key);
+		}
+
+		const change = this.pendingInputChanges.get(key);
+		if (!change) {
+			return;
+		}
+
+		this.pendingInputChanges.delete(key);
+		this.dispatchFieldChange(change.attribute, change.type, change.value);
 	}
 
 	private getAxisColor(axis: "x" | "y" | "z"): string {
@@ -390,11 +451,13 @@ export class DynamicForm extends LitElement {
 							.value=${value}
 							?disabled=${!field.editable}
 							@input=${(event: Event) =>
-								this.dispatchFieldChange(
+								this.debounceFieldChange(
 									field.attribute,
 									field.type,
 									(event.target as HTMLInputElement).value,
 								)}
+							@change=${() =>
+								this.flushDebouncedFieldChange(field.attribute, field.type)}
 						/>
 					</div>
 				`;
@@ -491,11 +554,13 @@ export class DynamicForm extends LitElement {
 							.value=${value == null ? "" : String(value)}
 							?disabled=${!field.editable}
 							@input=${(event: Event) =>
-								this.dispatchFieldChange(
+								this.debounceFieldChange(
 									field.attribute,
 									field.type,
 									(event.target as HTMLInputElement).value,
 								)}
+							@change=${() =>
+								this.flushDebouncedFieldChange(field.attribute, field.type)}
 						/>
 					</div>
 				`;
