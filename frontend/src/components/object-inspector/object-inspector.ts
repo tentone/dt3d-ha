@@ -404,37 +404,32 @@ export class DT3DObjectInspector extends LitElement {
 		});
 	}
 
-	private renderEntityDetails() {
-		if (!(this.selectedObject instanceof EntityObject)) {
-			return null;
+	private getEntityAttributeLabel(attribute: string): string {
+		const translatedLabel = localManager.get(attribute);
+		if (translatedLabel !== attribute) {
+			return translatedLabel;
 		}
 
-		const entityData = this.selectedObject.getEntity();
-		const attributes = entityData?.attributes ?? {};
-		const attributeEntries = Object.entries(attributes);
+		return attribute
+			.split("_")
+			.filter(Boolean)
+			.map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+			.join(" ");
+	}
 
-		return html`
-			<div class="field">
-				<label>${localManager.get("attributes")}</label>
-				${attributeEntries.length
-					? html`<div class="attribute-list">
-							${attributeEntries.map(
-								([key, value]) =>
-									html`<div class="attribute-row">
-										<span class="attr-key">${key}</span>
-										<span class="attr-value">
-											${typeof value === "object"
-												? JSON.stringify(value)
-												: String(value)}
-										</span>
-									</div>`,
-							)}
-						</div>`
-					: html`<div class="placeholder">
-							${localManager.get("noAttributes")}
-						</div>`}
-			</div>
-		`;
+	private getEntityAttributeFields(): DynamicFormField[] {
+		if (!(this.selectedObject instanceof EntityObject)) {
+			return [];
+		}
+
+		const attributes = this.selectedObject.getEntity()?.attributes ?? {};
+		return Object.keys(attributes).map((attribute) => ({
+			label: this.getEntityAttributeLabel(attribute),
+			attribute: `attributes.${attribute}`,
+			type: "info",
+			editable: false,
+			enabled: true,
+		}));
 	}
 
 	private getWallFields(locked: boolean): DynamicFormField[] {
@@ -516,6 +511,7 @@ export class DT3DObjectInspector extends LitElement {
 		if (!(this.selectedObject instanceof EntityObject)) {
 			return [];
 		}
+		const attributeFields = this.getEntityAttributeFields();
 		const actionOptions = [
 			{label: localManager.get("cardDefaultAction"), value: "default"},
 			{label: localManager.get("openEntity"), value: "open"},
@@ -547,6 +543,7 @@ export class DT3DObjectInspector extends LitElement {
 				editable: false,
 				enabled: true,
 			},
+			...attributeFields,
 			{
 				label: localManager.get("entityClickAction"),
 				attribute: "clickAction",
@@ -749,6 +746,7 @@ export class DT3DObjectInspector extends LitElement {
 			entityId: this.selectedObject.entityId,
 			entityName: friendlyName,
 			entityState: String(stateValue),
+			attributes: entityData?.attributes ?? {},
 			clickAction: this.selectedObject.clickAction,
 			doubleClickAction: this.selectedObject.doubleClickAction,
 		};
@@ -846,7 +844,6 @@ export class DT3DObjectInspector extends LitElement {
 									${localManager.get("objectLocked")}
 								</div>`
 							: null}
-						${this.renderEntityDetails()}
 					`
 				: html`<div class="placeholder">
 						${localManager.get("selectObjectPrompt")}

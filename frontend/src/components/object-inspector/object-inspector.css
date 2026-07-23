@@ -26,29 +26,6 @@ h4 {
 	padding: 6px 8px;
 	color: var(--input-ink-color);
 }
-.attribute-list {
-	display: flex;
-	flex-direction: column;
-	gap: 6px;
-}
-.attribute-row {
-	display: flex;
-	justify-content: space-between;
-	align-items: center;
-	padding: 6px 8px;
-	border-radius: 4px;
-	border: 1px solid var(--divider-color);
-	background: var(--input-fill-color);
-}
-.attribute-row .attr-key {
-	font-weight: 600;
-	color: var(--secondary-text-color);
-}
-.attribute-row .attr-value {
-	color: var(--primary-text-color);
-	word-break: break-all;
-	text-align: right;
-}
 .group-row {
 	display: grid;
 	grid-template-columns: repeat(3, 1fr);

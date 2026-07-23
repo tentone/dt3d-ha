@@ -120,6 +120,22 @@ export class DynamicForm extends LitElement {
 		return value.toFixed(decimals);
 	}
 
+	private formatInfoValue(value: unknown): string {
+		if (value == null) {
+			return "";
+		}
+
+		if (typeof value !== "object") {
+			return String(value);
+		}
+
+		try {
+			return JSON.stringify(value);
+		} catch {
+			return String(value);
+		}
+	}
+
 	private getVectorDisplayValue(
 		field: DynamicFormInputField,
 		data: unknown,
@@ -408,7 +424,7 @@ export class DynamicForm extends LitElement {
 						<input
 							type="text"
 							class="info-input"
-							.value=${value == null ? "" : String(value)}
+							.value=${this.formatInfoValue(value)}
 							readonly
 							disabled
 						/>
