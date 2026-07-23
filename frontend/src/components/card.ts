@@ -553,6 +553,7 @@ export class DT3DCard extends LitElement {
 		this.rendererManager?.setRenderingConfig(this.generalConfig.rendering);
 		this.sceneManager?.setShadowsEnabled(
 			this.generalConfig.rendering.shadowMap.enabled,
+			this.generalConfig.rendering.shadowMap.resolution,
 		);
 		this.applyDevelopmentMode();
 	}
@@ -713,8 +714,8 @@ export class DT3DCard extends LitElement {
 			object.init();
 		}
 
-		this.sceneManager?.applyShadowSettingsToObject(object);
 		this.space.add(object);
+		this.sceneManager?.applyShadowSettingsToObject(object);
 		this.attachTransform(object);
 
 		this.tree.updateTreeDiff(this.space);
@@ -850,6 +851,7 @@ export class DT3DCard extends LitElement {
 		});
 
 		parent.remove(target);
+		this.sceneManager?.requestShadowMapUpdate();
 
 		if (removesTransformTarget) {
 			this.transform.detach();
@@ -2422,6 +2424,7 @@ export class DT3DCard extends LitElement {
 			if (!updatedObject) {
 				return;
 			}
+			this.sceneManager.applyShadowSettingsToObject(updatedObject);
 
 			const changedDefaultViewports =
 				updatedObject instanceof ViewportObject && updatedObject.defaultViewport
@@ -2455,6 +2458,7 @@ export class DT3DCard extends LitElement {
 			if (!movedObject) {
 				return;
 			}
+			this.sceneManager.requestShadowMapUpdate();
 
 			this.tree.refreshSelectedObject();
 			void Promise.all(
@@ -2563,6 +2567,7 @@ export class DT3DCard extends LitElement {
 					child.update(time);
 				}
 			});
+			this.sceneManager.updateShadowMap();
 		});
 
 		const resizeDetector = new ResizeObserver((event) => {

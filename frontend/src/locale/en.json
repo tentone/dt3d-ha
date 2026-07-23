@@ -284,6 +284,8 @@
 	"shadowMapEnabledTooltip": "Enable shadow-map rendering for lights and mesh objects.",
 	"shadowMapType": "Shadow map type",
 	"shadowMapTypeTooltip": "Choose the shadow filtering algorithm used by the WebGL renderer.",
+	"shadowMapResolution": "Shadow map resolution",
+	"shadowMapResolutionTooltip": "Resolution applied to every shadow-casting light. Higher values produce sharper shadows and use more GPU memory.",
 	"shadowMapBasic": "Basic",
 	"shadowMapPcf": "PCF",
 	"shadowMapPcfSoft": "PCF Soft",

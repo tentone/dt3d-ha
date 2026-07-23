@@ -1,6 +1,7 @@
 import type {Object3D} from "three";
 import {
 	AmbientLight,
+	Box3,
 	BoxGeometry,
 	Color,
 	DirectionalLight,
@@ -11,7 +12,9 @@ import {
 	MeshStandardMaterial,
 	OrthographicCamera,
 	PerspectiveCamera,
+	PointLight,
 	Scene,
+	SpotLight,
 	Vector3,
 } from "three";
 import {Sky} from "three/examples/jsm/Addons.js";
@@ -44,7 +47,10 @@ export const normalizeNavigationControlsType = (
 		return DEFAULT_NAVIGATION_CONTROLS;
 	}
 
-	const normalized = value.trim().toLowerCase().replace(/controls?$/, "");
+	const normalized = value
+		.trim()
+		.toLowerCase()
+		.replace(/controls?$/, "");
 	return normalized === "fly" || normalized === "map" || normalized === "orbit"
 		? normalized
 		: DEFAULT_NAVIGATION_CONTROLS;
@@ -390,6 +396,16 @@ export class SceneManager {
 	private shadowsEnabled = false;
 
 	/**
+	 * Resolution shared by every shadow map in the scene.
+	 */
+	private shadowMapResolution = 2048;
+
+	/**
+	 * Whether the directional-light shadow camera needs to be refitted.
+	 */
+	private sunlightShadowCameraDirty = true;
+
+	/**
 	 * Ambient light used by daylight configuration.
 	 */
 	private ambientLight: AmbientLight | null = null;
@@ -398,6 +414,11 @@ export class SceneManager {
 	 * Directional sunlight used by daylight configuration.
 	 */
 	private sunlight: DirectionalLight | null = null;
+
+	/**
+	 * Unit direction from the sunlight target toward the light.
+	 */
+	private sunlightDirection = new Vector3(0, 1, 0);
 
 	/**
 	 * Sky dome used by daylight configuration.
@@ -444,6 +465,9 @@ export class SceneManager {
 		this.transform = new TransformControls(this.camera, canvas);
 		this.transform.addEventListener("dragging-changed", (event: any) => {
 			this.controls.enabled = !event.value;
+		});
+		this.transform.addEventListener("objectChange", () => {
+			this.requestShadowMapUpdate();
 		});
 		this.scene.add(this.transform.getHelper());
 
@@ -645,14 +669,54 @@ export class SceneManager {
 	/**
 	 * Enable or disable shadows for scene lights and mesh objects.
 	 */
-	public setShadowsEnabled(enabled: boolean): void {
+	public setShadowsEnabled(enabled: boolean, resolution = 2048): void {
 		this.shadowsEnabled = enabled;
+		this.setShadowMapResolution(resolution);
 
 		if (this.sunlight) {
 			this.sunlight.castShadow = enabled;
 		}
 
 		this.applyShadowSettingsToObject(this.space);
+		this.requestShadowMapUpdate();
+	}
+
+	/**
+	 * Apply a single resolution to the sun, point-light, and spot-light maps.
+	 */
+	private setShadowMapResolution(resolution: number): void {
+		if (!Number.isFinite(resolution) || resolution <= 0) {
+			return;
+		}
+
+		this.shadowMapResolution = resolution;
+		if (this.sunlight) {
+			this.applyShadowMapResolution(this.sunlight);
+		}
+		this.space.traverse((child) => {
+			if (child instanceof PointLight || child instanceof SpotLight) {
+				this.applyShadowMapResolution(child);
+			}
+		});
+	}
+
+	private applyShadowMapResolution(
+		light: DirectionalLight | PointLight | SpotLight,
+	): void {
+		const shadow = light.shadow;
+		if (
+			shadow.mapSize.width === this.shadowMapResolution &&
+			shadow.mapSize.height === this.shadowMapResolution
+		) {
+			return;
+		}
+
+		shadow.mapSize.set(this.shadowMapResolution, this.shadowMapResolution);
+		shadow.map?.dispose();
+		shadow.map = null;
+		shadow.mapPass?.dispose();
+		shadow.mapPass = null;
+		shadow.needsUpdate = true;
 	}
 
 	/**
@@ -660,6 +724,10 @@ export class SceneManager {
 	 */
 	public applyShadowSettingsToObject(object: Object3D): void {
 		object.traverse((child) => {
+			if (child instanceof PointLight || child instanceof SpotLight) {
+				this.applyShadowMapResolution(child);
+			}
+
 			if ((child as any).internal === true) {
 				return;
 			}
@@ -669,6 +737,82 @@ export class SceneManager {
 				child.receiveShadow = this.shadowsEnabled;
 			}
 		});
+		this.requestShadowMapUpdate();
+	}
+
+	/**
+	 * Mark the directional-light shadow camera for a fit on the next frame.
+	 */
+	public requestShadowMapUpdate(): void {
+		this.sunlightShadowCameraDirty = true;
+	}
+
+	/**
+	 * Fit the directional-light shadow camera to all scene objects.
+	 */
+	public updateShadowMap(): void {
+		if (!this.sunlightShadowCameraDirty || !this.sunlight) {
+			return;
+		}
+		this.sunlightShadowCameraDirty = false;
+
+		this.space.updateWorldMatrix(true, true);
+		const bounds = new Box3().setFromObject(this.space, true);
+		if (bounds.isEmpty()) {
+			return;
+		}
+
+		const center = bounds.getCenter(new Vector3());
+		const size = bounds.getSize(new Vector3());
+		const radius = Math.max(size.length() / 2, 0.5);
+		const padding = Math.max(radius * 0.05, 0.1);
+		const direction = this.sunlightDirection.clone();
+
+		const lightPosition = center
+			.clone()
+			.add(direction.multiplyScalar(radius * 2 + padding));
+		lightPosition.y = Math.max(lightPosition.y, bounds.max.y + padding);
+
+		this.sunlight.position.copy(lightPosition);
+		this.sunlight.target.position.copy(center);
+		this.sunlight.updateMatrixWorld();
+		this.sunlight.target.updateMatrixWorld();
+
+		const shadowCamera = this.sunlight.shadow.camera;
+		shadowCamera.position.copy(lightPosition);
+		shadowCamera.lookAt(center);
+		shadowCamera.updateMatrixWorld();
+
+		const minimum = new Vector3(
+			Number.POSITIVE_INFINITY,
+			Number.POSITIVE_INFINITY,
+			Number.POSITIVE_INFINITY,
+		);
+		const maximum = new Vector3(
+			Number.NEGATIVE_INFINITY,
+			Number.NEGATIVE_INFINITY,
+			Number.NEGATIVE_INFINITY,
+		);
+		const corner = new Vector3();
+
+		for (const x of [bounds.min.x, bounds.max.x]) {
+			for (const y of [bounds.min.y, bounds.max.y]) {
+				for (const z of [bounds.min.z, bounds.max.z]) {
+					corner.set(x, y, z).applyMatrix4(shadowCamera.matrixWorldInverse);
+					minimum.min(corner);
+					maximum.max(corner);
+				}
+			}
+		}
+
+		shadowCamera.left = minimum.x - padding;
+		shadowCamera.right = maximum.x + padding;
+		shadowCamera.bottom = minimum.y - padding;
+		shadowCamera.top = maximum.y + padding;
+		shadowCamera.near = Math.max(0.01, -maximum.z - padding);
+		shadowCamera.far = Math.max(shadowCamera.near + 0.01, -minimum.z + padding);
+		shadowCamera.updateProjectionMatrix();
+		this.sunlight.shadow.needsUpdate = true;
 	}
 
 	/**
@@ -820,6 +964,7 @@ export class SceneManager {
 		plane.name = "Plane";
 		plane.userData.meshType = "plane";
 		this.space.add(plane);
+		this.applyShadowSettingsToObject(this.space);
 	}
 
 	/**
@@ -1051,14 +1196,10 @@ export class SceneManager {
 		this.sunlight = new DirectionalLight(0xeeeeee);
 		this.sunlight.position.set(200, 1000, 300);
 		this.sunlight.castShadow = this.shadowsEnabled;
-		this.sunlight.shadow.mapSize.set(2048, 2048);
-		this.sunlight.shadow.camera.near = 0.5;
-		this.sunlight.shadow.camera.far = 3000;
-		this.sunlight.shadow.camera.left = -200;
-		this.sunlight.shadow.camera.right = 200;
-		this.sunlight.shadow.camera.top = 200;
-		this.sunlight.shadow.camera.bottom = -200;
+		this.applyShadowMapResolution(this.sunlight);
+		this.sunlight.target.internal = true;
 		this.scene.add(this.sunlight);
+		this.scene.add(this.sunlight.target);
 
 		this.sky = new Sky();
 		this.sky.scale.setScalar(1e4);
@@ -1105,7 +1246,9 @@ export class SceneManager {
 		if (this.sunlight) {
 			this.sunlight.color.set(config.sunlightColor);
 			this.sunlight.intensity = config.sunlightIntensity;
+			this.sunlightDirection.copy(sunPosition);
 			this.sunlight.position.copy(sunPosition).multiplyScalar(1000);
+			this.requestShadowMapUpdate();
 		}
 
 		if (this.sky) {

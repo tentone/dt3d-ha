@@ -1,12 +1,11 @@
 # DT3D setup and usage manual
 
- - This manual covers installation, networking, configuration, editing, and dashboard usage for Digital Twin 3D for Home Assistant (DT3D). The system has two parts:
- - For architecture, source layout, and development instructions, see the [project README](README.md).
-
-   - `addon/`: the backend app/add-on. It stores spaces and objects in SQLite and
-   exposes them over an authenticated HTTP(S) API.
-   - `frontend/`: the `custom:dt3d-card` dashboard card. It contains both the
-   editor and the read-only visualization mode.
+- This manual covers installation, networking, configuration, editing, and dashboard usage for Digital Twin 3D for Home Assistant (DT3D). The system has two parts:
+- For architecture, source layout, and development instructions, see the [project README](README.md).
+  - `addon/`: the backend app/add-on. It stores spaces and objects in SQLite and
+    exposes them over an authenticated HTTP(S) API.
+  - `frontend/`: the `custom:dt3d-card` dashboard card. It contains both the
+    editor and the read-only visualization mode.
 
 > Home Assistant apps/add-ons are installed from the **Apps/Add-ons store**.
 > HACS is used for dashboard frontend resources.
@@ -44,25 +43,26 @@ Once DT3D publishes a built `dt3d-card.js` as a HACS Dashboard repository:
 1. Open **HACS → three-dot menu → Custom repositories**.
 2. Add `https://github.com/tentone/dt3d-ha` with category **Dashboard**.
 3. Open **Digital Twin 3D**, select **Download**, and restart or hard-refresh the browser when prompted.
-4. If HACS does not register the resource automatically, add the downloaded JS file under **Settings → Dashboards → three-dot menu → Resources** as a  JavaScript module. HACS dashboard files are normally served below `/hacsfiles/`.
-
-
+4. If HACS does not register the resource automatically, add the downloaded JS file under **Settings → Dashboards → three-dot menu → Resources** as a JavaScript module. HACS dashboard files are normally served below `/hacsfiles/`.
 
 ## Setup
+
 ### Addon
+
 #### Configuration Reference
 
- - Below is a sample configuration for the DT3D backend add-on.
-.
-   ```yaml
-   port: 8080 # Exposed TCP port for the backend API
-   service_key: "<secret>"  # Must match the card configuration
-   ssl_certificate: /ssl/fullchain.pem # Path to the certificate file, or empty for no TLS
-   ssl_key: /ssl/privkey.pem # Path to the private key file, or empty for no TLS
-   use_self_signed_certificate: false # Set to true if no trusted certificate is available
-   ```
+- Below is a sample configuration for the DT3D backend add-on.
+  .
 
- - The certificate and key options also accept PEM content directly:
+  ```yaml
+  port: 8080 # Exposed TCP port for the backend API
+  service_key: "<secret>" # Must match the card configuration
+  ssl_certificate: /ssl/fullchain.pem # Path to the certificate file, or empty for no TLS
+  ssl_key: /ssl/privkey.pem # Path to the private key file, or empty for no TLS
+  use_self_signed_certificate: false # Set to true if no trusted certificate is available
+  ```
+
+- The certificate and key options also accept PEM content directly:
 
 ```yaml
 ssl_certificate: |
@@ -76,24 +76,24 @@ ssl_key: |
 use_self_signed_certificate: false
 ```
 
-
 #### Network and TLS setup
 
- - The card runs in the user's browser and connects directly to the backend.
- - The backend therefore must be reachable from every phone, tablet, and computer that opens the dashboard.
- - A Home Assistant page loaded over HTTPS cannot call an HTTP backend because browsers block mixed content.
-   - Put the certificate and private key already used for Home Assistant in its `/ssl` directory.
- - If no trusted certificate is available, set `use_self_signed_certificate: true`.
- - DT3D generates and reuses a certificate in `/data`, but every client must trust it.
- - Recommended layout: one hostname and one trusted certificate.
-   - Using the same hostname and certificate keeps DNS and certificate trust consistent.
+- The card runs in the user's browser and connects directly to the backend.
+- The backend therefore must be reachable from every phone, tablet, and computer that opens the dashboard.
+- A Home Assistant page loaded over HTTPS cannot call an HTTP backend because browsers block mixed content.
+  - Put the certificate and private key already used for Home Assistant in its `/ssl` directory.
+- If no trusted certificate is available, set `use_self_signed_certificate: true`.
+- DT3D generates and reuses a certificate in `/data`, but every client must trust it.
+- Recommended layout: one hostname and one trusted certificate.
+  - Using the same hostname and certificate keeps DNS and certificate trust consistent.
 
 ```text
 Home Assistant UI: https://home.example.com:8123
 DT3D backend:      https://home.example.com:8080
 ```
- - The ports make these different browser origins, but the backend includes CORS support.
- - Make sure TCP port `8080` (or the configured port) is reachable from dashboard clients.
+
+- The ports make these different browser origins, but the backend includes CORS support.
+- Make sure TCP port `8080` (or the configured port) is reachable from dashboard clients.
 
 ## Create the fullscreen editor
 
@@ -125,6 +125,7 @@ general:
     shadowMap:
       enabled: false
       type: pcf
+      resolution: 2048
   developmentMode:
     enabled: false
 ```
@@ -194,15 +195,15 @@ Select **Add entity**, search by entity ID or friendly name, and choose the
 entity. Position it with the transform controls. Entity visuals update from the
 Home Assistant state supplied to the card.
 
-| Entity domain | Specialized visualization | Toggle action |
-| --- | --- | --- |
-| `sensor` | State-aware icon and name/state hover label | No |
-| `binary_sensor` | Icon and color derived from the binary state | No |
-| `camera` | Still-image panel refreshed approximately every 5 seconds | No |
-| `climate` | HVAC-mode color and target temperature while active | No |
-| `light` | State/color icon plus a configurable 3D light source | Yes |
-| `switch` | State icon and name/state hover label | Yes |
-| Any other domain | Generic marker and friendly-name label | No |
+| Entity domain    | Specialized visualization                                 | Toggle action |
+| ---------------- | --------------------------------------------------------- | ------------- |
+| `sensor`         | State-aware icon and name/state hover label               | No            |
+| `binary_sensor`  | Icon and color derived from the binary state              | No            |
+| `camera`         | Still-image panel refreshed approximately every 5 seconds | No            |
+| `climate`        | HVAC-mode color and target temperature while active       | No            |
+| `light`          | State/color icon plus a configurable 3D light source      | Yes           |
+| `switch`         | State icon and name/state hover label                     | Yes           |
+| Any other domain | Generic marker and friendly-name label                    | No            |
 
 All entity domains can use **Open entity** to show Home Assistant's more-info
 dialog. Card-wide single- and double-click defaults can be `open`, `toggle`, or
@@ -253,12 +254,12 @@ cube face to align the camera to the front, back, left, right, top, or bottom.
 Open **Space configuration** (sun icon) in the left toolbar. These values are
 saved with the active space and therefore affect every card that displays it:
 
-| Section | Options |
-| --- | --- |
-| Tone mapping | None, Linear, Reinhard, Cineon, ACES Filmic |
-| Post-processing | Bokeh depth of field, Bloom, GTAO, SSAO, Halftone, Film grain |
-| Appearance | Enable or disable the procedural sky, optionally follow Home Assistant's local date/time daylight cycle, and choose a solid-color or transparent background |
-| Daylight | Ambient color/intensity, sunlight color/intensity, sun elevation/azimuth |
+| Section         | Options                                                                                                                                                     |
+| --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Tone mapping    | None, Linear, Reinhard, Cineon, ACES Filmic                                                                                                                 |
+| Post-processing | Bokeh depth of field, Bloom, GTAO, SSAO, Halftone, Film grain                                                                                               |
+| Appearance      | Enable or disable the procedural sky, optionally follow Home Assistant's local date/time daylight cycle, and choose a solid-color or transparent background |
+| Daylight        | Ambient color/intensity, sunlight color/intensity, sun elevation/azimuth                                                                                    |
 
 GTAO and SSAO are mutually exclusive. Post-processing can improve depth and
 style but is usually the largest GPU cost after high resolution and shadows.
@@ -292,6 +293,7 @@ general:
     shadowMap:
       enabled: false
       type: pcf
+      resolution: 2048
   developmentMode:
     enabled: false
 ```
@@ -301,23 +303,24 @@ spaces there. Leave `default_viewport` empty to follow the space's default.
 
 ### Card configuration reference
 
-| Option | Default | Description |
-| --- | --- | --- |
-| `address` | `http://localhost` | Backend scheme and hostname, without the API path or trailing port. |
-| `port` | `8080` | Exposed backend TCP port. |
-| `service_key` | empty | Must exactly match the backend `service_key`. |
-| `default_space` | first available | Space ID opened by this card. |
-| `default_viewport` | space default | Viewport object ID opened by this card. |
-| `navigation_controls` | `orbit` | Camera interaction style: `orbit`, `map`, or `fly`. |
-| `orientation_cube` | `false` | Shows the camera orientation cube. |
-| `visualization_only` | `false` | Hides all editing and space-management controls. |
-| `entity_click_action` | `nothing` | `open`, `toggle`, or `nothing`. |
-| `entity_double_click_action` | `open` | `open`, `toggle`, or `nothing`. |
-| `general.rendering.antialiasing` | `false` | Smooths geometry edges; changing it recreates the WebGL renderer. |
-| `general.rendering.resolution` | `1` | Internal scale: `1`, `0.75`, or `0.5`. |
-| `general.rendering.shadowMap.enabled` | `false` | Enables shadows for compatible lights and meshes. |
-| `general.rendering.shadowMap.type` | `pcf` | `basic`, `pcf`, `pcf_soft`, or `vsm`. |
-| `general.developmentMode.enabled` | `true` | Shows connection status and build timestamp. Disable for normal dashboards. |
+| Option                                   | Default            | Description                                                                      |
+| ---------------------------------------- | ------------------ | -------------------------------------------------------------------------------- |
+| `address`                                | `http://localhost` | Backend scheme and hostname, without the API path or trailing port.              |
+| `port`                                   | `8080`             | Exposed backend TCP port.                                                        |
+| `service_key`                            | empty              | Must exactly match the backend `service_key`.                                    |
+| `default_space`                          | first available    | Space ID opened by this card.                                                    |
+| `default_viewport`                       | space default      | Viewport object ID opened by this card.                                          |
+| `navigation_controls`                    | `orbit`            | Camera interaction style: `orbit`, `map`, or `fly`.                              |
+| `orientation_cube`                       | `false`            | Shows the camera orientation cube.                                               |
+| `visualization_only`                     | `false`            | Hides all editing and space-management controls.                                 |
+| `entity_click_action`                    | `nothing`          | `open`, `toggle`, or `nothing`.                                                  |
+| `entity_double_click_action`             | `open`             | `open`, `toggle`, or `nothing`.                                                  |
+| `general.rendering.antialiasing`         | `false`            | Smooths geometry edges; changing it recreates the WebGL renderer.                |
+| `general.rendering.resolution`           | `1`                | Internal scale: `1`, `0.75`, or `0.5`.                                           |
+| `general.rendering.shadowMap.enabled`    | `false`            | Enables shadows for compatible lights and meshes.                                |
+| `general.rendering.shadowMap.type`       | `pcf`              | `basic`, `pcf`, `pcf_soft`, or `vsm`.                                            |
+| `general.rendering.shadowMap.resolution` | `2048`             | Resolution applied to every shadow map: `256`, `512`, `1024`, `2048`, or `4096`. |
+| `general.developmentMode.enabled`        | `true`             | Shows connection status and build timestamp. Disable for normal dashboards.      |
 
 Connection, antialiasing, resolution, shadow maps, and development mode are
 per-card. Tone mapping, post-processing, and daylight are per-space.
@@ -328,8 +331,8 @@ per-card. Tone mapping, post-processing, and daylight are per-space.
 
 ## Performance optimization
 
- - The digital twin 3D renderer is GPU-bound. The following settings and practices can improve performance on low-end devices, integrated GPUs, and mobile phones.
- - Start with the following profile on phones, wall tablets, and integrated GPUs:
+- The digital twin 3D renderer is GPU-bound. The following settings and practices can improve performance on low-end devices, integrated GPUs, and mobile phones.
+- Start with the following profile on phones, wall tablets, and integrated GPUs:
 
 ```yaml
 general:

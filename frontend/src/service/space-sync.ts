@@ -133,8 +133,13 @@ function deserializeMaterial(
 	return new MeshStandardMaterial({color: fallbackColor});
 }
 
-function replaceMeshMaterial(mesh: Mesh, material: Material | Material[]): void {
-	const oldMaterials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+function replaceMeshMaterial(
+	mesh: Mesh,
+	material: Material | Material[],
+): void {
+	const oldMaterials = Array.isArray(mesh.material)
+		? mesh.material
+		: [mesh.material];
 	mesh.material = material;
 	for (const oldMaterial of oldMaterials) oldMaterial.dispose();
 }
@@ -242,6 +247,7 @@ export class SpaceSync {
 			}
 		});
 		this.space.clear();
+		this.sceneManager.requestShadowMapUpdate();
 		this.objectApiIds.clear();
 		this.pendingObjectCreates.clear();
 	}
@@ -464,6 +470,7 @@ export class SpaceSync {
 				object.init();
 			}
 		}
+		this.sceneManager.applyShadowSettingsToObject(this.space);
 	}
 
 	/**
@@ -513,7 +520,10 @@ export class SpaceSync {
 					},
 					color,
 				);
-				replaceMeshMaterial(wall.wallMesh, deserializeMaterial(data.material, color));
+				replaceMeshMaterial(
+					wall.wallMesh,
+					deserializeMaterial(data.material, color),
+				);
 				object = wall;
 			} else if (meshType === "door" || meshType === "window") {
 				const dims = data.dimensions as
@@ -529,7 +539,10 @@ export class SpaceSync {
 						},
 						color,
 					);
-					replaceMeshMaterial(door.doorMesh, deserializeMaterial(data.material, color));
+					replaceMeshMaterial(
+						door.doorMesh,
+						deserializeMaterial(data.material, color),
+					);
 					door.setOpen(openState);
 					object = door;
 				} else {
@@ -544,7 +557,11 @@ export class SpaceSync {
 					const windowMesh = windowObj.getObjectByName(
 						"Window Panel",
 					) as Mesh | null;
-					if (windowMesh) replaceMeshMaterial(windowMesh, deserializeMaterial(data.material, color));
+					if (windowMesh)
+						replaceMeshMaterial(
+							windowMesh,
+							deserializeMaterial(data.material, color),
+						);
 					windowObj.setOpen(openState);
 					object = windowObj;
 				}

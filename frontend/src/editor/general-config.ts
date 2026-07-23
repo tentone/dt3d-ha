@@ -12,6 +12,8 @@ export type ResolutionScale = 1 | 0.75 | 0.5;
 
 export type ShadowMapMode = "basic" | "pcf" | "pcf_soft" | "vsm";
 
+export type ShadowMapResolution = 256 | 512 | 1024 | 2048 | 4096;
+
 export type BokehDepthConfig = {
 	enabled: boolean;
 	focus: number;
@@ -89,6 +91,7 @@ export type RenderingConfig = {
 	shadowMap: {
 		enabled: boolean;
 		type: ShadowMapMode;
+		resolution: ShadowMapResolution;
 	};
 	postProcessing: PostProcessingConfig;
 };
@@ -101,10 +104,7 @@ export type GeneralConfig = {
 };
 
 export type CardGeneralConfig = {
-	rendering: Pick<
-		RenderingConfig,
-		"antialiasing" | "resolution" | "shadowMap"
-	>;
+	rendering: Pick<RenderingConfig, "antialiasing" | "resolution" | "shadowMap">;
 	developmentMode: GeneralConfig["developmentMode"];
 };
 
@@ -125,6 +125,7 @@ export const DEFAULT_GENERAL_CONFIG: GeneralConfig = {
 		shadowMap: {
 			enabled: false,
 			type: "pcf",
+			resolution: 2048,
 		},
 		postProcessing: {
 			bokehDepth: {
@@ -246,7 +247,7 @@ const integerOrDefault = (
 const passConfig = (
 	value: unknown,
 	fallbackEnabled: boolean,
-): {enabled: boolean; values: Record<string, any>} => {
+): { enabled: boolean; values: Record<string, any> } => {
 	if (value && typeof value === "object" && !Array.isArray(value)) {
 		const values = value as Record<string, any>;
 		return {
@@ -331,6 +332,23 @@ export const normalizeShadowMapMode = (value: unknown): ShadowMapMode => {
 	}
 };
 
+export const normalizeShadowMapResolution = (
+	value: unknown,
+): ShadowMapResolution => {
+	const parsed = typeof value === "string" ? Number(value) : value;
+
+	switch (parsed) {
+		case 256:
+		case 512:
+		case 1024:
+		case 2048:
+		case 4096:
+			return parsed;
+		default:
+			return DEFAULT_GENERAL_CONFIG.rendering.shadowMap.resolution;
+	}
+};
+
 export const normalizePostProcessingConfig = (
 	config: Record<string, any> = {},
 ): PostProcessingConfig => {
@@ -397,12 +415,7 @@ export const normalizePostProcessingConfig = (
 				0,
 				10,
 			),
-			radius: numberOrDefault(
-				bloom.values.radius,
-				defaults.bloom.radius,
-				0,
-				1,
-			),
+			radius: numberOrDefault(bloom.values.radius, defaults.bloom.radius, 0, 1),
 			threshold: numberOrDefault(
 				bloom.values.threshold,
 				defaults.bloom.threshold,
@@ -436,12 +449,7 @@ export const normalizePostProcessingConfig = (
 				0,
 				10,
 			),
-			scale: numberOrDefault(
-				gtao.values.scale,
-				defaults.gtao.scale,
-				0.01,
-				10,
-			),
+			scale: numberOrDefault(gtao.values.scale, defaults.gtao.scale, 0.01, 10),
 			samples: integerOrDefault(
 				gtao.values.samples,
 				defaults.gtao.samples,
@@ -620,6 +628,7 @@ export const normalizeGeneralConfig = (
 					DEFAULT_GENERAL_CONFIG.rendering.shadowMap.enabled,
 				),
 				type: normalizeShadowMapMode(shadowMap.type),
+				resolution: normalizeShadowMapResolution(shadowMap.resolution),
 			},
 			postProcessing: normalizePostProcessingConfig(postProcessing),
 		},
