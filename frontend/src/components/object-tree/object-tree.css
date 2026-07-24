@@ -73,6 +73,10 @@
 	color: var(--primary-text-color);
 }
 
+.tree-node.selected-ancestor {
+	background: color-mix(in srgb, var(--primary-color) 12%, transparent);
+}
+
 .toggle {
 	cursor: pointer;
 	margin-right: 4px;

@@ -1205,6 +1205,7 @@ export class DT3DTree extends LitElement {
 							<!-- Node -->
 							<div
 								class="tree-node ${this.selectedId === node.id ? "selected" : ""}
+									${this.isAncestor(node.id, this.selectedId) ? "selected-ancestor" : ""}
 									${this.draggedId === node.id ? "dragging" : ""}
 									${this.dropTarget?.id === node.id ? `drop-${this.dropTarget.position}` : ""}"
 								style=${`--tree-depth: ${depth};`}
