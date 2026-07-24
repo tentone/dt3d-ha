@@ -30,6 +30,7 @@ type WallCallbacks = {
 type WallPlacement = {
 	point: Vector3;
 	connectedWall: WallObject | null;
+	wallOffset: number | null;
 };
 
 export class WallManager {
@@ -111,7 +112,8 @@ export class WallManager {
 	 */
 	public handleClick(event: MouseEvent): boolean {
 		if (this._mode === "door" || this._mode === "window") {
-			const clickedWall = this.pickPlacementFromEvent(event)?.connectedWall;
+			const placement = this.pickPlacementFromEvent(event);
+			const clickedWall = placement?.connectedWall;
 			const selectedWall = clickedWall ?? this.resolveSelectedWall();
 			if (!selectedWall) {
 				return false;
@@ -123,8 +125,8 @@ export class WallManager {
 			}
 
 			const added = this._mode === "door"
-				? selectedWall.addDoor()
-				: selectedWall.addWindow();
+				? selectedWall.addDoor(placement?.wallOffset ?? 0)
+				: selectedWall.addWindow(placement?.wallOffset ?? 0);
 			this.callbacks.attachTransform(added);
 			this.callbacks.updateTree();
 			this.callbacks.syncCreate(added);
@@ -255,19 +257,17 @@ export class WallManager {
 
 		const connectedWall = this.resolveWallFromObject(intersection.object, space);
 		let point: Vector3;
+		let wallOffset: number | null = null;
 
 		if (connectedWall) {
 			// Join the new segment to the existing wall's center line, whether the
 			// user clicked its face, one of its ends, or anywhere in the middle.
 			const wallPoint = connectedWall.worldToLocal(intersection.point.clone());
-			wallPoint.set(
-				Math.min(
-					connectedWall.length / 2,
-					Math.max(-connectedWall.length / 2, wallPoint.x),
-				),
-				0,
-				0,
+			wallOffset = Math.min(
+				connectedWall.length / 2,
+				Math.max(-connectedWall.length / 2, wallPoint.x),
 			);
+			wallPoint.set(wallOffset, 0, 0);
 			point = space.worldToLocal(connectedWall.localToWorld(wallPoint));
 		} else {
 			point = space.worldToLocal(intersection.point.clone());
@@ -276,7 +276,7 @@ export class WallManager {
 			}
 		}
 
-		return {point, connectedWall};
+		return {point, connectedWall, wallOffset};
 	}
 
 	private resolveWallFromObject(object: Object3D, space: Group): WallObject | null {

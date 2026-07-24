@@ -164,11 +164,14 @@ export class WallObject extends DTObject {
 
 	/**
 	 * Add a door to the wall.
+	 *
+	 * @param wallOffset - Position along the wall's local X axis.
 	 */
-	public addDoor(): DoorObject {
+	public addDoor(wallOffset = 0): DoorObject {
 		this.doorCount += 1;
 		const door = new DoorObject();
 		door.name = `Door ${this.doorCount}`;
+		door.position.x = wallOffset;
 		door.position.y = 0;
 		this.add(door);
 		this.updateGeometry();
@@ -177,11 +180,14 @@ export class WallObject extends DTObject {
 
 	/**
 	 * Add a window to the wall.
+	 *
+	 * @param wallOffset - Position along the wall's local X axis.
 	 */
-	public addWindow(): WindowObject {
+	public addWindow(wallOffset = 0): WindowObject {
 		this.windowCount += 1;
 		const window = new WindowObject();
 		window.name = `Window ${this.windowCount}`;
+		window.position.x = wallOffset;
 		window.position.y = 1.2;
 		this.add(window);
 		this.updateGeometry();
