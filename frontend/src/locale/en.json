@@ -237,7 +237,7 @@
 	"exitWallTools": "Exit wall tools",
 	"hintMeasureDistance": "Double-click on 2 points to measure distance",
 	"hintMeasureAngle": "Double-click on 3 points to measure angle",
-	"hintWallEnd": "Click to set the end point of the wall",
+	"hintWallEnd": "Click to place the next wall point, or finish on an existing wall",
 	"hintWallStart": "Click to set the start point of the wall",
 	"hintAddDoor": "Select a wall, then click to add a door",
 	"hintAddWindow": "Select a wall, then click to add a window",

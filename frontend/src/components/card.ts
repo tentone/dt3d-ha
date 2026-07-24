@@ -2165,6 +2165,7 @@ export class DT3DCard extends LitElement {
 				setLastSelectedObject: (object) => {
 					this.lastSelectedObject = object;
 				},
+				selectObject: (object) => this.tree.selectObject(object.uuid),
 			},
 		);
 

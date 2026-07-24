@@ -218,8 +218,9 @@ dialog. Card-wide single- and double-click defaults can be `open`, `toggle`, or
 
 1. Add or import a floor/plane so the wall tool has a surface to intersect.
 2. Optionally enable grid snapping and set the required snap size.
-3. Select **Draw wall**. Double-click once for the start point and double-click
-   again for the end point. Repeat for each segment.
+3. Select **Draw wall**. Double-click once for the start point, then double-click
+   each following point to draw connected wall segments continuously. End on any
+   part of an existing wall to finish the run, or choose **Exit wall tools**.
 4. Select a wall in the canvas or object tree.
 5. Choose **Add door to selected wall** or **Add window to selected wall**, then
    double-click the canvas. The opening is created as a child of that wall.

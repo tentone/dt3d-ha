@@ -24,6 +24,12 @@ type WallCallbacks = {
 	syncCreate: (object: Object3D) => void;
 	updateHintMessage: () => void;
 	setLastSelectedObject: (object: Object3D | null) => void;
+	selectObject: (object: Object3D) => void;
+};
+
+type WallPlacement = {
+	point: Vector3;
+	connectedWall: WallObject | null;
 };
 
 export class WallManager {
@@ -105,9 +111,15 @@ export class WallManager {
 	 */
 	public handleClick(event: MouseEvent): boolean {
 		if (this._mode === "door" || this._mode === "window") {
-			const selectedWall = this.resolveSelectedWall();
+			const clickedWall = this.pickPlacementFromEvent(event)?.connectedWall;
+			const selectedWall = clickedWall ?? this.resolveSelectedWall();
 			if (!selectedWall) {
 				return false;
+			}
+
+			if (clickedWall) {
+				this.callbacks.setLastSelectedObject(clickedWall);
+				this.callbacks.selectObject(clickedWall);
 			}
 
 			const added = this._mode === "door"
@@ -123,19 +135,34 @@ export class WallManager {
 			return false;
 		}
 
-		const intersection = this.pickPointFromEvent(event);
-		if (!intersection) {
+		const placement = this.pickPlacementFromEvent(event);
+		if (!placement) {
 			return true;
 		}
 
 		if (!this.draftStart) {
-			this.draftStart = intersection.clone();
+			this.draftStart = placement.point.clone();
 			this.createDraft(this.draftStart);
 			return true;
 		}
 
-		this.draft.setFromPoints(this.draftStart, intersection);
+		const segmentLength = Math.hypot(
+			placement.point.x - this.draftStart.x,
+			placement.point.z - this.draftStart.z,
+		);
+		if (segmentLength <= 1e-6 || !this.draft) {
+			return true;
+		}
+
+		this.draft.setFromPoints(this.draftStart, placement.point);
 		this.finalizeWall();
+
+		// Reaching any point along an existing wall closes the current run.
+		// Otherwise, the end point immediately becomes the next wall's start.
+		if (!placement.connectedWall) {
+			this.draftStart = placement.point.clone();
+			this.createDraft(this.draftStart);
+		}
 		return true;
 	}
 
@@ -153,12 +180,12 @@ export class WallManager {
 			return;
 		}
 
-		const intersection = this.pickPointFromEvent(event);
-		if (!intersection) {
+		const placement = this.pickPlacementFromEvent(event);
+		if (!placement) {
 			return;
 		}
 
-		this.draft.setFromPoints(this.draftStart, intersection);
+		this.draft.setFromPoints(this.draftStart, placement.point);
 		this.draft.updateLabel();
 	}
 
@@ -210,7 +237,7 @@ export class WallManager {
 		return null;
 	}
 
-	private pickPointFromEvent(event: MouseEvent): Vector3 | null {
+	private pickPlacementFromEvent(event: MouseEvent): WallPlacement | null {
 		const {canvas, camera, space, gridSnapEnabled, gridSnapSize} = this.getContext();
 		if (!canvas || !camera || !space) {
 			return null;
@@ -221,13 +248,46 @@ export class WallManager {
 		this.pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
 		this.raycaster.setFromCamera(this.pointer, camera);
 
-		const intersects = this.raycaster.intersectObjects(space.children, true);
-		const point = intersects[0]?.point;
-		if (!point) {
+		const intersection = this.raycaster.intersectObjects(space.children, true)[0];
+		if (!intersection) {
 			return null;
 		}
 
-		return gridSnapEnabled ? this.snapPointToGrid(point, gridSnapSize) : point;
+		const connectedWall = this.resolveWallFromObject(intersection.object, space);
+		let point: Vector3;
+
+		if (connectedWall) {
+			// Join the new segment to the existing wall's center line, whether the
+			// user clicked its face, one of its ends, or anywhere in the middle.
+			const wallPoint = connectedWall.worldToLocal(intersection.point.clone());
+			wallPoint.set(
+				Math.min(
+					connectedWall.length / 2,
+					Math.max(-connectedWall.length / 2, wallPoint.x),
+				),
+				0,
+				0,
+			);
+			point = space.worldToLocal(connectedWall.localToWorld(wallPoint));
+		} else {
+			point = space.worldToLocal(intersection.point.clone());
+			if (gridSnapEnabled) {
+				point = this.snapPointToGrid(point, gridSnapSize);
+			}
+		}
+
+		return {point, connectedWall};
+	}
+
+	private resolveWallFromObject(object: Object3D, space: Group): WallObject | null {
+		let current: Object3D | null = object;
+		while (current && current !== space) {
+			if (current instanceof WallObject) {
+				return current;
+			}
+			current = current.parent;
+		}
+		return null;
 	}
 
 	private snapPointToGrid(point: Vector3, snapSize: number): Vector3 {
