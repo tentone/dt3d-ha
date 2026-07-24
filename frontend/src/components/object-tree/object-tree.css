@@ -183,6 +183,31 @@
 	padding-right: 8px;
 }
 
+.tree-search {
+	position: sticky;
+	top: 0;
+	z-index: 2;
+    margin: 0 8px 8px;
+    background: color-mix(in srgb, var(--card-background-color) 90%, transparent);
+    border-radius: 6px;
+}
+
+.tree-search input {
+	width: 100%;
+	box-sizing: border-box;
+	padding: 6px 8px;
+	border: 1px solid var(--divider-color);
+	border-radius: 6px;
+	background: var(--input-fill-color);
+	color: var(--input-ink-color);
+}
+
+.no-search-results {
+	padding: 8px 12px;
+	color: var(--secondary-text-color);
+	font-size: 0.9em;
+}
+
 .panel-resize-handle {
 	position: relative;
 	flex: 0 0 9px;

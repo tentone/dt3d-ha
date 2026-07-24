@@ -102,6 +102,8 @@ interface TreeNode {
 	id: UUID;
 	// Display name of the node
 	name: string;
+	// Optional searchable description stored with the source object
+	description?: string;
 	// Home Assistant icon name for this object type
 	icon: string;
 	// Locked state for DTObjects
@@ -165,6 +167,12 @@ export class DT3DTree extends LitElement {
 	 */
 	@state()
 	private selectedObject: Object3D | null = null;
+
+	/**
+	 * Current object tree search text.
+	 */
+	@state()
+	private searchQuery = "";
 
 	/**
 	 * Data of the context menu, (object id and context menu position).
@@ -567,6 +575,7 @@ export class DT3DTree extends LitElement {
 		const metadata = this.getNodeMetadata(obj);
 
 		node.name = metadata.name;
+		node.description = metadata.description;
 		node.icon = metadata.icon;
 		node.locked = metadata.locked;
 		node.entityId = metadata.entityId;
@@ -589,9 +598,17 @@ export class DT3DTree extends LitElement {
 	 * @param obj - Source object.
 	 */
 	private getNodeMetadata(obj: Object3D): TreeNode {
+		const objectDescription =
+			(obj as Object3D & { description?: unknown }).description ??
+			obj.userData.description;
+
 		return {
 			id: obj.uuid,
 			name: obj.name || obj.type,
+			description:
+				typeof objectDescription === "string"
+					? objectDescription
+					: undefined,
 			icon: this.getObjectIcon(obj),
 			locked: obj instanceof DTObject ? obj.locked : false,
 			entityId: obj instanceof EntityObject ? obj.entityId : undefined,
@@ -710,6 +727,48 @@ export class DT3DTree extends LitElement {
 		this.expanded = new Set(
 			[...this.expanded].filter((id) => validIds.has(id)),
 		);
+	}
+
+	/**
+	 * Filter nodes recursively, retaining matches and the ancestors needed to
+	 * reach them.
+	 *
+	 * @param nodes - Tree nodes to filter.
+	 * @param query - Normalized search text.
+	 */
+	private filterTree(nodes: TreeNode[], query: string): TreeNode[] {
+		const filtered: TreeNode[] = [];
+
+		for (const node of nodes) {
+			const children = this.filterTree(node.children ?? [], query);
+			const matches =
+				node.name.toLocaleLowerCase().includes(query) ||
+				node.description?.toLocaleLowerCase().includes(query);
+
+			if (matches || children.length > 0) {
+				filtered.push({
+					...node,
+					children: children.length > 0 ? children : undefined,
+				});
+			}
+		}
+
+		return filtered;
+	}
+
+	/**
+	 * Return the visible tree for the current search query.
+	 */
+	private getVisibleTree(): TreeNode[] {
+		const query = this.searchQuery.trim().toLocaleLowerCase();
+		return query ? this.filterTree(this.tree, query) : this.tree;
+	}
+
+	/**
+	 * Update the object tree search query.
+	 */
+	private handleSearch(event: Event): void {
+		this.searchQuery = (event.currentTarget as HTMLInputElement).value;
 	}
 
 	/**
@@ -1228,6 +1287,8 @@ export class DT3DTree extends LitElement {
 	 * @returns Rendered HTML template.
 	 */
 	private renderTree(nodes: TreeNode[], depth: number = 0): any {
+		const searching = this.searchQuery.trim().length > 0;
+
 		return html`
 			<ul style="list-style: none; margin: 0; padding: 0;">
 				${repeat(
@@ -1258,10 +1319,12 @@ export class DT3DTree extends LitElement {
 												class="toggle"
 												@click=${(e: Event) => {
 		e.stopPropagation();
-		this.toggleNode(node.id);
+		if (!searching) {
+			this.toggleNode(node.id);
+		}
 	}}
 											>
-												${this.expanded.has(node.id) ? "▼" : "▶"}
+												${searching || this.expanded.has(node.id) ? "▼" : "▶"}
 											</span>
 										`
 		: html`<span class="toggle-spacer"></span>`}
@@ -1290,7 +1353,8 @@ export class DT3DTree extends LitElement {
 							</div>
 							${node.children &&
 							node.children.length &&
-							this.expanded.has(node.id) ? this.renderTree(node.children, depth + 1) : null}
+							(searching || this.expanded.has(node.id))
+								? this.renderTree(node.children, depth + 1) : null}
 						</li>
 					`,
 	)}
@@ -1302,6 +1366,7 @@ export class DT3DTree extends LitElement {
 		const collapseLabel = localManager.get(
 			this.collapsed ? "expandObjectTree" : "collapseObjectTree",
 		);
+		const visibleTree = this.getVisibleTree();
 
 		return html`
 			<button
@@ -1321,7 +1386,26 @@ export class DT3DTree extends LitElement {
 				@mousedown=${(event: MouseEvent) => this.handleResizeStart(event)}
 			></div>
 			<div class="panel">
-				<div class="tree-section">${this.renderTree(this.tree)}</div>
+				<div class="tree-section">
+					<div class="tree-search">
+						<input
+							type="search"
+							placeholder=${localManager.get("searchObjects")}
+							aria-label=${localManager.get("searchObjects")}
+							.value=${this.searchQuery}
+							@input=${this.handleSearch}
+						/>
+					</div>
+					${visibleTree.length > 0
+						? this.renderTree(visibleTree)
+						: this.searchQuery.trim()
+							? html`
+								<div class="no-search-results">
+									${localManager.get("noMatchingObjects")}
+								</div>
+							`
+							: null}
+				</div>
 				<div
 					class="panel-resize-handle"
 					role="separator"

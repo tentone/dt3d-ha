@@ -16,6 +16,8 @@
 	"noData": "No data available",
 	"selectAnEntity": "Select an Entity",
 	"searchEntities": "Search entities...",
+	"searchObjects": "Search objects...",
+	"noMatchingObjects": "No matching objects",
 	"switchToOrthographic": "Switch to orthographic camera",
 	"switchToPerspective": "Switch to perspective camera",
 	"waiting": "Waiting...",
