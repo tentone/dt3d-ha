@@ -32,6 +32,7 @@ import (
 const (
 	defaultPort               = 8080
 	optionsFilePath           = "/data/options.json"
+	databaseFilePath          = "/data/data.db"
 	configuredCertificateFile = "/data/dt3d-configured.crt"
 	configuredKeyFile         = "/data/dt3d-configured.key"
 	geometryFilesDir          = "/data/dt3d-geometries"
@@ -143,15 +144,11 @@ func main() {
 		log.Fatal("service_key must be configured in add-on options")
 	}
 
-	// Initialize database
-	db, err := gorm.Open(sqlite.Open("data.db"), &gorm.Config{})
+	db, err := initializeDatabase(databaseFilePath)
 	if err != nil {
-		log.Fatalf("failed to connect database: %v", err)
+		log.Fatalf("failed to initialize database: %v", err)
 	}
-
-	if err := db.AutoMigrate(&models.Space{}, &models.ObjectInstance{}); err != nil {
-		log.Fatalf("failed to migrate database: %v", err)
-	}
+	log.Printf("Using persistent database at %s", databaseFilePath)
 
 	// Repositories
 	spaceRepo := repository.NewSpaceRepository(db)
@@ -174,6 +171,19 @@ func main() {
 	if err := runServer(router, fmt.Sprintf("0.0.0.0:%d", opt.Port), opt); err != nil {
 		log.Fatalf("failed to start server: %v", err)
 	}
+}
+
+func initializeDatabase(path string) (*gorm.DB, error) {
+	db, err := gorm.Open(sqlite.Open(path), &gorm.Config{})
+	if err != nil {
+		return nil, fmt.Errorf("connect to database %q: %w", path, err)
+	}
+
+	if err := db.AutoMigrate(&models.Space{}, &models.ObjectInstance{}); err != nil {
+		return nil, fmt.Errorf("migrate database %q: %w", path, err)
+	}
+
+	return db, nil
 }
 
 func validateTLSCertificatePair(certFile string, keyFile string) error {

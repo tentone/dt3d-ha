@@ -93,7 +93,7 @@ use_self_signed_certificate: false
 ### Data Structure
 
  - Inside the Home Assistant app/add-on:
- - SQLite uses `data.db` in the backend process's working directory. In the current container image that directory is `/app`.
+ - SQLite uses `/data/data.db`, inside Home Assistant's persistent add-on data volume. It survives add-on restarts, rebuilds, and upgrades.
  - Generated or normalized TLS files live under `/data`.
  - Imported binary geometry lives under `/data/dt3d-geometries`.
  - Certificates mounted from Home Assistant are available under `/ssl`.
