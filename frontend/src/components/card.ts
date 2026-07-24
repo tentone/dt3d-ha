@@ -888,6 +888,13 @@ export class DT3DCard extends LitElement {
 		const parent = original.parent ?? this.space;
 		const clone = original.clone(true);
 
+		// Object3D.clone() copies userData, including the API IDs assigned to the
+		// original hierarchy. Remove them so persistence creates new records
+		// instead of updating the originals.
+		clone.traverse((child) => {
+			delete child.userData.apiId;
+		});
+
 		parent.add(clone);
 
 		this.attachTransform(clone);
