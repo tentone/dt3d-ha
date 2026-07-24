@@ -107,10 +107,16 @@ tone mapping, and post-processing configuration.
    The new copy includes the space configuration, every object and its
    hierarchy, and uploaded geometry.
 4. Add or edit objects; changes are synchronized to the backend automatically.
-5. To remove the active space, use **Delete space** beside the selector and
+5. Select **Download space (.dt3d)** to save the active space as one portable
+   file. The archive contains the space configuration and object database data,
+   along with uploaded geometry, models, textures, and other persisted assets.
+6. Select **Upload space (.dt3d)** to create and open a new space from an
+   archive. Import generates new database IDs, so it does not overwrite the
+   original space.
+7. To remove the active space, use **Delete space** beside the selector and
    confirm. This permanently deletes every object in that space.
 
-Space creation, cloning, switching, and deletion are hidden when
+Space creation, cloning, import/export, switching, and deletion are hidden when
 `visualization_only: true`.
 
 <img src="readme/2_editor.png" width="500">

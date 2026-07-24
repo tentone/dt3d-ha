@@ -2,7 +2,7 @@
 	position: absolute;
 	top: 16px;
 	left: 50%;
-	max-width: min(360px, calc(100% - 160px));
+	max-width: min(440px, calc(100% - 160px));
 }
 
 .selector {
@@ -70,6 +70,10 @@ button:focus-visible {
 
 ha-icon {
 	--mdc-icon-size: 18px;
+}
+
+input[type="file"] {
+	display: none;
 }
 
 select:disabled {

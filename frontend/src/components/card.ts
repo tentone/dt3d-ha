@@ -17,7 +17,13 @@ import "./upload-menu/upload-menu.js";
 import {LitElement} from "lit";
 import {customElement} from "lit/decorators.js";
 import type {Camera, Intersection, Object3D, Scene} from "three";
-import {Group, MeshStandardMaterial, Raycaster, Vector2, Vector3} from "three";
+import {
+	Group,
+	MeshStandardMaterial,
+	Raycaster,
+	Vector2,
+	Vector3,
+} from "three";
 import type {TransformControls} from "three/examples/jsm/controls/TransformControls";
 
 import type {
@@ -287,7 +293,8 @@ export class DT3DCard extends LitElement {
 	 */
 	private generalConfig: GeneralConfig = normalizeGeneralConfig();
 	private cardGeneralConfig: CardGeneralConfig = normalizeCardGeneralConfig();
-	private spaceGeneralConfig: SpaceGeneralConfig = normalizeSpaceGeneralConfig();
+	private spaceGeneralConfig: SpaceGeneralConfig =
+		normalizeSpaceGeneralConfig();
 
 	/**
 	 * Current space-level scene configuration.
@@ -371,10 +378,7 @@ export class DT3DCard extends LitElement {
 		);
 	}
 
-	private importModels(
-		files: File[],
-		position?: Vector3,
-	): Promise<void> {
+	private importModels(files: File[], position?: Vector3): Promise<void> {
 		if (!this.space || this.isVisualizationOnly()) {
 			return Promise.resolve();
 		}
@@ -513,7 +517,8 @@ export class DT3DCard extends LitElement {
 		}
 
 		if (this.cameraToggle) {
-			const cubeHeight = this.orientationCube?.getBoundingClientRect().height ?? 0;
+			const cubeHeight =
+				this.orientationCube?.getBoundingClientRect().height ?? 0;
 			const bottom = this.orientationCube
 				? VIEWER_CONTROL_MARGIN + cubeHeight + VIEWER_CONTROL_GAP
 				: VIEWER_CONTROL_MARGIN;
@@ -1017,7 +1022,10 @@ export class DT3DCard extends LitElement {
 		);
 	}
 
-	private performEntityAction(object: EntityObject, action: EntityAction): void {
+	private performEntityAction(
+		object: EntityObject,
+		action: EntityAction,
+	): void {
 		switch (action) {
 			case "open":
 				this.openEntity(object.entityId);
@@ -1039,9 +1047,7 @@ export class DT3DCard extends LitElement {
 		const override =
 			interaction === "click" ? object.clickAction : object.doubleClickAction;
 		const action =
-			override === "default"
-				? this.entityInteractions[interaction]
-				: override;
+			override === "default" ? this.entityInteractions[interaction] : override;
 
 		return action === "toggle" && !isToggleable(object) ? "nothing" : action;
 	}
@@ -1511,14 +1517,20 @@ export class DT3DCard extends LitElement {
 		this.uploadMenu = null;
 		const contentRect = this.content.getBoundingClientRect();
 		const menu = document.createElement("dt3d-light-menu") as DT3DLightMenu;
-		menu.x = Math.max(8, Math.min(
-			(anchor?.left ?? contentRect.left + 8) - contentRect.left,
-			contentRect.width - 208,
-		));
-		menu.y = Math.max(8, Math.min(
-			(anchor?.top ?? contentRect.top + 8) - contentRect.top,
-			contentRect.height - 8,
-		));
+		menu.x = Math.max(
+			8,
+			Math.min(
+				(anchor?.left ?? contentRect.left + 8) - contentRect.left,
+				contentRect.width - 208,
+			),
+		);
+		menu.y = Math.max(
+			8,
+			Math.min(
+				(anchor?.top ?? contentRect.top + 8) - contentRect.top,
+				contentRect.height - 8,
+			),
+		);
 		menu.addEventListener("add-object", (event: Event) => {
 			const {type} = (event as CustomEvent<{ type: string }>).detail;
 			this.handleAddObject(type);
@@ -1543,16 +1555,23 @@ export class DT3DCard extends LitElement {
 
 		const contentRect = this.content.getBoundingClientRect();
 		const menu = document.createElement("dt3d-upload-menu") as DT3DUploadMenu;
-		menu.x = Math.max(8, Math.min(
-			(anchor?.left ?? contentRect.left + 8) - contentRect.left,
-			contentRect.width - 208,
-		));
-		menu.y = Math.max(8, Math.min(
-			(anchor?.top ?? contentRect.top + 8) - contentRect.top,
-			contentRect.height - 8,
-		));
+		menu.x = Math.max(
+			8,
+			Math.min(
+				(anchor?.left ?? contentRect.left + 8) - contentRect.left,
+				contentRect.width - 208,
+			),
+		);
+		menu.y = Math.max(
+			8,
+			Math.min(
+				(anchor?.top ?? contentRect.top + 8) - contentRect.top,
+				contentRect.height - 8,
+			),
+		);
 		menu.addEventListener("upload-model", (event: Event) => {
-			const {directory} = (event as CustomEvent<{ directory: boolean }>).detail;
+			const {directory} = (event as CustomEvent<{ directory: boolean }>)
+				.detail;
 			this.selectFiles(directory);
 		});
 		menu.addEventListener("modal-close", () => {
@@ -1751,6 +1770,70 @@ export class DT3DCard extends LitElement {
 		}
 	}
 
+	private async exportSpace(spaceId: string): Promise<void> {
+		if (!this.spaceSync || !spaceId || this.isVisualizationOnly()) {
+			return;
+		}
+
+		if (this.spaceSelector) {
+			this.spaceSelector.loading = true;
+		}
+
+		try {
+			const blob = await this.spaceSync.exportSpace(spaceId);
+			const spaceName =
+				this.spaceSync?.availableSpaces.find((space) => space.id === spaceId)
+					?.name ?? "space";
+			const fileName =
+				spaceName
+					.trim()
+					.replace(/[^\p{L}\p{N}_-]+/gu, "-")
+					.replace(/^-+|-+$/g, "") || "space";
+			const downloadUrl = URL.createObjectURL(blob);
+			const link = document.createElement("a");
+			link.href = downloadUrl;
+			link.download = `${fileName}.dt3d`;
+			document.body.appendChild(link);
+			link.click();
+			link.remove();
+			window.setTimeout(() => URL.revokeObjectURL(downloadUrl), 1000);
+		} catch (error) {
+			console.error("DT3D: Failed to export space", error);
+		} finally {
+			if (this.spaceSelector) {
+				this.spaceSelector.loading = false;
+			}
+		}
+	}
+
+	private async importSpace(file: File): Promise<void> {
+		if (!this.spaceSync || this.isVisualizationOnly()) {
+			return;
+		}
+
+		if (this.spaceSelector) {
+			this.spaceSelector.loading = true;
+		}
+
+		try {
+			this.attachTransform(null);
+			this.lastSelectedObject = null;
+			const space = await this.spaceSync.importSpace(file);
+			this.applySpaceConfigFromApi(space);
+			this.applyDefaultViewportOnLoad();
+			if (this.spaceSelector) {
+				this.spaceSelector.spaces = this.spaceSync.availableSpaces;
+				this.spaceSelector.selectedSpaceId = space.id;
+			}
+		} catch (error) {
+			console.error("DT3D: Failed to import space", error);
+		} finally {
+			if (this.spaceSelector) {
+				this.spaceSelector.loading = false;
+			}
+		}
+	}
+
 	private requestDeleteSpace(spaceId: string): void {
 		if (!spaceId || this.isVisualizationOnly()) {
 			return;
@@ -1822,7 +1905,11 @@ export class DT3DCard extends LitElement {
 		let defaultViewport: ViewportObject | null = null;
 
 		this.space?.traverse((child) => {
-			if (!defaultViewport && child instanceof ViewportObject && child.defaultViewport) {
+			if (
+				!defaultViewport &&
+				child instanceof ViewportObject &&
+				child.defaultViewport
+			) {
 				defaultViewport = child;
 			}
 		});
@@ -1876,7 +1963,8 @@ export class DT3DCard extends LitElement {
 
 		const configuredViewportId = this.getDefaultViewportId();
 		const initialViewport = configuredViewportId
-			? this.getViewportById(configuredViewportId) ?? this.getDefaultViewport()
+			? (this.getViewportById(configuredViewportId) ??
+				this.getDefaultViewport())
 			: this.getDefaultViewport();
 		if (initialViewport) {
 			this.activateViewport(initialViewport);
@@ -1914,8 +2002,7 @@ export class DT3DCard extends LitElement {
 		} catch (error) {
 			console.error("DT3D: Failed to change active space", error);
 			if (this.spaceSelector) {
-				this.spaceSelector.selectedSpaceId =
-					this.spaceSync.activeSpaceId ?? "";
+				this.spaceSelector.selectedSpaceId = this.spaceSync.activeSpaceId ?? "";
 			}
 		} finally {
 			if (this.spaceSelector) {
@@ -2024,11 +2111,12 @@ export class DT3DCard extends LitElement {
 		} else if (type === "entity") {
 			this.addEntityModal();
 		} else if (type === "static-light" || type.startsWith("light-")) {
-			const sourceType = type === "light-spot"
-				? "spot"
-				: type === "light-rect-area"
-					? "rect-area"
-					: "point";
+			const sourceType =
+				type === "light-spot"
+					? "spot"
+					: type === "light-rect-area"
+						? "rect-area"
+						: "point";
 			const light = new StaticLightObject({
 				type: sourceType,
 				intensity: sourceType === "rect-area" ? 5 : 1,
@@ -2042,11 +2130,12 @@ export class DT3DCard extends LitElement {
 					lightCount += 1;
 				}
 			});
-			const nameKey = sourceType === "spot"
-				? "spotLight"
-				: sourceType === "rect-area"
-					? "rectAreaLight"
-					: "pointLight";
+			const nameKey =
+				sourceType === "spot"
+					? "spotLight"
+					: sourceType === "rect-area"
+						? "rectAreaLight"
+						: "pointLight";
 			light.name = `${localManager.get(nameKey)} ${lightCount + 1}`;
 			this.addToScene(light);
 		} else if (type === "group") {
@@ -2163,11 +2252,14 @@ export class DT3DCard extends LitElement {
 			"sync-progress-component",
 		) as SyncProgressComponent;
 		this.syncProgressComponent.sidebarCollapsed = this.sidebar.collapsed;
-		this.sidebar.addEventListener("sidebar-collapse-changed", (event: Event) => {
-			this.syncProgressComponent!.sidebarCollapsed = (
-				event as CustomEvent<{collapsed: boolean}>
-			).detail.collapsed;
-		});
+		this.sidebar.addEventListener(
+			"sidebar-collapse-changed",
+			(event: Event) => {
+				this.syncProgressComponent!.sidebarCollapsed = (
+					event as CustomEvent<{ collapsed: boolean }>
+				).detail.collapsed;
+			},
+		);
 		this.content.appendChild(this.syncProgressComponent);
 
 		const cssElem = document.createElement("div");
@@ -2311,14 +2403,34 @@ export class DT3DCard extends LitElement {
 		this.spaceSelector.addEventListener("space-create-request", () => {
 			this.openCreateSpaceModal();
 		});
-		this.spaceSelector.addEventListener("space-clone-request", (event: Event) => {
-			const {spaceId} = (event as CustomEvent<{spaceId: string}>).detail;
-			this.openCloneSpaceModal(spaceId);
-		});
-		this.spaceSelector.addEventListener("space-delete-request", (event: Event) => {
-			const {spaceId} = (event as CustomEvent<{spaceId: string}>).detail;
-			this.requestDeleteSpace(spaceId);
-		});
+		this.spaceSelector.addEventListener(
+			"space-clone-request",
+			(event: Event) => {
+				const {spaceId} = (event as CustomEvent<{ spaceId: string }>).detail;
+				this.openCloneSpaceModal(spaceId);
+			},
+		);
+		this.spaceSelector.addEventListener(
+			"space-export-request",
+			(event: Event) => {
+				const {spaceId} = (event as CustomEvent<{ spaceId: string }>).detail;
+				void this.exportSpace(spaceId);
+			},
+		);
+		this.spaceSelector.addEventListener(
+			"space-import-request",
+			(event: Event) => {
+				const {file} = (event as CustomEvent<{ file: File }>).detail;
+				void this.importSpace(file);
+			},
+		);
+		this.spaceSelector.addEventListener(
+			"space-delete-request",
+			(event: Event) => {
+				const {spaceId} = (event as CustomEvent<{ spaceId: string }>).detail;
+				this.requestDeleteSpace(spaceId);
+			},
+		);
 		this.content.appendChild(this.spaceSelector);
 
 		this.applyVisualizationMode();

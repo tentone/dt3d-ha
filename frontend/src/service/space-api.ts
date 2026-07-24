@@ -65,7 +65,9 @@ export const SERVICE_KEY_HEADER = "X-DT3D-Service-Key";
  * @returns The full base URL for the backend API (e.g., "http://localhost:8080/api")
  */
 export function buildBackendApiUrl(address: string, port: number): string {
-	const normalizedAddress = /^https?:\/\//i.test(address) ? address : `http://${address}`;
+	const normalizedAddress = /^https?:\/\//i.test(address)
+		? address
+		: `http://${address}`;
 	return `${normalizedAddress.replace(/\/+$/, "")}:${port}/api`;
 }
 
@@ -95,6 +97,13 @@ export class SpaceApi {
 	 */
 	public listSpaces(): Promise<SpaceResponse[]> {
 		return this.fetchJson<SpaceResponse[]>("/spaces");
+	}
+
+	/**
+	 * Get one space, including its current configuration.
+	 */
+	public getSpace(spaceId: string): Promise<SpaceResponse> {
+		return this.fetchJson<SpaceResponse>(`/spaces/${spaceId}`);
 	}
 
 	/**
@@ -147,7 +156,9 @@ export class SpaceApi {
 	 * Fetch all object instances for a space.
 	 */
 	public listObjects(spaceId: string): Promise<ObjectInstanceResponse[]> {
-		return this.fetchJson<ObjectInstanceResponse[]>(`/spaces/${spaceId}/objects`);
+		return this.fetchJson<ObjectInstanceResponse[]>(
+			`/spaces/${spaceId}/objects`,
+		);
 	}
 
 	/**
@@ -157,10 +168,13 @@ export class SpaceApi {
 		spaceId: string,
 		payload: ObjectInstancePayload,
 	): Promise<ObjectInstanceResponse> {
-		return this.fetchJson<ObjectInstanceResponse>(`/spaces/${spaceId}/objects`, {
-			method: "POST",
-			body: JSON.stringify(payload),
-		});
+		return this.fetchJson<ObjectInstanceResponse>(
+			`/spaces/${spaceId}/objects`,
+			{
+				method: "POST",
+				body: JSON.stringify(payload),
+			},
+		);
 	}
 
 	/**
@@ -196,19 +210,25 @@ export class SpaceApi {
 		spaceId: string,
 		geometry: ArrayBuffer,
 	): Promise<GeometryFileResponse> {
-		return this.fetchJson<GeometryFileResponse>(`/spaces/${spaceId}/geometries`, {
-			body: geometry,
-			headers: {
-				"Content-Type": "application/octet-stream",
+		return this.fetchJson<GeometryFileResponse>(
+			`/spaces/${spaceId}/geometries`,
+			{
+				body: geometry,
+				headers: {
+					"Content-Type": "application/octet-stream",
+				},
+				method: "POST",
 			},
-			method: "POST",
-		});
+		);
 	}
 
 	/**
 	 * Fetch binary geometry data from the backend.
 	 */
-	public getGeometry(spaceId: string, geometryId: string): Promise<ArrayBuffer> {
+	public getGeometry(
+		spaceId: string,
+		geometryId: string,
+	): Promise<ArrayBuffer> {
 		return this.fetchArrayBuffer(`/spaces/${spaceId}/geometries/${geometryId}`);
 	}
 
@@ -241,7 +261,10 @@ export class SpaceApi {
 		return response.json() as Promise<T>;
 	}
 
-	private async fetchArrayBuffer(path: string, options?: RequestInit): Promise<ArrayBuffer> {
+	private async fetchArrayBuffer(
+		path: string,
+		options?: RequestInit,
+	): Promise<ArrayBuffer> {
 		const response = await fetch(`${this.baseUrl}${path}`, {
 			...options,
 			headers: {

@@ -35,6 +35,7 @@ import type {
 	SpaceApi,
 	SpaceResponse,
 } from "./space-api.js";
+import {exportSpaceArchive, importSpaceArchive} from "./space-archive.js";
 
 type SpaceSyncDependencies = {
 	apiClient: SpaceApi;
@@ -340,6 +341,26 @@ export class SpaceSync {
 		name: string,
 	): Promise<SpaceResponse> {
 		const space = await this.apiClient.cloneSpace(spaceId, name);
+		this.availableSpaces = [...this.availableSpaces, space];
+		return this.loadSpaceFromApi(space.id);
+	}
+
+	/**
+	 * Build a portable archive for a space entirely in the browser.
+	 */
+	public exportSpace(spaceId: string): Promise<Blob> {
+		return this.trackProgress("Export space", "DT3D archive", () =>
+			exportSpaceArchive(this.apiClient, spaceId),
+		);
+	}
+
+	/**
+	 * Import and activate a space from a portable archive.
+	 */
+	public async importSpace(file: File): Promise<SpaceResponse> {
+		const space = await this.trackProgress("Import space", file.name, () =>
+			importSpaceArchive(this.apiClient, file),
+		);
 		this.availableSpaces = [...this.availableSpaces, space];
 		return this.loadSpaceFromApi(space.id);
 	}

@@ -97,6 +97,9 @@ use_self_signed_certificate: false
  - Generated or normalized TLS files live under `/data`.
  - Imported binary geometry lives under `/data/dt3d-geometries`.
  - Certificates mounted from Home Assistant are available under `/ssl`.
+ - The frontend can download and upload spaces as portable `.dt3d` ZIP
+   archives. Each archive contains a versioned `space.json` database snapshot
+   and the space's persisted assets under `assets/`.
 
 ## Repository structure
 

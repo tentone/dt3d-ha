@@ -154,6 +154,8 @@
 	"createSpaceDescription": "Create a separate 3D scene and make it active.",
 	"cloneSpace": "Clone space",
 	"cloneSpaceDescription": "Create a new copy of this space and all of its objects.",
+	"exportSpace": "Download space (.dt3d)",
+	"importSpace": "Upload space (.dt3d)",
 	"spaceName": "Name",
 	"spaceDescription": "Description",
 	"deleteSpace": "Delete space",
