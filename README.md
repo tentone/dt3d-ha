@@ -7,7 +7,8 @@
  - Features a integrated 3D editor to create and modify the digital twin, add 3D elements, and link them with HA entities.
  - The project is split into a HA frontend card and a Home Assistant app/add-on that stores 3D scene data.
  - The system allows to create multiple spaces (environments) in the same deployment.
- - For end-user instructions, see the [setup and usage manual](MANUAL.md).
+ - For installation and connection instructions, see the [setup guide](SETUP_GUIDE.md).
+ - For end-user instructions, see the [user manual](MANUAL.md).
 
 <img src="readme/0_screenshot.png" width="400">
 <img src="readme/3_add_objects.png" width="400">
@@ -78,7 +79,7 @@ general:
 
 ### Configuration
  - The addon configuration can be set in the Home Assistant GUI or using YAML.
- - For HTTPS and certificates, follow the [network and TLS section of the manual](MANUAL.md#network-and-tls-setup).
+ - For HTTPS and certificates, follow the [network and TLS section of the setup guide](SETUP_GUIDE.md#network-and-tls-setup).
  - Here is a sample configuration for the backend add-on.
 ```yaml
 port: 8080
@@ -119,12 +120,14 @@ use_self_signed_certificate: false
 │   │   └── locale/         UI strings
 │   └── vite.config.js      Single-module production build
 ├── sample/                 Sample 3D assets
-├── MANUAL.md               Installation and user documentation
+├── MANUAL.md               End-user documentation
+├── SETUP_GUIDE.md          Installation and connection documentation
 └── README.md               Architecture and development documentation
 ```
 
 ## Documentation
 
-- [Setup and usage manual](MANUAL.md)
+- [Setup guide](SETUP_GUIDE.md)
+- [User manual](MANUAL.md)
 - [Home Assistant custom app repositories](https://developers.home-assistant.io/docs/apps/repository/)
 - [Home Assistant dashboard views](https://www.home-assistant.io/dashboards/views/)

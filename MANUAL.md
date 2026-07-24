@@ -1,138 +1,23 @@
-# DT3D setup and usage manual
+# DT3D user manual
 
-- This manual covers installation, networking, configuration, editing, and dashboard usage for Digital Twin 3D for Home Assistant (DT3D). The system has two parts:
-- For architecture, source layout, and development instructions, see the [project README](README.md).
-  - `addon/`: the backend app/add-on. It stores spaces and objects in SQLite and
-    exposes them over an authenticated HTTP(S) API.
-  - `frontend/`: the `custom:dt3d-card` dashboard card. It contains both the
-    editor and the read-only visualization mode.
+This manual explains how to create, edit, and view a Digital Twin 3D for Home
+Assistant (DT3D). It covers spaces, 3D objects, Home Assistant entities,
+floor-plan tools, measurements, grid configuration, viewports, visualization
+cards, and performance.
 
-> Home Assistant apps/add-ons are installed from the **Apps/Add-ons store**.
-> HACS is used for dashboard frontend resources.
+Complete the [setup guide](SETUP_GUIDE.md) before using this manual. For system
+architecture, source layout, and development instructions, see the
+[project README](README.md).
 
-## Requirements
+## Open the editor
 
-- Home Assistant OS or Home Assistant Supervised for the backend app/add-on.
-- A hostname that every browser used for Home Assistant can resolve.
-- A certificate valid for that hostname if Home Assistant is served over HTTPS.
-- Node.js and npm only when building the frontend from source.
+Open the Home Assistant dashboard view that contains the DT3D editing card. A
+fullscreen **Panel (one card)** view gives the editor the most working space.
+The [setup guide](SETUP_GUIDE.md#create-the-fullscreen-editor) explains how to
+create and connect this card.
 
-## Installation
-
-### 1. Install DT3D add-on
-
-Use these steps when DT3D is published with Home Assistant app repository metadata:
-
-1. Open **Settings → Apps** (called **Add-ons** in older Home Assistant versions), then open the **App store**.
-2. Open the three-dot menu, choose **Repositories**, and add:
-
-   ```text
-   https://github.com/tentone/dt3d-ha
-   ```
-
-3. Close the repository dialog, refresh the store, and select **DT3D**.
-4. Select **Install**.
-5. On the **Configuration** tab, set a long, random `service_key`.
-6. Configure TLS as described in [Network and TLS setup](#network-and-tls-setup),
-   then start the app and enable **Start on boot**.
-
-### 2. Install the frontend
-
-Once DT3D publishes a built `dt3d-card.js` as a HACS Dashboard repository:
-
-1. Open **HACS → three-dot menu → Custom repositories**.
-2. Add `https://github.com/tentone/dt3d-ha` with category **Dashboard**.
-3. Open **Digital Twin 3D**, select **Download**, and restart or hard-refresh the browser when prompted.
-4. If HACS does not register the resource automatically, add the downloaded JS file under **Settings → Dashboards → three-dot menu → Resources** as a JavaScript module. HACS dashboard files are normally served below `/hacsfiles/`.
-
-## Setup
-
-### Addon
-
-#### Configuration Reference
-
-- Below is a sample configuration for the DT3D backend add-on.
-  .
-
-  ```yaml
-  port: 8080 # Exposed TCP port for the backend API
-  service_key: "<secret>" # Must match the card configuration
-  ssl_certificate: /ssl/fullchain.pem # Path to the certificate file, or empty for no TLS
-  ssl_key: /ssl/privkey.pem # Path to the private key file, or empty for no TLS
-  use_self_signed_certificate: false # Set to true if no trusted certificate is available
-  ```
-
-- The certificate and key options also accept PEM content directly:
-
-```yaml
-ssl_certificate: |
-  -----BEGIN CERTIFICATE-----
-  ...
-  -----END CERTIFICATE-----
-ssl_key: |
-  -----BEGIN PRIVATE KEY-----
-  ...
-  -----END PRIVATE KEY-----
-use_self_signed_certificate: false
-```
-
-#### Network and TLS setup
-
-- The card runs in the user's browser and connects directly to the backend.
-- The backend therefore must be reachable from every phone, tablet, and computer that opens the dashboard.
-- A Home Assistant page loaded over HTTPS cannot call an HTTP backend because browsers block mixed content.
-  - Put the certificate and private key already used for Home Assistant in its `/ssl` directory.
-- If no trusted certificate is available, set `use_self_signed_certificate: true`.
-- DT3D generates and reuses a certificate in `/data`, but every client must trust it.
-- Recommended layout: one hostname and one trusted certificate.
-  - Using the same hostname and certificate keeps DNS and certificate trust consistent.
-
-```text
-Home Assistant UI: https://home.example.com:8123
-DT3D backend:      https://home.example.com:8080
-```
-
-- The ports make these different browser origins, but the backend includes CORS support.
-- Make sure TCP port `8080` (or the configured port) is reachable from dashboard clients.
-
-## Create the fullscreen editor
-
-Keep one editing card and create separate read-only cards for daily dashboard
-use.
-
-1. Edit a dashboard and create a new view.
-2. Set the view layout/type to **Panel (one card)**. Panel view stretches its
-   only card to the available view area.
-3. Add a **Manual** card with the configuration below. Leave
-   `visualization_only` set to `false` for the editor.
-
-```yaml
-type: custom:dt3d-card
-address: https://home.example.com
-port: 8080
-service_key: replace-with-the-backend-service-key
-default_space: ""
-default_viewport: ""
-navigation_controls: orbit
-orientation_cube: true
-visualization_only: false
-entity_click_action: nothing
-entity_double_click_action: open
-general:
-  rendering:
-    antialiasing: false
-    resolution: 1
-    shadowMap:
-      enabled: false
-      type: pcf
-      resolution: 2048
-  developmentMode:
-    enabled: false
-```
-
-The visual card editor exposes the same settings. After the connection fields
-are valid, its **Default space** and **Viewport** lists are loaded from the
-backend.
+Keep one editing card for maintaining the digital twin and create separate
+read-only visualization cards for normal dashboard use.
 
 <img src="readme/1_editor_panel.png" width="500">
 
@@ -145,12 +30,71 @@ backend.
 - Select an object in the object tree, then use **Move**, **Rotate**, or
   **Scale** in the left toolbar. The inspector can edit its name, lock state,
   transform, geometry, material, and type-specific properties.
-- Enable grid snapping with the magnet button. The adjacent grid controls show
-  the grid and configure its size and snap spacing.
 - Drag tree entries to reorder them or make them children of a group. Grouping
   is useful for floors, rooms, furniture, and entity layers.
 - Right-click an object in the tree to clone or delete it. Locked objects cannot
   be transformed or dragged.
+
+### Configure the grid
+
+The **Controls** section of the left toolbar contains three grid controls:
+
+- **Snap transforms to grid** (magnet) enables snapping. Translation uses the
+  configured snap size, rotation snaps to 15-degree increments, and scale snaps
+  to increments of 0.1. Wall points also use the configured snap size when this
+  option is active.
+- **Toggle grid** shows or hides the editor grid. Grid visibility does not
+  enable or disable snapping.
+- **Configure grid** opens the grid configuration dialog.
+
+The grid configuration dialog provides:
+
+| Setting     | Default | Description                                                                 |
+| ----------- | ------- | --------------------------------------------------------------------------- |
+| Grid size   | `200`   | Base visible grid extent in meters. The grid expands as the camera rises.   |
+| Snap size   | `0.5`   | Translation and wall-placement snap interval in meters.                    |
+
+Choose **Save** to apply the values. Grid configuration is stored in the
+current browser, not in the active space, so other devices can use different
+editor grid settings.
+
+> **Screenshot placeholder — grid controls and grid configuration dialog**
+>
+> _Replace this block with a screenshot._
+
+### Use the measurement tools
+
+The **Measure** section of the left toolbar provides temporary distance and
+angle measurements. Measurement points must be placed on a visible object
+surface.
+
+#### Measure a distance
+
+1. Select **Measure distance**.
+2. Double-click the surface at the start point.
+3. Double-click the surface at the end point.
+
+DT3D draws a line between the two points and shows the distance in meters,
+rounded to two decimal places.
+
+#### Measure an angle
+
+1. Select **Measure angle**.
+2. Double-click the first endpoint.
+3. Double-click the angle vertex.
+4. Double-click the second endpoint.
+
+DT3D draws two lines from the middle point and shows the angle in degrees,
+rounded to two decimal places.
+
+Select **Clear measurements** to leave measurement mode and remove the current
+measurement. Measurements are editor helpers only: they are not saved with the
+space and are replaced when a new measurement is started. Selecting a wall tool
+also exits measurement mode.
+
+> **Screenshot placeholder — distance and angle measurement tools**
+>
+> _Replace this block with a screenshot._
 
 ### Manage spaces
 
@@ -328,7 +272,7 @@ per-card. Tone mapping, post-processing, and daylight are per-space.
 
 <img src="readme/6_card_configuration.png" width="500">
 
-<img src="readme/7_dashboard.png" width="500">+
+<img src="readme/7_dashboard.png" width="500">
 
 ## Performance optimization
 
@@ -366,19 +310,18 @@ Then optimize in this order:
 
 ## Troubleshooting
 
-- **Card not found:** verify the resource URL, resource type **JavaScript
-  module**, and hard-refresh the browser.
-- **Connection failed:** confirm the hostname is reachable from the browser,
-  port `8080` is open, and the backend is running.
-- **401 Unauthorized:** make the card and backend service keys identical. Avoid
-  accidental leading/trailing spaces.
-- **Mixed-content error:** use HTTPS for DT3D whenever the Home Assistant page
-  uses HTTPS.
-- **Certificate warning:** the certificate must be trusted and valid for the
-  exact hostname in `address`; a certificate for a DNS name normally does not
-  validate an IP address.
-- **Spaces absent in the visual editor:** finish the address, port, and service
-  key fields, wait for the list to reload, and check the browser console/network
-  panel for TLS, CORS, or authorization errors.
+- **An object cannot be moved or reordered:** select it and disable its locked
+  state in the inspector.
+- **A measurement point is not added:** double-click a visible object surface.
+  Clicking empty scene space does not create a measurement point.
+- **Grid settings differ on another device:** grid configuration is stored
+  locally in each browser and is not part of the space.
 - **Imported model has missing materials/textures:** use a self-contained `.glb`
   or apply a texture through the object inspector.
+- **The scene is slow on a phone or wall panel:** start with the profile in
+  [Performance optimization](#performance-optimization), then reduce model and
+  texture complexity.
+
+For card loading, connection, authorization, mixed-content, certificate, or
+space-list problems, see
+[Setup troubleshooting](SETUP_GUIDE.md#setup-troubleshooting).
