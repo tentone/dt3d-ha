@@ -113,7 +113,7 @@ Can be used to organize different sections of a home, different floors, or diffe
 Space creation, cloning, import/export, switching, and deletion are hidden when
 `visualization_only: true`.
 
-<img src="readme/space_options.png" width="500">
+<img src="readme/space_options.png" width="300">
 
 ### Add 3D elements
 
@@ -276,6 +276,13 @@ per-card. Tone mapping, post-processing, and daylight are per-space.
 <img src="readme/6_card_configuration.png" width="500">
 
 <img src="readme/7_dashboard.png" width="500">
+
+## Data synchronization
+ - While the system is loading or storing data in the server, a progress indicator is shown in the bottom right corner.
+ - If home assistant is closed before the data is fully synchronized, the changes made can be lost.
+
+<img src="readme/synchronization_indicator.png" width="300">
+
 
 ## Performance optimization
 
