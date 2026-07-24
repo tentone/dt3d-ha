@@ -123,6 +123,8 @@ const TREE_COLLAPSED_STORAGE_KEY = "object-tree-collapsed";
 const TREE_SPLIT_STORAGE_KEY = "object-tree-split";
 const DEFAULT_TREE_SPLIT = 0.55;
 const MIN_PANEL_SECTION_HEIGHT = 80;
+const MOBILE_MEDIA_QUERY = "(max-width: 768px)";
+const MOBILE_TREE_WIDTH = "95%";
 
 @customElement("dt3d-tree")
 export class DT3DTree extends LitElement {
@@ -194,6 +196,22 @@ export class DT3DTree extends LitElement {
 	private width = LocalStorage.read(TREE_WIDTH_STORAGE_KEY, 220) ?? 220;
 
 	private resizeInitialSize = 0;
+	private mobileMediaQuery: MediaQueryList | null = null;
+
+	private handleMobileMediaChange = (): void => {
+		if (!this.collapsed) {
+			this.setExpandedWidth();
+		}
+	};
+
+	/**
+	 * Apply the stored desktop width or the mobile-friendly viewport width.
+	 */
+	private setExpandedWidth(): void {
+		this.style.width = this.mobileMediaQuery?.matches
+			? MOBILE_TREE_WIDTH
+			: `${this.width}px`;
+	}
 
 	/**
 	 * Tree/inspector split resizing state.
@@ -221,7 +239,11 @@ export class DT3DTree extends LitElement {
 	 */
 	private toggleCollapse(): void {
 		this.collapsed = !this.collapsed;
-		this.style.width = this.collapsed ? "0px" : this.width + "px";
+		if (this.collapsed) {
+			this.style.width = "0px";
+		} else {
+			this.setExpandedWidth();
+		}
 		LocalStorage.write(TREE_COLLAPSED_STORAGE_KEY, this.collapsed);
 
 		if (this.collapsed) {
@@ -364,7 +386,17 @@ export class DT3DTree extends LitElement {
 	public connectedCallback(): void {
 		super.connectedCallback();
 
-		this.style.width = this.collapsed ? "0px" : this.width + "px";
+		this.mobileMediaQuery = window.matchMedia(MOBILE_MEDIA_QUERY);
+		this.mobileMediaQuery.addEventListener(
+			"change",
+			this.handleMobileMediaChange,
+		);
+
+		if (this.collapsed) {
+			this.style.width = "0px";
+		} else {
+			this.setExpandedWidth();
+		}
 		this.style.setProperty(
 			"--tree-section-height",
 			`${this.splitRatio * 100}%`,
@@ -374,6 +406,11 @@ export class DT3DTree extends LitElement {
 	public disconnectedCallback(): void {
 		super.disconnectedCallback();
 
+		this.mobileMediaQuery?.removeEventListener(
+			"change",
+			this.handleMobileMediaChange,
+		);
+		this.mobileMediaQuery = null;
 		this.handleResizeEnd();
 		this.handleSplitResizeEnd();
 	}
