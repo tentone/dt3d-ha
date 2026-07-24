@@ -2,6 +2,7 @@ export type SpaceResponse = {
 	id: string;
 	name: string;
 	description: string;
+	is_default: boolean;
 	config: Record<string, any> | null;
 	created_at: number;
 	updated_at: number;
@@ -11,6 +12,7 @@ export type SpaceResponse = {
 export type SpacePayload = {
 	name: string;
 	description: string;
+	is_default: boolean;
 	config?: Record<string, any> | null;
 };
 
@@ -113,10 +115,16 @@ export class SpaceApi {
 		name: string,
 		description: string,
 		config: Record<string, any> | null = null,
+		isDefault = false,
 	): Promise<SpaceResponse> {
 		return this.fetchJson<SpaceResponse>("/spaces", {
 			method: "POST",
-			body: JSON.stringify({name, description, config}),
+			body: JSON.stringify({
+				name,
+				description,
+				is_default: isDefault,
+				config,
+			}),
 		});
 	}
 

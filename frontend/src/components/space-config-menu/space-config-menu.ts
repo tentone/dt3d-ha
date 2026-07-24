@@ -12,12 +12,28 @@ import type {
 } from "../dynamic-form/dynamic-form.js";
 import componentStyles from "./space-config-menu.css?inline";
 
+export type SpaceConfigUpdateDetail = {
+	config: SpaceConfiguration;
+	name: string;
+	description: string;
+	isDefault: boolean;
+};
+
 @customElement("dt3d-space-config-menu")
 export class DT3DSpaceConfigMenu extends LitElement {
 	static styles = unsafeCSS(componentStyles);
 
 	@property({attribute: false})
 	public config: SpaceConfiguration = normalizeSpaceConfiguration();
+
+	@property({type: String})
+	public spaceName = "";
+
+	@property({type: String})
+	public spaceDescription = "";
+
+	@property({type: Boolean})
+	public isDefault = false;
 
 	private postProcessingNumber(
 		label: string,
@@ -373,6 +389,36 @@ export class DT3DSpaceConfigMenu extends LitElement {
 
 	private fields: DynamicFormField[] = [
 		{
+			label: localManager.get("spaceDetails"),
+			attribute: "space-details",
+			type: "sub-form",
+			enabled: true,
+			fields: [
+				{
+					label: localManager.get("spaceName"),
+					attribute: "name",
+					type: "string",
+					editable: true,
+					enabled: true,
+				},
+				{
+					label: localManager.get("spaceDescription"),
+					attribute: "description",
+					type: "string",
+					editable: true,
+					enabled: true,
+				},
+				{
+					label: localManager.get("defaultSpace"),
+					attribute: "isDefault",
+					type: "boolean",
+					tooltip: localManager.get("spaceDefaultDescription"),
+					editable: true,
+					enabled: true,
+				},
+			],
+		},
+		{
 			label: localManager.get("appearance"),
 			type: "sub-form",
 			enabled: true,
@@ -535,21 +581,38 @@ export class DT3DSpaceConfigMenu extends LitElement {
 	}
 
 	private handleFieldChange(event: CustomEvent<DynamicFormChangeDetail>) {
+		const {attribute, value} = event.detail;
+		if (attribute === "name") {
+			this.spaceName = String(value);
+			this.dispatchUpdate();
+			return;
+		}
+		if (attribute === "description") {
+			this.spaceDescription = String(value);
+			this.dispatchUpdate();
+			return;
+		}
+		if (attribute === "isDefault") {
+			this.isDefault = Boolean(value);
+			this.dispatchUpdate();
+			return;
+		}
+
 		const nextConfig = normalizeSpaceConfiguration(this.config);
 		this.setNestedAttribute(
 			nextConfig,
-			event.detail.attribute,
-			event.detail.value,
+			attribute,
+			value,
 		);
 
-		if (event.detail.value === true) {
+		if (value === true) {
 			if (
-				event.detail.attribute ===
+				attribute ===
 				"general.rendering.postProcessing.gtao.enabled"
 			) {
 				nextConfig.general.rendering.postProcessing.ssao.enabled = false;
 			} else if (
-				event.detail.attribute ===
+				attribute ===
 				"general.rendering.postProcessing.ssao.enabled"
 			) {
 				nextConfig.general.rendering.postProcessing.gtao.enabled = false;
@@ -557,10 +620,18 @@ export class DT3DSpaceConfigMenu extends LitElement {
 		}
 
 		this.config = normalizeSpaceConfiguration(nextConfig);
+		this.dispatchUpdate();
+	}
 
+	private dispatchUpdate(): void {
 		this.dispatchEvent(
-			new CustomEvent("space-config-updated", {
-				detail: {config: this.config},
+			new CustomEvent<SpaceConfigUpdateDetail>("space-config-updated", {
+				detail: {
+					config: this.config,
+					name: this.spaceName,
+					description: this.spaceDescription,
+					isDefault: this.isDefault,
+				},
 				bubbles: true,
 				composed: true,
 			}),
@@ -586,7 +657,12 @@ export class DT3DSpaceConfigMenu extends LitElement {
 					</header>
 					<dt3d-dynamic-form
 						.fields=${this.fields}
-						.data=${this.config}
+						.data=${{
+							...this.config,
+							name: this.spaceName,
+							description: this.spaceDescription,
+							isDefault: this.isDefault,
+						}}
 						@field-change=${(event: CustomEvent<DynamicFormChangeDetail>) =>
 							this.handleFieldChange(event)}
 					></dt3d-dynamic-form>

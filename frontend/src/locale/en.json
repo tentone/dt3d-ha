@@ -160,6 +160,8 @@
 	"importSpace": "Upload space (.dt3d)",
 	"spaceName": "Name",
 	"spaceDescription": "Description",
+	"spaceDetails": "Details",
+	"spaceDefaultDescription": "Open this space by default when the card does not specify another space. Selecting it clears the previous default.",
 	"deleteSpace": "Delete space",
 	"deleteSpaceTitle": "Delete space?",
 	"confirmDeleteSpace": "This permanently deletes the space and all objects inside it.",

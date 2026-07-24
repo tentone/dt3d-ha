@@ -29,6 +29,7 @@ type ArchivedSpace = {
 	id: string;
 	name: string;
 	description: string;
+	is_default?: boolean;
 	config: Record<string, any> | null;
 	created_at: number;
 	updated_at: number;
@@ -104,6 +105,7 @@ export async function exportSpaceArchive(
 			id: space.id,
 			name: space.name,
 			description: space.description,
+			is_default: space.is_default,
 			config: archivedConfig,
 			created_at: space.created_at,
 			updated_at: space.updated_at,
@@ -205,6 +207,7 @@ export async function importSpaceArchive(
 		return await apiClient.updateSpace(createdSpace.id, {
 			name: archive.space.name,
 			description: archive.space.description,
+			is_default: false,
 			config,
 		});
 	} catch (error) {

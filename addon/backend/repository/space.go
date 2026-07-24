@@ -18,7 +18,25 @@ func NewSpaceRepository(db *gorm.DB) *SpaceRepository {
 }
 
 func (r *SpaceRepository) Create(space *models.Space) error {
-	return r.db.Create(space).Error
+	return r.db.Transaction(func(tx *gorm.DB) error {
+		var count int64
+		if err := tx.Model(&models.Space{}).Count(&count).Error; err != nil {
+			return err
+		}
+
+		// The first space is the natural default. A later explicit default
+		// atomically replaces the previous one.
+		space.IsDefault = space.IsDefault || count == 0
+		if space.IsDefault {
+			if err := tx.Model(&models.Space{}).
+				Where("is_default = ?", true).
+				Update("is_default", false).Error; err != nil {
+				return err
+			}
+		}
+
+		return tx.Create(space).Error
+	})
 }
 
 func (r *SpaceRepository) FindAll() ([]models.Space, error) {
@@ -36,7 +54,17 @@ func (r *SpaceRepository) FindByID(id string) (*models.Space, error) {
 }
 
 func (r *SpaceRepository) Update(space *models.Space) error {
-	return r.db.Save(space).Error
+	return r.db.Transaction(func(tx *gorm.DB) error {
+		if space.IsDefault {
+			if err := tx.Model(&models.Space{}).
+				Where("id <> ? AND is_default = ?", space.ID, true).
+				Update("is_default", false).Error; err != nil {
+				return err
+			}
+		}
+
+		return tx.Save(space).Error
+	})
 }
 
 func (r *SpaceRepository) Clone(sourceID, name string) (*models.Space, error) {
@@ -51,6 +79,7 @@ func (r *SpaceRepository) Clone(sourceID, name string) (*models.Space, error) {
 		clone := models.Space{
 			Name:        name,
 			Description: source.Description,
+			IsDefault:   false,
 			Config:      append([]byte(nil), source.Config...),
 		}
 		if err := tx.Create(&clone).Error; err != nil {
@@ -138,6 +167,22 @@ func (r *SpaceRepository) Delete(space *models.Space) error {
 			return err
 		}
 
-		return tx.Delete(space).Error
+		if err := tx.Delete(space).Error; err != nil {
+			return err
+		}
+
+		if !space.IsDefault {
+			return nil
+		}
+
+		var next models.Space
+		if err := tx.Order("created_at ASC").First(&next).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return nil
+			}
+			return err
+		}
+
+		return tx.Model(&next).Update("is_default", true).Error
 	})
 }

@@ -268,6 +268,7 @@ export class SpaceSync {
 			let space = preferredSpaceId
 				? spaces.find((candidate) => candidate.id === preferredSpaceId)
 				: undefined;
+			space ??= spaces.find((candidate) => candidate.is_default);
 			space ??= spaces[0];
 
 			if (!space) {
@@ -371,9 +372,7 @@ export class SpaceSync {
 	 */
 	public async deleteSpace(spaceId: string): Promise<SpaceResponse | null> {
 		await this.apiClient.deleteSpace(spaceId);
-		this.availableSpaces = this.availableSpaces.filter(
-			(space) => space.id !== spaceId,
-		);
+		this.availableSpaces = await this.apiClient.listSpaces();
 
 		if (this.activeSpaceId !== spaceId) {
 			return this.activeSpace;
@@ -418,6 +417,11 @@ export class SpaceSync {
 
 	public async updateActiveSpaceConfig(
 		config: Record<string, any>,
+		metadata?: {
+			name: string;
+			description: string;
+			isDefault: boolean;
+		},
 	): Promise<SpaceResponse | null> {
 		if (!this.activeSpaceId || !this.activeSpace) {
 			return null;
@@ -426,16 +430,20 @@ export class SpaceSync {
 		const spaceId = this.activeSpaceId;
 		const activeSpace = this.activeSpace;
 		const updatedSpace = await this.apiClient.updateSpace(spaceId, {
-			name: activeSpace.name,
-			description: activeSpace.description,
+			name: metadata?.name ?? activeSpace.name,
+			description: metadata?.description ?? activeSpace.description,
+			is_default: metadata?.isDefault ?? activeSpace.is_default,
 			config,
 		});
 		if (this.activeSpaceId === spaceId) {
 			this.activeSpace = updatedSpace;
 		}
-		this.availableSpaces = this.availableSpaces.map((space) =>
-			space.id === updatedSpace.id ? updatedSpace : space,
-		);
+		this.availableSpaces = this.availableSpaces.map((space) => {
+			if (space.id === updatedSpace.id) {
+				return updatedSpace;
+			}
+			return updatedSpace.is_default ? {...space, is_default: false} : space;
+		});
 
 		return updatedSpace;
 	}

@@ -57,6 +57,7 @@ func (s *SpaceService) DeleteSpace(id string) error {
 type UpdateSpaceInput struct {
 	Name        string
 	Description string
+	IsDefault   *bool
 	Config      datatypes.JSON
 }
 
@@ -73,6 +74,9 @@ func (s *SpaceService) UpdateSpace(spaceID string, payload UpdateSpaceInput) (*m
 
 	space.Name = payload.Name
 	space.Description = payload.Description
+	if payload.IsDefault != nil {
+		space.IsDefault = *payload.IsDefault
+	}
 	space.Config = payload.Config
 
 	if err := s.spaces.Update(space); err != nil {

@@ -2,7 +2,7 @@
 	position: absolute;
 	top: 16px;
 	left: 50%;
-	max-width: min(440px, calc(100% - 160px));
+	width: min(500px, calc(100% - 160px));
 }
 
 .selector {
@@ -16,6 +16,8 @@
 	border: 1px solid var(--divider-color);
 	box-shadow: 0 4px 12px var(--shadow-color);
 	transform: translateX(-50%);
+	box-sizing: border-box;
+	width: 100%;
 }
 
 label {
@@ -24,6 +26,7 @@ label {
 }
 
 select {
+	flex: 1;
 	min-width: 0;
 	max-width: 260px;
 	padding: 5px 28px 5px 8px;

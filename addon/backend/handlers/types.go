@@ -12,12 +12,14 @@ import (
 type createSpaceRequest struct {
 	Name        string          `json:"name"`
 	Description string          `json:"description"`
+	IsDefault   bool            `json:"is_default"`
 	Config      json.RawMessage `json:"config"`
 }
 
 type updateSpaceRequest struct {
 	Name        string          `json:"name"`
 	Description string          `json:"description"`
+	IsDefault   *bool           `json:"is_default"`
 	Config      json.RawMessage `json:"config"`
 }
 
@@ -54,6 +56,7 @@ type spaceResponse struct {
 	ID              string                   `json:"id"`
 	Name            string                   `json:"name"`
 	Description     string                   `json:"description"`
+	IsDefault       bool                     `json:"is_default"`
 	Config          json.RawMessage          `json:"config"`
 	CreatedAt       int64                    `json:"created_at"`
 	UpdatedAt       int64                    `json:"updated_at"`
@@ -105,6 +108,7 @@ func toSpaceResponse(space models.Space) spaceResponse {
 		ID:              space.ID,
 		Name:            space.Name,
 		Description:     space.Description,
+		IsDefault:       space.IsDefault,
 		Config:          config,
 		CreatedAt:       space.CreatedAt,
 		UpdatedAt:       space.UpdatedAt,

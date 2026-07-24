@@ -97,6 +97,9 @@ Can be used to organize different sections of a home, different floors, or diffe
 
 1. Use the selector at the top of the editor to switch spaces.
 2. Select **Create space**, enter a name and optional description, and confirm.
+   Use **Space configuration** (cog icon) in the same bar to edit those details
+   later or make the active space the default. Selecting a new default clears
+   the previous default.
 3. To copy the active space, select **Clone space**, enter a name, and confirm.
    The new copy includes the space configuration, every object and its
    hierarchy, and uploaded geometry.
@@ -199,8 +202,10 @@ cube face to align the camera to the front, back, left, right, top, or bottom.
 
 ### Configure a space
 
-Open **Space configuration** (sun icon) in the left toolbar. These values are
-saved with the active space and therefore affect every card that displays it:
+Open **Space configuration** (cog icon) beside the space selector. The form also
+contains the space name, description, and default-space checkbox. Its appearance
+values are saved with the active space and therefore affect every card that
+displays it:
 
 | Section         | Options                                                                                                                                                     |
 | --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |

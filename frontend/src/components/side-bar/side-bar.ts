@@ -271,18 +271,6 @@ export class DT3DSidebar extends LitElement {
 	}
 
 	/**
-	 * Open the space-level scene configuration menu.
-	 */
-	private handleSpaceConfigOpen() {
-		this.dispatchEvent(
-			new CustomEvent("space-config-open", {
-				bubbles: true,
-				composed: true,
-			}),
-		);
-	}
-
-	/**
 	 * Create the tooltip element for each of the options.
 	 */
 	private createTooltips() {
@@ -387,16 +375,6 @@ export class DT3DSidebar extends LitElement {
 						aria-label=${localManager.get("configureGrid")}
 					>
 						<ha-icon icon="mdi:grid-large"></ha-icon>
-					</button>
-				</div>
-				<div class="sidebar-section">
-					<div class="sidebar-title">${localManager.get("space")}</div>
-					<button
-						@click=${() => this.handleSpaceConfigOpen()}
-						data-tooltip=${localManager.get("spaceConfiguration")}
-						aria-label=${localManager.get("spaceConfiguration")}
-					>
-						<ha-icon icon="mdi:white-balance-sunny"></ha-icon>
 					</button>
 				</div>
 				<div class="sidebar-section">

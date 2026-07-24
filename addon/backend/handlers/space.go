@@ -71,6 +71,7 @@ func (h *SpaceHandler) createSpace(c *gin.Context) {
 	space := models.Space{
 		Name:        req.Name,
 		Description: req.Description,
+		IsDefault:   req.IsDefault,
 		Config:      rawMessageToJSON(req.Config),
 	}
 	if err := h.spaces.CreateSpace(&space); err != nil {
@@ -105,6 +106,7 @@ func (h *SpaceHandler) updateSpace(c *gin.Context) {
 	space, err := h.spaces.UpdateSpace(spaceID, service.UpdateSpaceInput{
 		Name:        req.Name,
 		Description: req.Description,
+		IsDefault:   req.IsDefault,
 		Config:      rawMessageToJSON(req.Config),
 	})
 	if err != nil {

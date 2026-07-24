@@ -53,6 +53,20 @@ export class DT3DSpaceSelector extends LitElement {
 		);
 	}
 
+	private requestConfigure(): void {
+		if (!this.selectedSpaceId) {
+			return;
+		}
+
+		this.dispatchEvent(
+			new CustomEvent("space-config-request", {
+				detail: {spaceId: this.selectedSpaceId},
+				bubbles: true,
+				composed: true,
+			}),
+		);
+	}
+
 	private requestClone(): void {
 		if (!this.selectedSpaceId) {
 			return;
@@ -121,6 +135,15 @@ export class DT3DSpaceSelector extends LitElement {
 						(space) => html`<option value=${space.id}>${space.name}</option>`,
 					)}
 				</select>
+				<button
+					type="button"
+					?disabled=${this.loading || !this.selectedSpaceId}
+					@click=${this.requestConfigure}
+					title=${localManager.get("spaceConfiguration")}
+					aria-label=${localManager.get("spaceConfiguration")}
+				>
+					<ha-icon icon="mdi:cog-outline"></ha-icon>
+				</button>
 				<button
 					type="button"
 					?disabled=${this.loading}

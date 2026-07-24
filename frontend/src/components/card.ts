@@ -110,7 +110,10 @@ import type {
 	OrientationCubeDirection,
 } from "./orientation-cube/orientation-cube.js";
 import type {DT3DSidebar} from "./side-bar/side-bar.js";
-import type {DT3DSpaceConfigMenu} from "./space-config-menu/space-config-menu.js";
+import type {
+	DT3DSpaceConfigMenu,
+	SpaceConfigUpdateDetail,
+} from "./space-config-menu/space-config-menu.js";
 import type {DT3DSpaceSelector} from "./space-selector/space-selector.js";
 import type {SyncProgressComponent} from "./sync-progress-component/sync-progress-component.js";
 import type {DT3DUploadMenu} from "./upload-menu/upload-menu.js";
@@ -322,6 +325,9 @@ export class DT3DCard extends LitElement {
 	private spaceFormModal: DT3DFormModal | null = null;
 
 	private persistSpaceConfigTimer: number | null = null;
+
+	private pendingSpaceMetadata: Omit<SpaceConfigUpdateDetail, "config"> | null =
+		null;
 
 	static properties = {
 		hass: {attribute: false},
@@ -609,7 +615,12 @@ export class DT3DCard extends LitElement {
 		}
 	}
 
-	private schedulePersistSpaceConfiguration(): void {
+	private schedulePersistSpaceConfiguration(
+		metadata?: Omit<SpaceConfigUpdateDetail, "config">,
+	): void {
+		if (metadata) {
+			this.pendingSpaceMetadata = metadata;
+		}
 		if (this.persistSpaceConfigTimer !== null) {
 			window.clearTimeout(this.persistSpaceConfigTimer);
 		}
@@ -621,10 +632,28 @@ export class DT3DCard extends LitElement {
 	}
 
 	private async persistSpaceConfiguration(): Promise<void> {
+		const metadata = this.pendingSpaceMetadata;
+		if (metadata && !metadata.name.trim()) {
+			return;
+		}
+
 		try {
-			await this.spaceSync?.updateActiveSpaceConfig(
+			const updatedSpace = await this.spaceSync?.updateActiveSpaceConfig(
 				this.getSpaceConfiguration(),
+				metadata
+					? {
+						name: metadata.name.trim(),
+						description: metadata.description.trim(),
+						isDefault: metadata.isDefault,
+					}
+					: undefined,
 			);
+			if (updatedSpace && this.spaceSelector && this.spaceSync) {
+				this.spaceSelector.spaces = this.spaceSync.availableSpaces;
+			}
+			if (this.pendingSpaceMetadata === metadata) {
+				this.pendingSpaceMetadata = null;
+			}
 		} catch (error) {
 			console.warn("DT3D: Failed to persist space configuration", error);
 		}
@@ -1349,13 +1378,21 @@ export class DT3DCard extends LitElement {
 		const menu = document.createElement(
 			"dt3d-space-config-menu",
 		) as DT3DSpaceConfigMenu;
+		const activeSpace = this.spaceSync?.activeSpace;
+		if (!activeSpace) {
+			return;
+		}
 		menu.config = this.getSpaceConfiguration();
+		menu.spaceName = activeSpace.name;
+		menu.spaceDescription = activeSpace.description;
+		menu.isDefault = activeSpace.is_default;
 
 		menu.addEventListener("space-config-updated", (event: Event) => {
-			const {config} = (event as CustomEvent<{ config: SpaceConfiguration }>)
-				.detail;
+			const {config, ...metadata} = (
+				event as CustomEvent<SpaceConfigUpdateDetail>
+			).detail;
 			menu.config = this.applySpaceConfiguration(config);
-			this.schedulePersistSpaceConfiguration();
+			this.schedulePersistSpaceConfiguration(metadata);
 		});
 
 		menu.addEventListener("modal-close", () => {
@@ -1985,6 +2022,7 @@ export class DT3DCard extends LitElement {
 			window.clearTimeout(this.persistSpaceConfigTimer);
 			this.persistSpaceConfigTimer = null;
 		}
+		this.pendingSpaceMetadata = null;
 
 		if (this.spaceSelector) {
 			this.spaceSelector.loading = true;
@@ -2403,6 +2441,9 @@ export class DT3DCard extends LitElement {
 		this.spaceSelector.addEventListener("space-create-request", () => {
 			this.openCreateSpaceModal();
 		});
+		this.spaceSelector.addEventListener("space-config-request", () => {
+			this.openSpaceConfigMenu();
+		});
 		this.spaceSelector.addEventListener(
 			"space-clone-request",
 			(event: Event) => {
@@ -2501,14 +2542,6 @@ export class DT3DCard extends LitElement {
 			}
 
 			this.openGridConfigModal();
-		});
-
-		this.sidebar.addEventListener("space-config-open", () => {
-			if (this.isVisualizationOnly()) {
-				return;
-			}
-
-			this.openSpaceConfigMenu();
 		});
 
 		this.sidebar.addEventListener("mesh-menu-open", (event: Event) => {
@@ -2815,6 +2848,7 @@ export class DT3DCard extends LitElement {
 			window.clearTimeout(this.persistSpaceConfigTimer);
 			this.persistSpaceConfigTimer = null;
 		}
+		this.pendingSpaceMetadata = null;
 		this.clearSceneLongPress();
 		this.clearCanvasClickSuppression();
 		this.clearPendingEntityClickAction();
