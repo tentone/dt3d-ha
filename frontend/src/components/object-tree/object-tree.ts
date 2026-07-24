@@ -124,7 +124,7 @@ const TREE_SPLIT_STORAGE_KEY = "object-tree-split";
 const DEFAULT_TREE_SPLIT = 0.55;
 const MIN_PANEL_SECTION_HEIGHT = 80;
 const MOBILE_MEDIA_QUERY = "(max-width: 768px)";
-const MOBILE_TREE_WIDTH = "95%";
+const MOBILE_TREE_WIDTH = "calc(100% - 64px)";
 
 @customElement("dt3d-tree")
 export class DT3DTree extends LitElement {
