@@ -1,5 +1,5 @@
 name: DT3D
-version: "0.1.0"
+version: "0.3.0"
 slug: dt3d
 description: Backend for 3D digital twin service in home assistant. Frontend must be installed as an integration that will communicate directly with this backend using HTTP or HTTPS. Ports must be exposed to the frontend integration.
 arch:
