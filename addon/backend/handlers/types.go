@@ -21,6 +21,10 @@ type updateSpaceRequest struct {
 	Config      json.RawMessage `json:"config"`
 }
 
+type cloneSpaceRequest struct {
+	Name string `json:"name"`
+}
+
 type createObjectInstanceRequest struct {
 	Name     string          `json:"name"`
 	Type     string          `json:"type"`

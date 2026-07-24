@@ -152,6 +152,8 @@
 	"noSpaces": "No spaces",
 	"createSpace": "Create space",
 	"createSpaceDescription": "Create a separate 3D scene and make it active.",
+	"cloneSpace": "Clone space",
+	"cloneSpaceDescription": "Create a new copy of this space and all of its objects.",
 	"spaceName": "Name",
 	"spaceDescription": "Description",
 	"deleteSpace": "Delete space",

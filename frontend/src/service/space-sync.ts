@@ -333,6 +333,18 @@ export class SpaceSync {
 	}
 
 	/**
+	 * Clone and activate a space.
+	 */
+	public async cloneSpace(
+		spaceId: string,
+		name: string,
+	): Promise<SpaceResponse> {
+		const space = await this.apiClient.cloneSpace(spaceId, name);
+		this.availableSpaces = [...this.availableSpaces, space];
+		return this.loadSpaceFromApi(space.id);
+	}
+
+	/**
 	 * Delete a space. When the active space is deleted, activate the next
 	 * available space or reset the editor to an unsaved default scene.
 	 */

@@ -53,6 +53,20 @@ export class DT3DSpaceSelector extends LitElement {
 		);
 	}
 
+	private requestClone(): void {
+		if (!this.selectedSpaceId) {
+			return;
+		}
+
+		this.dispatchEvent(
+			new CustomEvent("space-clone-request", {
+				detail: {spaceId: this.selectedSpaceId},
+				bubbles: true,
+				composed: true,
+			}),
+		);
+	}
+
 	protected render() {
 		return html`
 			<div class="selector">
@@ -76,6 +90,14 @@ export class DT3DSpaceSelector extends LitElement {
 					title=${localManager.get("createSpace")}
 					aria-label=${localManager.get("createSpace")}>
 					<ha-icon icon="mdi:plus"></ha-icon>
+				</button>
+				<button
+					type="button"
+					?disabled=${this.loading || !this.selectedSpaceId}
+					@click=${this.requestClone}
+					title=${localManager.get("cloneSpace")}
+					aria-label=${localManager.get("cloneSpace")}>
+					<ha-icon icon="mdi:content-copy"></ha-icon>
 				</button>
 				<button
 					type="button"

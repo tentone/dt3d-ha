@@ -36,6 +36,15 @@ func (s *SpaceService) GetSpaceByID(id string) (*models.Space, error) {
 	return s.spaces.FindByID(id)
 }
 
+func (s *SpaceService) CloneSpace(sourceID, name string) (*models.Space, error) {
+	name = strings.TrimSpace(name)
+	if name == "" {
+		return nil, errors.New("space name is required")
+	}
+
+	return s.spaces.Clone(sourceID, name)
+}
+
 func (s *SpaceService) DeleteSpace(id string) error {
 	space, err := s.spaces.FindByID(id)
 	if err != nil {

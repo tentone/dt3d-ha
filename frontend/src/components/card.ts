@@ -1658,6 +1658,99 @@ export class DT3DCard extends LitElement {
 		}
 	}
 
+	/**
+	 * Open the form used to clone and activate a space.
+	 */
+	private openCloneSpaceModal(spaceId: string): void {
+		if (
+			!this.content ||
+			this.spaceFormModal ||
+			this.isVisualizationOnly() ||
+			!this.spaceSync
+		) {
+			return;
+		}
+
+		const source = this.spaceSync.availableSpaces.find(
+			(space) => space.id === spaceId,
+		);
+		if (!source) {
+			return;
+		}
+
+		const modal = document.createElement("dt3d-form-modal") as DT3DFormModal;
+		modal.heading = localManager.get("cloneSpace");
+		modal.description = localManager.get("cloneSpaceDescription");
+		modal.confirmLabel = localManager.get("cloneSpace");
+		modal.fields = [
+			{
+				label: localManager.get("spaceName"),
+				attribute: "name",
+				type: "string",
+				editable: true,
+				enabled: true,
+			},
+		];
+		modal.data = {
+			name: `${source.name} (copy)`,
+		};
+
+		const closeModal = () => {
+			modal.remove();
+			if (this.spaceFormModal === modal) {
+				this.spaceFormModal = null;
+			}
+		};
+
+		modal.addEventListener("form-submit", (event: Event) => {
+			const {values} = (event as CustomEvent<FormModalSubmitDetail>).detail;
+			const name = String(values.name ?? "").trim();
+			if (!name) {
+				return;
+			}
+
+			void this.cloneSpace(spaceId, name).then((cloned) => {
+				if (cloned) {
+					closeModal();
+				}
+			});
+		});
+		modal.addEventListener("modal-close", closeModal);
+
+		this.spaceFormModal = modal;
+		this.content.appendChild(modal);
+	}
+
+	private async cloneSpace(spaceId: string, name: string): Promise<boolean> {
+		if (!this.spaceSync || this.isVisualizationOnly()) {
+			return false;
+		}
+
+		if (this.spaceSelector) {
+			this.spaceSelector.loading = true;
+		}
+
+		try {
+			this.attachTransform(null);
+			this.lastSelectedObject = null;
+			const space = await this.spaceSync.cloneSpace(spaceId, name);
+			this.applySpaceConfigFromApi(space);
+			this.applyDefaultViewportOnLoad();
+			if (this.spaceSelector) {
+				this.spaceSelector.spaces = this.spaceSync.availableSpaces;
+				this.spaceSelector.selectedSpaceId = space.id;
+			}
+			return true;
+		} catch (error) {
+			console.error("DT3D: Failed to clone space", error);
+			return false;
+		} finally {
+			if (this.spaceSelector) {
+				this.spaceSelector.loading = false;
+			}
+		}
+	}
+
 	private requestDeleteSpace(spaceId: string): void {
 		if (!spaceId || this.isVisualizationOnly()) {
 			return;
@@ -2217,6 +2310,10 @@ export class DT3DCard extends LitElement {
 		});
 		this.spaceSelector.addEventListener("space-create-request", () => {
 			this.openCreateSpaceModal();
+		});
+		this.spaceSelector.addEventListener("space-clone-request", (event: Event) => {
+			const {spaceId} = (event as CustomEvent<{spaceId: string}>).detail;
+			this.openCloneSpaceModal(spaceId);
 		});
 		this.spaceSelector.addEventListener("space-delete-request", (event: Event) => {
 			const {spaceId} = (event as CustomEvent<{spaceId: string}>).detail;

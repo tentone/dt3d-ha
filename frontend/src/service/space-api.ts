@@ -112,6 +112,16 @@ export class SpaceApi {
 	}
 
 	/**
+	 * Clone a space, including its configuration and object hierarchy.
+	 */
+	public cloneSpace(spaceId: string, name: string): Promise<SpaceResponse> {
+		return this.fetchJson<SpaceResponse>(`/spaces/${spaceId}/clone`, {
+			method: "POST",
+			body: JSON.stringify({name}),
+		});
+	}
+
+	/**
 	 * Update a space's metadata/configuration.
 	 */
 	public updateSpace(

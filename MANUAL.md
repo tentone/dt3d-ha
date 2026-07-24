@@ -103,11 +103,14 @@ tone mapping, and post-processing configuration.
 
 1. Use the selector at the top of the editor to switch spaces.
 2. Select **Create space**, enter a name and optional description, and confirm.
-3. Add or edit objects; changes are synchronized to the backend automatically.
-4. To remove the active space, use **Delete space** beside the selector and
+3. To copy the active space, select **Clone space**, enter a name, and confirm.
+   The new copy includes the space configuration, every object and its
+   hierarchy, and uploaded geometry.
+4. Add or edit objects; changes are synchronized to the backend automatically.
+5. To remove the active space, use **Delete space** beside the selector and
    confirm. This permanently deletes every object in that space.
 
-Space creation, switching, and deletion are hidden when
+Space creation, cloning, switching, and deletion are hidden when
 `visualization_only: true`.
 
 <img src="readme/2_editor.png" width="500">

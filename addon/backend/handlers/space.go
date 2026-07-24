@@ -37,6 +37,7 @@ func (h *SpaceHandler) Register(router gin.IRouter) {
 		spaces.GET(":spaceID", h.getSpace)
 		spaces.PUT(":spaceID", h.updateSpace)
 		spaces.DELETE(":spaceID", h.deleteSpace)
+		spaces.POST(":spaceID/clone", h.cloneSpace)
 		spaces.GET(":spaceID/objects", h.listObjectInstances)
 		spaces.GET(":spaceID/tree", h.getObjectTree)
 		spaces.POST(":spaceID/objects", h.createObjectInstance)
@@ -116,6 +117,43 @@ func (h *SpaceHandler) updateSpace(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, toSpaceResponse(*space))
+}
+
+func (h *SpaceHandler) cloneSpace(c *gin.Context) {
+	sourceSpaceID := c.Param("spaceID")
+	if _, err := uuid.Parse(sourceSpaceID); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid space id"})
+		return
+	}
+
+	var req cloneSpaceRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid clone payload"})
+		return
+	}
+
+	space, err := h.spaces.CloneSpace(sourceSpaceID, req.Name)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "space not found"})
+			return
+		}
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	if err := cloneGeometryFiles(h.geometryDir, sourceSpaceID, space.ID); err != nil {
+		if cleanupErr := h.spaces.DeleteSpace(space.ID); cleanupErr != nil {
+			log.Printf("Failed to remove incomplete cloned space %s: %v", space.ID, cleanupErr)
+		}
+		if cleanupErr := os.RemoveAll(filepath.Join(h.geometryDir, space.ID)); cleanupErr != nil {
+			log.Printf("Failed to remove geometry files for incomplete cloned space %s: %v", space.ID, cleanupErr)
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to clone space geometry files"})
+		return
+	}
+
+	c.JSON(http.StatusCreated, toSpaceResponse(*space))
 }
 
 func (h *SpaceHandler) deleteSpace(c *gin.Context) {
@@ -339,4 +377,56 @@ func (h *SpaceHandler) geometryFilePath(spaceID string, geometryID string) (stri
 	}
 
 	return filepath.Join(h.geometryDir, spaceID, geometryID+".dt3dgeo"), nil
+}
+
+func cloneGeometryFiles(geometryDir, sourceSpaceID, clonedSpaceID string) error {
+	sourceDir := filepath.Join(geometryDir, sourceSpaceID)
+	entries, err := os.ReadDir(sourceDir)
+	if os.IsNotExist(err) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+
+	clonedDir := filepath.Join(geometryDir, clonedSpaceID)
+	if err := os.MkdirAll(clonedDir, 0750); err != nil {
+		return err
+	}
+
+	for _, entry := range entries {
+		if !entry.Type().IsRegular() {
+			continue
+		}
+
+		sourceFile, err := os.Open(filepath.Join(sourceDir, entry.Name()))
+		if err != nil {
+			return err
+		}
+
+		clonedFile, err := os.OpenFile(
+			filepath.Join(clonedDir, entry.Name()),
+			os.O_WRONLY|os.O_CREATE|os.O_EXCL,
+			0640,
+		)
+		if err != nil {
+			sourceFile.Close()
+			return err
+		}
+
+		_, copyErr := io.Copy(clonedFile, sourceFile)
+		closeErr := clonedFile.Close()
+		sourceCloseErr := sourceFile.Close()
+		if copyErr != nil {
+			return copyErr
+		}
+		if closeErr != nil {
+			return closeErr
+		}
+		if sourceCloseErr != nil {
+			return sourceCloseErr
+		}
+	}
+
+	return nil
 }
