@@ -243,6 +243,9 @@ export class DT3DTree extends LitElement {
 			this.style.width = "0px";
 		} else {
 			this.setExpandedWidth();
+			if (this.selectedId) {
+				this.revealNode(this.selectedId);
+			}
 		}
 		LocalStorage.write(TREE_COLLAPSED_STORAGE_KEY, this.collapsed);
 
@@ -761,6 +764,35 @@ export class DT3DTree extends LitElement {
 	}
 
 	/**
+	 * Expand the hierarchy leading to a node and scroll it into view.
+	 *
+	 * @param id - The ID of the node to reveal.
+	 */
+	private revealNode(id: UUID): void {
+		if (!this.findNodeById(this.tree, id)) {
+			return;
+		}
+
+		const expanded = new Set(this.expanded);
+		let parentId = this.findParentId(this.tree, id);
+		while (parentId !== null) {
+			expanded.add(parentId);
+			parentId = this.findParentId(this.tree, parentId);
+		}
+		this.expanded = expanded;
+
+		void this.updateComplete.then(() => {
+			if (this.selectedId !== id || this.collapsed) {
+				return;
+			}
+
+			const selectedNode =
+				this.renderRoot.querySelector<HTMLElement>(".tree-node.selected");
+			selectedNode?.scrollIntoView({block: "nearest", inline: "nearest"});
+		});
+	}
+
+	/**
 	 * Select a object by its ID, dispatching an event.
 	 *
 	 * @param id - The ID of the node to select.
@@ -769,6 +801,7 @@ export class DT3DTree extends LitElement {
 	public selectObject(id: UUID, event: boolean = false) {
 		this.selectedId = id;
 		this.selectedObject = this.scene?.getObjectByProperty("uuid", id) ?? null;
+		this.revealNode(id);
 
 		if (event) {
 			this.dispatchEvent(
