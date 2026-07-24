@@ -62,44 +62,38 @@ editor grid settings.
 >
 > _Replace this block with a screenshot._
 
-### Use the measurement tools
+### Measurement tools
 
 The **Measure** section of the left toolbar provides temporary distance and
 angle measurements. Measurement points must be placed on a visible object
 surface.
 
-#### Measure a distance
+#### Distance
 
 1. Select **Measure distance**.
 2. Double-click the surface at the start point.
 3. Double-click the surface at the end point.
 
-DT3D draws a line between the two points and shows the distance in meters,
-rounded to two decimal places.
+DT3D draws a line between the two points and shows the distance in meters, rounded to two decimal places.
 
-#### Measure an angle
+#### Angle
 
 1. Select **Measure angle**.
 2. Double-click the first endpoint.
 3. Double-click the angle vertex.
 4. Double-click the second endpoint.
 
-DT3D draws two lines from the middle point and shows the angle in degrees,
-rounded to two decimal places.
+DT3D draws two lines from the middle point and shows the angle in degrees, rounded to two decimal places.
 
 Select **Clear measurements** to leave measurement mode and remove the current
 measurement. Measurements are editor helpers only: they are not saved with the
 space and are replaced when a new measurement is started. Selecting a wall tool
 also exits measurement mode.
 
-> **Screenshot placeholder — distance and angle measurement tools**
->
-> _Replace this block with a screenshot._
-
 ### Manage spaces
 
-A space is an independent scene with its own objects, saved viewports, daylight,
-tone mapping, and post-processing configuration.
+A space is an independent scene with its own objects, saved viewports, daylight, tone mapping, and post-processing configuration.
+Can be used to organize different sections of a home, different floors, or different homes, without the need for a huge scene with all the objects, which can be slow to load and render.
 
 1. Use the selector at the top of the editor to switch spaces.
 2. Select **Create space**, enter a name and optional description, and confirm.
@@ -119,7 +113,7 @@ tone mapping, and post-processing configuration.
 Space creation, cloning, import/export, switching, and deletion are hidden when
 `visualization_only: true`.
 
-<img src="readme/2_editor.png" width="500">
+<img src="readme/space_options.png" width="500">
 
 ### Add 3D elements
 
