@@ -1,6 +1,8 @@
 package repository
 
 import (
+	"errors"
+
 	"dt3d-ha/backend/models"
 
 	"gorm.io/gorm"
@@ -18,7 +20,13 @@ func NewObjectInstanceRepository(db *gorm.DB) *ObjectInstanceRepository {
 }
 
 func (r *ObjectInstanceRepository) Create(instance *models.ObjectInstance) error {
-	return r.db.Create(instance).Error
+	return r.db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Create(instance).Error; err != nil {
+			return err
+		}
+
+		return bumpSpaceCacheVersion(tx, instance.SpaceID)
+	})
 }
 
 func (r *ObjectInstanceRepository) FindBySpaceID(spaceID string) ([]models.ObjectInstance, error) {
@@ -36,10 +44,16 @@ func (r *ObjectInstanceRepository) FindByID(id string) (*models.ObjectInstance, 
 }
 
 func (r *ObjectInstanceRepository) Update(instance *models.ObjectInstance) error {
-	return r.db.Save(instance).Error
+	return r.db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Save(instance).Error; err != nil {
+			return err
+		}
+
+		return bumpSpaceCacheVersion(tx, instance.SpaceID)
+	})
 }
 
-func (r *ObjectInstanceRepository) DeleteWithDescendants(id string) error {
+func (r *ObjectInstanceRepository) DeleteWithDescendants(spaceID, id string) error {
 	return r.db.Transaction(func(tx *gorm.DB) error {
 		ids, err := collectObjectSubtreeIDs(tx, id)
 		if err != nil {
@@ -57,8 +71,22 @@ func (r *ObjectInstanceRepository) DeleteWithDescendants(id string) error {
 			}
 		}
 
-		return nil
+		return bumpSpaceCacheVersion(tx, spaceID)
 	})
+}
+
+func bumpSpaceCacheVersion(tx *gorm.DB, spaceID string) error {
+	result := tx.Model(&models.Space{}).
+		Where("id = ?", spaceID).
+		UpdateColumn("cache_version", gorm.Expr("cache_version + 1"))
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		return errors.New("space not found")
+	}
+
+	return nil
 }
 
 func collectObjectSubtreeIDs(tx *gorm.DB, rootID string) ([]string, error) {

@@ -36,6 +36,7 @@ import type {
 	SpaceResponse,
 } from "./space-api.js";
 import {exportSpaceArchive, importSpaceArchive} from "./space-archive.js";
+import {SpaceDataCache} from "./space-cache.js";
 
 type SpaceSyncDependencies = {
 	apiClient: SpaceApi;
@@ -181,6 +182,7 @@ function getDeclaredObjectInstanceType(object: Object3D): string | null {
  */
 export class SpaceSync {
 	private apiClient: SpaceApi;
+	private cache: SpaceDataCache;
 	private readOnly: boolean;
 	private sceneManager: SceneManager;
 	private space: Group;
@@ -215,6 +217,7 @@ export class SpaceSync {
 		createEntityObject,
 	}: SpaceSyncDependencies) {
 		this.apiClient = apiClient;
+		this.cache = new SpaceDataCache(apiClient.getCacheNamespace());
 		this.readOnly = readOnly;
 		this.sceneManager = sceneManager;
 		this.space = space;
@@ -372,6 +375,7 @@ export class SpaceSync {
 	 */
 	public async deleteSpace(spaceId: string): Promise<SpaceResponse | null> {
 		await this.apiClient.deleteSpace(spaceId);
+		await this.cache.deleteSpace(spaceId);
 		this.availableSpaces = await this.apiClient.listSpaces();
 
 		if (this.activeSpaceId !== spaceId) {
@@ -393,7 +397,20 @@ export class SpaceSync {
 	}
 
 	private async loadSpace(space: SpaceResponse): Promise<SpaceResponse> {
-		const instances = await this.apiClient.listObjects(space.id);
+		const cacheVersion = space.cache_version;
+		const canUseCache =
+			typeof cacheVersion === "number" &&
+			Number.isSafeInteger(cacheVersion) &&
+			cacheVersion >= 0;
+		let instances = canUseCache
+			? await this.cache.getSpace(space.id, cacheVersion)
+			: null;
+		if (!instances) {
+			instances = await this.apiClient.listObjects(space.id);
+			if (canUseCache) {
+				await this.cache.putSpace(space.id, cacheVersion, instances);
+			}
+		}
 
 		this.activeSpaceId = space.id;
 		this.activeSpace = space;
@@ -883,8 +900,9 @@ export class SpaceSync {
 			() =>
 				this.apiClient
 					.createObject(this.activeSpaceId, payload)
-					.then((response) => {
+					.then(async (response) => {
 						this.setObjectApiId(object, response.id);
+						await this.cache.invalidateSpace(response.space_id);
 					}),
 		);
 
@@ -925,8 +943,17 @@ export class SpaceSync {
 			return;
 		}
 
-		await this.trackProgress("Update object", this.getObjectLabel(object), () =>
-			this.apiClient.updateObject(this.activeSpaceId, objectId, payload),
+		await this.trackProgress(
+			"Update object",
+			this.getObjectLabel(object),
+			async () => {
+				const response = await this.apiClient.updateObject(
+					this.activeSpaceId,
+					objectId,
+					payload,
+				);
+				await this.cache.invalidateSpace(response.space_id);
+			},
 		);
 	}
 
@@ -946,6 +973,7 @@ export class SpaceSync {
 		await this.trackProgress("Delete object", this.getObjectLabel(object), () =>
 			this.apiClient.deleteObject(this.activeSpaceId, objectId),
 		);
+		await this.cache.invalidateSpace(this.activeSpaceId);
 		this.clearObjectMapping(object);
 	}
 
@@ -1006,6 +1034,7 @@ export class SpaceSync {
 			this.getObjectLabel(object),
 			() => this.apiClient.uploadGeometry(this.activeSpaceId, geometryData),
 		);
+		await this.cache.putGeometry(this.activeSpaceId, response.id, geometryData);
 		object.userData[GEOMETRY_FILE_ID_DATA_KEY] = response.id;
 		object.userData[GEOMETRY_FILE_GEOMETRY_UUID_USER_DATA_KEY] =
 			object.geometry.uuid;
@@ -1021,15 +1050,43 @@ export class SpaceSync {
 		if (!this.activeSpaceId) {
 			return;
 		}
+		const spaceId = this.activeSpaceId;
 
 		try {
-			const geometryData = await this.trackProgress(
+			let geometryData = await this.trackProgress(
 				"Load geometry",
 				label || this.getObjectLabel(object),
-				() => this.apiClient.getGeometry(this.activeSpaceId, geometryFileId),
+				() => this.cache.getGeometry(spaceId, geometryFileId),
 			);
-			const geometry = deserializeGeometryBinary(geometryData);
-			if (object.userData[GEOMETRY_FILE_ID_DATA_KEY] !== geometryFileId) {
+			let geometry = null;
+			if (geometryData) {
+				try {
+					geometry = deserializeGeometryBinary(geometryData);
+				} catch (error) {
+					console.warn(
+						"DT3D: Cached geometry is invalid; fetching it again",
+						error,
+					);
+					await this.cache.deleteGeometry(spaceId, geometryFileId);
+					geometryData = null;
+				}
+			}
+			if (!geometryData) {
+				geometryData = await this.trackProgress(
+					"Download geometry",
+					label || this.getObjectLabel(object),
+					() => this.apiClient.getGeometry(spaceId, geometryFileId),
+				);
+				geometry = deserializeGeometryBinary(geometryData);
+				await this.cache.putGeometry(spaceId, geometryFileId, geometryData);
+			}
+			if (!geometry) {
+				return;
+			}
+			if (
+				this.activeSpaceId !== spaceId ||
+				object.userData[GEOMETRY_FILE_ID_DATA_KEY] !== geometryFileId
+			) {
 				geometry.dispose();
 				return;
 			}

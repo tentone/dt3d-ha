@@ -28,8 +28,8 @@ func (s *SpaceService) CreateSpace(space *models.Space) error {
 	return s.spaces.Create(space)
 }
 
-func (s *SpaceService) ListSpaces() ([]models.Space, error) {
-	return s.spaces.FindAll()
+func (s *SpaceService) ListSpaces(includeObjects bool) ([]models.Space, error) {
+	return s.spaces.FindAll(includeObjects)
 }
 
 func (s *SpaceService) GetSpaceByID(id string) (*models.Space, error) {
@@ -174,7 +174,7 @@ func (s *SpaceService) DeleteObjectInstance(spaceID, objectID string) error {
 	if instance.SpaceID != spaceID {
 		return errors.New("object instance does not belong to space")
 	}
-	return s.instances.DeleteWithDescendants(objectID)
+	return s.instances.DeleteWithDescendants(spaceID, objectID)
 }
 
 type ObjectTreeNode struct {

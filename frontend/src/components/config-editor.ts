@@ -126,11 +126,21 @@ export class DT3DConfigEditor extends LitElement {
 		}
 
 		try {
-			const spaces = await new SpaceApi(
+			const apiClient = new SpaceApi(
 				address,
 				port,
 				String(this._config?.service_key ?? ""),
-			).listSpaces();
+			);
+			const spaces = await apiClient.listSpaces();
+			const configuredSpaceId =
+				this._config?.default_space ?? this._config?.defaultSpace;
+			const selectedSpace =
+				spaces.find((space) => space.id === configuredSpaceId) ?? spaces[0];
+			if (selectedSpace) {
+				selectedSpace.object_instances = await apiClient.listObjects(
+					selectedSpace.id,
+				);
+			}
 			if (requestSequence === this.spacesRequestSequence) {
 				this._spaces = spaces;
 			}
@@ -213,6 +223,7 @@ export class DT3DConfigEditor extends LitElement {
 			default_space: target.value,
 			default_viewport: "",
 		});
+		this.scheduleSpacesReload();
 	}
 
 	/**

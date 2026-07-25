@@ -54,6 +54,7 @@ type objectInstanceResponse struct {
 
 type spaceResponse struct {
 	ID              string                   `json:"id"`
+	CacheVersion    int64                    `json:"cache_version"`
 	Name            string                   `json:"name"`
 	Description     string                   `json:"description"`
 	IsDefault       bool                     `json:"is_default"`
@@ -106,6 +107,7 @@ func toSpaceResponse(space models.Space) spaceResponse {
 	}
 	return spaceResponse{
 		ID:              space.ID,
+		CacheVersion:    space.CacheVersion,
 		Name:            space.Name,
 		Description:     space.Description,
 		IsDefault:       space.IsDefault,

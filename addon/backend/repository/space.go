@@ -39,9 +39,13 @@ func (r *SpaceRepository) Create(space *models.Space) error {
 	})
 }
 
-func (r *SpaceRepository) FindAll() ([]models.Space, error) {
+func (r *SpaceRepository) FindAll(includeObjects bool) ([]models.Space, error) {
 	var spaces []models.Space
-	err := r.db.Preload("ObjectInstances").Find(&spaces).Error
+	query := r.db
+	if includeObjects {
+		query = query.Preload("ObjectInstances")
+	}
+	err := query.Find(&spaces).Error
 	return spaces, err
 }
 

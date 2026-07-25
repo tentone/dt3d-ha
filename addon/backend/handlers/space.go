@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"dt3d-ha/backend/models"
@@ -49,7 +50,19 @@ func (h *SpaceHandler) Register(router gin.IRouter) {
 }
 
 func (h *SpaceHandler) listSpaces(c *gin.Context) {
-	spaces, err := h.spaces.ListSpaces()
+	includeObjects := true
+	if rawValue, provided := c.GetQuery("include_objects"); provided {
+		value, err := strconv.ParseBool(rawValue)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error": "include_objects must be true or false",
+			})
+			return
+		}
+		includeObjects = value
+	}
+
+	spaces, err := h.spaces.ListSpaces(includeObjects)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

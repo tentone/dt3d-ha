@@ -5,6 +5,9 @@ import "gorm.io/datatypes"
 type Space struct {
 	Base
 
+	// CacheVersion changes whenever cached object or asset data changes.
+	CacheVersion int64 `gorm:"not null;default:1" json:"cache_version"`
+
 	// Name of the space
 	Name string `gorm:"size:255" json:"name"`
 

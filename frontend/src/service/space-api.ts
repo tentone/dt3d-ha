@@ -1,5 +1,6 @@
 export type SpaceResponse = {
 	id: string;
+	cache_version?: number;
 	name: string;
 	description: string;
 	is_default: boolean;
@@ -80,6 +81,7 @@ export function buildBackendApiUrl(address: string, port: number): string {
  */
 export class SpaceApi {
 	private baseUrl: string;
+	private cacheNamespace: string;
 	private serviceKey: string;
 
 	/**
@@ -92,13 +94,22 @@ export class SpaceApi {
 	constructor(address: string, port: number, serviceKey = "") {
 		this.baseUrl = buildBackendApiUrl(address, port);
 		this.serviceKey = serviceKey;
+		this.cacheNamespace = this.buildCacheNamespace();
 	}
 
 	/**
-	 * Get all spaces from the backend.
+	 * Get a stable, credential-safe namespace for browser-cached API data.
+	 */
+	public getCacheNamespace(): string {
+		return this.cacheNamespace;
+	}
+
+	/**
+	 * Get lightweight metadata for all spaces from the backend.
+	 * Object instances are loaded on demand for the selected space.
 	 */
 	public listSpaces(): Promise<SpaceResponse[]> {
-		return this.fetchJson<SpaceResponse[]>("/spaces");
+		return this.fetchJson<SpaceResponse[]>("/spaces?include_objects=false");
 	}
 
 	/**
@@ -304,5 +315,19 @@ export class SpaceApi {
 		return {
 			[SERVICE_KEY_HEADER]: this.serviceKey,
 		};
+	}
+
+	private buildCacheNamespace(): string {
+		const value = `${this.baseUrl}\u0000${this.serviceKey}`;
+		let first = 0x811c9dc5;
+		let second = 0x9e3779b9;
+
+		for (let index = 0; index < value.length; index++) {
+			const code = value.charCodeAt(index);
+			first = Math.imul(first ^ code, 0x01000193);
+			second = Math.imul(second ^ code, 0x85ebca6b);
+		}
+
+		return `${(first >>> 0).toString(16)}${(second >>> 0).toString(16)}`;
 	}
 }
