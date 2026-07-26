@@ -1,4 +1,4 @@
-import type {Material, Object3D, Texture} from "three";
+import type {Material, Object3D} from "three";
 import {
 	BoxGeometry,
 	BufferGeometryLoader,
@@ -7,11 +7,16 @@ import {
 	Mesh,
 	MeshStandardMaterial,
 	ObjectLoader,
+	Texture,
 } from "three";
 
 import type {DT3DTree} from "../components/object-tree/object-tree.js";
 import {normalizeEntityActionOverride} from "../editor/entity-actions.js";
-import {applyTextureToMesh} from "../editor/material-texture.js";
+import {
+	applyTextureToMesh,
+	getTexturePredominantColor,
+	TEXTURE_PREDOMINANT_COLOR_DATA_KEY,
+} from "../editor/material-texture.js";
 import {
 	createMeshObject,
 	getMeshGeometryParameters,
@@ -72,6 +77,22 @@ export type SyncProgressSnapshot = {
 const OBJECT_INSTANCE_TYPE_USER_DATA_KEY = "objectInstanceType";
 const GEOMETRY_FILE_ID_DATA_KEY = "geometryFileId";
 const GEOMETRY_FILE_GEOMETRY_UUID_USER_DATA_KEY = "geometryFileGeometryUuid";
+const GEOMETRY_BOUNDING_BOX_DATA_KEY = "geometryBoundingBox";
+const LEGACY_METADATA_MIGRATION_DATA_KEY = "legacyMetadataMigration";
+const MATERIAL_RESOURCE_READY_DATA_KEY = "materialResourceReady";
+const RESOURCE_PLACEHOLDER_DATA_KEY = "resourcePlaceholder";
+
+type StoredBoundingBox = {
+	max: { x: number; y: number; z: number };
+	min: { x: number; y: number; z: number };
+};
+
+type LegacyMetadataMigration = {
+	geometryBoundingBox: boolean;
+	materialColor: boolean;
+	materialResourceRequired: boolean;
+	texturePredominantColor: boolean;
+};
 
 function serializeMaterial(
 	material: Material | Material[],
@@ -137,6 +158,140 @@ function createPlaceholderMaterial(color: number): MeshStandardMaterial {
 	});
 	material.name = "Loading material";
 	return material;
+}
+
+function getStoredBoundingBox(data: unknown): StoredBoundingBox | null {
+	if (!data || typeof data !== "object") {
+		return null;
+	}
+
+	const boundingBox = data as Partial<StoredBoundingBox>;
+	const values = [
+		boundingBox.min?.x,
+		boundingBox.min?.y,
+		boundingBox.min?.z,
+		boundingBox.max?.x,
+		boundingBox.max?.y,
+		boundingBox.max?.z,
+	];
+	if (
+		values.some((value) => typeof value !== "number" || !Number.isFinite(value))
+	) {
+		return null;
+	}
+
+	const min = boundingBox.min!;
+	const max = boundingBox.max!;
+	if (max.x < min.x || max.y < min.y || max.z < min.z) {
+		return null;
+	}
+
+	return {max: {...max}, min: {...min}};
+}
+
+function createPlaceholderGeometry(data: unknown): BoxGeometry {
+	const boundingBox = getStoredBoundingBox(data);
+	if (!boundingBox) {
+		return new BoxGeometry(1, 1, 1);
+	}
+
+	const {min, max} = boundingBox;
+	const geometry = new BoxGeometry(max.x - min.x, max.y - min.y, max.z - min.z);
+	geometry.translate(
+		(min.x + max.x) / 2,
+		(min.y + max.y) / 2,
+		(min.z + max.z) / 2,
+	);
+	return geometry;
+}
+
+function getStoredColor(value: unknown): number | null {
+	if (typeof value !== "string" || !/^[0-9a-f]{6}$/i.test(value)) {
+		return null;
+	}
+
+	return parseInt(value, 16);
+}
+
+function getMeshPredominantTextureColor(mesh: Mesh): string | null {
+	const materials = Array.isArray(mesh.material)
+		? mesh.material
+		: [mesh.material];
+	for (const material of materials) {
+		if ("map" in material && material.map instanceof Texture) {
+			const color = getTexturePredominantColor(material.map);
+			if (color) {
+				return color;
+			}
+		}
+	}
+
+	const storedColor = mesh.userData[TEXTURE_PREDOMINANT_COLOR_DATA_KEY];
+	return typeof storedColor === "string" && /^[0-9a-f]{6}$/i.test(storedColor)
+		? storedColor
+		: null;
+}
+
+function getMeshMaterialColor(mesh: Mesh): string | null {
+	const materials = Array.isArray(mesh.material)
+		? mesh.material
+		: [mesh.material];
+	for (const material of materials) {
+		if (
+			"color" in material &&
+			material.color &&
+			typeof material.color === "object" &&
+			"getHexString" in material.color &&
+			typeof material.color.getHexString === "function"
+		) {
+			return material.color.getHexString();
+		}
+	}
+
+	return null;
+}
+
+function storeMeshPredominantTextureColor(
+	data: Record<string, any>,
+	mesh: Mesh,
+): void {
+	const color = getMeshPredominantTextureColor(mesh);
+	if (color) {
+		data[TEXTURE_PREDOMINANT_COLOR_DATA_KEY] = color;
+	}
+}
+
+function storeGeometryBoundingBox(data: Record<string, any>, mesh: Mesh): void {
+	mesh.geometry.computeBoundingBox();
+	const boundingBox = mesh.geometry.boundingBox;
+	if (!boundingBox) {
+		return;
+	}
+
+	const values = [
+		boundingBox.min.x,
+		boundingBox.min.y,
+		boundingBox.min.z,
+		boundingBox.max.x,
+		boundingBox.max.y,
+		boundingBox.max.z,
+	];
+	if (!values.every(Number.isFinite)) {
+		return;
+	}
+
+	data[GEOMETRY_BOUNDING_BOX_DATA_KEY] = {
+		min: {
+			x: boundingBox.min.x,
+			y: boundingBox.min.y,
+			z: boundingBox.min.z,
+		},
+		max: {
+			x: boundingBox.max.x,
+			y: boundingBox.max.y,
+			z: boundingBox.max.z,
+		},
+	};
 }
 
 function replaceMeshMaterial(
@@ -587,20 +742,33 @@ export class SpaceSync {
 		const instanceType = normalizeObjectInstanceType(instance.type);
 		let object: Object3D | null = null;
 		let materialTarget: Mesh | null = null;
+		let needsLegacyGeometryBoundingBox = false;
 
 		if (instanceType === "mesh") {
 			const meshType = data.meshType as string | undefined;
 			const color =
-				typeof data.color === "string" ? parseInt(data.color, 16) : 0xffffff;
+				getStoredColor(data[TEXTURE_PREDOMINANT_COLOR_DATA_KEY]) ??
+				getStoredColor(data.color) ??
+				0xffffff;
 			const geometryFileId = data[GEOMETRY_FILE_ID_DATA_KEY] as
 				| string
 				| undefined;
 			if (typeof geometryFileId === "string" && geometryFileId) {
+				const storedBoundingBox = getStoredBoundingBox(
+					data[GEOMETRY_BOUNDING_BOX_DATA_KEY],
+				);
 				const mesh: Mesh = new Mesh(
-					new BoxGeometry(1, 1, 1),
+					createPlaceholderGeometry(storedBoundingBox),
 					createPlaceholderMaterial(color),
 				);
 				mesh.userData[GEOMETRY_FILE_ID_DATA_KEY] = geometryFileId;
+				mesh.userData[RESOURCE_PLACEHOLDER_DATA_KEY] = true;
+				if (storedBoundingBox) {
+					mesh.userData[GEOMETRY_BOUNDING_BOX_DATA_KEY] =
+						storedBoundingBox;
+				} else {
+					needsLegacyGeometryBoundingBox = true;
+				}
 				resourceTasks.push({
 					operation: "Load geometry",
 					label: instance.name,
@@ -614,10 +782,20 @@ export class SpaceSync {
 				object = mesh;
 				materialTarget = mesh;
 			} else if (data.geometry && typeof data.geometry === "object") {
+				const storedBoundingBox = getStoredBoundingBox(
+					data[GEOMETRY_BOUNDING_BOX_DATA_KEY],
+				);
 				const mesh: Mesh = new Mesh(
-					new BoxGeometry(1, 1, 1),
+					createPlaceholderGeometry(storedBoundingBox),
 					createPlaceholderMaterial(color),
 				);
+				mesh.userData[RESOURCE_PLACEHOLDER_DATA_KEY] = true;
+				if (storedBoundingBox) {
+					mesh.userData[GEOMETRY_BOUNDING_BOX_DATA_KEY] =
+						storedBoundingBox;
+				} else {
+					needsLegacyGeometryBoundingBox = true;
+				}
 				resourceTasks.push({
 					operation: "Prepare geometry",
 					label: instance.name,
@@ -631,6 +809,7 @@ export class SpaceSync {
 						}
 						const placeholderGeometry = mesh.geometry;
 						mesh.geometry = geometry;
+						delete mesh.userData[RESOURCE_PLACEHOLDER_DATA_KEY];
 						placeholderGeometry.dispose();
 						this.tree.refreshSelectedObject();
 					},
@@ -642,7 +821,7 @@ export class SpaceSync {
 					new BoxGeometry(1, 1, 1),
 					createPlaceholderMaterial(color),
 				);
-				mesh.userData.resourcePlaceholder = true;
+				mesh.userData[RESOURCE_PLACEHOLDER_DATA_KEY] = true;
 				object = mesh;
 				materialTarget = mesh;
 			} else if (meshType === "wall") {
@@ -704,7 +883,7 @@ export class SpaceSync {
 				) as Mesh | null;
 				if (!mesh) {
 					mesh = new Mesh(new BoxGeometry(1, 1, 1), placeholderMaterial);
-					mesh.userData.resourcePlaceholder = true;
+					mesh.userData[RESOURCE_PLACEHOLDER_DATA_KEY] = true;
 				}
 				object = mesh;
 				materialTarget = mesh;
@@ -761,15 +940,44 @@ export class SpaceSync {
 			declaredType || instance.type;
 		this.applyObjectTransform(object, data);
 
+		if (
+			materialTarget &&
+			getStoredColor(data[TEXTURE_PREDOMINANT_COLOR_DATA_KEY]) !== null
+		) {
+			materialTarget.userData[TEXTURE_PREDOMINANT_COLOR_DATA_KEY] = (
+				data[TEXTURE_PREDOMINANT_COLOR_DATA_KEY] as string
+			).toLowerCase();
+		}
+
 		const hasSerializedMaterial =
 			Boolean(data.material) && typeof data.material === "object";
 		const hasTextureData = typeof data.textureDataUrl === "string";
+		const needsLegacyTextureColor =
+			(hasSerializedMaterial || hasTextureData) &&
+			getStoredColor(data[TEXTURE_PREDOMINANT_COLOR_DATA_KEY]) === null;
+		const needsLegacyMaterialColor =
+			(hasSerializedMaterial || hasTextureData) &&
+			getStoredColor(data.color) === null;
+		if (
+			object instanceof Mesh &&
+			(needsLegacyGeometryBoundingBox ||
+				needsLegacyMaterialColor ||
+				needsLegacyTextureColor)
+		) {
+			object.userData[LEGACY_METADATA_MIGRATION_DATA_KEY] = {
+				geometryBoundingBox: needsLegacyGeometryBoundingBox,
+				materialColor: needsLegacyMaterialColor,
+				materialResourceRequired: hasSerializedMaterial || hasTextureData,
+				texturePredominantColor: needsLegacyTextureColor,
+			} satisfies LegacyMetadataMigration;
+		}
 		if (materialTarget && (hasSerializedMaterial || hasTextureData)) {
 			const target = materialTarget;
 			resourceTasks.push({
 				operation: hasSerializedMaterial ? "Load material" : "Load texture",
 				label: instance.name,
 				load: async () => {
+					let materialReady = !hasSerializedMaterial;
 					if (hasSerializedMaterial) {
 						const material = await deserializeMaterial(data.material);
 						if (material) {
@@ -788,11 +996,12 @@ export class SpaceSync {
 								return;
 							}
 							replaceMeshMaterial(target, material);
+							materialReady = true;
 						}
 					}
 
 					if (hasTextureData) {
-						await applyTextureToMesh(
+						const textureApplied = await applyTextureToMesh(
 							target,
 							data.textureDataUrl,
 							typeof data.textureName === "string"
@@ -804,6 +1013,11 @@ export class SpaceSync {
 									resourceLoadGeneration,
 								),
 						);
+						materialReady &&= textureApplied;
+					}
+
+					if (materialReady) {
+						target.userData[MATERIAL_RESOURCE_READY_DATA_KEY] = true;
 					}
 				},
 			});
@@ -882,6 +1096,7 @@ export class SpaceSync {
 				data.color = material.color.getHexString();
 			}
 			data.material = serializeMaterial(object.wallMesh.material);
+			storeMeshPredominantTextureColor(data, object.wallMesh);
 		} else if (object instanceof DoorObject) {
 			type = declaredType ?? "mesh";
 			data.meshType = "door";
@@ -896,6 +1111,7 @@ export class SpaceSync {
 				data.color = material.color.getHexString();
 			}
 			data.material = serializeMaterial(object.doorMesh.material);
+			storeMeshPredominantTextureColor(data, object.doorMesh);
 		} else if (object instanceof WindowObject) {
 			type = declaredType ?? "mesh";
 			data.meshType = "window";
@@ -910,6 +1126,10 @@ export class SpaceSync {
 				data.color = material.color.getHexString();
 			}
 			data.material = serializeMaterial(material);
+			const windowMesh = object.getObjectByName("Window Panel");
+			if (windowMesh instanceof Mesh) {
+				storeMeshPredominantTextureColor(data, windowMesh);
+			}
 		} else if (object instanceof Mesh) {
 			const meshType = this.resolveMeshType(object);
 			if (meshType) {
@@ -927,6 +1147,7 @@ export class SpaceSync {
 				}
 
 				data.material = serializeMaterial(object.material);
+				storeMeshPredominantTextureColor(data, object);
 
 				if (object instanceof Mesh) {
 					const geometryParameters = getMeshGeometryParameters(object);
@@ -941,6 +1162,16 @@ export class SpaceSync {
 					return null;
 				}
 				data[GEOMETRY_FILE_ID_DATA_KEY] = geometryFileId;
+				if (object.userData[RESOURCE_PLACEHOLDER_DATA_KEY] === true) {
+					const storedBoundingBox = getStoredBoundingBox(
+						object.userData[GEOMETRY_BOUNDING_BOX_DATA_KEY],
+					);
+					if (storedBoundingBox) {
+						data[GEOMETRY_BOUNDING_BOX_DATA_KEY] = storedBoundingBox;
+					}
+				} else {
+					storeGeometryBoundingBox(data, object);
+				}
 
 				const material = serializeMaterial(object.material);
 				if (material) {
@@ -957,6 +1188,7 @@ export class SpaceSync {
 				) {
 					data.color = materialWithColor.color.getHexString();
 				}
+				storeMeshPredominantTextureColor(data, object);
 			}
 		}
 
@@ -1222,6 +1454,7 @@ export class SpaceSync {
 		object.geometry = geometry;
 		object.userData[GEOMETRY_FILE_GEOMETRY_UUID_USER_DATA_KEY] =
 			geometry.uuid;
+		delete object.userData[RESOURCE_PLACEHOLDER_DATA_KEY];
 		placeholderGeometry.dispose();
 		this.tree.refreshSelectedObject();
 	}
@@ -1236,9 +1469,75 @@ export class SpaceSync {
 
 		window.requestAnimationFrame(() => {
 			window.setTimeout(() => {
-				void this.runResourceTasks(tasks, resourceLoadGeneration);
+				void this.runResourceTasks(tasks, resourceLoadGeneration).then(() =>
+					this.migrateLegacyMeshMetadata(resourceLoadGeneration),
+				);
 			}, 0);
 		});
+	}
+
+	private async migrateLegacyMeshMetadata(
+		resourceLoadGeneration: number,
+	): Promise<void> {
+		if (
+			this.readOnly ||
+			resourceLoadGeneration !== this.resourceLoadGeneration
+		) {
+			return;
+		}
+
+		const legacyMeshes: Mesh[] = [];
+		this.space.traverse((object) => {
+			if (
+				object instanceof Mesh &&
+				object.userData[LEGACY_METADATA_MIGRATION_DATA_KEY]
+			) {
+				legacyMeshes.push(object);
+			}
+		});
+
+		for (const mesh of legacyMeshes) {
+			if (!this.isResourceTargetCurrent(mesh, resourceLoadGeneration)) {
+				return;
+			}
+
+			const migration = mesh.userData[
+				LEGACY_METADATA_MIGRATION_DATA_KEY
+			] as LegacyMetadataMigration;
+			const geometryReady =
+				!migration.geometryBoundingBox ||
+				mesh.userData[RESOURCE_PLACEHOLDER_DATA_KEY] !== true;
+			const materialReady =
+				!migration.materialResourceRequired ||
+				mesh.userData[MATERIAL_RESOURCE_READY_DATA_KEY] === true;
+			const textureColorReady =
+				migration.texturePredominantColor &&
+				getMeshPredominantTextureColor(mesh) !== null;
+			const materialColorReady =
+				migration.materialColor && getMeshMaterialColor(mesh) !== null;
+			delete mesh.userData[LEGACY_METADATA_MIGRATION_DATA_KEY];
+
+			if (
+				!geometryReady ||
+				!materialReady ||
+				(!migration.geometryBoundingBox &&
+					!materialColorReady &&
+					!textureColorReady)
+			) {
+				continue;
+			}
+
+			try {
+				await this.syncObjectUpdate(mesh);
+			} catch (error) {
+				console.error(
+					`DT3D: Failed to migrate loading metadata for ${this.getObjectLabel(
+						mesh,
+					)}`,
+					error,
+				);
+			}
+		}
 	}
 
 	private async runResourceTasks(
