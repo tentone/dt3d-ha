@@ -18,6 +18,7 @@ import {
 } from "../editor/mesh-handler.js";
 import type {CameraViewportConfig, SceneManager} from "../editor/scene.js";
 import {DTObject} from "../objects/dt-object.js";
+import {EntityGeneric} from "../objects/entity-generic.js";
 import {EntityLight} from "../objects/entity-light.js";
 import {EntityObject} from "../objects/entity-object.js";
 import {DoorObject} from "../objects/house/door.js";
@@ -46,6 +47,12 @@ type SpaceSyncDependencies = {
 	tree: DT3DTree;
 	resolveMeshType: (object: Object3D) => string | null;
 	createEntityObject: (entityId: string) => Object3D | null;
+};
+
+type DeferredResourceTask = {
+	label: string;
+	load: () => Promise<void>;
+	operation: string;
 };
 
 export type SyncProgressItem = {
@@ -81,7 +88,7 @@ function serializeMaterial(
 	}
 }
 
-function parseSerializedMaterial(data: unknown): Material | null {
+async function parseSerializedMaterial(data: unknown): Promise<Material | null> {
 	if (!data || typeof data !== "object") {
 		return null;
 	}
@@ -94,45 +101,42 @@ function parseSerializedMaterial(data: unknown): Material | null {
 		Array.isArray(materialData.textures)
 	) {
 		const objectLoader = new ObjectLoader();
-		let textures: Record<string, Texture> = {};
-		const images = objectLoader.parseImages(materialData.images, () => {
-			for (const texture of Object.values(textures)) {
-				texture.needsUpdate = true;
-			}
-		});
-		textures = objectLoader.parseTextures(materialData.textures, images);
+		const images = await objectLoader.parseImagesAsync(materialData.images);
+		const textures: Record<string, Texture> = objectLoader.parseTextures(
+			materialData.textures,
+			images,
+		);
 		materialLoader.setTextures(textures);
 	}
 
 	return materialLoader.parse(materialData);
 }
 
-function deserializeMaterial(
+async function deserializeMaterial(
 	data: unknown,
-	fallbackColor: number,
-): Material | Material[] {
-	try {
-		if (Array.isArray(data)) {
-			const materials = data
-				.map((item) => parseSerializedMaterial(item))
-				.filter(
-					(material): material is Material =>
-						material instanceof MeshStandardMaterial || Boolean(material),
-				);
-			if (materials.length > 0) {
-				return materials;
-			}
-		} else if (data && typeof data === "object") {
-			const material = parseSerializedMaterial(data);
-			if (material) {
-				return material;
-			}
+): Promise<Material | Material[] | null> {
+	if (Array.isArray(data)) {
+		const materials = (
+			await Promise.all(data.map((item) => parseSerializedMaterial(item)))
+		).filter((material): material is Material => Boolean(material));
+		if (materials.length > 0) {
+			return materials;
 		}
-	} catch (error) {
-		console.warn("DT3D: Failed to deserialize mesh material", error);
+	} else if (data && typeof data === "object") {
+		return parseSerializedMaterial(data);
 	}
 
-	return new MeshStandardMaterial({color: fallbackColor});
+	return null;
+}
+
+function createPlaceholderMaterial(color: number): MeshStandardMaterial {
+	const material = new MeshStandardMaterial({
+		color,
+		metalness: 0,
+		roughness: 0.8,
+	});
+	material.name = "Loading material";
+	return material;
 }
 
 function replaceMeshMaterial(
@@ -199,6 +203,7 @@ export class SpaceSync {
 	private progressResetTimer: number | null = null;
 	private progressSequence = 0;
 	private progressTotal = 0;
+	private resourceLoadGeneration = 0;
 	private isSyncingFromApi = false;
 
 	public activeSpaceId: string | null = null;
@@ -245,6 +250,7 @@ export class SpaceSync {
 	 * Clear all objects from the active space and reset API mappings.
 	 */
 	public clearSpace(): void {
+		this.resourceLoadGeneration += 1;
 		this.space.traverse((child) => {
 			if (child instanceof DTObject) {
 				child.dispose();
@@ -266,7 +272,11 @@ export class SpaceSync {
 		this.isSyncingFromApi = true;
 
 		try {
-			const spaces = await this.apiClient.listSpaces();
+			const spaces = await this.trackProgress(
+				"Load spaces",
+				"Available spaces",
+				() => this.apiClient.listSpaces(),
+			);
 			this.availableSpaces = spaces;
 			let space = preferredSpaceId
 				? spaces.find((candidate) => candidate.id === preferredSpaceId)
@@ -403,13 +413,16 @@ export class SpaceSync {
 			Number.isSafeInteger(cacheVersion) &&
 			cacheVersion >= 0;
 		let instances = canUseCache
-			? await this.cache.getSpace(space.id, cacheVersion)
+			? await this.trackProgress("Read scene cache", space.name, () =>
+				this.cache.getSpace(space.id, cacheVersion),
+			)
 			: null;
+		let shouldCacheSpace = false;
 		if (!instances) {
-			instances = await this.apiClient.listObjects(space.id);
-			if (canUseCache) {
-				await this.cache.putSpace(space.id, cacheVersion, instances);
-			}
+			instances = await this.trackProgress("Load scene objects", space.name, () =>
+				this.apiClient.listObjects(space.id),
+			);
+			shouldCacheSpace = canUseCache;
 		}
 
 		this.activeSpaceId = space.id;
@@ -421,13 +434,32 @@ export class SpaceSync {
 			this.tree.updateTreeFromScene(this.space, true);
 			if (!this.readOnly) {
 				this.isSyncingFromApi = false;
-				await this.syncAllObjectsToApi();
-				this.isSyncingFromApi = true;
+				const spaceId = space.id;
+				window.setTimeout(() => {
+					if (this.activeSpaceId !== spaceId) {
+						return;
+					}
+					void this.syncAllObjectsToApi().catch((error) => {
+						console.error("DT3D: Failed to persist the default scene", error);
+					});
+				}, 0);
 			}
 			return space;
 		}
 
-		this.loadObjectsFromApi(instances);
+		this.loadObjectsFromApi(
+			instances,
+			shouldCacheSpace
+				? [
+					{
+						operation: "Cache scene",
+						label: space.name,
+						load: () =>
+							this.cache.putSpace(space.id, cacheVersion!, instances),
+					},
+				]
+				: [],
+		);
 		this.tree.updateTreeFromScene(this.space, true);
 		return space;
 	}
@@ -468,13 +500,22 @@ export class SpaceSync {
 	/**
 	 * Load object instances into the space and reconstruct hierarchy.
 	 */
-	public loadObjectsFromApi(instances: ObjectInstanceResponse[]): void {
+	public loadObjectsFromApi(
+		instances: ObjectInstanceResponse[],
+		additionalResourceTasks: DeferredResourceTask[] = [],
+	): void {
 		this.clearSpace();
+		const resourceLoadGeneration = this.resourceLoadGeneration;
+		const resourceTasks: DeferredResourceTask[] = [];
 
 		const objectsById = new Map<string, Object3D>();
 
 		for (const instance of instances) {
-			const object = this.createObjectFromInstance(instance);
+			const object = this.createObjectFromInstance(
+				instance,
+				resourceTasks,
+				resourceLoadGeneration,
+			);
 			if (!object) {
 				continue;
 			}
@@ -529,6 +570,8 @@ export class SpaceSync {
 			}
 		}
 		this.sceneManager.applyShadowSettingsToObject(this.space);
+		resourceTasks.push(...additionalResourceTasks);
+		this.scheduleResourceTasks(resourceTasks, resourceLoadGeneration);
 	}
 
 	/**
@@ -536,11 +579,14 @@ export class SpaceSync {
 	 */
 	public createObjectFromInstance(
 		instance: ObjectInstanceResponse,
+		resourceTasks: DeferredResourceTask[] = [],
+		resourceLoadGeneration = this.resourceLoadGeneration,
 	): Object3D | null {
 		const data = instance.data ?? {};
 		const declaredType = instance.type.trim();
 		const instanceType = normalizeObjectInstanceType(instance.type);
 		let object: Object3D | null = null;
+		let materialTarget: Mesh | null = null;
 
 		if (instanceType === "mesh") {
 			const meshType = data.meshType as string | undefined;
@@ -550,22 +596,55 @@ export class SpaceSync {
 				| string
 				| undefined;
 			if (typeof geometryFileId === "string" && geometryFileId) {
-				const material = deserializeMaterial(data.material, color);
-				const mesh = new Mesh(new BoxGeometry(1, 1, 1), material);
+				const mesh: Mesh = new Mesh(
+					new BoxGeometry(1, 1, 1),
+					createPlaceholderMaterial(color),
+				);
 				mesh.userData[GEOMETRY_FILE_ID_DATA_KEY] = geometryFileId;
-				void this.loadMeshGeometryFile(mesh, geometryFileId, instance.name);
+				resourceTasks.push({
+					operation: "Load geometry",
+					label: instance.name,
+					load: () =>
+						this.loadMeshGeometryFile(
+							mesh,
+							geometryFileId,
+							resourceLoadGeneration,
+						),
+				});
 				object = mesh;
+				materialTarget = mesh;
 			} else if (data.geometry && typeof data.geometry === "object") {
-				try {
-					const geometry = new BufferGeometryLoader().parse(data.geometry);
-					const material = deserializeMaterial(data.material, color);
-					object = new Mesh(geometry, material);
-				} catch (error) {
-					console.warn("DT3D: Failed to load persisted mesh geometry", error);
-					return null;
-				}
+				const mesh: Mesh = new Mesh(
+					new BoxGeometry(1, 1, 1),
+					createPlaceholderMaterial(color),
+				);
+				resourceTasks.push({
+					operation: "Prepare geometry",
+					label: instance.name,
+					load: async () => {
+						const geometry = new BufferGeometryLoader().parse(data.geometry);
+						if (
+							!this.isResourceTargetCurrent(mesh, resourceLoadGeneration)
+						) {
+							geometry.dispose();
+							return;
+						}
+						const placeholderGeometry = mesh.geometry;
+						mesh.geometry = geometry;
+						placeholderGeometry.dispose();
+						this.tree.refreshSelectedObject();
+					},
+				});
+				object = mesh;
+				materialTarget = mesh;
 			} else if (!meshType) {
-				return null;
+				const mesh = new Mesh(
+					new BoxGeometry(1, 1, 1),
+					createPlaceholderMaterial(color),
+				);
+				mesh.userData.resourcePlaceholder = true;
+				object = mesh;
+				materialTarget = mesh;
 			} else if (meshType === "wall") {
 				const wallData = data.wall as
 					| { length?: number; height?: number; thickness?: number }
@@ -578,11 +657,8 @@ export class SpaceSync {
 					},
 					color,
 				);
-				replaceMeshMaterial(
-					wall.wallMesh,
-					deserializeMaterial(data.material, color),
-				);
 				object = wall;
+				materialTarget = wall.wallMesh;
 			} else if (meshType === "door" || meshType === "window") {
 				const dims = data.dimensions as
 					| { width?: number; height?: number; thickness?: number }
@@ -597,12 +673,9 @@ export class SpaceSync {
 						},
 						color,
 					);
-					replaceMeshMaterial(
-						door.doorMesh,
-						deserializeMaterial(data.material, color),
-					);
 					door.setOpen(openState);
 					object = door;
+					materialTarget = door.doorMesh;
 				} else {
 					const windowObj = new WindowObject(
 						{
@@ -615,20 +688,26 @@ export class SpaceSync {
 					const windowMesh = windowObj.getObjectByName(
 						"Window Panel",
 					) as Mesh | null;
-					if (windowMesh)
-						replaceMeshMaterial(
-							windowMesh,
-							deserializeMaterial(data.material, color),
-						);
 					windowObj.setOpen(openState);
 					object = windowObj;
+					materialTarget = windowMesh;
 				}
 			} else {
-				const material = deserializeMaterial(data.material, color);
 				const geometryParameters = data.geometryParameters as
 					| Record<string, number | boolean>
 					| undefined;
-				object = createMeshObject(meshType, material, geometryParameters);
+				const placeholderMaterial = createPlaceholderMaterial(color);
+				let mesh = createMeshObject(
+					meshType,
+					placeholderMaterial,
+					geometryParameters,
+				) as Mesh | null;
+				if (!mesh) {
+					mesh = new Mesh(new BoxGeometry(1, 1, 1), placeholderMaterial);
+					mesh.userData.resourcePlaceholder = true;
+				}
+				object = mesh;
+				materialTarget = mesh;
 			}
 			if (object && meshType) {
 				object.userData.meshType = meshType;
@@ -640,6 +719,12 @@ export class SpaceSync {
 			}
 
 			object = this.createEntityObject(entityId);
+			object ??= new EntityGeneric(entityId, {
+				state: "unavailable",
+				attributes: {
+					friendly_name: instance.name || entityId,
+				},
+			});
 			if (object) {
 				object.userData.entityId = entityId;
 				if (object instanceof EntityObject) {
@@ -676,12 +761,52 @@ export class SpaceSync {
 			declaredType || instance.type;
 		this.applyObjectTransform(object, data);
 
-		if (object instanceof Mesh && typeof data.textureDataUrl === "string") {
-			void applyTextureToMesh(
-				object,
-				data.textureDataUrl,
-				typeof data.textureName === "string" ? data.textureName : "Texture",
-			);
+		const hasSerializedMaterial =
+			Boolean(data.material) && typeof data.material === "object";
+		const hasTextureData = typeof data.textureDataUrl === "string";
+		if (materialTarget && (hasSerializedMaterial || hasTextureData)) {
+			const target = materialTarget;
+			resourceTasks.push({
+				operation: hasSerializedMaterial ? "Load material" : "Load texture",
+				label: instance.name,
+				load: async () => {
+					if (hasSerializedMaterial) {
+						const material = await deserializeMaterial(data.material);
+						if (material) {
+							if (
+								!this.isResourceTargetCurrent(
+									target,
+									resourceLoadGeneration,
+								)
+							) {
+								const materials = Array.isArray(material)
+									? material
+									: [material];
+								for (const staleMaterial of materials) {
+									staleMaterial.dispose();
+								}
+								return;
+							}
+							replaceMeshMaterial(target, material);
+						}
+					}
+
+					if (hasTextureData) {
+						await applyTextureToMesh(
+							target,
+							data.textureDataUrl,
+							typeof data.textureName === "string"
+								? data.textureName
+								: "Texture",
+							() =>
+								this.isResourceTargetCurrent(
+									target,
+									resourceLoadGeneration,
+								),
+						);
+					}
+				},
+			});
 		}
 
 		if (object instanceof DTObject && typeof data.locked === "boolean") {
@@ -877,6 +1002,7 @@ export class SpaceSync {
 		if (this.readOnly || !this.activeSpaceId || this.isSyncingFromApi) {
 			return;
 		}
+		const spaceId = this.activeSpaceId;
 
 		if (this.getObjectApiId(object)) {
 			await this.syncObjectUpdate(object);
@@ -890,7 +1016,11 @@ export class SpaceSync {
 		}
 
 		const payload = await this.buildObjectPayload(object);
-		if (!payload) {
+		if (
+			!payload ||
+			this.activeSpaceId !== spaceId ||
+			!this.shouldPersistObject(object)
+		) {
 			return;
 		}
 
@@ -899,9 +1029,14 @@ export class SpaceSync {
 			this.getObjectLabel(object),
 			() =>
 				this.apiClient
-					.createObject(this.activeSpaceId, payload)
+					.createObject(spaceId, payload)
 					.then(async (response) => {
-						this.setObjectApiId(object, response.id);
+						if (
+							this.activeSpaceId === spaceId &&
+							this.shouldPersistObject(object)
+						) {
+							this.setObjectApiId(object, response.id);
+						}
 						await this.cache.invalidateSpace(response.space_id);
 					}),
 		);
@@ -1045,61 +1180,107 @@ export class SpaceSync {
 	private async loadMeshGeometryFile(
 		object: Mesh,
 		geometryFileId: string,
-		label?: string,
+		resourceLoadGeneration: number,
 	): Promise<void> {
 		if (!this.activeSpaceId) {
 			return;
 		}
 		const spaceId = this.activeSpaceId;
 
-		try {
-			let geometryData = await this.trackProgress(
-				"Load geometry",
-				label || this.getObjectLabel(object),
-				() => this.cache.getGeometry(spaceId, geometryFileId),
-			);
-			let geometry = null;
-			if (geometryData) {
+		let geometryData = await this.cache.getGeometry(spaceId, geometryFileId);
+		let geometry = null;
+		if (geometryData) {
+			try {
+				geometry = deserializeGeometryBinary(geometryData);
+			} catch (error) {
+				console.warn(
+					"DT3D: Cached geometry is invalid; fetching it again",
+					error,
+				);
+				await this.cache.deleteGeometry(spaceId, geometryFileId);
+				geometryData = null;
+			}
+		}
+		if (!geometryData) {
+			geometryData = await this.apiClient.getGeometry(spaceId, geometryFileId);
+			geometry = deserializeGeometryBinary(geometryData);
+			await this.cache.putGeometry(spaceId, geometryFileId, geometryData);
+		}
+		if (!geometry) {
+			return;
+		}
+		if (
+			this.activeSpaceId !== spaceId ||
+			object.userData[GEOMETRY_FILE_ID_DATA_KEY] !== geometryFileId ||
+			!this.isResourceTargetCurrent(object, resourceLoadGeneration)
+		) {
+			geometry.dispose();
+			return;
+		}
+
+		const placeholderGeometry = object.geometry;
+		object.geometry = geometry;
+		object.userData[GEOMETRY_FILE_GEOMETRY_UUID_USER_DATA_KEY] =
+			geometry.uuid;
+		placeholderGeometry.dispose();
+		this.tree.refreshSelectedObject();
+	}
+
+	private scheduleResourceTasks(
+		tasks: DeferredResourceTask[],
+		resourceLoadGeneration: number,
+	): void {
+		if (tasks.length === 0) {
+			return;
+		}
+
+		window.requestAnimationFrame(() => {
+			window.setTimeout(() => {
+				void this.runResourceTasks(tasks, resourceLoadGeneration);
+			}, 0);
+		});
+	}
+
+	private async runResourceTasks(
+		tasks: DeferredResourceTask[],
+		resourceLoadGeneration: number,
+	): Promise<void> {
+		let nextTaskIndex = 0;
+		const workerCount = Math.min(3, tasks.length);
+		const runWorker = async () => {
+			while (
+				nextTaskIndex < tasks.length &&
+				resourceLoadGeneration === this.resourceLoadGeneration
+			) {
+				const task = tasks[nextTaskIndex];
+				nextTaskIndex += 1;
 				try {
-					geometry = deserializeGeometryBinary(geometryData);
+					await this.trackProgress(task.operation, task.label, task.load);
 				} catch (error) {
-					console.warn(
-						"DT3D: Cached geometry is invalid; fetching it again",
+					console.error(
+						`DT3D: ${task.operation} failed for ${task.label}`,
 						error,
 					);
-					await this.cache.deleteGeometry(spaceId, geometryFileId);
-					geometryData = null;
 				}
-			}
-			if (!geometryData) {
-				geometryData = await this.trackProgress(
-					"Download geometry",
-					label || this.getObjectLabel(object),
-					() => this.apiClient.getGeometry(spaceId, geometryFileId),
-				);
-				geometry = deserializeGeometryBinary(geometryData);
-				await this.cache.putGeometry(spaceId, geometryFileId, geometryData);
-			}
-			if (!geometry) {
-				return;
-			}
-			if (
-				this.activeSpaceId !== spaceId ||
-				object.userData[GEOMETRY_FILE_ID_DATA_KEY] !== geometryFileId
-			) {
-				geometry.dispose();
-				return;
-			}
 
-			const placeholderGeometry = object.geometry;
-			object.geometry = geometry;
-			object.userData[GEOMETRY_FILE_GEOMETRY_UUID_USER_DATA_KEY] =
-				geometry.uuid;
-			placeholderGeometry.dispose();
-			this.tree.refreshSelectedObject();
-		} catch (error) {
-			console.error("DT3D: Failed to load mesh geometry file", error);
+				await new Promise<void>((resolve) => {
+					window.setTimeout(resolve, 0);
+				});
+			}
+		};
+
+		await Promise.all(Array.from({length: workerCount}, () => runWorker()));
+	}
+
+	private isResourceTargetCurrent(
+		object: Object3D,
+		resourceLoadGeneration: number,
+	): boolean {
+		if (resourceLoadGeneration !== this.resourceLoadGeneration) {
+			return false;
 		}
+
+		return object === this.space || this.isDescendant(object, this.space);
 	}
 
 	private async trackProgress<T>(

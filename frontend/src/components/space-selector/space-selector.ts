@@ -120,8 +120,18 @@ export class DT3DSpaceSelector extends LitElement {
 
 	protected render() {
 		return html`
-			<div class="selector">
+			<div class="selector" aria-busy=${this.loading ? "true" : "false"}>
 				<label for="active-space">${localManager.get("space")}</label>
+				${this.loading
+					? html`
+						<span
+							class="loading-indicator"
+							role="status"
+							aria-label=${localManager.get("loading")}
+							title=${localManager.get("loading")}
+						></span>
+					`
+					: null}
 				<select
 					id="active-space"
 					.value=${this.selectedSpaceId}

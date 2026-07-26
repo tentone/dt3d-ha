@@ -33,11 +33,22 @@ export class SyncProgressComponent extends LitElement {
 		const percent = Math.min(100, Math.max(0, Math.round((finished / total) * 100)));
 		const activeItems = progress.items.slice(0, 4);
 		const remainingItems = Math.max(0, progress.items.length - activeItems.length);
+		const isLoading = progress.items.some((item) =>
+			/^(load|read|cache|prepare)/i.test(item.operation),
+		);
+		const title =
+			progress.items.length === 0
+				? progress.failed > 0
+					? "Scene loaded with errors"
+					: "Scene ready"
+				: isLoading
+					? "Loading scene"
+					: "Syncing scene";
 
 		return html`
 			<div class="sync-progress" role="status" aria-live="polite">
 				<div class="sync-header">
-					<div class="sync-title">Syncing scene</div>
+					<div class="sync-title">${title}</div>
 					<div class="sync-count">${finished}/${total}</div>
 				</div>
 				<div class="sync-bar" aria-hidden="true">

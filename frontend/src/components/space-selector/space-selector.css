@@ -25,6 +25,23 @@ label {
 	font-weight: 600;
 }
 
+.loading-indicator {
+	width: 14px;
+	height: 14px;
+	flex: 0 0 auto;
+	border: 2px solid color-mix(in srgb, var(--primary-color) 24%, transparent);
+	border-top-color: var(--primary-color);
+	border-radius: 50%;
+	animation: loading-spin 0.75s linear infinite;
+	box-sizing: border-box;
+}
+
+@keyframes loading-spin {
+	to {
+		transform: rotate(360deg);
+	}
+}
+
 select {
 	flex: 1;
 	min-width: 0;

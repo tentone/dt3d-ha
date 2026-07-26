@@ -49,8 +49,14 @@ export async function applyTextureToMesh(
 	mesh: Mesh,
 	dataUrl: string,
 	textureName = "Texture",
-): Promise<void> {
+	shouldApply: () => boolean = () => true,
+): Promise<boolean> {
 	const texture = await loadTexture(dataUrl);
+	if (!shouldApply()) {
+		texture.dispose();
+		return false;
+	}
+
 	texture.colorSpace = "srgb";
 	texture.needsUpdate = true;
 
@@ -79,6 +85,7 @@ export async function applyTextureToMesh(
 
 	mesh.userData.textureDataUrl = dataUrl;
 	mesh.userData.textureName = textureName;
+	return true;
 }
 
 export function clearMeshTexture(mesh: Mesh): void {
