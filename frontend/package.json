@@ -12,10 +12,10 @@
 	},
 	"dependencies": {
 		"@mdi/js": "~7.4.47",
-		"draco3d": "^1.5.7",
-		"fflate": "^0.8.3",
+		"draco3d": "~1.5.7",
+		"fflate": "~0.8.3",
 		"lit": "~3.3.1",
-		"three": "~0.180.0",
+		"three": "~0.185.1",
 		"tippy.js": "6.3.7",
 		"troika-three-text": "0.52.4"
 	},
