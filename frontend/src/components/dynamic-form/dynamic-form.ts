@@ -1,3 +1,4 @@
+import type {TemplateResult} from "lit";
 import {html, LitElement, unsafeCSS} from "lit";
 import {customElement, property} from "lit/decorators.js";
 
@@ -14,6 +15,7 @@ export type DynamicInputFieldType =
 	| "color"
 	| "info"
 	| "file"
+	| "texture"
 	| "select";
 
 export type DynamicFieldType = DynamicInputFieldType | "sub-form";
@@ -31,6 +33,10 @@ export type DynamicFormInputField = {
 	step?: number;
 	min?: number;
 	max?: number;
+	accept?: string;
+	placeholder?: string;
+	replaceLabel?: string;
+	clearLabel?: string;
 	/**
 	 * Whether a Vector3 field should offer linked, proportional axis editing.
 	 * The value also controls the initial linked state.
@@ -93,6 +99,8 @@ export class DynamicForm extends LitElement {
 
 	private subFormOpenState = new Map<string, boolean>();
 	private vectorLinkedState = new Map<string, boolean>();
+	private textureDragState = new Set<string>();
+	private texturePreviewCache = new WeakMap<object, string | null>();
 	private inputDebounceTimers = new Map<string, number>();
 	private pendingInputChanges = new Map<string, DynamicFormChangeDetail>();
 
@@ -190,6 +198,216 @@ export class DynamicForm extends LitElement {
 			return `#${(value as any).getHexString()}`;
 		}
 		return "#000000";
+	}
+
+	private getTexturePreviewUrl(value: unknown): string | null {
+		if (!value || typeof value !== "object") {
+			return null;
+		}
+
+		const texture = value as {
+			image?: unknown;
+			source?: {data?: unknown};
+		};
+		const image = texture.image ?? texture.source?.data;
+		if (typeof image === "string") {
+			return image;
+		}
+		if (!image || typeof image !== "object") {
+			return null;
+		}
+
+		const imageSource = image as {currentSrc?: unknown; src?: unknown};
+		if (typeof imageSource.currentSrc === "string" && imageSource.currentSrc) {
+			return imageSource.currentSrc;
+		}
+		if (typeof imageSource.src === "string" && imageSource.src) {
+			return imageSource.src;
+		}
+		const cachedPreview = this.texturePreviewCache.get(image);
+		if (cachedPreview !== undefined) {
+			return cachedPreview;
+		}
+
+		let previewUrl: string | null = null;
+		try {
+			if (
+				typeof HTMLCanvasElement !== "undefined" &&
+				image instanceof HTMLCanvasElement
+			) {
+				previewUrl = image.toDataURL();
+			} else {
+				const dimensions = image as {height?: unknown; width?: unknown};
+				const width = Number(dimensions.width);
+				const height = Number(dimensions.height);
+				if (width > 0 && height > 0) {
+					const maxSize = 128;
+					const scale = Math.min(1, maxSize / Math.max(width, height));
+					const canvas = document.createElement("canvas");
+					canvas.width = Math.max(1, Math.round(width * scale));
+					canvas.height = Math.max(1, Math.round(height * scale));
+					const context = canvas.getContext("2d");
+					context?.drawImage(
+						image as CanvasImageSource,
+						0,
+						0,
+						canvas.width,
+						canvas.height,
+					);
+					previewUrl = context ? canvas.toDataURL() : null;
+				}
+			}
+		} catch {
+			previewUrl = null;
+		}
+		this.texturePreviewCache.set(image, previewUrl);
+		return previewUrl;
+	}
+
+	private getTextureName(value: unknown): string {
+		if (!value || typeof value !== "object") {
+			return "";
+		}
+
+		const name = (value as {name?: unknown}).name;
+		return typeof name === "string" ? name : "";
+	}
+
+	private setTextureDragging(attribute: string, dragging: boolean): void {
+		if (dragging) {
+			this.textureDragState.add(attribute);
+		} else {
+			this.textureDragState.delete(attribute);
+		}
+		this.requestUpdate();
+	}
+
+	private dispatchTextureFile(
+		field: DynamicFormInputField,
+		file: File | null,
+	): void {
+		if (file && !file.type.startsWith("image/")) {
+			return;
+		}
+		this.dispatchFieldChange(field.attribute, field.type, file);
+	}
+
+	private openTexturePicker(event: Event): void {
+		const control = (event.currentTarget as HTMLElement).closest(
+			".texture-control",
+		);
+		control?.querySelector<HTMLInputElement>(".texture-file-input")?.click();
+	}
+
+	private renderTextureField(
+		field: DynamicFormInputField,
+		data: unknown,
+	): TemplateResult {
+		const value = this.getFieldValue(field, data);
+		const previewUrl = this.getTexturePreviewUrl(value);
+		const textureName = this.getTextureName(value);
+		const dragging = this.textureDragState.has(field.attribute);
+		const hasTexture = value != null;
+
+		return html`
+			<div class="field texture-field">
+				<label title=${field.tooltip ?? ""}>${field.label}</label>
+				<div class="texture-control">
+					<button
+						type="button"
+						class=${`texture-drop-zone${dragging ? " dragging" : ""}`}
+						?disabled=${!field.editable}
+						aria-label=${hasTexture
+							? (field.replaceLabel ?? "Replace texture")
+							: (field.placeholder ?? "Choose a texture")}
+						@click=${this.openTexturePicker}
+						@dragenter=${(event: DragEvent) => {
+							event.preventDefault();
+							if (field.editable) {
+								this.setTextureDragging(field.attribute, true);
+							}
+						}}
+						@dragover=${(event: DragEvent) => {
+							event.preventDefault();
+							if (event.dataTransfer) {
+								event.dataTransfer.dropEffect = field.editable
+									? "copy"
+									: "none";
+							}
+						}}
+						@dragleave=${(event: DragEvent) => {
+							const nextTarget = event.relatedTarget;
+							if (
+								!nextTarget ||
+								!(event.currentTarget as HTMLElement).contains(
+									nextTarget as Node,
+								)
+							) {
+								this.setTextureDragging(field.attribute, false);
+							}
+						}}
+						@drop=${(event: DragEvent) => {
+							event.preventDefault();
+							this.setTextureDragging(field.attribute, false);
+							if (!field.editable) return;
+							const file = Array.from(event.dataTransfer?.files ?? []).find(
+								(item) => item.type.startsWith("image/"),
+							);
+							if (file) {
+								this.dispatchTextureFile(field, file);
+							}
+						}}
+					>
+						${previewUrl
+							? html`<img class="texture-preview" src=${previewUrl} alt="" />`
+							: html`<ha-icon
+									class="texture-placeholder-icon"
+									icon="mdi:image-plus"
+								></ha-icon>`}
+						<span class="texture-details">
+							<span class="texture-action">
+								${hasTexture
+									? (field.replaceLabel ?? "Drop or choose a replacement")
+									: (field.placeholder ?? "Drop an image or click to browse")}
+							</span>
+							${textureName
+								? html`<span class="texture-name" title=${textureName}>
+										${textureName}
+									</span>`
+								: null}
+						</span>
+					</button>
+					<input
+						class="texture-file-input"
+						type="file"
+						accept=${field.accept ?? "image/*"}
+						?disabled=${!field.editable}
+						@change=${(event: Event) => {
+							const input = event.target as HTMLInputElement;
+							const file = input.files?.[0];
+							if (file) {
+								this.dispatchTextureFile(field, file);
+							}
+							input.value = "";
+						}}
+					/>
+					${hasTexture
+						? html`
+								<button
+									type="button"
+									class="texture-clear-button"
+									?disabled=${!field.editable}
+									title=${field.clearLabel ?? "Clear texture"}
+									aria-label=${field.clearLabel ?? "Clear texture"}
+									@click=${() => this.dispatchTextureFile(field, null)}
+								>
+									<ha-icon icon="mdi:delete-outline"></ha-icon>
+								</button>
+							`
+						: null}
+				</div>
+			</div>
+		`;
 	}
 
 	/**
@@ -324,7 +542,10 @@ export class DynamicForm extends LitElement {
 		this.subFormOpenState.set(this.getSubFormKey(field), details.open);
 	}
 
-	private renderSubForm(field: DynamicFormSubFormField, data: unknown) {
+	private renderSubForm(
+		field: DynamicFormSubFormField,
+		data: unknown,
+	): TemplateResult {
 		const subFormData = field.data === undefined ? data : field.data;
 
 		return html`
@@ -351,7 +572,10 @@ export class DynamicForm extends LitElement {
 	 * @param field - Field description to render.
 	 * @returns Rendered template for the field, or null if the field type is not supported or the field is disabled.
 	 */
-	private renderField(field: DynamicFormField, data = this.data) {
+	private renderField(
+		field: DynamicFormField,
+		data = this.data,
+	): TemplateResult | null {
 		if (!field.enabled) {
 			return null;
 		}
@@ -479,6 +703,8 @@ export class DynamicForm extends LitElement {
 					</div>
 				`;
 			}
+			case "texture":
+				return this.renderTextureField(field, data);
 			case "info": {
 				const value = this.getFieldValue(field, data);
 				return html`

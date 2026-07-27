@@ -37,16 +37,16 @@ import {
 	SubtractiveBlending,
 } from "three";
 
-export type MaterialObject = Object3D & { material: Material | Material[] };
+export type MaterialObject = Object3D & {material: Material | Material[]};
 
 export type MaterialPropertyDefinition = {
 	property: string;
 	label: string;
-	type: "string" | "number" | "boolean" | "color" | "select";
+	type: "string" | "number" | "boolean" | "color" | "select" | "texture";
 	step?: number;
 	min?: number;
 	max?: number;
-	options?: Array<{ label: string; value: string | number | boolean }>;
+	options?: Array<{label: string; value: string | number | boolean}>;
 };
 
 type MaterialConstructor = new () => Material;
@@ -191,6 +191,76 @@ const TRANSFERABLE_PROPERTIES = [
 
 const COMMON_PROPERTY_DEFINITIONS: MaterialPropertyDefinition[] = [
 	{property: "name", label: "materialName", type: "string"},
+	{property: "map", label: "materialMap", type: "texture"},
+	{property: "lightMap", label: "materialLightMap", type: "texture"},
+	{property: "aoMap", label: "materialAoMap", type: "texture"},
+	{property: "emissiveMap", label: "materialEmissiveMap", type: "texture"},
+	{property: "bumpMap", label: "materialBumpMap", type: "texture"},
+	{property: "normalMap", label: "materialNormalMap", type: "texture"},
+	{
+		property: "displacementMap",
+		label: "materialDisplacementMap",
+		type: "texture",
+	},
+	{property: "roughnessMap", label: "materialRoughnessMap", type: "texture"},
+	{property: "metalnessMap", label: "materialMetalnessMap", type: "texture"},
+	{property: "alphaMap", label: "materialAlphaMap", type: "texture"},
+	{property: "envMap", label: "materialEnvMap", type: "texture"},
+	{property: "specularMap", label: "materialSpecularMap", type: "texture"},
+	{property: "clearcoatMap", label: "materialClearcoatMap", type: "texture"},
+	{
+		property: "clearcoatRoughnessMap",
+		label: "materialClearcoatRoughnessMap",
+		type: "texture",
+	},
+	{
+		property: "clearcoatNormalMap",
+		label: "materialClearcoatNormalMap",
+		type: "texture",
+	},
+	{
+		property: "sheenColorMap",
+		label: "materialSheenColorMap",
+		type: "texture",
+	},
+	{
+		property: "sheenRoughnessMap",
+		label: "materialSheenRoughnessMap",
+		type: "texture",
+	},
+	{
+		property: "transmissionMap",
+		label: "materialTransmissionMap",
+		type: "texture",
+	},
+	{property: "thicknessMap", label: "materialThicknessMap", type: "texture"},
+	{
+		property: "specularIntensityMap",
+		label: "materialSpecularIntensityMap",
+		type: "texture",
+	},
+	{
+		property: "specularColorMap",
+		label: "materialSpecularColorMap",
+		type: "texture",
+	},
+	{
+		property: "iridescenceMap",
+		label: "materialIridescenceMap",
+		type: "texture",
+	},
+	{
+		property: "iridescenceThicknessMap",
+		label: "materialIridescenceThicknessMap",
+		type: "texture",
+	},
+	{
+		property: "anisotropyMap",
+		label: "materialAnisotropyMap",
+		type: "texture",
+	},
+	{property: "matcap", label: "materialMatcapMap", type: "texture"},
+	{property: "gradientMap", label: "materialGradientMap", type: "texture"},
 	{property: "color", label: "materialColor", type: "color"},
 	{property: "emissive", label: "materialEmissive", type: "color"},
 	{
@@ -610,9 +680,9 @@ function cloneMaterialProperty(value: unknown): unknown {
 		value &&
 		typeof value === "object" &&
 		"clone" in value &&
-		typeof (value as { clone?: unknown }).clone === "function"
+		typeof (value as {clone?: unknown}).clone === "function"
 	) {
-		return (value as { clone: () => unknown }).clone();
+		return (value as {clone: () => unknown}).clone();
 	}
 	if (Array.isArray(value)) return [...value];
 	return value;

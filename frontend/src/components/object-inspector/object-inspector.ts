@@ -15,8 +15,8 @@ import {
 	setMaterialProperty,
 } from "../../editor/material-handler.js";
 import {
-	applyImageTextureToMesh,
-	clearMeshTexture,
+	applyImageTextureToMaterial,
+	clearMaterialTexture,
 } from "../../editor/material-texture.js";
 import {
 	getMeshGeometryParameters,
@@ -45,6 +45,8 @@ export class DT3DObjectInspector extends LitElement {
 
 	@property({attribute: false})
 	public selectedObject: Object3D | null = null;
+
+	private materialTextureVersions = new Map<string, number>();
 
 	private isLocked(
 		object: Object3D | null = this.selectedObject,
@@ -179,24 +181,42 @@ export class DT3DObjectInspector extends LitElement {
 				return;
 			}
 			this.selectedObject.setColor(colorValue);
-		} else if (attribute === "material.texture") {
-			const mesh = findMaterialObject(this.selectedObject);
-			if (!mesh || !(value instanceof File)) {
+		} else if (type === "texture" && attribute.startsWith("material.")) {
+			const materialObject = findMaterialObject(this.selectedObject);
+			if (!materialObject) {
 				return;
 			}
-			if (!(mesh instanceof Mesh)) return;
-			void applyImageTextureToMesh(mesh, value).then(() => {
-				this.dispatchUpdated();
-				this.requestUpdate();
-			});
-			return;
-		} else if (attribute === "material.clearTexture") {
-			const mesh = findMaterialObject(this.selectedObject);
-			if (!mesh || value !== true) {
+
+			const materialProperty = attribute.slice("material.".length);
+			const textureKey = `${materialObject.uuid}:${materialProperty}`;
+			const textureVersion =
+				(this.materialTextureVersions.get(textureKey) ?? 0) + 1;
+			this.materialTextureVersions.set(textureKey, textureVersion);
+			if (value === null) {
+				if (!clearMaterialTexture(materialObject, materialProperty)) {
+					return;
+				}
+			} else if (value instanceof File) {
+				void applyImageTextureToMaterial(
+					materialObject,
+					materialProperty,
+					value,
+					() =>
+						this.materialTextureVersions.get(textureKey) === textureVersion &&
+						findMaterialObject(this.selectedObject) === materialObject,
+				)
+					.then((changed) => {
+						if (!changed) return;
+						this.dispatchUpdated();
+						this.requestUpdate();
+					})
+					.catch((error) => {
+						console.error("Failed to apply material texture", error);
+					});
+				return;
+			} else {
 				return;
 			}
-			if (!(mesh instanceof Mesh)) return;
-			clearMeshTexture(mesh);
 		} else if (attribute.startsWith("material.")) {
 			const materialObject = findMaterialObject(this.selectedObject);
 			const materialProperty = attribute.slice("material.".length);
@@ -356,29 +376,20 @@ export class DT3DObjectInspector extends LitElement {
 				min: definition.min,
 				max: definition.max,
 				options: definition.options,
+				placeholder:
+					definition.type === "texture"
+						? localManager.get("materialTextureDrop")
+						: undefined,
+				replaceLabel:
+					definition.type === "texture"
+						? localManager.get("materialTextureReplace")
+						: undefined,
+				clearLabel:
+					definition.type === "texture"
+						? localManager.get("clearMaterialTexture")
+						: undefined,
 			})),
 		);
-
-		if (materialObject instanceof Mesh && "map" in material) {
-			fields.push(
-				{
-					label: localManager.get("materialTexture"),
-					attribute: "material.texture",
-					type: "file",
-					tooltip: localManager.get("materialTextureTooltip"),
-					editable: !locked,
-					enabled: true,
-				},
-				{
-					label: localManager.get("clearMaterialTexture"),
-					attribute: "material.clearTexture",
-					type: "boolean",
-					tooltip: localManager.get("clearMaterialTextureTooltip"),
-					editable: !locked,
-					enabled: true,
-				},
-			);
-		}
 
 		return fields;
 	}
