@@ -53,6 +53,9 @@ export class DT3DObjectInspector extends LitElement {
 	@property({attribute: false})
 	public selectedObject: Object3D | null = null;
 
+	@property({type: Boolean})
+	public multiple = false;
+
 	private materialTextureVersions = new Map<string, number>();
 
 	private isLocked(
@@ -956,6 +959,14 @@ export class DT3DObjectInspector extends LitElement {
 	}
 
 	public render() {
+		if (this.multiple) {
+			return html`
+				<div class="placeholder">
+					${localManager.get("multipleObjectsSelected")}
+				</div>
+			`;
+		}
+
 		const locked = this.isLocked();
 		const inspectorFields = this.getInspectorFields(locked);
 

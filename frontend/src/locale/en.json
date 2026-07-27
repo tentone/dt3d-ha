@@ -160,6 +160,7 @@
 	"entity": "Entity",
 	"objectLocked": "This object is locked and cannot be edited.",
 	"selectObjectPrompt": "Select an object from the tree to edit its properties.",
+	"multipleObjectsSelected": "Multiple objects selected",
 	"collapseSidebar": "Collapse sidebar",
 	"collapseObjectTree": "Collapse object tree explorer",
 	"expandObjectTree": "Expand object tree explorer",

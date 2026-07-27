@@ -158,6 +158,13 @@ export class DT3DTree extends LitElement {
 	private selectedId: UUID = null;
 
 	/**
+	 * All selected node IDs. `selectedId` remains the range anchor and primary
+	 * selection for scrolling and single-selection behavior.
+	 */
+	@state()
+	private selectedIds: Set<UUID> = new Set();
+
+	/**
 	 * Tree data structure representing the 3D scene graph.
 	 */
 	private tree: TreeNode[] = [];
@@ -180,9 +187,9 @@ export class DT3DTree extends LitElement {
 	@state()
 	private contextMenu: { id: UUID; x: number; y: number } | null = null;
 
-	/** Object currently being dragged in the tree. */
+	/** Top-level selected objects currently being dragged in the tree. */
 	@state()
-	private draggedId: UUID | null = null;
+	private draggedIds: UUID[] = [];
 
 	/** Active insertion target shown while dragging. */
 	@state()
@@ -476,10 +483,7 @@ export class DT3DTree extends LitElement {
 		const root = this.createTreeNode(targetScene);
 		this.tree = root ? [root] : [];
 
-		if (this.selectedId) {
-			this.selectedObject =
-				this.scene?.getObjectByProperty("uuid", this.selectedId) ?? null;
-		}
+		this.reconcileSelection();
 
 		this.requestUpdate();
 
@@ -487,6 +491,8 @@ export class DT3DTree extends LitElement {
 		if (reset) {
 			this.expanded = new Set([targetScene.uuid]);
 			this.selectedId = null;
+			this.selectedIds = new Set();
+			this.selectedObject = null;
 		}
 	}
 
@@ -519,14 +525,7 @@ export class DT3DTree extends LitElement {
 
 		this.pruneExpandedState();
 
-		if (this.selectedId) {
-			this.selectedObject =
-				this.scene?.getObjectByProperty("uuid", this.selectedId) ?? null;
-
-			if (!this.selectedObject) {
-				this.selectedId = null;
-			}
-		}
+		this.reconcileSelection();
 
 		this.requestUpdate();
 	}
@@ -822,6 +821,75 @@ export class DT3DTree extends LitElement {
 		return this.isAncestor(ancestorId, parentId);
 	}
 
+	/** Return true when a node contains at least one selected descendant. */
+	private isSelectedAncestor(id: UUID): boolean {
+		for (const selectedId of this.selectedIds) {
+			if (this.isAncestor(id, selectedId)) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	/** Flatten a rendered tree in its current visual order. */
+	private flattenTree(nodes: TreeNode[]): TreeNode[] {
+		const flattened: TreeNode[] = [];
+		const visit = (items: TreeNode[]) => {
+			for (const item of items) {
+				flattened.push(item);
+				if (item.children?.length) {
+					visit(item.children);
+				}
+			}
+		};
+		visit(nodes);
+		return flattened;
+	}
+
+	/** Flatten only nodes currently displayed by expansion/search state. */
+	private flattenVisibleTree(nodes: TreeNode[]): TreeNode[] {
+		const flattened: TreeNode[] = [];
+		const searching = this.searchQuery.trim().length > 0;
+		const visit = (items: TreeNode[]) => {
+			for (const item of items) {
+				flattened.push(item);
+				if (
+					item.children?.length &&
+					(searching || this.expanded.has(item.id))
+				) {
+					visit(item.children);
+				}
+			}
+		};
+		visit(nodes);
+		return flattened;
+	}
+
+	/** Keep selection state valid after scene graph changes. */
+	private reconcileSelection(): void {
+		if (!this.scene) {
+			this.selectedId = null;
+			this.selectedIds = new Set();
+			this.selectedObject = null;
+			return;
+		}
+
+		const selectedIds = new Set(
+			[...this.selectedIds].filter((id) =>
+				Boolean(this.scene?.getObjectByProperty("uuid", id)),
+			),
+		);
+		this.selectedIds = selectedIds;
+		if (!this.selectedId || !selectedIds.has(this.selectedId)) {
+			this.selectedId = [...selectedIds].at(-1) ?? null;
+		}
+		this.selectedObject =
+			selectedIds.size === 1 && this.selectedId
+				? this.scene.getObjectByProperty("uuid", this.selectedId)
+				: null;
+	}
+
 	/**
 	 * Expand the hierarchy leading to a node and scroll it into view.
 	 *
@@ -858,19 +926,93 @@ export class DT3DTree extends LitElement {
 	 * @param event - If select event shoudl be dispatched.
 	 */
 	public selectObject(id: UUID, event: boolean = false) {
+		if (!this.scene?.getObjectByProperty("uuid", id)) {
+			return;
+		}
+
 		this.selectedId = id;
-		this.selectedObject = this.scene?.getObjectByProperty("uuid", id) ?? null;
+		this.selectedIds = new Set([id]);
+		this.selectedObject = this.scene.getObjectByProperty("uuid", id);
 		this.revealNode(id);
 
 		if (event) {
-			this.dispatchEvent(
-				new CustomEvent("object-selected", {
-					detail: {id},
-					bubbles: true,
-					composed: true,
-				}),
-			);
+			this.dispatchSelection();
 		}
+	}
+
+	/**
+	 * Apply standard tree multi-selection behavior. Ctrl/Cmd toggles individual
+	 * nodes while Shift selects the visual range from the primary node.
+	 */
+	private handleNodeSelection(event: MouseEvent, node: TreeNode): void {
+		const additive = event.ctrlKey || event.metaKey;
+		const range = event.shiftKey;
+
+		if (
+			node.id === this.scene?.uuid ||
+			(this.scene ? this.selectedIds.has(this.scene.uuid) : false) ||
+			(!additive && !range) ||
+			this.selectedIds.size === 0
+		) {
+			this.selectObject(node.id, true);
+			return;
+		}
+
+		let selectedIds = new Set(this.selectedIds);
+		if (range) {
+			const visibleNodes = this.flattenVisibleTree(this.getVisibleTree()).filter(
+				(item) => item.id !== this.scene?.uuid,
+			);
+			const anchorIndex = visibleNodes.findIndex(
+				(item) => item.id === this.selectedId,
+			);
+			const targetIndex = visibleNodes.findIndex((item) => item.id === node.id);
+			if (anchorIndex >= 0 && targetIndex >= 0) {
+				const [start, end] =
+					anchorIndex < targetIndex
+						? [anchorIndex, targetIndex]
+						: [targetIndex, anchorIndex];
+				const rangeIds = visibleNodes
+					.slice(start, end + 1)
+					.map((item) => item.id);
+				selectedIds = additive
+					? new Set([...selectedIds, ...rangeIds])
+					: new Set(rangeIds);
+			} else {
+				selectedIds = additive
+					? new Set([...selectedIds, node.id])
+					: new Set([node.id]);
+			}
+		} else if (selectedIds.has(node.id)) {
+			selectedIds.delete(node.id);
+		} else {
+			selectedIds.add(node.id);
+		}
+
+		this.selectedIds = selectedIds;
+		this.selectedId = selectedIds.has(node.id)
+			? node.id
+			: ([...selectedIds].at(-1) ?? null);
+		this.selectedObject =
+			selectedIds.size === 1 && this.selectedId
+				? this.scene?.getObjectByProperty("uuid", this.selectedId) ?? null
+				: null;
+		if (this.selectedId) {
+			this.revealNode(this.selectedId);
+		}
+		this.dispatchSelection();
+	}
+
+	/** Notify the editor of the complete selection set. */
+	private dispatchSelection(): void {
+		const ids = [...this.selectedIds];
+		this.dispatchEvent(
+			new CustomEvent("object-selected", {
+				detail: {id: this.selectedId, ids},
+				bubbles: true,
+				composed: true,
+			}),
+		);
 	}
 
 	/**
@@ -1043,13 +1185,11 @@ export class DT3DTree extends LitElement {
 	 * Must be called when changes are applied.
 	 */
 	public refreshSelectedObject() {
-		if (!this.selectedId || !this.scene) {
+		if (this.selectedIds.size === 0 || !this.scene) {
 			return;
 		}
 
-		this.selectedObject =
-			this.scene.getObjectByProperty("uuid", this.selectedId) ?? null;
-
+		this.reconcileSelection();
 		this.requestUpdate();
 	}
 
@@ -1068,19 +1208,51 @@ export class DT3DTree extends LitElement {
 			return;
 		}
 
-		this.draggedId = node.id;
+		const selectedDrag =
+			this.selectedIds.size > 1 && this.selectedIds.has(node.id);
+		const draggedIds = selectedDrag
+			? this.getTopLevelSelectedIds()
+			: [node.id];
+		const hasLockedObject = draggedIds.some((id) => {
+			const object = this.scene?.getObjectByProperty("uuid", id);
+			return object instanceof DTObject && object.locked;
+		});
+		if (hasLockedObject) {
+			event.preventDefault();
+			return;
+		}
+
+		this.draggedIds = draggedIds;
 		this.dropTarget = null;
 		this.closeContextMenu();
 		if (event.dataTransfer) {
 			event.dataTransfer.effectAllowed = "move";
-			event.dataTransfer.setData("text/plain", node.id);
+			event.dataTransfer.setData("text/plain", draggedIds.join(","));
 		}
 	}
 
 	/** Clear all transient drag state. */
 	private handleDragEnd(): void {
-		this.draggedId = null;
+		this.draggedIds = [];
 		this.dropTarget = null;
+	}
+
+	/** Selected IDs ordered like the tree, excluding descendants of selections. */
+	private getTopLevelSelectedIds(): UUID[] {
+		const orderedIds = this.flattenTree(this.tree)
+			.map((node) => node.id)
+			.filter((id) => this.selectedIds.has(id));
+
+		return orderedIds.filter((id) => {
+			let parentId = this.findParentId(this.tree, id);
+			while (parentId) {
+				if (this.selectedIds.has(parentId)) {
+					return false;
+				}
+				parentId = this.findParentId(this.tree, parentId);
+			}
+			return true;
+		});
 	}
 
 	/**
@@ -1103,13 +1275,16 @@ export class DT3DTree extends LitElement {
 
 	/** Return true when the proposed move stays inside the scene and creates no cycle. */
 	private canDrop(targetId: UUID, position: DropPosition): boolean {
-		if (!this.scene || !this.draggedId || this.draggedId === targetId) {
+		if (
+			!this.scene ||
+			this.draggedIds.length === 0 ||
+			this.draggedIds.includes(targetId)
+		) {
 			return false;
 		}
 
-		const object = this.scene.getObjectByProperty("uuid", this.draggedId);
 		const target = this.scene.getObjectByProperty("uuid", targetId);
-		if (!object || !target || object === this.scene) {
+		if (!target) {
 			return false;
 		}
 
@@ -1118,12 +1293,24 @@ export class DT3DTree extends LitElement {
 			return false;
 		}
 
-		// A node cannot become a child or sibling inside its own subtree.
-		return newParent !== object && !object.getObjectByProperty("uuid", newParent.uuid);
+		for (const draggedId of this.draggedIds) {
+			const object = this.scene.getObjectByProperty("uuid", draggedId);
+			if (
+				!object ||
+				object === this.scene ||
+				newParent === object ||
+				object.getObjectByProperty("uuid", newParent.uuid) ||
+				object.getObjectByProperty("uuid", targetId)
+			) {
+				return false;
+			}
+		}
+
+		return true;
 	}
 
 	private handleDragOver(event: DragEvent, node: TreeNode): void {
-		if (!this.draggedId) return;
+		if (this.draggedIds.length === 0) return;
 
 		const position = this.getDropPosition(event, node);
 		if (!this.canDrop(node.id, position)) {
@@ -1159,53 +1346,83 @@ export class DT3DTree extends LitElement {
 
 		event.preventDefault();
 		event.stopPropagation();
-		this.moveObject(this.draggedId!, node.id, position);
+		this.moveObjects(this.draggedIds, node.id, position);
 		this.handleDragEnd();
 	}
 
 	/**
-	 * Move an Object3D and preserve its world transform by converting its old
-	 * world matrix into the new parent's local coordinate system.
+	 * Move selected Object3Ds together and preserve each world transform by
+	 * converting its old world matrix into the new parent's local space.
 	 */
-	private moveObject(objectId: UUID, targetId: UUID, position: DropPosition): void {
+	private moveObjects(
+		objectIds: UUID[],
+		targetId: UUID,
+		position: DropPosition,
+	): void {
 		if (!this.scene) return;
 
-		const object = this.scene.getObjectByProperty("uuid", objectId);
 		const target = this.scene.getObjectByProperty("uuid", targetId);
-		if (!object || !target || !object.parent) return;
+		const objects = objectIds
+			.map((id) => this.scene?.getObjectByProperty("uuid", id) ?? null)
+			.filter((object): object is Object3D => Boolean(object?.parent));
+		if (!target || objects.length === 0) return;
 
-		const oldParent = object.parent;
-		const oldIndex = oldParent.children.indexOf(object);
-		const oldPosition = object.position.clone();
-		const oldQuaternion = object.quaternion.clone();
-		const oldScale = object.scale.clone();
 		const newParent = position === "inside" ? target : target.parent;
 		if (!newParent) return;
 
-		const affected = new Set<Object3D>(oldParent.children);
+		const moves = objects.map((object) => {
+			const oldParent = object.parent!;
+			object.updateWorldMatrix(true, false);
+			return {
+				object,
+				oldParent,
+				oldIndex: oldParent.children.indexOf(object),
+				oldPosition: object.position.clone(),
+				oldQuaternion: object.quaternion.clone(),
+				oldScale: object.scale.clone(),
+				worldMatrix: object.matrixWorld.clone(),
+			};
+		});
+		const affected = new Set<Object3D>();
+		for (const move of moves) {
+			move.oldParent.children.forEach((child) => affected.add(child));
+		}
 		newParent.children.forEach((child) => affected.add(child));
-
-		object.updateWorldMatrix(true, false);
-		const worldMatrix = object.matrixWorld.clone();
 		newParent.updateWorldMatrix(true, false);
-		const localMatrix = new Matrix4()
+		const inverseParentMatrix = new Matrix4()
 			.copy(newParent.matrixWorld)
-			.invert()
-			.multiply(worldMatrix);
+			.invert();
 
-		newParent.add(object);
-		localMatrix.decompose(object.position, object.quaternion, object.scale);
-		object.updateMatrix();
-
-		if (position !== "inside") {
-			const currentIndex = newParent.children.indexOf(object);
-			newParent.children.splice(currentIndex, 1);
-			const targetIndex = newParent.children.indexOf(target);
-			const insertionIndex = targetIndex + (position === "after" ? 1 : 0);
-			newParent.children.splice(insertionIndex, 0, object);
+		for (const move of moves) {
+			const localMatrix = new Matrix4()
+				.copy(inverseParentMatrix)
+				.multiply(move.worldMatrix);
+			newParent.add(move.object);
+			localMatrix.decompose(
+				move.object.position,
+				move.object.quaternion,
+				move.object.scale,
+			);
+			move.object.updateMatrix();
 		}
 
-		object.updateWorldMatrix(false, true);
+		if (position !== "inside") {
+			for (const move of moves) {
+				const currentIndex = newParent.children.indexOf(move.object);
+				newParent.children.splice(currentIndex, 1);
+			}
+			const targetIndex = newParent.children.indexOf(target);
+			const insertionIndex = targetIndex + (position === "after" ? 1 : 0);
+			newParent.children.splice(
+				insertionIndex,
+				0,
+				...moves.map((move) => move.object),
+			);
+		}
+
+		for (const move of moves) {
+			move.object.updateWorldMatrix(false, true);
+		}
 		newParent.children.forEach((child) => affected.add(child));
 		this.expanded = new Set([...this.expanded, newParent.uuid]);
 		this.updateTreeDiff(this.scene);
@@ -1213,15 +1430,21 @@ export class DT3DTree extends LitElement {
 		this.dispatchEvent(
 			new CustomEvent("object-moved", {
 				detail: {
-					object,
+					object: moves[0].object,
 					objects: [...affected],
-					oldParent,
-					oldIndex,
-					oldPosition,
-					oldQuaternion,
-					oldScale,
-					newParent,
-					newIndex: newParent.children.indexOf(object),
+					moves: moves.map((move) => ({
+						object: move.object,
+						oldParent: move.oldParent,
+						oldIndex: move.oldIndex,
+						oldPosition: move.oldPosition,
+						oldQuaternion: move.oldQuaternion,
+						oldScale: move.oldScale,
+						newParent,
+						newIndex: newParent.children.indexOf(move.object),
+						newPosition: move.object.position.clone(),
+						newQuaternion: move.object.quaternion.clone(),
+						newScale: move.object.scale.clone(),
+					})),
 				},
 				bubbles: true,
 				composed: true,
@@ -1337,13 +1560,14 @@ export class DT3DTree extends LitElement {
 						<li>
 							<!-- Node -->
 							<div
-								class="tree-node ${this.selectedId === node.id ? "selected" : ""}
-									${this.isAncestor(node.id, this.selectedId) ? "selected-ancestor" : ""}
-									${this.draggedId === node.id ? "dragging" : ""}
+								class="tree-node ${this.selectedIds.has(node.id) ? "selected" : ""}
+									${!this.selectedIds.has(node.id) && this.isSelectedAncestor(node.id) ? "selected-ancestor" : ""}
+									${this.draggedIds.includes(node.id) ? "dragging" : ""}
 									${this.dropTarget?.id === node.id ? `drop-${this.dropTarget.position}` : ""}"
 								style=${`--tree-depth: ${depth};`}
 								.draggable=${node.id !== this.scene?.uuid && !node.locked}
-								@click=${() => this.selectObject(node.id, true)}
+								@click=${(event: MouseEvent) =>
+		this.handleNodeSelection(event, node)}
 								@contextmenu=${(event: MouseEvent) =>
 		this.handleContextMenu(event, node.id)}
 								@dragstart=${(event: DragEvent) => this.handleDragStart(event, node)}
@@ -1455,6 +1679,7 @@ export class DT3DTree extends LitElement {
 				></div>
 				<dt3d-object-inspector
 					.selectedObject=${this.selectedObject}
+					.multiple=${this.selectedIds.size > 1}
 					@object-updated=${this.handleObjectUpdated}
 				></dt3d-object-inspector>
 				${this.renderContextMenu()}

@@ -24,7 +24,9 @@ import type {
 	Scene,
 } from "three";
 import {
+	Box3,
 	Group,
+	Matrix4,
 	MeshStandardMaterial,
 	Plane,
 	Raycaster,
@@ -148,6 +150,20 @@ type ConfirmationOptions = {
 	onConfirm: () => void;
 };
 
+type HierarchyMoveSnapshot = {
+	object: Object3D;
+	oldParent: Object3D;
+	oldIndex: number;
+	oldPosition: Vector3;
+	oldQuaternion: Quaternion;
+	oldScale: Vector3;
+	newParent: Object3D;
+	newIndex: number;
+	newPosition: Vector3;
+	newQuaternion: Quaternion;
+	newScale: Vector3;
+};
+
 @customElement("dt3d-card")
 export class DT3DCard extends LitElement {
 	/**
@@ -235,6 +251,11 @@ export class DT3DCard extends LitElement {
 	private wallManager: WallManager | null = null;
 
 	private lastSelectedObject: Object3D | null = null;
+
+	private selectedObjects: Object3D[] = [];
+
+	/** Editor-only object used as TransformControls' multi-selection target. */
+	private selectionPivot: Group | null = null;
 
 	/**
 	 * Object waiting to be placed by a scene double-click.
@@ -334,6 +355,19 @@ export class DT3DCard extends LitElement {
 				position: Vector3;
 				quaternion: Quaternion;
 				scale: Vector3;
+		  }
+		| null = null;
+
+	private multiTransformStart:
+		| {
+				pivotMatrixWorld: Matrix4;
+				objects: {
+					object: Object3D;
+					worldMatrix: Matrix4;
+					position: Vector3;
+					quaternion: Quaternion;
+					scale: Vector3;
+				}[];
 		  }
 		| null = null;
 
@@ -712,8 +746,8 @@ export class DT3DCard extends LitElement {
 	private applyVisualizationMode(): void {
 		const visualizationOnly = this.isVisualizationOnly();
 		this.spaceSync?.setReadOnly(visualizationOnly);
-		this.rendererManager?.setSelectedObject(
-			visualizationOnly ? null : this.lastSelectedObject,
+		this.rendererManager?.setSelectedObjects(
+			visualizationOnly ? [] : this.selectedObjects,
 		);
 
 		if (this.sidebar) {
@@ -791,6 +825,9 @@ export class DT3DCard extends LitElement {
 		}
 		this.tree?.updateTreeDiff(this.space);
 		this.tree?.refreshSelectedObject();
+		if (this.selectedObjects.length > 1 && !this.multiTransformStart) {
+			this.attachTransformToSelection();
+		}
 	}
 
 	private insertObject(
@@ -815,9 +852,12 @@ export class DT3DCard extends LitElement {
 	}
 
 	private removeObject(object: Object3D): void {
-		const removesSelection = this.lastSelectedObject
-			? Boolean(object.getObjectByProperty("uuid", this.lastSelectedObject.uuid))
-			: false;
+		const remainingSelection = this.selectedObjects.filter(
+			(selectedObject) =>
+				!object.getObjectByProperty("uuid", selectedObject.uuid),
+		);
+		const removesSelection =
+			remainingSelection.length !== this.selectedObjects.length;
 		const removesTransform = this.transform?.object
 			? Boolean(object.getObjectByProperty("uuid", this.transform.object.uuid))
 			: false;
@@ -833,33 +873,64 @@ export class DT3DCard extends LitElement {
 			this.cancelMoveToPoint();
 		}
 		if (removesSelection) {
-			this.setSelectedObject(null);
+			this.setSelectedObjects(remainingSelection);
 		}
 		this.refreshAfterObjectMutation(null);
 	}
 
-	private placeObject(
-		object: Object3D,
-		parent: Object3D,
-		index: number,
-		position: Vector3,
-		quaternion: Quaternion,
-		scale: Vector3,
+	/** Restore all hierarchy placements as one undoable operation. */
+	private placeObjects(
+		moves: HierarchyMoveSnapshot[],
+		state: "old" | "new",
 	): void {
-		parent.add(object);
-		const currentIndex = parent.children.indexOf(object);
-		parent.children.splice(currentIndex, 1);
-		parent.children.splice(
-			Math.max(0, Math.min(index, parent.children.length)),
-			0,
-			object,
-		);
-		object.position.copy(position);
-		object.quaternion.copy(quaternion);
-		object.scale.copy(scale);
-		object.updateMatrix();
-		object.updateWorldMatrix(false, true);
-		this.refreshAfterObjectMutation(object);
+		for (const move of moves) {
+			move.object.removeFromParent();
+		}
+
+		const movesByParent = new Map<Object3D, HierarchyMoveSnapshot[]>();
+		for (const move of moves) {
+			const parent = state === "old" ? move.oldParent : move.newParent;
+			const parentMoves = movesByParent.get(parent) ?? [];
+			parentMoves.push(move);
+			movesByParent.set(parent, parentMoves);
+		}
+
+		for (const [parent, parentMoves] of movesByParent) {
+			parentMoves.sort((first, second) => {
+				const firstIndex =
+					state === "old" ? first.oldIndex : first.newIndex;
+				const secondIndex =
+					state === "old" ? second.oldIndex : second.newIndex;
+				return firstIndex - secondIndex;
+			});
+
+			for (const move of parentMoves) {
+				const index = state === "old" ? move.oldIndex : move.newIndex;
+				const position =
+					state === "old" ? move.oldPosition : move.newPosition;
+				const quaternion =
+					state === "old" ? move.oldQuaternion : move.newQuaternion;
+				const scale = state === "old" ? move.oldScale : move.newScale;
+
+				parent.add(move.object);
+				const currentIndex = parent.children.indexOf(move.object);
+				parent.children.splice(currentIndex, 1);
+				parent.children.splice(
+					Math.max(0, Math.min(index, parent.children.length)),
+					0,
+					move.object,
+				);
+				move.object.position.copy(position);
+				move.object.quaternion.copy(quaternion);
+				move.object.scale.copy(scale);
+				move.object.updateMatrix();
+			}
+		}
+
+		for (const move of moves) {
+			move.object.updateWorldMatrix(false, true);
+		}
+		this.refreshAfterObjectMutation(null);
 	}
 
 	private recordAddedObject(object: Object3D): void {
@@ -947,19 +1018,136 @@ export class DT3DCard extends LitElement {
 		this.transform.getHelper().visible = enabled;
 	}
 
+	/** Return selected roots so descendants are not transformed twice. */
+	private getTopLevelSelectedObjects(): Object3D[] {
+		const selected = new Set(this.selectedObjects);
+		return this.selectedObjects.filter((object) => {
+			let parent = object.parent;
+			while (parent) {
+				if (selected.has(parent)) {
+					return false;
+				}
+				parent = parent.parent;
+			}
+			return true;
+		});
+	}
+
+	/** Attach TransformControls to either the selected object or a shared pivot. */
+	private attachTransformToSelection(): void {
+		if (!this.transform) {
+			return;
+		}
+
+		if (this.selectedObjects.length <= 1) {
+			this.attachTransform(this.selectedObjects[0] ?? null);
+			return;
+		}
+
+		if (
+			this.selectedObjects.some(
+				(object) => object instanceof DTObject && object.locked,
+			)
+		) {
+			this.attachTransform(null);
+			return;
+		}
+
+		if (!this.selectionPivot) {
+			this.selectionPivot = new Group();
+			this.selectionPivot.name = "Multi-selection pivot";
+			this.selectionPivot.internal = true;
+		}
+		if (this.scene && this.selectionPivot.parent !== this.scene) {
+			this.scene.add(this.selectionPivot);
+		}
+
+		const bounds = new Box3();
+		for (const object of this.selectedObjects) {
+			object.updateWorldMatrix(true, true);
+			const objectBounds = new Box3().expandByObject(object, true);
+			if (objectBounds.isEmpty()) {
+				const position = new Vector3();
+				object.getWorldPosition(position);
+				bounds.expandByPoint(position);
+			} else {
+				bounds.union(objectBounds);
+			}
+		}
+
+		const center = new Vector3();
+		bounds.getCenter(center);
+
+		this.selectionPivot.position.copy(center);
+		this.selectionPivot.quaternion.identity();
+		this.selectionPivot.scale.set(1, 1, 1);
+		this.selectionPivot.updateMatrix();
+		this.selectionPivot.updateWorldMatrix(true, false);
+		this.attachTransform(this.selectionPivot);
+	}
+
 	/**
 	 * Store the current selection and show its editor-only outline.
 	 *
 	 * @param object - Selected object, or null to clear the selection.
 	 */
 	private setSelectedObject(object: Object3D | null): void {
-		if (!object && this.moveToPointObject) {
+		this.setSelectedObjects(object ? [object] : []);
+	}
+
+	/** Store and display a complete object selection. */
+	private setSelectedObjects(objects: Object3D[]): void {
+		const uniqueObjects = [...new Set(objects)];
+		if (uniqueObjects.length === 0 && this.moveToPointObject) {
 			this.cancelMoveToPoint();
 		}
-		this.lastSelectedObject = object;
-		this.rendererManager?.setSelectedObject(
-			this.isVisualizationOnly() ? null : object,
+		this.selectedObjects = uniqueObjects;
+		this.lastSelectedObject =
+			uniqueObjects.length === 1 ? uniqueObjects[0] : null;
+		this.rendererManager?.setSelectedObjects(
+			this.isVisualizationOnly() ? [] : uniqueObjects,
 		);
+		this.attachTransformToSelection();
+	}
+
+	/** Apply the current pivot delta to every selected top-level object. */
+	private applyMultiTransformDelta(): void {
+		const start = this.multiTransformStart;
+		if (
+			!start ||
+			!this.selectionPivot ||
+			this.transform?.object !== this.selectionPivot
+		) {
+			return;
+		}
+
+		this.selectionPivot.updateWorldMatrix(true, false);
+		const delta = new Matrix4()
+			.copy(this.selectionPivot.matrixWorld)
+			.multiply(new Matrix4().copy(start.pivotMatrixWorld).invert());
+
+		for (const snapshot of start.objects) {
+			const parent = snapshot.object.parent;
+			if (!parent) {
+				continue;
+			}
+
+			parent.updateWorldMatrix(true, false);
+			const localMatrix = new Matrix4()
+				.copy(parent.matrixWorld)
+				.invert()
+				.multiply(delta)
+				.multiply(snapshot.worldMatrix);
+			localMatrix.decompose(
+				snapshot.object.position,
+				snapshot.object.quaternion,
+				snapshot.object.scale,
+			);
+			snapshot.object.updateMatrix();
+			snapshot.object.updateWorldMatrix(false, true);
+		}
+
+		this.sceneManager?.requestShadowMapUpdate();
 	}
 
 	private openConfirmationModal(options: ConfirmationOptions): void {
@@ -2716,6 +2904,7 @@ export class DT3DCard extends LitElement {
 				return;
 			}
 
+			this.applyMultiTransformDelta();
 			this.tree.refreshSelectedObject();
 		});
 		this.sceneManager.transform.addEventListener(
@@ -2727,6 +2916,29 @@ export class DT3DCard extends LitElement {
 				}
 
 				if (event.value) {
+					if (
+						this.selectedObjects.length > 1 &&
+						this.selectionPivot &&
+						this.transform?.object === this.selectionPivot
+					) {
+						this.selectionPivot.updateWorldMatrix(true, false);
+						this.multiTransformStart = {
+							pivotMatrixWorld: this.selectionPivot.matrixWorld.clone(),
+							objects: this.getTopLevelSelectedObjects().map((object) => {
+								object.updateWorldMatrix(true, false);
+								return {
+									object,
+									worldMatrix: object.matrixWorld.clone(),
+									position: object.position.clone(),
+									quaternion: object.quaternion.clone(),
+									scale: object.scale.clone(),
+								};
+							}),
+						};
+						this.transformStart = null;
+						return;
+					}
+
 					const object = this.transform?.object;
 					this.transformStart = object
 						? {
@@ -2736,6 +2948,67 @@ export class DT3DCard extends LitElement {
 							scale: object.scale.clone(),
 						  }
 						: null;
+					return;
+				}
+
+				const multiStart = this.multiTransformStart;
+				this.multiTransformStart = null;
+				if (multiStart) {
+					const end = multiStart.objects.map(({object}) => ({
+						object,
+						position: object.position.clone(),
+						quaternion: object.quaternion.clone(),
+						scale: object.scale.clone(),
+					}));
+					const changed = end.some((snapshot, index) => {
+						const start = multiStart.objects[index];
+						return (
+							!start.position.equals(snapshot.position) ||
+							!start.quaternion.equals(snapshot.quaternion) ||
+							!start.scale.equals(snapshot.scale)
+						);
+					});
+					this.attachTransformToSelection();
+					if (!changed) {
+						return;
+					}
+
+					const applyTransforms = (
+						snapshots: {
+							object: Object3D;
+							position: Vector3;
+							quaternion: Quaternion;
+							scale: Vector3;
+						}[],
+					) => {
+						for (const snapshot of snapshots) {
+							snapshot.object.position.copy(snapshot.position);
+							snapshot.object.quaternion.copy(snapshot.quaternion);
+							snapshot.object.scale.copy(snapshot.scale);
+							snapshot.object.updateMatrix();
+							snapshot.object.updateWorldMatrix(false, true);
+						}
+						this.refreshAfterObjectMutation(null);
+					};
+					const start = multiStart.objects.map((snapshot) => ({
+						object: snapshot.object,
+						position: snapshot.position,
+						quaternion: snapshot.quaternion,
+						scale: snapshot.scale,
+					}));
+
+					this.recordAction({
+						type: "update-object",
+						label: `${this.selectedObjects.length} objects transform`,
+						undo: () => applyTransforms(start),
+						redo: () => applyTransforms(end),
+						sync: () =>
+							Promise.all(
+								end.map(({object}) =>
+									this.spaceSync?.syncObjectUpdate(object),
+								),
+							),
+					});
 					return;
 				}
 
@@ -3031,11 +3304,12 @@ export class DT3DCard extends LitElement {
 
 		// Listen for selection events from the tree
 		this.tree.addEventListener("object-selected", (e: any) => {
-			const id = e.detail.id;
-			const object = this.space.getObjectByProperty("uuid", id);
-			if (object && !this.isVisualizationOnly()) {
-				this.attachTransform(object);
-				this.setSelectedObject(object);
+			const ids = (e.detail.ids ?? [e.detail.id]).filter(Boolean) as string[];
+			const objects = ids
+				.map((id) => this.space.getObjectByProperty("uuid", id))
+				.filter((object): object is Object3D => Boolean(object));
+			if (!this.isVisualizationOnly()) {
+				this.setSelectedObjects(objects);
 			}
 		});
 
@@ -3163,46 +3437,25 @@ export class DT3DCard extends LitElement {
 				return;
 			}
 
-			const movedObject = e.detail?.object as Object3D | null;
+			const moves = e.detail?.moves as HierarchyMoveSnapshot[] | undefined;
+			const movedObject = moves?.[0]?.object ?? null;
 			const affectedObjects = e.detail?.objects as Object3D[] | undefined;
-			if (!movedObject) {
+			if (!movedObject || !moves?.length) {
 				return;
 			}
-			const oldParent = e.detail.oldParent as Object3D;
-			const newParent = e.detail.newParent as Object3D;
-			const oldIndex = e.detail.oldIndex as number;
-			const newIndex = e.detail.newIndex as number;
-			const oldPosition = e.detail.oldPosition as Vector3;
-			const oldQuaternion = e.detail.oldQuaternion as Quaternion;
-			const oldScale = e.detail.oldScale as Vector3;
-			const newPosition = movedObject.position.clone();
-			const newQuaternion = movedObject.quaternion.clone();
-			const newScale = movedObject.scale.clone();
-			const syncObjects = affectedObjects ?? [movedObject];
+			const syncObjects = affectedObjects ?? moves.map(({object}) => object);
 
 			this.sceneManager.requestShadowMapUpdate();
 			this.tree.refreshSelectedObject();
+			this.attachTransformToSelection();
 			this.recordAction({
 				type: "move-object",
-				label: movedObject.name || "Object",
-				undo: () =>
-					this.placeObject(
-						movedObject,
-						oldParent,
-						oldIndex,
-						oldPosition,
-						oldQuaternion,
-						oldScale,
-					),
-				redo: () =>
-					this.placeObject(
-						movedObject,
-						newParent,
-						newIndex,
-						newPosition,
-						newQuaternion,
-						newScale,
-					),
+				label:
+					moves.length === 1
+						? movedObject.name || "Object"
+						: `${moves.length} objects`,
+				undo: () => this.placeObjects(moves, "old"),
+				redo: () => this.placeObjects(moves, "new"),
 				sync: () =>
 					Promise.all(
 						syncObjects.map((object) =>

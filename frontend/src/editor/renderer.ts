@@ -187,7 +187,7 @@ export class RendererManager {
 
 	private selectionOutline: SelectionOutlinePass;
 
-	private selectedObject: Object3D | null = null;
+	private selectedObjects: Object3D[] = [];
 
 	private selectionOutlineExclusions: Object3D[] = [];
 
@@ -445,7 +445,7 @@ export class RendererManager {
 			this.renderPass = pipeline.renderPass;
 			this.postProcessingPasses = pipeline.passes;
 			this.selectionOutline = pipeline.selectionOutline;
-			this.setSelectedObject(this.selectedObject);
+			this.setSelectedObjects(this.selectedObjects);
 			return;
 		}
 
@@ -540,9 +540,18 @@ export class RendererManager {
 	 * @param object - Selected object, or null to clear the highlight.
 	 */
 	public setSelectedObject(object: Object3D | null): void {
-		this.selectedObject = object;
-		this.selectionOutline.selectedObjects = object ? [object] : [];
-		this.selectionOutline.enabled = object !== null;
+		this.setSelectedObjects(object ? [object] : []);
+	}
+
+	/**
+	 * Highlight all objects in an editor multi-selection.
+	 *
+	 * @param objects - Selected objects, or an empty array to clear the highlight.
+	 */
+	public setSelectedObjects(objects: Object3D[]): void {
+		this.selectedObjects = [...objects];
+		this.selectionOutline.selectedObjects = this.selectedObjects;
+		this.selectionOutline.enabled = this.selectedObjects.length > 0;
 	}
 
 	/**
