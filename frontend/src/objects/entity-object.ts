@@ -56,7 +56,7 @@ export abstract class EntityObject extends DTObject {
 	}
 
 	public friendlyName(entity: any): string {
-		return entity.attributes?.friendly_name ?? this.name;
+		return entity?.attributes?.friendly_name ?? this.name;
 	}
 
 	/**
@@ -84,6 +84,35 @@ export abstract class EntityObject extends DTObject {
 		this.doubleClickAction = source.doubleClickAction;
 		return this;
 	}
+
+	/**
+	 * Clone an entity without invoking its constructor with missing entity data.
+	 *
+	 * Three.js normally clones an Object3D with `new this.constructor()`. Entity
+	 * constructors require an entity ID and state, so subclasses create a valid
+	 * instance first. Its constructor already recreates the internal visuals;
+	 * only user-added children should then be cloned from the source hierarchy.
+	 */
+	public override clone(recursive: boolean = true): this {
+		const clone = this.createEntityClone();
+		clone.copy(this, false);
+
+		if (recursive) {
+			for (const child of this.children) {
+				if ((child as Object3D & {internal?: boolean}).internal) {
+					continue;
+				}
+				clone.add(child.clone(true));
+			}
+		}
+
+		return clone;
+	}
+
+	/**
+	 * Construct a valid empty target for clone().
+	 */
+	protected abstract createEntityClone(): this;
 
 	/**
 	 * Register a label to show only while the entity is hovered.

@@ -48,6 +48,10 @@ export class EntityBinary extends EntityObject {
 		);
 	}
 
+	protected createEntityClone(): this {
+		return new EntityBinary(this.entityId, this.getEntity()) as this;
+	}
+
 	/**
 	 * Background color based on binary state.
 	 *

@@ -63,6 +63,10 @@ export class EntitySensor extends EntityObject {
 		}
 	}
 
+	protected createEntityClone(): this {
+		return new EntitySensor(this.entityId, this.getEntity()) as this;
+	}
+
 	public override dispose(): void {
 		if (this.refreshTimer !== null) {
 			window.clearTimeout(this.refreshTimer);

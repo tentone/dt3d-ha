@@ -57,6 +57,14 @@ export class EntityClimate extends EntityObject {
 		);
 	}
 
+	protected createEntityClone(): this {
+		return new EntityClimate(
+			this.entityId,
+			this.getEntity(),
+			this.defaultTemperatureUnit,
+		) as this;
+	}
+
 	private static getIconPath(entity: any): string {
 		return resolveEntityIconPath("climate", entity?.attributes?.icon);
 	}

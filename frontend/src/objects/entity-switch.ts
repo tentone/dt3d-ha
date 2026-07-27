@@ -37,6 +37,10 @@ export class EntitySwitch extends EntityObject {
 		this.icon.setIcon(EntitySwitch.getIconPath(entity));
 	}
 
+	protected createEntityClone(): this {
+		return new EntitySwitch(this.entityId, this.getEntity()) as this;
+	}
+
 	/**
 	 * Toggle the switch, called on click.
 	 *

@@ -195,6 +195,10 @@ export class EntityCamera extends EntityObject {
 		}
 	}
 
+	protected createEntityClone(): this {
+		return new EntityCamera(this.entityId, this.getEntity()) as this;
+	}
+
 	/**
 	 * Start the periodic camera image refresh loop.
 	 */

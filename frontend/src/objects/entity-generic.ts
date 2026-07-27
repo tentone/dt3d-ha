@@ -47,4 +47,8 @@ export class EntityGeneric extends EntityObject {
 			resolveEntityIconPath(this.entityId, entity?.attributes?.icon),
 		);
 	}
+
+	protected createEntityClone(): this {
+		return new EntityGeneric(this.entityId, this.getEntity()) as this;
+	}
 }

@@ -67,6 +67,14 @@ export class EntityLight extends EntityObject {
 		this.label.setText(friendlyName);
 	}
 
+	protected createEntityClone(): this {
+		return new EntityLight(
+			this.entityId,
+			this.getEntity(),
+			this.getLightSettings(),
+		) as this;
+	}
+
 	public get sourceType(): LightSourceType {return this.lightSource.sourceType;}
 	public set sourceType(value: LightSourceType) {this.lightSource.sourceType = value;}
 	public get intensity(): number {return this.lightSource.intensity;}
