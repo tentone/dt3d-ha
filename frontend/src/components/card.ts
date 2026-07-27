@@ -16,7 +16,13 @@ import "./upload-menu/upload-menu.js";
 
 import {LitElement} from "lit";
 import {customElement} from "lit/decorators.js";
-import type {Camera, Intersection, Object3D, Scene} from "three";
+import type {
+	Camera,
+	Intersection,
+	Object3D,
+	Quaternion,
+	Scene,
+} from "three";
 import {
 	Group,
 	MeshStandardMaterial,
@@ -26,6 +32,8 @@ import {
 } from "three";
 import type {TransformControls} from "three/examples/jsm/controls/TransformControls";
 
+import type {EditorAction} from "../editor/action-stack.js";
+import {ActionStack} from "../editor/action-stack.js";
 import type {
 	EntityAction,
 	EntityInteractionConfig,
@@ -53,6 +61,7 @@ import {createMeshObject, resolveMeshType} from "../editor/mesh-handler.js";
 import {RendererManager} from "../editor/renderer.js";
 import type {
 	CameraMode,
+	CameraViewportConfig,
 	GridConfig,
 	NavigationControls,
 	NavigationControlsType,
@@ -104,6 +113,7 @@ import type {
 import type {DT3DHintBox} from "./hint-box/hint-box.js";
 import type {DT3DLightMenu} from "./light-menu/light-menu.js";
 import type {DT3DMeshMenu} from "./mesh-menu/mesh-menu.js";
+import type {ObjectUpdateDetail} from "./object-inspector/object-inspector.js";
 import type {DT3DTree} from "./object-tree/object-tree.js";
 import type {
 	DT3DOrientationCube,
@@ -266,7 +276,7 @@ export class DT3DCard extends LitElement {
 		normalizeEntityInteractionConfig();
 
 	private readonly handleKeyDown = (event: KeyboardEvent): void => {
-		if (event.key !== "Delete" || event.defaultPrevented || event.repeat) {
+		if (event.defaultPrevented || event.repeat) {
 			return;
 		}
 
@@ -278,6 +288,23 @@ export class DT3DCard extends LitElement {
 			return;
 		}
 
+		const modifier = event.ctrlKey || event.metaKey;
+		const key = event.key.toLowerCase();
+		if (modifier && !event.altKey && (key === "z" || key === "y")) {
+			const redo = key === "y" || event.shiftKey;
+			const changed = redo
+				? this.actionStack.redo()
+				: this.actionStack.undo();
+			if (changed) {
+				event.preventDefault();
+			}
+			return;
+		}
+
+		if (event.key !== "Delete") {
+			return;
+		}
+
 		const target = this.getSelectedObjectForDelete();
 		if (!target) {
 			return;
@@ -286,6 +313,17 @@ export class DT3DCard extends LitElement {
 		event.preventDefault();
 		this.requestDeleteObject(target.uuid);
 	};
+
+	private readonly actionStack = new ActionStack();
+
+	private transformStart:
+		| {
+				object: Object3D;
+				position: Vector3;
+				quaternion: Quaternion;
+				scale: Vector3;
+		  }
+		| null = null;
 
 	private readonly sceneLongPressDelay = 600;
 
@@ -727,6 +765,102 @@ export class DT3DCard extends LitElement {
 		);
 	}
 
+	private recordAction(action: EditorAction): void {
+		if (!this.isVisualizationOnly()) {
+			this.actionStack.record(action);
+		}
+	}
+
+	private refreshAfterObjectMutation(object: Object3D | null): void {
+		this.sceneManager?.requestShadowMapUpdate();
+		if (object) {
+			this.sceneManager?.applyShadowSettingsToObject(object);
+		}
+		this.tree?.updateTreeDiff(this.space);
+		this.tree?.refreshSelectedObject();
+	}
+
+	private insertObject(
+		object: Object3D,
+		parent: Object3D,
+		index: number,
+	): void {
+		parent.add(object);
+		const currentIndex = parent.children.indexOf(object);
+		parent.children.splice(currentIndex, 1);
+		parent.children.splice(
+			Math.max(0, Math.min(index, parent.children.length)),
+			0,
+			object,
+		);
+		object.traverse((child) => {
+			if (child instanceof DTObject) {
+				child.init();
+			}
+		});
+		this.refreshAfterObjectMutation(object);
+	}
+
+	private removeObject(object: Object3D): void {
+		const removesSelection = this.lastSelectedObject
+			? Boolean(object.getObjectByProperty("uuid", this.lastSelectedObject.uuid))
+			: false;
+		const removesTransform = this.transform?.object
+			? Boolean(object.getObjectByProperty("uuid", this.transform.object.uuid))
+			: false;
+
+		object.removeFromParent();
+		if (removesTransform) {
+			this.transform.detach();
+		}
+		if (removesSelection) {
+			this.setSelectedObject(null);
+		}
+		this.refreshAfterObjectMutation(null);
+	}
+
+	private placeObject(
+		object: Object3D,
+		parent: Object3D,
+		index: number,
+		position: Vector3,
+		quaternion: Quaternion,
+		scale: Vector3,
+	): void {
+		parent.add(object);
+		const currentIndex = parent.children.indexOf(object);
+		parent.children.splice(currentIndex, 1);
+		parent.children.splice(
+			Math.max(0, Math.min(index, parent.children.length)),
+			0,
+			object,
+		);
+		object.position.copy(position);
+		object.quaternion.copy(quaternion);
+		object.scale.copy(scale);
+		object.updateMatrix();
+		object.updateWorldMatrix(false, true);
+		this.refreshAfterObjectMutation(object);
+	}
+
+	private recordAddedObject(object: Object3D): void {
+		const parent = object.parent;
+		if (!parent) {
+			return;
+		}
+		const index = parent.children.indexOf(object);
+		this.recordAction({
+			type: "add-object",
+			label: object.name || "Object",
+			undo: () => this.removeObject(object),
+			redo: () => this.insertObject(object, parent, index),
+			sync: (operation) =>
+				operation === "undo"
+					? this.spaceSync?.syncObjectDelete(object)
+					: this.spaceSync?.syncObjectHierarchyCreate(object),
+		});
+	}
+
 	/**
 	 * Adds a 3D object to the scene.
 	 *
@@ -757,7 +891,7 @@ export class DT3DCard extends LitElement {
 
 		this.tree.updateTreeDiff(this.space);
 
-		void this.spaceSync?.syncObjectHierarchyCreate(object);
+		this.recordAddedObject(object);
 	}
 
 	/**
@@ -884,35 +1018,18 @@ export class DT3DCard extends LitElement {
 			return;
 		}
 
-		const transformTarget = this.transform?.object ?? null;
-		const selectedTarget = this.lastSelectedObject;
-		const removesTransformTarget = transformTarget
-			? Boolean(target.getObjectByProperty("uuid", transformTarget.uuid))
-			: false;
-		const removesSelectedTarget = selectedTarget
-			? Boolean(target.getObjectByProperty("uuid", selectedTarget.uuid))
-			: false;
-
-		target.traverse((child) => {
-			if (child instanceof DTObject) {
-				child.dispose();
-			}
+		const index = parent.children.indexOf(target);
+		this.removeObject(target);
+		this.recordAction({
+			type: "delete-object",
+			label: target.name || "Object",
+			undo: () => this.insertObject(target, parent, index),
+			redo: () => this.removeObject(target),
+			sync: (operation) =>
+				operation === "undo"
+					? this.spaceSync?.syncObjectHierarchyCreate(target)
+					: this.spaceSync?.syncObjectDelete(target),
 		});
-
-		parent.remove(target);
-		this.sceneManager?.requestShadowMapUpdate();
-
-		if (removesTransformTarget) {
-			this.transform.detach();
-		}
-
-		if (removesSelectedTarget) {
-			this.setSelectedObject(null);
-		}
-
-		this.tree.updateTreeDiff(this.space);
-
-		void this.spaceSync?.syncObjectDelete(target);
 	}
 
 	/**
@@ -949,7 +1066,7 @@ export class DT3DCard extends LitElement {
 		this.attachTransform(clone);
 		this.tree.updateTreeDiff(this.space);
 
-		void this.spaceSync?.syncObjectHierarchyCreate(clone);
+		this.recordAddedObject(clone);
 	}
 
 	private pickDropPositionFromEvent(event: MouseEvent): Vector3 {
@@ -998,9 +1115,29 @@ export class DT3DCard extends LitElement {
 			return;
 		}
 
+		const beforeMaterial = Array.isArray(mesh.material)
+			? mesh.material.map((material) => material.clone())
+			: mesh.material.clone();
 		await applyImageTextureToMesh(mesh, file);
+		const afterMaterial = Array.isArray(mesh.material)
+			? mesh.material.map((material) => material.clone())
+			: mesh.material.clone();
+		const applyMaterial = (
+			material: typeof beforeMaterial,
+		): void => {
+			mesh.material = Array.isArray(material)
+				? material.map((item) => item.clone())
+				: material.clone();
+			this.refreshAfterObjectMutation(mesh);
+		};
 		this.tree.refreshSelectedObject();
-		void this.spaceSync?.syncObjectUpdate(mesh);
+		this.recordAction({
+			type: "update-object",
+			label: `${mesh.name || "Object"}: material`,
+			undo: () => applyMaterial(beforeMaterial),
+			redo: () => applyMaterial(afterMaterial),
+			sync: () => this.spaceSync?.syncObjectUpdate(mesh),
+		});
 	}
 
 	/**
@@ -1709,9 +1846,11 @@ export class DT3DCard extends LitElement {
 		}
 
 		try {
+			await this.actionStack.flush();
 			this.attachTransform(null);
 			this.setSelectedObject(null);
 			const space = await this.spaceSync.createSpace(name, description);
+			this.actionStack.clear();
 			this.applySpaceConfigFromApi(space);
 			this.applyDefaultViewportOnLoad();
 			if (this.spaceSelector) {
@@ -1802,9 +1941,11 @@ export class DT3DCard extends LitElement {
 		}
 
 		try {
+			await this.actionStack.flush();
 			this.attachTransform(null);
 			this.setSelectedObject(null);
 			const space = await this.spaceSync.cloneSpace(spaceId, name);
+			this.actionStack.clear();
 			this.applySpaceConfigFromApi(space);
 			this.applyDefaultViewportOnLoad();
 			if (this.spaceSelector) {
@@ -1868,9 +2009,11 @@ export class DT3DCard extends LitElement {
 		}
 
 		try {
+			await this.actionStack.flush();
 			this.attachTransform(null);
 			this.setSelectedObject(null);
 			const space = await this.spaceSync.importSpace(file);
+			this.actionStack.clear();
 			this.applySpaceConfigFromApi(space);
 			this.applyDefaultViewportOnLoad();
 			if (this.spaceSelector) {
@@ -1912,9 +2055,11 @@ export class DT3DCard extends LitElement {
 		}
 
 		try {
+			await this.actionStack.flush();
 			this.attachTransform(null);
 			this.setSelectedObject(null);
 			const space = await this.spaceSync.deleteSpace(spaceId);
+			this.actionStack.clear();
 			this.applySpaceConfigFromApi(space);
 			this.applyDefaultViewportOnLoad();
 			if (this.spaceSelector) {
@@ -2044,9 +2189,11 @@ export class DT3DCard extends LitElement {
 		}
 
 		try {
+			await this.actionStack.flush();
 			this.attachTransform(null);
 			this.setSelectedObject(null);
 			const space = await this.spaceSync.loadSpaceFromApi(spaceId);
+			this.actionStack.clear();
 			this.applySpaceConfigFromApi(space);
 			this.applyDefaultViewportOnLoad();
 			if (this.spaceSelector) {
@@ -2069,6 +2216,15 @@ export class DT3DCard extends LitElement {
 			return;
 		}
 
+		const viewports: ViewportObject[] = [];
+		this.space.traverse((child) => {
+			if (child instanceof ViewportObject) {
+				viewports.push(child);
+			}
+		});
+		const before = new Map(
+			viewports.map((item) => [item, item.defaultViewport]),
+		);
 		const changedViewports = new Set<ViewportObject>();
 
 		if (!viewport.defaultViewport) {
@@ -2086,7 +2242,27 @@ export class DT3DCard extends LitElement {
 
 		this.tree.updateTreeDiff(this.space);
 		this.tree.refreshSelectedObject();
-		this.syncViewportObjects(changedViewports);
+		const after = new Map(
+			viewports.map((item) => [item, item.defaultViewport]),
+		);
+		const apply = (values: Map<ViewportObject, boolean>) => {
+			for (const [item, value] of values) {
+				item.defaultViewport = value;
+			}
+			this.refreshAfterObjectMutation(viewport);
+		};
+		this.recordAction({
+			type: "update-object",
+			label: `${viewport.name || "Viewport"}: default`,
+			undo: () => apply(before),
+			redo: () => apply(after),
+			sync: () =>
+				Promise.all(
+					viewports.map((item) =>
+						this.spaceSync?.syncObjectUpdate(item),
+					),
+				),
+		});
 	}
 
 	private setDefaultViewportById(objectId: string): void {
@@ -2103,10 +2279,22 @@ export class DT3DCard extends LitElement {
 			return;
 		}
 
-		viewport.setViewportConfig(this.sceneManager.captureViewportConfig());
+		const before = viewport.getViewportConfig();
+		const after = this.sceneManager.captureViewportConfig();
+		viewport.setViewportConfig(after);
 		this.tree.updateTreeDiff(this.space);
 		this.tree.refreshSelectedObject();
-		void this.spaceSync?.syncObjectUpdate(viewport);
+		const apply = (config: CameraViewportConfig) => {
+			viewport.setViewportConfig(config);
+			this.refreshAfterObjectMutation(viewport);
+		};
+		this.recordAction({
+			type: "update-object",
+			label: `${viewport.name || "Viewport"}: camera`,
+			undo: () => apply(before),
+			redo: () => apply(after),
+			sync: () => this.spaceSync?.syncObjectUpdate(viewport),
+		});
 	}
 
 	private updateViewportFromCurrentCameraById(objectId: string): void {
@@ -2343,34 +2531,74 @@ export class DT3DCard extends LitElement {
 			this.spaceSceneConfig,
 		);
 		this.updateSkyFromDateTime();
-		let transformedObject: Object3D | null = null;
 		this.sceneManager.transform.addEventListener("objectChange", () => {
 			if (this.isVisualizationOnly()) {
 				return;
 			}
 
 			this.tree.refreshSelectedObject();
-			if (this.transform?.object) {
-				transformedObject = this.transform.object;
-			}
 		});
 		this.sceneManager.transform.addEventListener(
 			"dragging-changed",
 			(event: any) => {
 				if (this.isVisualizationOnly()) {
-					transformedObject = null;
+					this.transformStart = null;
 					return;
 				}
 
 				if (event.value) {
-					transformedObject = null;
+					const object = this.transform?.object;
+					this.transformStart = object
+						? {
+							object,
+							position: object.position.clone(),
+							quaternion: object.quaternion.clone(),
+							scale: object.scale.clone(),
+						  }
+						: null;
 					return;
 				}
 
-				if (transformedObject) {
-					void this.spaceSync?.syncObjectUpdate(transformedObject);
-					transformedObject = null;
+				const start = this.transformStart;
+				this.transformStart = null;
+				if (!start) {
+					return;
 				}
+
+				const {object} = start;
+				const end = {
+					position: object.position.clone(),
+					quaternion: object.quaternion.clone(),
+					scale: object.scale.clone(),
+				};
+				if (
+					start.position.equals(end.position) &&
+					start.quaternion.equals(end.quaternion) &&
+					start.scale.equals(end.scale)
+				) {
+					return;
+				}
+				const applyTransform = (
+					position: Vector3,
+					quaternion: Quaternion,
+					scale: Vector3,
+				) => {
+					object.position.copy(position);
+					object.quaternion.copy(quaternion);
+					object.scale.copy(scale);
+					object.updateMatrix();
+					this.refreshAfterObjectMutation(object);
+				};
+
+				this.recordAction({
+					type: "update-object",
+					label: object.name || "Object transform",
+					undo: () =>
+						applyTransform(start.position, start.quaternion, start.scale),
+					redo: () =>
+						applyTransform(end.position, end.quaternion, end.scale),
+					sync: () => this.spaceSync?.syncObjectUpdate(object),
+				});
 			},
 		);
 		this.applyGridVisibility();
@@ -2404,7 +2632,7 @@ export class DT3DCard extends LitElement {
 				attachTransform: (object) => this.attachTransform(object),
 				updateTree: () => this.tree.updateTreeDiff(this.space),
 				syncCreate: (object) => {
-					void this.spaceSync?.syncObjectHierarchyCreate(object);
+					this.recordAddedObject(object);
 				},
 				updateHintMessage: () => this.updateHintMessage(),
 				setLastSelectedObject: (object) => {
@@ -2608,6 +2836,7 @@ export class DT3DCard extends LitElement {
 		void this.spaceSync
 			.initializeSpaceFromApi(this.getDefaultSpaceId())
 			.then((space) => {
+				this.actionStack.clear();
 				if (this.spaceSelector) {
 					this.spaceSelector.spaces = this.spaceSync?.availableSpaces ?? [];
 					this.spaceSelector.selectedSpaceId = space?.id ?? "";
@@ -2683,12 +2912,13 @@ export class DT3DCard extends LitElement {
 			this.updateViewportFromCurrentCameraById(id);
 		});
 
-		this.tree.addEventListener("object-updated", (e: any) => {
+		this.tree.addEventListener("object-updated", (e: Event) => {
 			if (this.isVisualizationOnly()) {
 				return;
 			}
 
-			const updatedObject = e.detail?.object as Object3D | null;
+			const detail = (e as CustomEvent<ObjectUpdateDetail>).detail;
+			const updatedObject = detail?.object ?? null;
 			if (!updatedObject) {
 				return;
 			}
@@ -2709,11 +2939,35 @@ export class DT3DCard extends LitElement {
 
 			if (changedDefaultViewports.length > 0) {
 				this.tree.updateTreeDiff(this.space);
-				this.syncViewportObjects(changedDefaultViewports);
 			}
 
 			this.tree.refreshSelectedObject();
-			void this.spaceSync?.syncObjectUpdate(updatedObject);
+			const undoUpdate = detail.undo;
+			const redoUpdate = detail.redo;
+			this.recordAction({
+				type: "update-object",
+				label: `${updatedObject.name || "Object"}: ${detail.attribute}`,
+				undo: () => {
+					undoUpdate();
+					for (const viewport of changedDefaultViewports) {
+						viewport.defaultViewport = true;
+					}
+					this.refreshAfterObjectMutation(updatedObject);
+				},
+				redo: () => {
+					redoUpdate();
+					for (const viewport of changedDefaultViewports) {
+						viewport.defaultViewport = false;
+					}
+					this.refreshAfterObjectMutation(updatedObject);
+				},
+				sync: () =>
+					Promise.all(
+						[updatedObject, ...changedDefaultViewports].map((object) =>
+							this.spaceSync?.syncObjectUpdate(object),
+						),
+					),
+			});
 		});
 
 		this.tree.addEventListener("object-moved", (e: any) => {
@@ -2726,14 +2980,48 @@ export class DT3DCard extends LitElement {
 			if (!movedObject) {
 				return;
 			}
-			this.sceneManager.requestShadowMapUpdate();
+			const oldParent = e.detail.oldParent as Object3D;
+			const newParent = e.detail.newParent as Object3D;
+			const oldIndex = e.detail.oldIndex as number;
+			const newIndex = e.detail.newIndex as number;
+			const oldPosition = e.detail.oldPosition as Vector3;
+			const oldQuaternion = e.detail.oldQuaternion as Quaternion;
+			const oldScale = e.detail.oldScale as Vector3;
+			const newPosition = movedObject.position.clone();
+			const newQuaternion = movedObject.quaternion.clone();
+			const newScale = movedObject.scale.clone();
+			const syncObjects = affectedObjects ?? [movedObject];
 
+			this.sceneManager.requestShadowMapUpdate();
 			this.tree.refreshSelectedObject();
-			void Promise.all(
-				(affectedObjects ?? [movedObject]).map((object) =>
-					this.spaceSync?.syncObjectUpdate(object),
-				),
-			);
+			this.recordAction({
+				type: "move-object",
+				label: movedObject.name || "Object",
+				undo: () =>
+					this.placeObject(
+						movedObject,
+						oldParent,
+						oldIndex,
+						oldPosition,
+						oldQuaternion,
+						oldScale,
+					),
+				redo: () =>
+					this.placeObject(
+						movedObject,
+						newParent,
+						newIndex,
+						newPosition,
+						newQuaternion,
+						newScale,
+					),
+				sync: () =>
+					Promise.all(
+						syncObjects.map((object) =>
+							this.spaceSync?.syncObjectUpdate(object),
+						),
+					),
+			});
 		});
 
 		this.canvas.addEventListener("dblclick", (event: MouseEvent) => {

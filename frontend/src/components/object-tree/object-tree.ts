@@ -1159,6 +1159,10 @@ export class DT3DTree extends LitElement {
 		if (!object || !target || !object.parent) return;
 
 		const oldParent = object.parent;
+		const oldIndex = oldParent.children.indexOf(object);
+		const oldPosition = object.position.clone();
+		const oldQuaternion = object.quaternion.clone();
+		const oldScale = object.scale.clone();
 		const newParent = position === "inside" ? target : target.parent;
 		if (!newParent) return;
 
@@ -1192,7 +1196,17 @@ export class DT3DTree extends LitElement {
 
 		this.dispatchEvent(
 			new CustomEvent("object-moved", {
-				detail: {object, objects: [...affected]},
+				detail: {
+					object,
+					objects: [...affected],
+					oldParent,
+					oldIndex,
+					oldPosition,
+					oldQuaternion,
+					oldScale,
+					newParent,
+					newIndex: newParent.children.indexOf(object),
+				},
 				bubbles: true,
 				composed: true,
 			}),

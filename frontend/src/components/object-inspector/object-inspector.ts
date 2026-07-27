@@ -39,6 +39,13 @@ import type {
 } from "../dynamic-form/dynamic-form.js";
 import componentStyles from "./object-inspector.css?inline";
 
+export type ObjectUpdateDetail = {
+	object: Object3D;
+	attribute: string;
+	undo: () => void;
+	redo: () => void;
+};
+
 @customElement("dt3d-object-inspector")
 export class DT3DObjectInspector extends LitElement {
 	static styles = unsafeCSS(componentStyles);
@@ -57,14 +64,118 @@ export class DT3DObjectInspector extends LitElement {
 	/**
 	 * Dispatch a updated event, which can be used to notify other components that the selected object has been updated.
 	 */
-	private dispatchUpdated() {
+	private dispatchUpdated(
+		attribute: string,
+		undo: () => void,
+		redo: () => void,
+	) {
 		this.dispatchEvent(
-			new CustomEvent("object-updated", {
-				detail: {object: this.selectedObject},
+			new CustomEvent<ObjectUpdateDetail>("object-updated", {
+				detail: {
+					object: this.selectedObject!,
+					attribute,
+					undo,
+					redo,
+				},
 				bubbles: true,
 				composed: true,
 			}),
 		);
+	}
+
+	private getNestedAttribute(target: any, attribute: string): unknown {
+		let current = target;
+		for (const key of attribute.split(".")) {
+			if (current == null) return undefined;
+			current = current[key];
+		}
+		return current;
+	}
+
+	/**
+	 * Capture only the mutable state represented by a form field. Keeping the
+	 * memento field-sized avoids replacing live Three.js objects during undo.
+	 */
+	private captureRestore(
+		object: Object3D,
+		attribute: string,
+		type: string,
+	): () => void {
+		if (attribute.startsWith("material.")) {
+			const materialObject = findMaterialObject(object);
+			if (materialObject) {
+				const snapshot = Array.isArray(materialObject.material)
+					? materialObject.material.map((material) => material.clone())
+					: materialObject.material.clone();
+				return () => {
+					materialObject.material = Array.isArray(snapshot)
+						? snapshot.map((material) => material.clone())
+						: snapshot.clone();
+				};
+			}
+		}
+
+		if (attribute.startsWith("geometry.") && object instanceof Mesh) {
+			const parameters = getMeshGeometryParameters(object);
+			if (parameters) {
+				const snapshot = {...parameters};
+				return () => {
+					updateMeshGeometry(object, {...snapshot});
+				};
+			}
+		}
+
+		if (attribute === "height" && object instanceof WallObject) {
+			const value = object.height;
+			return () => object.setHeight(value);
+		}
+
+		if (attribute === "thickness" && object instanceof WallObject) {
+			const value = object.thickness;
+			return () => object.setThickness(value);
+		}
+
+		if (attribute === "open") {
+			if (object instanceof DoorObject) {
+				const value = object.open;
+				return () => object.setOpen(value);
+			}
+			if (object instanceof WindowObject) {
+				const value = object.open;
+				return () => object.setOpen(value);
+			}
+		}
+
+		if (attribute === "color" && object instanceof StaticLightObject) {
+			const value = `#${object.color.getHexString()}`;
+			return () => object.setColor(value);
+		}
+
+		const current = this.getNestedAttribute(object, attribute);
+		if (
+			type === "Vector3" &&
+			current &&
+			typeof current === "object" &&
+			"clone" in current &&
+			typeof (current as {clone?: unknown}).clone === "function"
+		) {
+			const value = (current as {clone: () => any}).clone();
+			return () => {
+				const target = this.getNestedAttribute(object, attribute) as {
+					copy?: (source: unknown) => void;
+				};
+				target?.copy?.(value);
+			};
+		}
+
+		const value =
+			current &&
+			typeof current === "object" &&
+			"clone" in current &&
+			typeof (current as {clone?: unknown}).clone === "function"
+				? (current as {clone: () => unknown}).clone()
+				: current;
+		return () => this.setNestedAttribute(object, attribute, value);
 	}
 
 	/**
@@ -141,9 +252,11 @@ export class DT3DObjectInspector extends LitElement {
 		if (!this.selectedObject) return;
 
 		const {attribute, type, value} = event.detail;
+		const updatedObject = this.selectedObject;
 		if (this.isLocked() && attribute !== "locked") {
 			return;
 		}
+		const undo = this.captureRestore(updatedObject, attribute, type);
 
 		if (attribute === "locked") {
 			if (this.selectedObject instanceof DTObject) {
@@ -207,7 +320,12 @@ export class DT3DObjectInspector extends LitElement {
 				)
 					.then((changed) => {
 						if (!changed) return;
-						this.dispatchUpdated();
+						const redo = this.captureRestore(
+							updatedObject,
+							attribute,
+							type,
+						);
+						this.dispatchUpdated(attribute, undo, redo);
 						this.requestUpdate();
 					})
 					.catch((error) => {
@@ -272,7 +390,8 @@ export class DT3DObjectInspector extends LitElement {
 			this.setNestedAttribute(this.selectedObject, attribute, value);
 		}
 
-		this.dispatchUpdated();
+		const redo = this.captureRestore(updatedObject, attribute, type);
+		this.dispatchUpdated(attribute, undo, redo);
 		this.requestUpdate();
 	}
 
