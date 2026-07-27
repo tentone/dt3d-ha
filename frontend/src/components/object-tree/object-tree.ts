@@ -935,6 +935,22 @@ export class DT3DTree extends LitElement {
 	}
 
 	/**
+	 * Dispatch move-to-point event for the given object ID.
+	 *
+	 * @param id - ID of the object to move.
+	 */
+	private dispatchMoveToPoint(id: UUID) {
+		this.dispatchEvent(
+			new CustomEvent("object-move-to-point", {
+				detail: {id},
+				bubbles: true,
+				composed: true,
+			}),
+		);
+		this.closeContextMenu();
+	}
+
+	/**
 	 * Dispatch open-entity event for the given entity ID.
 	 *
 	 * @param entityId - Home Assistant entity ID to open.
@@ -1233,6 +1249,15 @@ export class DT3DTree extends LitElement {
 				@click=${() => this.closeContextMenu()}
 			></div>
 			<div class="context-menu" style="top:${y}px; left:${x}px;">
+				<button
+					?disabled=${node?.locked ?? false}
+					@click=${(event: MouseEvent) => {
+						event.stopPropagation();
+						this.dispatchMoveToPoint(id);
+					}}
+				>
+					${localManager.get("moveToPoint")}
+				</button>
 				<button
 					@click=${(event: MouseEvent) => {
 						event.stopPropagation();

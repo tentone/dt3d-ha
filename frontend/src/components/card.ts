@@ -26,6 +26,7 @@ import type {
 import {
 	Group,
 	MeshStandardMaterial,
+	Plane,
 	Raycaster,
 	Vector2,
 	Vector3,
@@ -236,6 +237,11 @@ export class DT3DCard extends LitElement {
 	private lastSelectedObject: Object3D | null = null;
 
 	/**
+	 * Object waiting to be placed by a scene double-click.
+	 */
+	private moveToPointObject: Object3D | null = null;
+
+	/**
 	 * Raycaster for interaction with the scene.
 	 */
 	private raycaster: Raycaster = new Raycaster();
@@ -285,6 +291,12 @@ export class DT3DCard extends LitElement {
 			this.hasOpenDialog() ||
 			this.isKeyboardEventFromEditableElement(event)
 		) {
+			return;
+		}
+
+		if (event.key === "Escape" && this.moveToPointObject) {
+			event.preventDefault();
+			this.cancelMoveToPoint();
 			return;
 		}
 
@@ -722,6 +734,7 @@ export class DT3DCard extends LitElement {
 		}
 
 		if (visualizationOnly) {
+			this.cancelMoveToPoint();
 			this.spaceConfigMenu?.remove();
 			this.spaceConfigMenu = null;
 			this.meshMenu?.remove();
@@ -808,10 +821,16 @@ export class DT3DCard extends LitElement {
 		const removesTransform = this.transform?.object
 			? Boolean(object.getObjectByProperty("uuid", this.transform.object.uuid))
 			: false;
+		const removesMoveToPointTarget = this.moveToPointObject
+			? Boolean(object.getObjectByProperty("uuid", this.moveToPointObject.uuid))
+			: false;
 
 		object.removeFromParent();
 		if (removesTransform) {
 			this.transform.detach();
+		}
+		if (removesMoveToPointTarget) {
+			this.cancelMoveToPoint();
 		}
 		if (removesSelection) {
 			this.setSelectedObject(null);
@@ -934,6 +953,9 @@ export class DT3DCard extends LitElement {
 	 * @param object - Selected object, or null to clear the selection.
 	 */
 	private setSelectedObject(object: Object3D | null): void {
+		if (!object && this.moveToPointObject) {
+			this.cancelMoveToPoint();
+		}
 		this.lastSelectedObject = object;
 		this.rendererManager?.setSelectedObject(
 			this.isVisualizationOnly() ? null : object,
@@ -993,6 +1015,56 @@ export class DT3DCard extends LitElement {
 			actionType: "red",
 			onConfirm: () => this.deleteObject(objectId),
 		});
+	}
+
+	/**
+	 * Enter a one-shot mode that places an object at the next scene
+	 * double-click.
+	 */
+	private beginMoveToPoint(objectId: string): void {
+		if (!this.space || this.isVisualizationOnly()) {
+			return;
+		}
+
+		const object = this.space.getObjectByProperty(
+			"uuid",
+			objectId,
+		) as Object3D | null;
+		if (
+			!object ||
+			object === this.space ||
+			!object.parent ||
+			(object instanceof DTObject && object.locked)
+		) {
+			return;
+		}
+
+		this.measurementManager?.setMode("none");
+		this.wallManager?.setMode("none");
+		if (this.sidebar) {
+			this.sidebar.measurementTool = "none";
+			this.sidebar.wallTool = "none";
+		}
+
+		this.moveToPointObject = object;
+		this.attachTransform(object);
+		this.tree.selectObject(object.uuid);
+		this.setSelectedObject(object);
+		if (this.canvas) {
+			this.canvas.style.cursor = "crosshair";
+		}
+		this.updateHintMessage();
+	}
+
+	/**
+	 * Leave move-to-point mode without changing the object.
+	 */
+	private cancelMoveToPoint(): void {
+		this.moveToPointObject = null;
+		if (this.canvas) {
+			this.canvas.style.cursor = "";
+		}
+		this.updateHintMessage();
 	}
 
 	/**
@@ -1152,6 +1224,12 @@ export class DT3DCard extends LitElement {
 		}
 
 		this.tree?.closeContextMenu();
+
+		// Keep the pending object selected while waiting for the placement
+		// double-click. Browsers emit click events before dblclick.
+		if (this.moveToPointObject) {
+			return;
+		}
 
 		// In measurement mode, single clicks are consumed to prevent misclicks
 		if (this.measurementManager?.isActive() || this.wallManager?.isActive()) {
@@ -1316,6 +1394,106 @@ export class DT3DCard extends LitElement {
 		}
 
 		return {object: null, intersection: null};
+	}
+
+	/**
+	 * Resolve a world-space placement point while ignoring the object being
+	 * moved. Empty scene areas fall back to the world ground plane.
+	 */
+	private pickMoveToPointPosition(
+		event: MouseEvent,
+		movingObject: Object3D,
+	): Vector3 | null {
+		if (!this.canvas || !this.camera || !this.space) {
+			return null;
+		}
+
+		const rect = this.canvas.getBoundingClientRect();
+		this.pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+		this.pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+		this.raycaster.setFromCamera(this.pointer, this.camera);
+
+		const intersections = this.raycaster.intersectObjects(
+			this.space.children,
+			true,
+		);
+		const intersection = intersections.find((candidate) => {
+			let current: Object3D | null = candidate.object;
+			while (current) {
+				if (
+					current === movingObject ||
+					(current instanceof DTObject && current.internal)
+				) {
+					return false;
+				}
+				current = current.parent;
+			}
+			return true;
+		});
+		if (intersection) {
+			return intersection.point.clone();
+		}
+
+		return this.raycaster.ray.intersectPlane(
+			new Plane(new Vector3(0, 1, 0), 0),
+			new Vector3(),
+		);
+	}
+
+	/**
+	 * Apply the pending move-to-point command from a scene double-click.
+	 *
+	 * @returns True when move-to-point mode consumed the event.
+	 */
+	private handleMoveToPointDoubleClick(event: MouseEvent): boolean {
+		const object = this.moveToPointObject;
+		if (!object) {
+			return false;
+		}
+
+		const liveObject = this.space?.getObjectByProperty(
+			"uuid",
+			object.uuid,
+		) as Object3D | null;
+		if (
+			!liveObject ||
+			liveObject !== object ||
+			!object.parent ||
+			(object instanceof DTObject && object.locked)
+		) {
+			this.cancelMoveToPoint();
+			return true;
+		}
+
+		const worldPoint = this.pickMoveToPointPosition(event, object);
+		if (!worldPoint) {
+			return true;
+		}
+
+		const oldPosition = object.position.clone();
+		object.parent.updateWorldMatrix(true, false);
+		const newPosition = object.parent.worldToLocal(worldPoint.clone());
+		const applyPosition = (position: Vector3): void => {
+			object.position.copy(position);
+			object.updateMatrix();
+			object.updateWorldMatrix(false, true);
+			this.refreshAfterObjectMutation(object);
+		};
+
+		applyPosition(newPosition);
+		this.cancelMoveToPoint();
+
+		if (!oldPosition.equals(newPosition)) {
+			this.recordAction({
+				type: "update-object",
+				label: `${object.name || "Object"}: position`,
+				undo: () => applyPosition(oldPosition),
+				redo: () => applyPosition(newPosition),
+				sync: () => this.spaceSync?.syncObjectUpdate(object),
+			});
+		}
+
+		return true;
 	}
 
 	/**
@@ -1506,6 +1684,8 @@ export class DT3DCard extends LitElement {
 			this.hintBox.message = localManager.get("hintMeasureDistance");
 		} else if (this.sidebar?.measurementTool === "angle") {
 			this.hintBox.message = localManager.get("hintMeasureAngle");
+		} else if (this.moveToPointObject) {
+			this.hintBox.message = localManager.get("hintMoveToPoint");
 		} else if (this.wallManager?.mode === "wall") {
 			this.hintBox.message = this.wallManager.wallDraftStart
 				? localManager.get("hintWallEnd")
@@ -2728,6 +2908,7 @@ export class DT3DCard extends LitElement {
 			}
 
 			const tool = e.detail.tool;
+			this.cancelMoveToPoint();
 			if (tool === "none") {
 				this.transform.enabled = false;
 				this.transform.getHelper().visible = false;
@@ -2751,6 +2932,7 @@ export class DT3DCard extends LitElement {
 			if (mode !== "none") {
 				this.wallManager?.setMode("none");
 				this.sidebar.wallTool = "none";
+				this.cancelMoveToPoint();
 			}
 
 			this.updateHintMessage();
@@ -2767,6 +2949,7 @@ export class DT3DCard extends LitElement {
 			if (mode !== "none") {
 				this.measurementManager?.setMode("none");
 				this.sidebar.measurementTool = "none";
+				this.cancelMoveToPoint();
 			}
 
 			this.updateHintMessage();
@@ -2872,6 +3055,11 @@ export class DT3DCard extends LitElement {
 
 			const id = e.detail.id as string;
 			this.cloneObject(id);
+		});
+
+		this.tree.addEventListener("object-move-to-point", (e: any) => {
+			const id = e.detail.id as string;
+			this.beginMoveToPoint(id);
 		});
 
 		this.tree.addEventListener("entity-open", (e: any) => {
@@ -3028,6 +3216,10 @@ export class DT3DCard extends LitElement {
 			this.clearPendingEntityClickAction();
 
 			if (!this.isVisualizationOnly()) {
+				if (this.handleMoveToPointDoubleClick(event)) {
+					return;
+				}
+
 				// Handle measurement points on double click
 				if (this.measurementManager?.handleClick(event)) {
 					return;
@@ -3155,6 +3347,7 @@ export class DT3DCard extends LitElement {
 			this.persistSpaceConfigTimer = null;
 		}
 		this.pendingSpaceMetadata = null;
+		this.cancelMoveToPoint();
 		this.clearSceneLongPress();
 		this.clearCanvasClickSuppression();
 		this.clearPendingEntityClickAction();
