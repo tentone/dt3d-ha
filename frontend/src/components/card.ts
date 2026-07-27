@@ -662,6 +662,9 @@ export class DT3DCard extends LitElement {
 	private applyVisualizationMode(): void {
 		const visualizationOnly = this.isVisualizationOnly();
 		this.spaceSync?.setReadOnly(visualizationOnly);
+		this.rendererManager?.setSelectedObject(
+			visualizationOnly ? null : this.lastSelectedObject,
+		);
 
 		if (this.sidebar) {
 			this.sidebar.style.display = visualizationOnly ? "none" : "";
@@ -791,6 +794,18 @@ export class DT3DCard extends LitElement {
 		this.transform.getHelper().visible = enabled;
 	}
 
+	/**
+	 * Store the current selection and show its editor-only outline.
+	 *
+	 * @param object - Selected object, or null to clear the selection.
+	 */
+	private setSelectedObject(object: Object3D | null): void {
+		this.lastSelectedObject = object;
+		this.rendererManager?.setSelectedObject(
+			this.isVisualizationOnly() ? null : object,
+		);
+	}
+
 	private openConfirmationModal(options: ConfirmationOptions): void {
 		if (!this.content) {
 			return;
@@ -892,7 +907,7 @@ export class DT3DCard extends LitElement {
 		}
 
 		if (removesSelectedTarget) {
-			this.lastSelectedObject = null;
+			this.setSelectedObject(null);
 		}
 
 		this.tree.updateTreeDiff(this.space);
@@ -1010,7 +1025,7 @@ export class DT3DCard extends LitElement {
 
 		// Pick object and trigger click interaction
 		const {object} = this.pickObjectFromEvent(event);
-		this.lastSelectedObject = object;
+		this.setSelectedObject(object);
 		object?.onInteraction({
 			type: "click",
 			event: event,
@@ -1199,7 +1214,7 @@ export class DT3DCard extends LitElement {
 
 		this.attachTransform(target);
 		this.tree.selectObject(target.uuid);
-		this.lastSelectedObject = target;
+		this.setSelectedObject(target);
 		this.tree.openContextMenu(target.uuid, event.clientX, event.clientY);
 
 		return true;
@@ -1695,7 +1710,7 @@ export class DT3DCard extends LitElement {
 
 		try {
 			this.attachTransform(null);
-			this.lastSelectedObject = null;
+			this.setSelectedObject(null);
 			const space = await this.spaceSync.createSpace(name, description);
 			this.applySpaceConfigFromApi(space);
 			this.applyDefaultViewportOnLoad();
@@ -1788,7 +1803,7 @@ export class DT3DCard extends LitElement {
 
 		try {
 			this.attachTransform(null);
-			this.lastSelectedObject = null;
+			this.setSelectedObject(null);
 			const space = await this.spaceSync.cloneSpace(spaceId, name);
 			this.applySpaceConfigFromApi(space);
 			this.applyDefaultViewportOnLoad();
@@ -1854,7 +1869,7 @@ export class DT3DCard extends LitElement {
 
 		try {
 			this.attachTransform(null);
-			this.lastSelectedObject = null;
+			this.setSelectedObject(null);
 			const space = await this.spaceSync.importSpace(file);
 			this.applySpaceConfigFromApi(space);
 			this.applyDefaultViewportOnLoad();
@@ -1898,7 +1913,7 @@ export class DT3DCard extends LitElement {
 
 		try {
 			this.attachTransform(null);
-			this.lastSelectedObject = null;
+			this.setSelectedObject(null);
 			const space = await this.spaceSync.deleteSpace(spaceId);
 			this.applySpaceConfigFromApi(space);
 			this.applyDefaultViewportOnLoad();
@@ -2030,7 +2045,7 @@ export class DT3DCard extends LitElement {
 
 		try {
 			this.attachTransform(null);
-			this.lastSelectedObject = null;
+			this.setSelectedObject(null);
 			const space = await this.spaceSync.loadSpaceFromApi(spaceId);
 			this.applySpaceConfigFromApi(space);
 			this.applyDefaultViewportOnLoad();
@@ -2393,7 +2408,7 @@ export class DT3DCard extends LitElement {
 				},
 				updateHintMessage: () => this.updateHintMessage(),
 				setLastSelectedObject: (object) => {
-					this.lastSelectedObject = object;
+					this.setSelectedObject(object);
 				},
 				selectObject: (object) => this.tree.selectObject(object.uuid),
 			},
@@ -2409,6 +2424,9 @@ export class DT3DCard extends LitElement {
 			width,
 			this.generalConfig.rendering,
 		);
+		this.rendererManager.setSelectionOutlineExclusions([
+			this.transform.getHelper(),
+		]);
 		this.applyGeneralConfig();
 		this.applyOrientationCubeVisibility();
 
@@ -2605,7 +2623,7 @@ export class DT3DCard extends LitElement {
 			const object = this.space.getObjectByProperty("uuid", id);
 			if (object && !this.isVisualizationOnly()) {
 				this.attachTransform(object);
-				this.lastSelectedObject = object;
+				this.setSelectedObject(object);
 			}
 		});
 
@@ -2738,7 +2756,7 @@ export class DT3DCard extends LitElement {
 				const target = object ?? (intersection.object as Object3D);
 				this.attachTransform(target);
 				this.tree.selectObject(target.uuid);
-				this.lastSelectedObject = target;
+				this.setSelectedObject(target);
 			}
 
 			if (object instanceof ViewportObject) {

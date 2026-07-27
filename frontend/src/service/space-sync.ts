@@ -1395,7 +1395,7 @@ export class SpaceSync {
 			return existingGeometryFileId;
 		}
 
-		const geometryData = serializeGeometryToBinary(object.geometry);
+		const geometryData = await serializeGeometryToBinary(object.geometry);
 		const response = await this.trackProgress(
 			"Upload geometry",
 			this.getObjectLabel(object),
@@ -1423,7 +1423,7 @@ export class SpaceSync {
 		let geometry = null;
 		if (geometryData) {
 			try {
-				geometry = deserializeGeometryBinary(geometryData);
+				geometry = await deserializeGeometryBinary(geometryData);
 			} catch (error) {
 				console.warn(
 					"DT3D: Cached geometry is invalid; fetching it again",
@@ -1435,7 +1435,7 @@ export class SpaceSync {
 		}
 		if (!geometryData) {
 			geometryData = await this.apiClient.getGeometry(spaceId, geometryFileId);
-			geometry = deserializeGeometryBinary(geometryData);
+			geometry = await deserializeGeometryBinary(geometryData);
 			await this.cache.putGeometry(spaceId, geometryFileId, geometryData);
 		}
 		if (!geometry) {

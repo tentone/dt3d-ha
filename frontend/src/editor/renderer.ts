@@ -1,4 +1,9 @@
-import type {Camera, Scene} from "three";
+import type {
+	Camera,
+	Object3D,
+	Scene,
+	WebGLRenderTarget,
+} from "three";
 import {
 	ACESFilmicToneMapping,
 	BasicShadowMap,
@@ -17,6 +22,7 @@ import {EffectComposer} from "three/examples/jsm/postprocessing/EffectComposer.j
 import {FilmPass} from "three/examples/jsm/postprocessing/FilmPass.js";
 import {GTAOPass} from "three/examples/jsm/postprocessing/GTAOPass.js";
 import {HalftonePass} from "three/examples/jsm/postprocessing/HalftonePass.js";
+import {OutlinePass} from "three/examples/jsm/postprocessing/OutlinePass.js";
 import {OutputPass} from "three/examples/jsm/postprocessing/OutputPass.js";
 import type {Pass} from "three/examples/jsm/postprocessing/Pass.js";
 import {RenderPass} from "three/examples/jsm/postprocessing/RenderPass.js";
@@ -43,9 +49,67 @@ type PostProcessingPasses = {
 
 type PostProcessingPipeline = {
 	composer: EffectComposer;
+	selectionOutline: SelectionOutlinePass;
 	renderPass: RenderPass;
 	passes: PostProcessingPasses;
 };
+
+const SELECTION_OUTLINE_COLOR = 0xffff00;
+
+/**
+ * Outline pass for editor selections.
+ *
+ * Editor helpers are hidden while the selection mask is rendered, and the
+ * mask intentionally ignores scene depth so occluded selections remain clear.
+ */
+class SelectionOutlinePass extends OutlinePass {
+	public excludedObjects: Object3D[] = [];
+
+	constructor(
+		resolution: Vector2,
+		scene: Scene,
+		camera: Camera,
+	) {
+		super(resolution, scene, camera);
+
+		this.prepareMaskMaterial.fragmentShader = `
+			void main() {
+				gl_FragColor = vec4(0.0, 0.0, 1.0, 1.0);
+			}
+		`;
+		this.prepareMaskMaterial.depthTest = false;
+		this.prepareMaskMaterial.depthWrite = false;
+		this.prepareMaskMaterial.needsUpdate = true;
+	}
+
+	public override render(
+		renderer: WebGLRenderer,
+		writeBuffer: WebGLRenderTarget,
+		readBuffer: WebGLRenderTarget,
+		deltaTime: number,
+		maskActive: boolean,
+	): void {
+		const visibility = this.excludedObjects.map((object) => object.visible);
+
+		for (const object of this.excludedObjects) {
+			object.visible = false;
+		}
+
+		try {
+			super.render(
+				renderer,
+				writeBuffer,
+				readBuffer,
+				deltaTime,
+				maskActive,
+			);
+		} finally {
+			this.excludedObjects.forEach((object, index) => {
+				object.visible = visibility[index];
+			});
+		}
+	}
+}
 
 const getToneMapping = (mode: ToneMappingMode) => {
 	switch (mode) {
@@ -121,6 +185,12 @@ export class RendererManager {
 
 	private postProcessingPasses: PostProcessingPasses;
 
+	private selectionOutline: SelectionOutlinePass;
+
+	private selectedObject: Object3D | null = null;
+
+	private selectionOutlineExclusions: Object3D[] = [];
+
 	/**
 	 * If true the render loop if running.
 	 */
@@ -154,6 +224,7 @@ export class RendererManager {
 		this.composer = pipeline.composer;
 		this.renderPass = pipeline.renderPass;
 		this.postProcessingPasses = pipeline.passes;
+		this.selectionOutline = pipeline.selectionOutline;
 	}
 
 	private createRenderer(): WebGLRenderer {
@@ -224,6 +295,18 @@ export class RendererManager {
 			),
 		};
 		const composer = new EffectComposer(this.renderer);
+		const selectionOutline = new SelectionOutlinePass(
+			new Vector2(this.width, this.height),
+			this.scene,
+			this.camera,
+		);
+		selectionOutline.excludedObjects = this.selectionOutlineExclusions;
+		selectionOutline.visibleEdgeColor.setHex(SELECTION_OUTLINE_COLOR);
+		selectionOutline.hiddenEdgeColor.setHex(SELECTION_OUTLINE_COLOR);
+		selectionOutline.edgeStrength = 4;
+		selectionOutline.edgeGlow = 1;
+		selectionOutline.edgeThickness = 2;
+		selectionOutline.enabled = false;
 
 		// Effect order is significant and mirrors the space configuration UI.
 		composer.addPass(renderPass);
@@ -233,11 +316,12 @@ export class RendererManager {
 		composer.addPass(passes.ssao);
 		composer.addPass(passes.halftone);
 		composer.addPass(passes.filmGrain);
+		composer.addPass(selectionOutline);
 		composer.addPass(new OutputPass());
 
 		this.applyPostProcessingPassConfig(passes);
 
-		return {composer, renderPass, passes};
+		return {composer, renderPass, passes, selectionOutline};
 	}
 
 	private disposePostProcessingPipeline(): void {
@@ -360,6 +444,8 @@ export class RendererManager {
 			this.composer = pipeline.composer;
 			this.renderPass = pipeline.renderPass;
 			this.postProcessingPasses = pipeline.passes;
+			this.selectionOutline = pipeline.selectionOutline;
+			this.setSelectedObject(this.selectedObject);
 			return;
 		}
 
@@ -421,6 +507,7 @@ export class RendererManager {
 	public setCamera(camera: Camera): void {
 		this.camera = camera;
 		this.renderPass.camera = camera;
+		this.selectionOutline.renderCamera = camera;
 		this.postProcessingPasses.bokehDepth.camera = camera;
 		this.postProcessingPasses.gtao.camera = camera;
 		this.postProcessingPasses.ssao.camera = camera;
@@ -445,5 +532,26 @@ export class RendererManager {
 
 	public setControls(controls: NavigationControls): void {
 		this.controls = controls;
+	}
+
+	/**
+	 * Highlight an editor selection with a yellow glow.
+	 *
+	 * @param object - Selected object, or null to clear the highlight.
+	 */
+	public setSelectedObject(object: Object3D | null): void {
+		this.selectedObject = object;
+		this.selectionOutline.selectedObjects = object ? [object] : [];
+		this.selectionOutline.enabled = object !== null;
+	}
+
+	/**
+	 * Keep editor-only helpers out of the selection mask.
+	 *
+	 * @param objects - Objects to hide while rendering the outline pass.
+	 */
+	public setSelectionOutlineExclusions(objects: Object3D[]): void {
+		this.selectionOutlineExclusions = objects;
+		this.selectionOutline.excludedObjects = objects;
 	}
 }
