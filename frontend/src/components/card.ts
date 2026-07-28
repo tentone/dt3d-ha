@@ -25,8 +25,11 @@ import type {
 } from "three";
 import {
 	Box3,
+	BoxGeometry,
 	Group,
 	Matrix4,
+	Mesh,
+	MeshBasicMaterial,
 	MeshStandardMaterial,
 	Plane,
 	Raycaster,
@@ -37,6 +40,13 @@ import type {TransformControls} from "three/examples/jsm/controls/TransformContr
 
 import type {EditorAction} from "../editor/action-stack.js";
 import {ActionStack} from "../editor/action-stack.js";
+import type {CollisionObstacle} from "../editor/collision.js";
+import {
+	collectCollisionObstacles,
+	getInitiallyOverlappingObstacles,
+	getObjectBounds,
+	resolveCollisionMovement,
+} from "../editor/collision.js";
 import type {
 	EntityAction,
 	EntityInteractionConfig,
@@ -370,6 +380,18 @@ export class DT3DCard extends LitElement {
 				}[];
 		  }
 		| null = null;
+
+	private collisionDrag:
+		| {
+				bounds: Box3;
+				ignoredObstacles: Set<CollisionObstacle>;
+				obstacles: CollisionObstacle[];
+				target: Object3D;
+				targetWorldPosition: Vector3;
+		  }
+		| null = null;
+
+	private collisionBoundsHelper: Mesh | null = null;
 
 	private readonly sceneLongPressDelay = 600;
 
@@ -1148,6 +1170,153 @@ export class DT3DCard extends LitElement {
 		}
 
 		this.sceneManager?.requestShadowMapUpdate();
+	}
+
+	/**
+	 * Start collision tracking for a transform-controls translation.
+	 */
+	private beginCollisionDrag(
+		movingObjects: Object3D[],
+		target: Object3D,
+	): void {
+		this.endCollisionDrag();
+		if (
+			!this.sidebar?.collisionAvoidanceEnabled ||
+			this.transform?.getMode() !== "translate" ||
+			!this.space
+		) {
+			return;
+		}
+
+		const bounds = getObjectBounds(movingObjects);
+		if (bounds.isEmpty()) {
+			return;
+		}
+
+		const obstacles = collectCollisionObstacles(this.space, movingObjects);
+		target.updateWorldMatrix(true, false);
+		this.collisionDrag = {
+			bounds,
+			ignoredObstacles: getInitiallyOverlappingObstacles(bounds, obstacles),
+			obstacles,
+			target,
+			targetWorldPosition: target.getWorldPosition(new Vector3()),
+		};
+		this.updateCollisionBoundsHelper(bounds);
+	}
+
+	/**
+	 * Clamp the current transform target to the nearest obstacle.
+	 */
+	private applyCollisionConstraint(): void {
+		const drag = this.collisionDrag;
+		if (!drag || !this.sidebar?.collisionAvoidanceEnabled) {
+			return;
+		}
+
+		drag.target.updateWorldMatrix(true, false);
+		const proposedWorldPosition = drag.target.getWorldPosition(new Vector3());
+		const requestedMovement = proposedWorldPosition
+			.clone()
+			.sub(drag.targetWorldPosition);
+		const result = resolveCollisionMovement(
+			drag.bounds,
+			requestedMovement,
+			drag.obstacles,
+			drag.ignoredObstacles,
+		);
+		const allowedWorldPosition = drag.targetWorldPosition
+			.clone()
+			.add(result.movement);
+
+		if (!allowedWorldPosition.equals(proposedWorldPosition)) {
+			this.setObjectWorldPosition(drag.target, allowedWorldPosition);
+			if (
+				this.multiTransformStart &&
+				drag.target === this.selectionPivot
+			) {
+				this.applyMultiTransformDelta();
+			}
+		}
+
+		drag.bounds.copy(result.bounds);
+		drag.targetWorldPosition.copy(allowedWorldPosition);
+		this.updateCollisionBoundsHelper(drag.bounds);
+	}
+
+	/**
+	 * Set an object's world position while preserving its parent transform.
+	 */
+	private setObjectWorldPosition(object: Object3D, position: Vector3): void {
+		if (object.parent) {
+			object.parent.updateWorldMatrix(true, false);
+			object.position.copy(object.parent.worldToLocal(position.clone()));
+		} else {
+			object.position.copy(position);
+		}
+		object.updateMatrix();
+		object.updateWorldMatrix(false, true);
+	}
+
+	/**
+	 * Show the active moving bounds as a translucent red box.
+	 */
+	private updateCollisionBoundsHelper(bounds: Box3): void {
+		if (!this.scene) {
+			return;
+		}
+
+		if (!this.collisionBoundsHelper) {
+			const material = new MeshBasicMaterial({
+				color: 0xff0000,
+				depthTest: false,
+				depthWrite: false,
+				opacity: 0.4,
+				transparent: true,
+			});
+			this.collisionBoundsHelper = new Mesh(
+				new BoxGeometry(1, 1, 1),
+				material,
+			);
+			this.collisionBoundsHelper.name = "Collision bounds";
+			(
+				this.collisionBoundsHelper as Mesh & { internal?: boolean }
+			).internal = true;
+			this.collisionBoundsHelper.renderOrder = 1000;
+			this.scene.add(this.collisionBoundsHelper);
+		}
+
+		bounds.getCenter(this.collisionBoundsHelper.position);
+		bounds.getSize(this.collisionBoundsHelper.scale);
+		this.collisionBoundsHelper.visible = true;
+		this.collisionBoundsHelper.updateMatrix();
+	}
+
+	/**
+	 * Clear collision state and hide the editor-only bounds mesh.
+	 */
+	private endCollisionDrag(): void {
+		this.collisionDrag = null;
+		if (this.collisionBoundsHelper) {
+			this.collisionBoundsHelper.visible = false;
+		}
+	}
+
+	private disposeCollisionBoundsHelper(): void {
+		this.endCollisionDrag();
+		if (!this.collisionBoundsHelper) {
+			return;
+		}
+
+		this.collisionBoundsHelper.removeFromParent();
+		this.collisionBoundsHelper.geometry.dispose();
+		const materials = Array.isArray(this.collisionBoundsHelper.material)
+			? this.collisionBoundsHelper.material
+			: [this.collisionBoundsHelper.material];
+		for (const material of materials) {
+			material.dispose();
+		}
+		this.collisionBoundsHelper = null;
 	}
 
 	private openConfirmationModal(options: ConfirmationOptions): void {
@@ -2905,6 +3074,7 @@ export class DT3DCard extends LitElement {
 			}
 
 			this.applyMultiTransformDelta();
+			this.applyCollisionConstraint();
 			this.tree.refreshSelectedObject();
 		});
 		this.sceneManager.transform.addEventListener(
@@ -2912,6 +3082,8 @@ export class DT3DCard extends LitElement {
 			(event: any) => {
 				if (this.isVisualizationOnly()) {
 					this.transformStart = null;
+					this.multiTransformStart = null;
+					this.endCollisionDrag();
 					return;
 				}
 
@@ -2936,6 +3108,10 @@ export class DT3DCard extends LitElement {
 							}),
 						};
 						this.transformStart = null;
+						this.beginCollisionDrag(
+							this.multiTransformStart.objects.map(({object}) => object),
+							this.selectionPivot,
+						);
 						return;
 					}
 
@@ -2948,9 +3124,13 @@ export class DT3DCard extends LitElement {
 							scale: object.scale.clone(),
 						  }
 						: null;
+					if (object) {
+						this.beginCollisionDrag([object], object);
+					}
 					return;
 				}
 
+				this.endCollisionDrag();
 				const multiStart = this.multiTransformStart;
 				this.multiTransformStart = null;
 				if (multiStart) {
@@ -3182,6 +3362,7 @@ export class DT3DCard extends LitElement {
 
 			const tool = e.detail.tool;
 			this.cancelMoveToPoint();
+			this.endCollisionDrag();
 			if (tool === "none") {
 				this.transform.enabled = false;
 				this.transform.getHelper().visible = false;
@@ -3236,6 +3417,13 @@ export class DT3DCard extends LitElement {
 		this.sidebar.addEventListener("grid-snap-toggle", (e: any) => {
 			const enabled = e.detail.enabled as boolean;
 			this.sceneManager.setTransformSnapEnabled(enabled);
+		});
+
+		this.sidebar.addEventListener("collision-avoidance-toggle", (e: any) => {
+			const enabled = e.detail.enabled as boolean;
+			if (!enabled) {
+				this.endCollisionDrag();
+			}
 		});
 
 		this.sidebar.addEventListener("grid-config-open", () => {
@@ -3600,6 +3788,7 @@ export class DT3DCard extends LitElement {
 			this.persistSpaceConfigTimer = null;
 		}
 		this.pendingSpaceMetadata = null;
+		this.disposeCollisionBoundsHelper();
 		this.cancelMoveToPoint();
 		this.clearSceneLongPress();
 		this.clearCanvasClickSuppression();

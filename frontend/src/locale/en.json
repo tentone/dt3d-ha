@@ -170,6 +170,7 @@
 	"scaleObject": "Scale object",
 	"disableTransformControls": "Disable transform controls",
 	"snapToGrid": "Snap transforms to grid",
+	"preventObjectClipping": "Prevent object clipping while moving",
 	"toggleGrid": "Toggle grid",
 	"configureGrid": "Configure grid",
 	"gridConfiguration": "Grid configuration",

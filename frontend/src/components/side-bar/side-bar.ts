@@ -23,6 +23,7 @@ export type MeasurementOptions = "distance" | "angle" | "none";
 export type WallOptions = "wall" | "door" | "window" | "none";
 
 const SIDEBAR_COLLAPSED_STORAGE_KEY = "sidebar-collapsed";
+const COLLISION_AVOIDANCE_STORAGE_KEY = "collision-avoidance";
 
 /**
  * Sidebar contains tools to edit the space.
@@ -38,6 +39,7 @@ export class DT3DSidebar extends LitElement {
 		wallTool: {type: String},
 		gridEnabled: {type: Boolean},
 		gridSnapEnabled: {type: Boolean},
+		collisionAvoidanceEnabled: {type: Boolean},
 	};
 
 	/**
@@ -75,6 +77,12 @@ export class DT3DSidebar extends LitElement {
 	 * Toggle snapping transforms to the grid.
 	 */
 	public gridSnapEnabled = false;
+
+	/**
+	 * Prevent translated objects from overlapping other scene geometry.
+	 */
+	public collisionAvoidanceEnabled =
+		LocalStorage.read(COLLISION_AVOIDANCE_STORAGE_KEY, false) ?? false;
 
 	public disconnectedCallback(): void {
 		this.destroyTooltips();
@@ -193,6 +201,24 @@ export class DT3DSidebar extends LitElement {
 		this.dispatchEvent(
 			new CustomEvent("grid-snap-toggle", {
 				detail: {enabled: this.gridSnapEnabled},
+				bubbles: true,
+				composed: true,
+			}),
+		);
+	}
+
+	/**
+	 * Toggle collision avoidance for object translation.
+	 */
+	private handleCollisionAvoidanceToggle() {
+		this.collisionAvoidanceEnabled = !this.collisionAvoidanceEnabled;
+		LocalStorage.write(
+			COLLISION_AVOIDANCE_STORAGE_KEY,
+			this.collisionAvoidanceEnabled,
+		);
+		this.dispatchEvent(
+			new CustomEvent("collision-avoidance-toggle", {
+				detail: {enabled: this.collisionAvoidanceEnabled},
 				bubbles: true,
 				composed: true,
 			}),
@@ -360,6 +386,15 @@ export class DT3DSidebar extends LitElement {
 						aria-label=${localManager.get("snapToGrid")}
 					>
 						<ha-icon icon="mdi:magnet"></ha-icon>
+					</button>
+					<button
+						@click=${() => this.handleCollisionAvoidanceToggle()}
+						class=${`toggle-btn ${this.collisionAvoidanceEnabled ? "selected" : ""}`.trim()}
+						data-tooltip=${localManager.get("preventObjectClipping")}
+						aria-label=${localManager.get("preventObjectClipping")}
+						aria-pressed=${this.collisionAvoidanceEnabled}
+					>
+						<ha-icon icon="mdi:shield-half-full"></ha-icon>
 					</button>
 					<button
 						@click=${() => this.handleGridToggle()}
