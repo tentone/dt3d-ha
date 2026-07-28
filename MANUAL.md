@@ -25,15 +25,10 @@ read-only visualization cards for normal dashboard use.
 
 ### Navigate and edit objects
 
-- Orbit, pan, and zoom with the usual mouse/touch gestures. Use the camera
-  button to switch between perspective and orthographic projection.
-- Select an object in the object tree, then use **Move**, **Rotate**, or
-  **Scale** in the left toolbar. The inspector can edit its name, lock state,
-  transform, geometry, material, and type-specific properties.
-- Drag tree entries to reorder them or make them children of a group. Grouping
-  is useful for floors, rooms, furniture, and entity layers.
-- Right-click an object in the tree to clone or delete it. Locked objects cannot
-  be transformed or dragged.
+- Orbit, pan, and zoom with the usual mouse/touch gestures. Use the camera button to switch between perspective and orthographic projection.
+- Select an object in the object tree, then use **Move**, **Rotate**, or , **Scale** in the left toolbar. The inspector can edit its name, lock state, transform, geometry, material, and type-specific properties.
+- Drag tree entries to reorder them or make them children of a group. Grouping  is useful for floors, rooms, furniture, and entity layers.
+- Right-click an object in the tree to clone or delete it. Locked objects cannot be transformed or dragged.
 
 ### Configure the grid
 
@@ -58,37 +53,6 @@ Choose **Save** to apply the values. Grid configuration is stored in the
 current browser, not in the active space, so other devices can use different
 editor grid settings.
 
-> **Screenshot placeholder — grid controls and grid configuration dialog**
->
-> _Replace this block with a screenshot._
-
-### Measurement tools
-
-The **Measure** section of the left toolbar provides temporary distance and
-angle measurements. Measurement points must be placed on a visible object
-surface.
-
-#### Distance
-
-1. Select **Measure distance**.
-2. Double-click the surface at the start point.
-3. Double-click the surface at the end point.
-
-DT3D draws a line between the two points and shows the distance in meters, rounded to two decimal places.
-
-#### Angle
-
-1. Select **Measure angle**.
-2. Double-click the first endpoint.
-3. Double-click the angle vertex.
-4. Double-click the second endpoint.
-
-DT3D draws two lines from the middle point and shows the angle in degrees, rounded to two decimal places.
-
-Select **Clear measurements** to leave measurement mode and remove the current
-measurement. Measurements are editor helpers only: they are not saved with the
-space and are replaced when a new measurement is started. Selecting a wall tool
-also exits measurement mode.
 
 ### Manage spaces
 
@@ -125,17 +89,13 @@ The **Add** section of the left toolbar provides:
 - Built-in meshes: cube, sphere, plane, capsule, circle, cone, cylinder,
   dodecahedron, icosahedron, octahedron, ring, tetrahedron, torus, and torus
   knot.
-- Uploaded models: `.gltf`, `.glb`, `.obj`, `.fbx`, `.dae` (Collada), `.stl`,
-  and `.3ds`. Models can also be dragged onto the canvas. Select or drop
-  companion material and texture files with the model, or choose the folder
-  option in the upload menu to preserve their relative paths. Prefer a
-  self-contained `.glb` when possible for reliable results.
+- Uploaded models: `.gltf`, `.glb`, `.obj`, `.fbx`, `.dae` (Collada), `.stl`, and `.3ds`. Models can also be dragged onto the canvas.
+   - Select or drop companion material and texture files with the model, or choose the folder option in the upload menu to preserve their relative paths.
+   - Prefer a self-contained `.glb` when possible for reliable results.
 - Static lights: point, spot, and rectangular area lights.
 - Groups, saved viewports, and Home Assistant entities.
 
-After adding a mesh, select it to edit constructor dimensions, transform,
-material properties, or apply an image texture. Keep imported geometry and
-texture sizes modest because they are downloaded and uploaded by each client.
+After adding a mesh, select it to edit constructor dimensions, transform, material properties, or apply an image texture. Keep imported geometry and texture sizes modest because they are downloaded and uploaded by each client.
 
 <img src="readme/3_add_objects.png" width="500">
 
@@ -159,10 +119,6 @@ All entity domains can use **Open entity** to show Home Assistant's more-info
 dialog. Card-wide single- and double-click defaults can be `open`, `toggle`, or
 `nothing`. Each entity can inherit or override those defaults in its inspector;
 **Toggle** is only offered for `light` and `switch` objects.
-
-> **Screenshot placeholder — adding an entity and configuring its interactions**
->
-> _Replace this block with a screenshot._
 
 ### Draw a floor plan with walls, doors, and windows
 
@@ -197,8 +153,14 @@ view, and zoom.
 5. Optionally select a different `default_viewport` in a card's configuration.
    The card-specific choice overrides the space default for that card.
 
-The optional orientation cube is separate from saved viewports. Double-click a
-cube face to align the camera to the front, back, left, right, top, or bottom.
+The optional orientation cube is separate from saved viewports. Double-click a cube face to align the camera to the front, back, left, right, top, or bottom.
+
+### Organizing objects with groups
+
+ - Create a group to organize objects into a hierarchy or simply tidy up the object tree.
+ - Groups can be nested, and their transforms affect all children. So you can move or rotate a group to move or rotate all its children at once.
+
+ <img src="readme/groups_editor.png" width="500">
 
 ### Configure a space
 
@@ -220,6 +182,17 @@ Grid visibility, grid size, and snap size are local editor aids rather than
 space appearance settings.
 
 <img src="readme/4_create_space.png" width="500">
+
+### Measurement tools
+
+ - The **Measure** section of the left toolbar provides temporary distance and angle measurements.
+ - Measurement points must be placed on a visible object surface.
+ - While taking measurement a tooltip guides the user through the process.
+ - Select **Clear measurements** to leave measurement mode and remove the current measurement.
+ - Measurements are editor helpers only: they are not saved with the space and are replaced when a new measurement is started.
+ - Selecting another tool (e.g. wall tool) also exits measurement mode.
+
+<img src="readme/measurements.png" width="500">
 
 ## Configure visualization cards
 
@@ -281,6 +254,7 @@ per-card. Tone mapping, post-processing, and daylight are per-space.
 <img src="readme/6_card_configuration.png" width="500">
 
 <img src="readme/7_dashboard.png" width="500">
+
 
 ## Data synchronization
  - While the system is loading or storing data in the server, a progress indicator is shown in the bottom right corner.

@@ -108,12 +108,14 @@
 }
 
 .node-label {
-	display: inline-flex;
-	align-items: center;
-	gap: 4px;
-	min-width: 0;
-	flex: 1 1 auto;
-	overflow: hidden;
+    display: flex;
+    gap: 4px;
+    flex: 1 1 auto;
+    overflow: hidden;
+    align-items: center;
+    justify-content: flex-start;
+    flex-wrap: nowrap;
+    height: 30px;
 }
 
 .label-text {
