@@ -3662,8 +3662,9 @@ export class DT3DCard extends LitElement {
 		}
 
 		object.userData.entityId = id;
-		object.position.set(Math.random() * 2 - 1, 0, Math.random() * 2 - 1);
-		this.addToScene(object, id);
+		object.position.set(0,0,0);
+		const entityName = this.hassInstance?.states?.[id]?.attributes?.friendly_name;
+		this.addToScene(object, entityName || id);
 	}
 
 	/**

@@ -477,7 +477,7 @@ class $M {
   }
 }
 const Al = { I: g3 }, Cl = E6.litHtmlPolyfillSupport;
-Cl?.(FI, g3), (E6.litHtmlVersions ??= []).push("3.3.2");
+Cl?.(FI, g3), (E6.litHtmlVersions ??= []).push("3.3.3");
 const Il = (i, A, C) => {
   const I = C?.renderBefore ?? A;
   let t = I._$litPart$;
@@ -1557,7 +1557,7 @@ let b4 = class extends n2 {
     return q1`
 		<div class="connection-status-container">
 			<div style="margin: 5px;" class="${this.success ? "connection-status-success" : "connection-status-error"}">
-				${this.msg}<br>${"2026-07-27T15:05:28.147Z"}
+				${this.msg}<br>${"2026-07-28T10:47:14.461Z"}
 			</div>
 		</div>`;
   }
@@ -68352,7 +68352,11 @@ let Zi = class extends n2 {
     if (this.isVisualizationOnly())
       return;
     const A = this.createEntityObject(i);
-    A && (A.userData.entityId = i, A.position.set(Math.random() * 2 - 1, 0, Math.random() * 2 - 1), this.addToScene(A, i));
+    if (!A)
+      return;
+    A.userData.entityId = i, A.position.set(Math.random() * 2 - 1, 0, Math.random() * 2 - 1);
+    const C = this.hassInstance?.states?.[i]?.attributes?.friendly_name;
+    this.addToScene(A, C || i);
   }
   /**
    * Create object to represent a Home Assistant entity based on its domain.
