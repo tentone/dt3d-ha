@@ -3408,7 +3408,7 @@ let k4 = class extends B2 {
     return q1`
 		<div class="connection-status-container">
 			<div style="margin: 5px;" class="${this.success ? "connection-status-success" : "connection-status-error"}">
-				${this.msg}<br>${"2026-07-29T08:58:21.875Z"}
+				${this.msg}<br>${"2026-07-29T09:05:35.679Z"}
 			</div>
 		</div>`;
   }
@@ -33758,7 +33758,7 @@ ro([
 qI = ro([
   L2("dt3d-mesh-menu")
 ], qI);
-const GF = ":host{position:relative;z-index:100;display:flex;flex-direction:column;width:130px;height:100%;padding:16px 0;overflow:visible;box-sizing:border-box;background:color-mix(in srgb,var(--card-background-color) 90%,transparent);color:var(--primary-text-color);transition:width .2s,padding .2s}:host([collapsed]){width:0;padding:16px 0}.collapse-btn{position:absolute;top:12px;right:-32px;z-index:10;width:32px;height:32px;padding:0;border:0;border-radius:0 10px 10px 0;background:color-mix(in srgb,var(--card-background-color) 90%,transparent);box-shadow:none;color:var(--primary-text-color);cursor:pointer;font-size:1.2em}.object-sidebar-content{flex:1;overflow-y:auto;overflow-x:hidden}.object-sidebar-section{margin-bottom:24px;padding:0 16px;transition:opacity .2s}:host([collapsed]) .object-sidebar-section{height:0;margin:0;padding:0;opacity:0;pointer-events:none}.object-sidebar-title{margin-bottom:8px;color:var(--primary-color);font-size:1.1em;font-weight:700;letter-spacing:1px}button{display:block;width:100%;margin-bottom:8px;padding:10px 0;border:none;border-radius:4px;background:var(--primary-color);box-shadow:0 2px 4px var(--shadow-color);color:var(--text-primary-color);cursor:pointer;font-size:1em;transition:background .2s,transform .2s}button:hover,button.selected{background:var(--dark-primary-color)}button:active{background:var(--darker-primary-color)}.tippy-box[data-theme~=dt3d-object-sidebar]{background-color:var(--card-background-color);color:var(--primary-text-color)}.tippy-box[data-theme~=dt3d-object-sidebar][data-placement^=right]>.tippy-arrow:before{border-right-color:var(--card-background-color)}";
+const GF = ":host{position:relative;z-index:100;display:flex;flex-direction:column;width:80px;height:100%;padding:16px 0;overflow:visible;box-sizing:border-box;background:color-mix(in srgb,var(--card-background-color) 90%,transparent);color:var(--primary-text-color);transition:width .2s,padding .2s}:host([collapsed]){width:0;padding:16px 0}.collapse-btn{position:absolute;top:12px;right:-32px;z-index:10;width:32px;height:32px;padding:0;border:0;border-radius:0 10px 10px 0;background:color-mix(in srgb,var(--card-background-color) 90%,transparent);box-shadow:none;color:var(--primary-text-color);cursor:pointer;font-size:1.2em}.object-sidebar-content{flex:1;overflow-y:auto;overflow-x:hidden}.object-sidebar-section{margin-bottom:24px;padding:0 16px;transition:opacity .2s}:host([collapsed]) .object-sidebar-section{height:0;margin:0;padding:0;opacity:0;pointer-events:none}.object-sidebar-title{margin-bottom:8px;color:var(--primary-color);font-size:1.1em;font-weight:700;letter-spacing:1px}button{display:block;width:100%;margin-bottom:8px;padding:10px 0;border:none;border-radius:4px;background:var(--primary-color);box-shadow:0 2px 4px var(--shadow-color);color:var(--text-primary-color);cursor:pointer;font-size:1em;transition:background .2s,transform .2s}button:hover,button.selected{background:var(--dark-primary-color)}button:active{background:var(--darker-primary-color)}.tippy-box[data-theme~=dt3d-object-sidebar]{background-color:var(--card-background-color);color:var(--primary-text-color)}.tippy-box[data-theme~=dt3d-object-sidebar][data-placement^=right]>.tippy-arrow:before{border-right-color:var(--card-background-color)}";
 var jF = Object.getOwnPropertyDescriptor, RF = (i, A, C, I) => {
   for (var t = I > 1 ? void 0 : I ? jF(A, C) : A, g = i.length - 1, e; g >= 0; g--)
     (e = i[g]) && (t = e(t) || t);
@@ -59884,7 +59884,9 @@ class TxA {
    * Clear all draft and completed measurements.
    */
   clear() {
-    this.clearDraft(), this.completedMeasurements.clear();
+    this.clearDraft(), this.completedMeasurements.children.forEach((A) => {
+      A.clear();
+    }), this.completedMeasurements.clear();
   }
   /**
    * Clear only the unfinished measurement points.

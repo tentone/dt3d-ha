@@ -56,6 +56,10 @@ export class MeasurementManager {
 	 */
 	public clear(): void {
 		this.clearDraft();
+		this.completedMeasurements.children.forEach((measurement) => {
+			// Remove CSS3D labels (does not propagate automatically)
+			measurement.clear();
+		});
 		this.completedMeasurements.clear();
 	}
 
