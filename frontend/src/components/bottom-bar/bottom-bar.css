@@ -73,7 +73,7 @@ button {
 	border-radius: 6px;
 }
 
-button:hover {
+button:not(:disabled):hover {
 	background: color-mix(in srgb, var(--primary-color) 16%, transparent);
 }
 
@@ -82,8 +82,13 @@ button:focus-visible {
 	outline-offset: 1px;
 }
 
-button:active {
+button:not(:disabled):active {
 	transform: scale(0.94);
+}
+
+button:disabled {
+	opacity: 0.4;
+	cursor: not-allowed;
 }
 
 button.selected {

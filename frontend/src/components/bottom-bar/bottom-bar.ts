@@ -25,6 +25,7 @@ export class DT3DBottomBar extends LitElement {
 		gridEnabled: {type: Boolean},
 		gridSnapEnabled: {type: Boolean},
 		collisionAvoidanceEnabled: {type: Boolean},
+		hasSelection: {type: Boolean},
 		objectSidebarCollapsed: {
 			type: Boolean,
 			reflect: true,
@@ -38,6 +39,7 @@ export class DT3DBottomBar extends LitElement {
 	public gridSnapEnabled = false;
 	public collisionAvoidanceEnabled =
 		LocalStorage.read(COLLISION_AVOIDANCE_STORAGE_KEY, false) ?? false;
+	public hasSelection = false;
 	public objectSidebarCollapsed = true;
 
 	private handleTransformSelect(tool: TransformOptions): void {
@@ -118,11 +120,21 @@ export class DT3DBottomBar extends LitElement {
 		);
 	}
 
+	private handleFocusSelection(): void {
+		this.dispatchEvent(
+			new CustomEvent("focus-selection", {
+				bubbles: true,
+				composed: true,
+			}),
+		);
+	}
+
 	private renderButton(
 		icon: string,
 		label: string,
 		selected: boolean,
 		onClick: () => void,
+		disabled = false,
 	) {
 		return html`
 			<dt3d-tooltip .content=${label} placement="top">
@@ -131,6 +143,7 @@ export class DT3DBottomBar extends LitElement {
 					@click=${onClick}
 					aria-label=${label}
 					aria-pressed=${selected}
+					?disabled=${disabled}
 				>
 					<ha-icon icon=${icon}></ha-icon>
 				</button>
@@ -165,6 +178,13 @@ export class DT3DBottomBar extends LitElement {
 						localManager.get("disableTransformControls"),
 						this.transformTool === "none",
 						() => this.handleTransformSelect("none"),
+					)}
+					${this.renderButton(
+						"mdi:focus-field",
+						localManager.get("focusSelectedObjects"),
+						false,
+						() => this.handleFocusSelection(),
+						!this.hasSelection,
 					)}
 				</div>
 				<div class="group-space" aria-hidden="true"></div>

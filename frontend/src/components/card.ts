@@ -1051,6 +1051,33 @@ export class DT3DCard extends LitElement {
 		});
 	}
 
+	/** Calculate combined world-space bounds, falling back to object origins. */
+	private getCombinedObjectBounds(objects: Object3D[]): Box3 {
+		const bounds = new Box3();
+		for (const object of objects) {
+			object.updateWorldMatrix(true, true);
+			const objectBounds = new Box3().expandByObject(object, true);
+			if (objectBounds.isEmpty()) {
+				bounds.expandByPoint(object.getWorldPosition(new Vector3()));
+			} else {
+				bounds.union(objectBounds);
+			}
+		}
+
+		return bounds;
+	}
+
+	/** Frame the complete editor selection in the current camera view. */
+	private focusSelectedObjects(): void {
+		if (this.selectedObjects.length === 0) {
+			return;
+		}
+
+		this.sceneManager.focusBounds(
+			this.getCombinedObjectBounds(this.getTopLevelSelectedObjects()),
+		);
+	}
+
 	/** Attach TransformControls to either the selected object or a shared pivot. */
 	private attachTransformToSelection(): void {
 		if (!this.transform) {
@@ -1080,19 +1107,7 @@ export class DT3DCard extends LitElement {
 			this.scene.add(this.selectionPivot);
 		}
 
-		const bounds = new Box3();
-		for (const object of this.selectedObjects) {
-			object.updateWorldMatrix(true, true);
-			const objectBounds = new Box3().expandByObject(object, true);
-			if (objectBounds.isEmpty()) {
-				const position = new Vector3();
-				object.getWorldPosition(position);
-				bounds.expandByPoint(position);
-			} else {
-				bounds.union(objectBounds);
-			}
-		}
-
+		const bounds = this.getCombinedObjectBounds(this.selectedObjects);
 		const center = new Vector3();
 		bounds.getCenter(center);
 
@@ -1122,6 +1137,9 @@ export class DT3DCard extends LitElement {
 		this.selectedObjects = uniqueObjects;
 		this.lastSelectedObject =
 			uniqueObjects.length === 1 ? uniqueObjects[0] : null;
+		if (this.bottomBar) {
+			this.bottomBar.hasSelection = uniqueObjects.length > 0;
+		}
 		this.rendererManager?.setSelectedObjects(
 			this.isVisualizationOnly() ? [] : uniqueObjects,
 		);
@@ -3366,6 +3384,12 @@ export class DT3DCard extends LitElement {
 			this.transform.enabled = true;
 			this.transform.getHelper().visible = true;
 			this.transform.setMode(tool);
+		});
+
+		this.bottomBar.addEventListener("focus-selection", () => {
+			if (!this.isVisualizationOnly()) {
+				this.focusSelectedObjects();
+			}
 		});
 
 		this.bottomBar.addEventListener("measurement-mode-selected", (e: any) => {

@@ -274,6 +274,7 @@
 	"rotateObject": "Rotate object",
 	"scaleObject": "Scale object",
 	"disableTransformControls": "Disable transform controls",
+	"focusSelectedObjects": "Focus selected objects",
 	"snapToGrid": "Snap transforms to grid",
 	"preventObjectClipping": "Prevent object clipping while moving",
 	"toggleGrid": "Toggle grid",

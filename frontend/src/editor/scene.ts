@@ -1082,6 +1082,90 @@ export class SceneManager {
 	}
 
 	/**
+	 * Center the current view on a world-space bounding box and fit it in the
+	 * viewport while preserving the current viewing direction.
+	 *
+	 * @param bounds - World-space bounds to frame.
+	 * @param padding - Scale applied around the projected bounds.
+	 */
+	public focusBounds(bounds: Box3, padding = 1.2): void {
+		if (bounds.isEmpty()) {
+			return;
+		}
+
+		this.camera.updateMatrixWorld(true);
+		this.syncNavigationTarget();
+
+		const center = bounds.getCenter(new Vector3());
+		const direction = this.camera.getWorldDirection(new Vector3()).normalize();
+		const right = new Vector3()
+			.setFromMatrixColumn(this.camera.matrixWorld, 0)
+			.normalize();
+		const up = new Vector3()
+			.setFromMatrixColumn(this.camera.matrixWorld, 1)
+			.normalize();
+		const offset = new Vector3();
+		let halfWidth = 0;
+		let halfHeight = 0;
+		let halfDepth = 0;
+
+		for (const x of [bounds.min.x, bounds.max.x]) {
+			for (const y of [bounds.min.y, bounds.max.y]) {
+				for (const z of [bounds.min.z, bounds.max.z]) {
+					offset.set(x, y, z).sub(center);
+					halfWidth = Math.max(halfWidth, Math.abs(offset.dot(right)));
+					halfHeight = Math.max(halfHeight, Math.abs(offset.dot(up)));
+					halfDepth = Math.max(halfDepth, Math.abs(offset.dot(direction)));
+				}
+			}
+		}
+
+		const minimumHalfExtent = 0.25;
+		const paddedHalfWidth = Math.max(halfWidth * padding, minimumHalfExtent);
+		const paddedHalfHeight = Math.max(halfHeight * padding, minimumHalfExtent);
+		let distance: number;
+
+		if (this.camera instanceof PerspectiveCamera) {
+			const verticalTangent = Math.max(
+				Math.tan(MathUtils.degToRad(this.camera.fov) / 2),
+				Number.EPSILON,
+			);
+			const horizontalTangent = Math.max(
+				verticalTangent * this.camera.aspect,
+				Number.EPSILON,
+			);
+			distance =
+				halfDepth +
+				Math.max(
+					paddedHalfHeight / verticalTangent,
+					paddedHalfWidth / horizontalTangent,
+				);
+		} else {
+			const frustumWidth = this.camera.right - this.camera.left;
+			const frustumHeight = this.camera.top - this.camera.bottom;
+			this.camera.zoom = Math.min(
+				frustumWidth / (paddedHalfWidth * 2),
+				frustumHeight / (paddedHalfHeight * 2),
+			);
+			distance = Math.max(
+				this.navigationTargetDistance,
+				halfDepth + this.camera.near + 0.1,
+			);
+		}
+
+		this.camera.position.copy(center).add(direction.multiplyScalar(-distance));
+		this.camera.far = Math.max(
+			this.camera.far,
+			distance + halfDepth + Math.max(paddedHalfWidth, paddedHalfHeight),
+		);
+		this.setNavigationTarget(center);
+		this.camera.updateProjectionMatrix();
+		this.camera.updateMatrixWorld();
+		this.controls.update(0);
+		this.updateGridPosition();
+	}
+
+	/**
 	 * Capture the current camera position, orientation and projection mode.
 	 */
 	public captureViewportConfig(): CameraViewportConfig {
