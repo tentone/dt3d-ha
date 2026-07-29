@@ -303,8 +303,8 @@ export class RendererManager {
 		selectionOutline.excludedObjects = this.selectionOutlineExclusions;
 		selectionOutline.visibleEdgeColor.setHex(SELECTION_OUTLINE_COLOR);
 		selectionOutline.hiddenEdgeColor.setHex(SELECTION_OUTLINE_COLOR);
-		selectionOutline.edgeStrength = 4;
-		selectionOutline.edgeGlow = 1;
+		selectionOutline.edgeStrength = 3;
+		selectionOutline.edgeGlow = 0;
 		selectionOutline.edgeThickness = 2;
 		selectionOutline.enabled = false;
 
