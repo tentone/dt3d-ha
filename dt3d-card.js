@@ -2056,7 +2056,7 @@ let Co = class extends ln {
     return je`
 		<div class="connection-status-container">
 			<div style="margin: 5px;" class="${this.success ? "connection-status-success" : "connection-status-error"}">
-				${this.msg}<br>${"2026-07-29T16:23:15.611Z"}
+				${this.msg}<br>${"2026-07-29T17:39:08.487Z"}
 			</div>
 		</div>`;
   }
@@ -45873,10 +45873,10 @@ class qh extends Nn {
       2003199,
       0.64
     ), this.icon.internal = !0, this.icon.position.y = 0.32, this.add(this.icon), this.root = document.createElement("div"), this.root.style.cssText = `
-			width: 180px;
+			width: 320px;
 			overflow: hidden;
 			border: 1px solid var(--divider-color);
-			border-radius: 8px;
+			border-radius: 12px;
 			background: color-mix(in srgb, var(--card-background-color) 90%, transparent);
 			box-shadow: 0 8px 24px var(--shadow-color);
 			color: var(--primary-text-color);
@@ -45885,8 +45885,8 @@ class qh extends Nn {
 			transform-style: preserve-3d;
 		`, this.image = document.createElement("img"), this.image.alt = e, this.image.style.cssText = `
 			display: block;
-			width: 180px;
-			height: 112px;
+			width: 320px;
+			height: 200px;
 			object-fit: cover;
 			background: var(--secondary-background-color);
 		`, this.image.addEventListener("load", () => this.setStatus("")), this.image.addEventListener(
@@ -45899,13 +45899,13 @@ class qh extends Nn {
 			font-weight: 600;
 			text-overflow: ellipsis;
 			white-space: nowrap;
-		`, this.title.style.display = "none", this.root.appendChild(this.title), this.status = document.createElement("div"), this.status.style.cssText = `
+		`, this.root.appendChild(this.title), this.status = document.createElement("div"), this.status.style.cssText = `
 			display: none;
 			padding: 0 8px 7px;
 			color: var(--secondary-text-color);
 			font-size: 11px;
 			line-height: 1.3;
-		`, this.root.appendChild(this.status), this.overlay = new E4(this.root), this.overlay.internal = !0, this.overlay.position.y = 0.85, this.overlay.scale.setScalar(45e-4), this.add(this.overlay), this.setEntity(t);
+		`, this.root.appendChild(this.status), this.overlay = new E4(this.root), this.overlay.internal = !0, this.overlay.position.y = 1.2, this.overlay.scale.setScalar(45e-4), this.overlay.visible = !1, this.add(this.overlay), this.setEntity(t);
   }
   /**
    * Start refreshing the camera still image after the object is added to the scene.
@@ -45920,7 +45920,7 @@ class qh extends Nn {
     this.stopRefreshTimer(), this.root.remove();
   }
   onInteraction(e) {
-    super.onInteraction(e), e.type === "pointerenter" ? (this.isHovered = !0, this.updateTextVisibility()) : e.type === "pointerleave" && (this.isHovered = !1, this.updateTextVisibility());
+    super.onInteraction(e), e.type === "pointerenter" ? (this.isHovered = !0, this.updatePreviewVisibility()) : e.type === "pointerleave" && (this.isHovered = !1, this.updatePreviewVisibility());
   }
   /**
    * Update the camera overlay from the latest Home Assistant state.
@@ -45968,15 +45968,15 @@ class qh extends Nn {
     e.searchParams.set("dt3d_refresh", Date.now().toString()), this.image.src = e.toString();
   }
   /**
-   * Show or hide the overlay status text.
+   * Update the overlay status text.
    *
    * @param message - Status message, or an empty string to hide it.
    */
   setStatus(e) {
-    this.status.textContent = e, this.updateTextVisibility();
+    this.status.textContent = e, this.status.style.display = e ? "block" : "none";
   }
-  updateTextVisibility() {
-    this.title.style.display = this.isHovered ? "block" : "none", this.status.style.display = this.isHovered && this.status.textContent ? "block" : "none";
+  updatePreviewVisibility() {
+    this.overlay.visible = this.isHovered;
   }
   /**
    * Resolve the Home Assistant camera image URL from entity_picture.
@@ -58684,7 +58684,7 @@ let nu = class extends ln {
   /**
    * Handle pointer move events.
    *
-   * @param event - Mouse event
+   * @param event - Mouse or pointer event
    */
   handlePointerMove(s) {
     this.isVisualizationOnly() || this.wallManager?.handlePointerMove(s);
@@ -59748,9 +59748,9 @@ let nu = class extends ln {
     }), this.canvas.addEventListener("contextmenu", (c) => {
       this.clearSceneLongPress(), this.openSceneContextMenu(c);
     }), this.canvas.addEventListener("pointerdown", (c) => {
-      this.startSceneLongPress(c);
+      this.handlePointerMove(c), this.startSceneLongPress(c);
     }), this.canvas.addEventListener("pointermove", (c) => {
-      this.handleSceneLongPressMove(c);
+      this.handlePointerMove(c), this.handleSceneLongPressMove(c);
     }), this.canvas.addEventListener("pointerup", () => {
       this.clearSceneLongPress();
     }), this.canvas.addEventListener("pointercancel", () => {
@@ -59759,8 +59759,6 @@ let nu = class extends ln {
       c.preventDefault();
     }), this.canvas.addEventListener("drop", (c) => {
       this.handleCanvasDrop(c);
-    }), this.canvas.addEventListener("mousemove", (c) => {
-      this.handlePointerMove(c);
     }), this.canvas.addEventListener("mouseleave", (c) => {
       this.clearSceneLongPress(), this.hoveredObject && (this.hoveredObject.onInteraction({
         type: "pointerleave",

@@ -1660,7 +1660,7 @@ export class DT3DCard extends LitElement {
 	/**
 	 * Handle pointer move events.
 	 *
-	 * @param event - Mouse event
+	 * @param event - Mouse or pointer event
 	 */
 	private handlePointerMove(event: MouseEvent): void {
 		if (!this.isVisualizationOnly()) {
@@ -3713,10 +3713,12 @@ export class DT3DCard extends LitElement {
 		});
 
 		this.canvas.addEventListener("pointerdown", (event: PointerEvent) => {
+			this.handlePointerMove(event);
 			this.startSceneLongPress(event);
 		});
 
 		this.canvas.addEventListener("pointermove", (event: PointerEvent) => {
+			this.handlePointerMove(event);
 			this.handleSceneLongPressMove(event);
 		});
 
@@ -3734,10 +3736,6 @@ export class DT3DCard extends LitElement {
 
 		this.canvas.addEventListener("drop", (event: DragEvent) => {
 			void this.handleCanvasDrop(event);
-		});
-
-		this.canvas.addEventListener("mousemove", (event: MouseEvent) => {
-			this.handlePointerMove(event);
 		});
 
 		this.canvas.addEventListener("mouseleave", (event: MouseEvent) => {

@@ -8,11 +8,11 @@ import {IconSprite} from "./helpers/icon-sprite.js";
 const CAMERA_REFRESH_INTERVAL_MS = 5000;
 
 /**
- * Camera entity representation with an always-visible image overlay.
+ * Camera entity representation with an image preview shown on pointer hover.
  *
  * The object is still a normal persisted Home Assistant entity object. The
- * camera-specific behavior lives entirely in the visual children: a 3D marker
- * for picking/placement and a CSS3D sprite that shows the latest still image.
+ * camera-specific behavior lives entirely in the visual children: a round 3D
+ * marker for picking/placement and a CSS3D sprite with the latest still image.
  */
 export class EntityCamera extends EntityObject {
 	/**
@@ -56,7 +56,7 @@ export class EntityCamera extends EntityObject {
 	private refreshTimer: number | null = null;
 
 	/**
-	 * Whether camera text should be visible.
+	 * Whether the camera preview should be visible.
 	 */
 	private isHovered = false;
 
@@ -80,10 +80,10 @@ export class EntityCamera extends EntityObject {
 
 		this.root = document.createElement("div");
 		this.root.style.cssText = `
-			width: 180px;
+			width: 320px;
 			overflow: hidden;
 			border: 1px solid var(--divider-color);
-			border-radius: 8px;
+			border-radius: 12px;
 			background: color-mix(in srgb, var(--card-background-color) 90%, transparent);
 			box-shadow: 0 8px 24px var(--shadow-color);
 			color: var(--primary-text-color);
@@ -96,8 +96,8 @@ export class EntityCamera extends EntityObject {
 		this.image.alt = entityId;
 		this.image.style.cssText = `
 			display: block;
-			width: 180px;
-			height: 112px;
+			width: 320px;
+			height: 200px;
 			object-fit: cover;
 			background: var(--secondary-background-color);
 		`;
@@ -116,7 +116,6 @@ export class EntityCamera extends EntityObject {
 			text-overflow: ellipsis;
 			white-space: nowrap;
 		`;
-		this.title.style.display = "none";
 		this.root.appendChild(this.title);
 
 		this.status = document.createElement("div");
@@ -131,8 +130,9 @@ export class EntityCamera extends EntityObject {
 
 		this.overlay = new CSS3DSprite(this.root);
 		this.overlay.internal = true;
-		this.overlay.position.y = 0.85;
+		this.overlay.position.y = 1.2;
 		this.overlay.scale.setScalar(0.0045);
+		this.overlay.visible = false;
 		this.add(this.overlay);
 
 		this.setEntity(entity);
@@ -158,10 +158,10 @@ export class EntityCamera extends EntityObject {
 
 		if (event.type === "pointerenter") {
 			this.isHovered = true;
-			this.updateTextVisibility();
+			this.updatePreviewVisibility();
 		} else if (event.type === "pointerleave") {
 			this.isHovered = false;
-			this.updateTextVisibility();
+			this.updatePreviewVisibility();
 		}
 	}
 
@@ -239,19 +239,17 @@ export class EntityCamera extends EntityObject {
 	}
 
 	/**
-	 * Show or hide the overlay status text.
+	 * Update the overlay status text.
 	 *
 	 * @param message - Status message, or an empty string to hide it.
 	 */
 	private setStatus(message: string): void {
 		this.status.textContent = message;
-		this.updateTextVisibility();
+		this.status.style.display = message ? "block" : "none";
 	}
 
-	private updateTextVisibility(): void {
-		this.title.style.display = this.isHovered ? "block" : "none";
-		this.status.style.display =
-			this.isHovered && this.status.textContent ? "block" : "none";
+	private updatePreviewVisibility(): void {
+		this.overlay.visible = this.isHovered;
 	}
 
 	/**
