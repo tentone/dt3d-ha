@@ -20,6 +20,9 @@ export type DoorDimensions = {
 };
 
 export type DoorCustomization = {
+	operationType: "hinged" | "sliding";
+	panelCount: 1 | 2;
+	openAmount: number;
 	hingeSide: "left" | "right";
 	openingDirection: "inward" | "outward";
 	knobStyle: "none" | "round" | "lever" | "bar";
@@ -45,6 +48,9 @@ const DEFAULT_DOOR_DIMENSIONS: DoorDimensions = {
 };
 
 const DEFAULT_DOOR_CUSTOMIZATION: DoorCustomization = {
+	operationType: "hinged",
+	panelCount: 1,
+	openAmount: 0,
 	hingeSide: "left",
 	openingDirection: "inward",
 	knobStyle: "round",
@@ -84,6 +90,15 @@ export class DoorObject extends DTObject {
 	public thickness: number;
 
 	public open = false;
+
+	public operationType: DoorCustomization["operationType"];
+
+	public panelCount: DoorCustomization["panelCount"];
+
+	/**
+	 * Door opening percentage: 0 is closed and 100 is fully open.
+	 */
+	public openAmount: number;
 
 	public hingeSide: DoorCustomization["hingeSide"];
 
@@ -127,11 +142,19 @@ export class DoorObject extends DTObject {
 	 */
 	public doorMesh: Mesh;
 
+	private secondaryPanelGroup: Group;
+
+	private secondaryDoorMesh: Mesh;
+
 	private borderGroup: Group;
 
 	private hardwareGroup: Group;
 
+	private secondaryHardwareGroup: Group;
+
 	private doorWindowGroup: Group;
+
+	private secondaryDoorWindowGroup: Group;
 
 	private borderMaterial: MeshStandardMaterial;
 
@@ -152,6 +175,17 @@ export class DoorObject extends DTObject {
 		this.height = dimensions.height ?? DEFAULT_DOOR_DIMENSIONS.height;
 		this.thickness = dimensions.thickness ?? DEFAULT_DOOR_DIMENSIONS.thickness;
 
+		this.operationType =
+			customization.operationType ?? DEFAULT_DOOR_CUSTOMIZATION.operationType;
+		this.panelCount =
+			customization.panelCount === 2 ? 2 : DEFAULT_DOOR_CUSTOMIZATION.panelCount;
+		this.openAmount = Math.min(
+			100,
+			Math.max(
+				0,
+				customization.openAmount ?? DEFAULT_DOOR_CUSTOMIZATION.openAmount,
+			),
+		);
 		this.hingeSide =
 			customization.hingeSide ?? DEFAULT_DOOR_CUSTOMIZATION.hingeSide;
 		this.openingDirection =
@@ -202,6 +236,17 @@ export class DoorObject extends DTObject {
 		this.doorMesh.name = "Door Panel";
 		this.hingeGroup.add(this.doorMesh);
 
+		this.secondaryPanelGroup = new Group();
+		this.secondaryPanelGroup.name = "Door Secondary Panel";
+		(this.secondaryPanelGroup as any).internal = true;
+		this.add(this.secondaryPanelGroup);
+		this.secondaryDoorMesh = new Mesh(
+			new BoxGeometry(1, 1, 1),
+			this.doorMesh.material,
+		);
+		this.secondaryDoorMesh.name = "Door Panel 2";
+		this.secondaryPanelGroup.add(this.secondaryDoorMesh);
+
 		this.borderGroup = new Group();
 		this.borderGroup.name = "Door Border";
 		(this.borderGroup as any).internal = true;
@@ -211,9 +256,17 @@ export class DoorObject extends DTObject {
 		this.hardwareGroup.name = "Door Hardware";
 		this.hingeGroup.add(this.hardwareGroup);
 
+		this.secondaryHardwareGroup = new Group();
+		this.secondaryHardwareGroup.name = "Door Hardware 2";
+		this.secondaryPanelGroup.add(this.secondaryHardwareGroup);
+
 		this.doorWindowGroup = new Group();
 		this.doorWindowGroup.name = "Door Window";
 		this.hingeGroup.add(this.doorWindowGroup);
+
+		this.secondaryDoorWindowGroup = new Group();
+		this.secondaryDoorWindowGroup.name = "Door Window 2";
+		this.secondaryPanelGroup.add(this.secondaryDoorWindowGroup);
 
 		this.borderMaterial = new MeshStandardMaterial({color: this.borderColor});
 		this.knobMaterial = new MeshStandardMaterial({
@@ -233,20 +286,28 @@ export class DoorObject extends DTObject {
 		});
 
 		this.updateGeometry();
-		this.setOpen(this.open);
+		this.setOpenAmount(this.openAmount);
 	}
 
 	public setOpen(isOpen: boolean): void {
-		this.open = isOpen;
-		const hingeSign = this.hingeSide === "left" ? -1 : 1;
-		const directionSign = this.openingDirection === "inward" ? 1 : -1;
-		this.hingeGroup.rotation.y = isOpen
-			? hingeSign * directionSign * (Math.PI / 2)
-			: 0;
+		this.setOpenAmount(isOpen ? 100 : 0);
+	}
+
+	public setOpenAmount(amount: number): void {
+		if (!Number.isFinite(amount)) return;
+		this.openAmount = Math.min(100, Math.max(0, amount));
+		this.open = this.openAmount > 0;
+		this.applyOpeningTransform();
 	}
 
 	public toggleOpen(): void {
 		this.setOpen(!this.open);
+	}
+
+	public override update(_time: number): void {
+		if (this.secondaryDoorMesh.material !== this.doorMesh.material) {
+			this.secondaryDoorMesh.material = this.doorMesh.material;
+		}
 	}
 
 	/**
@@ -257,8 +318,16 @@ export class DoorObject extends DTObject {
 			this.setOpen(Boolean(value));
 			return true;
 		}
+		if (attribute === "openAmount") {
+			const amount = Number(value);
+			if (!Number.isFinite(amount)) return false;
+			this.setOpenAmount(amount);
+			return true;
+		}
 
 		if (
+			(attribute === "operationType" &&
+				(value === "hinged" || value === "sliding")) ||
 			(attribute === "hingeSide" && (value === "left" || value === "right")) ||
 			(attribute === "openingDirection" &&
 				(value === "inward" || value === "outward")) ||
@@ -270,7 +339,15 @@ export class DoorObject extends DTObject {
 		) {
 			(this as any)[attribute] = value;
 			this.updateGeometry();
-			this.setOpen(this.open);
+			this.setOpenAmount(this.openAmount);
+			return true;
+		}
+		if (attribute === "panelCount") {
+			const count = Number(value);
+			if (count !== 1 && count !== 2) return false;
+			this.panelCount = count;
+			this.updateGeometry();
+			this.setOpenAmount(this.openAmount);
 			return true;
 		}
 
@@ -305,6 +382,7 @@ export class DoorObject extends DTObject {
 			"windowPositionY",
 			"windowBorderWidth",
 			"windowOpacity",
+			"openAmount",
 		]);
 		if (!numericAttributes.has(attribute)) {
 			return false;
@@ -333,12 +411,15 @@ export class DoorObject extends DTObject {
 		(this as any)[attribute] =
 			attribute === "windowOpacity" ? Math.min(1, Math.max(0, number)) : number;
 		this.updateGeometry();
-		this.setOpen(this.open);
+		this.setOpenAmount(this.openAmount);
 		return true;
 	}
 
 	public getCustomization(): DoorCustomization {
 		return {
+			operationType: this.operationType,
+			panelCount: this.panelCount,
+			openAmount: this.openAmount,
 			hingeSide: this.hingeSide,
 			openingDirection: this.openingDirection,
 			knobStyle: this.knobStyle,
@@ -365,18 +446,21 @@ export class DoorObject extends DTObject {
 			this.height = source.height;
 			this.thickness = source.thickness;
 			this.open = source.open;
+			this.openAmount = source.openAmount;
 			Object.assign(this, source.getCustomization());
 			this.doorMesh.material = Array.isArray(source.doorMesh.material)
 				? source.doorMesh.material.map((material) => material.clone())
 				: source.doorMesh.material.clone();
+			this.secondaryDoorMesh.material = this.doorMesh.material;
 		}
 
 		this.updateGeometry();
-		this.setOpen(this.open);
+		this.setOpenAmount(this.openAmount);
 		if (recursive) {
 			for (const child of source.children) {
 				if (
 					child === source.hingeGroup ||
+					child === source.secondaryPanelGroup ||
 					child === source.borderGroup ||
 					(child as any).internal === true
 				) {
@@ -394,13 +478,15 @@ export class DoorObject extends DTObject {
 		this.updateBorderGeometry();
 		this.updateHardwareGeometry();
 		this.updateWindowGeometry();
+		this.applyOpeningTransform();
 	}
 
 	private clampWindow(): void {
 		const margin = 0.08;
+		const panelWidth = this.width / this.panelCount;
 		this.windowWidth = Math.min(
 			Math.max(0.05, this.windowWidth),
-			Math.max(0.05, this.width - margin * 2),
+			Math.max(0.05, panelWidth - margin * 2),
 		);
 		this.windowHeight = Math.min(
 			Math.max(0.05, this.windowHeight),
@@ -408,7 +494,7 @@ export class DoorObject extends DTObject {
 		);
 		const halfAvailableX = Math.max(
 			0,
-			(this.width - this.windowWidth) / 2 - margin,
+			(panelWidth - this.windowWidth) / 2 - margin,
 		);
 		this.windowPositionX = Math.min(
 			halfAvailableX,
@@ -422,13 +508,56 @@ export class DoorObject extends DTObject {
 	}
 
 	private updatePanelGeometry(): void {
-		let geometry;
+		const panelWidth = this.width / this.panelCount;
+		const primaryGeometry = this.createPanelGeometry(panelWidth);
+		this.doorMesh.geometry.dispose();
+		this.doorMesh.geometry = primaryGeometry;
+		this.secondaryDoorMesh.geometry.dispose();
+		this.secondaryDoorMesh.geometry = this.createPanelGeometry(panelWidth);
+		this.secondaryDoorMesh.material = this.doorMesh.material;
+		this.secondaryPanelGroup.visible = this.panelCount === 2;
+
+		if (this.operationType === "hinged") {
+			if (this.panelCount === 2) {
+				this.hingeGroup.position.set(-this.width / 2, this.height / 2, 0);
+				this.doorMesh.position.set(panelWidth / 2, 0, 0);
+				this.secondaryPanelGroup.position.set(
+					this.width / 2,
+					this.height / 2,
+					0,
+				);
+				this.secondaryDoorMesh.position.set(-panelWidth / 2, 0, 0);
+			} else {
+				const hingeX =
+					this.hingeSide === "left" ? -this.width / 2 : this.width / 2;
+				const panelOffset =
+					this.hingeSide === "left" ? this.width / 2 : -this.width / 2;
+				this.hingeGroup.position.set(hingeX, this.height / 2, 0);
+				this.doorMesh.position.set(panelOffset, 0, 0);
+			}
+		} else {
+			if (this.panelCount === 2) {
+				this.hingeGroup.position.set(-panelWidth / 2, this.height / 2, 0);
+				this.secondaryPanelGroup.position.set(
+					panelWidth / 2,
+					this.height / 2,
+					0,
+				);
+			} else {
+				this.hingeGroup.position.set(0, this.height / 2, 0);
+			}
+			this.doorMesh.position.set(0, 0, 0);
+			this.secondaryDoorMesh.position.set(0, 0, 0);
+		}
+	}
+
+	private createPanelGeometry(panelWidth: number) {
 		if (this.windowEnabled) {
 			const shape = new Shape();
-			shape.moveTo(-this.width / 2, -this.height / 2);
-			shape.lineTo(this.width / 2, -this.height / 2);
-			shape.lineTo(this.width / 2, this.height / 2);
-			shape.lineTo(-this.width / 2, this.height / 2);
+			shape.moveTo(-panelWidth / 2, -this.height / 2);
+			shape.lineTo(panelWidth / 2, -this.height / 2);
+			shape.lineTo(panelWidth / 2, this.height / 2);
+			shape.lineTo(-panelWidth / 2, this.height / 2);
 			shape.closePath();
 
 			const windowY = this.windowPositionY - this.height / 2;
@@ -451,22 +580,14 @@ export class DoorObject extends DTObject {
 			);
 			hole.closePath();
 			shape.holes.push(hole);
-			geometry = new ExtrudeGeometry(shape, {
+			const geometry = new ExtrudeGeometry(shape, {
 				depth: this.thickness,
 				bevelEnabled: false,
 			});
 			geometry.translate(0, 0, -this.thickness / 2);
-		} else {
-			geometry = new BoxGeometry(this.width, this.height, this.thickness);
+			return geometry;
 		}
-		this.doorMesh.geometry.dispose();
-		this.doorMesh.geometry = geometry;
-
-		const hingeX = this.hingeSide === "left" ? -this.width / 2 : this.width / 2;
-		const panelOffset =
-			this.hingeSide === "left" ? this.width / 2 : -this.width / 2;
-		this.hingeGroup.position.set(hingeX, this.height / 2, 0);
-		this.doorMesh.position.set(panelOffset, 0, 0);
+		return new BoxGeometry(panelWidth, this.height, this.thickness);
 	}
 
 	private updateBorderGeometry(): void {
@@ -506,15 +627,49 @@ export class DoorObject extends DTObject {
 
 	private updateHardwareGeometry(): void {
 		disposeGroupGeometry(this.hardwareGroup);
+		disposeGroupGeometry(this.secondaryHardwareGroup);
 		if (this.knobStyle === "none") {
 			return;
 		}
 		this.knobMaterial.color = new Color(this.knobColor);
-		const panelOffset =
-			this.hingeSide === "left" ? this.width / 2 : -this.width / 2;
-		const knobFromHinge =
-			(this.hingeSide === "left" ? 1 : -1) * this.width * 0.82;
-		const x = knobFromHinge;
+		const panelWidth = this.width / this.panelCount;
+		const primaryPanelCenter =
+			this.operationType === "hinged"
+				? this.panelCount === 2
+					? panelWidth / 2
+					: this.hingeSide === "left"
+						? this.width / 2
+						: -this.width / 2
+				: 0;
+		const primaryHandleSide =
+			this.panelCount === 2 ? 1 : this.hingeSide === "left" ? 1 : -1;
+		this.addHardwareToGroup(
+			this.hardwareGroup,
+			primaryPanelCenter,
+			panelWidth,
+			primaryHandleSide,
+		);
+		if (this.panelCount === 2) {
+			const secondaryPanelCenter =
+				this.operationType === "hinged" ? -panelWidth / 2 : 0;
+			this.addHardwareToGroup(
+				this.secondaryHardwareGroup,
+				secondaryPanelCenter,
+				panelWidth,
+				-1,
+			);
+		}
+	}
+
+	private addHardwareToGroup(
+		group: Group,
+		panelCenter: number,
+		panelWidth: number,
+		handleSide: number,
+	): void {
+		const x =
+			panelCenter +
+			handleSide * Math.max(0.04, panelWidth / 2 - Math.min(0.16, panelWidth / 4));
 		const y = Math.min(1, this.height * 0.48) - this.height / 2;
 		for (const face of [-1, 1]) {
 			const z = face * (this.thickness / 2 + 0.035);
@@ -524,7 +679,7 @@ export class DoorObject extends DTObject {
 			);
 			stem.rotation.x = Math.PI / 2;
 			stem.position.set(x, y, z - face * 0.025);
-			this.hardwareGroup.add(stem);
+			group.add(stem);
 
 			let handle: Mesh;
 			if (this.knobStyle === "round") {
@@ -541,14 +696,17 @@ export class DoorObject extends DTObject {
 					this.knobMaterial,
 				);
 			}
-			handle.position.set(x - panelOffset * 0.02, y, z);
-			this.hardwareGroup.add(handle);
+			handle.position.set(x, y, z);
+			group.add(handle);
 		}
 	}
 
 	private updateWindowGeometry(): void {
 		disposeGroupGeometry(this.doorWindowGroup);
+		disposeGroupGeometry(this.secondaryDoorWindowGroup);
 		this.doorWindowGroup.visible = this.windowEnabled;
+		this.secondaryDoorWindowGroup.visible =
+			this.windowEnabled && this.panelCount === 2;
 		if (!this.windowEnabled) {
 			return;
 		}
@@ -558,9 +716,30 @@ export class DoorObject extends DTObject {
 		this.windowMaterial.needsUpdate = true;
 		this.windowBorderMaterial.color = new Color(this.borderColor);
 
-		const panelOffset =
-			this.hingeSide === "left" ? this.width / 2 : -this.width / 2;
-		const centerX = panelOffset + this.windowPositionX;
+		const panelWidth = this.width / this.panelCount;
+		const primaryPanelCenter =
+			this.operationType === "hinged"
+				? this.panelCount === 2
+					? panelWidth / 2
+					: this.hingeSide === "left"
+						? this.width / 2
+						: -this.width / 2
+				: 0;
+		this.addWindowToGroup(
+			this.doorWindowGroup,
+			primaryPanelCenter + this.windowPositionX,
+		);
+		if (this.panelCount === 2) {
+			const secondaryPanelCenter =
+				this.operationType === "hinged" ? -panelWidth / 2 : 0;
+			this.addWindowToGroup(
+				this.secondaryDoorWindowGroup,
+				secondaryPanelCenter + this.windowPositionX,
+			);
+		}
+	}
+
+	private addWindowToGroup(group: Group, centerX: number): void {
 		const centerY = this.windowPositionY - this.height / 2;
 		const glass = new Mesh(
 			new BoxGeometry(
@@ -572,7 +751,7 @@ export class DoorObject extends DTObject {
 		);
 		glass.name = "Door Window Glass";
 		glass.position.set(centerX, centerY, 0);
-		this.doorWindowGroup.add(glass);
+		group.add(glass);
 
 		const border = Math.min(
 			this.windowBorderWidth,
@@ -593,7 +772,7 @@ export class DoorObject extends DTObject {
 				centerY,
 				0,
 			);
-			this.doorWindowGroup.add(vertical);
+			group.add(vertical);
 
 			const horizontal = new Mesh(
 				new BoxGeometry(this.windowWidth, border, borderDepth),
@@ -604,7 +783,61 @@ export class DoorObject extends DTObject {
 				centerY + side * (this.windowHeight / 2 + border / 2),
 				0,
 			);
-			this.doorWindowGroup.add(horizontal);
+			group.add(horizontal);
+		}
+	}
+
+	private applyOpeningTransform(): void {
+		const amount = this.openAmount / 100;
+		const panelWidth = this.width / this.panelCount;
+		this.secondaryPanelGroup.visible = this.panelCount === 2;
+		this.hingeGroup.rotation.set(0, 0, 0);
+		this.secondaryPanelGroup.rotation.set(0, 0, 0);
+
+		if (this.operationType === "hinged") {
+			const directionSign = this.openingDirection === "inward" ? 1 : -1;
+			if (this.panelCount === 2) {
+				this.hingeGroup.position.set(-this.width / 2, this.height / 2, 0);
+				this.secondaryPanelGroup.position.set(
+					this.width / 2,
+					this.height / 2,
+					0,
+				);
+				this.hingeGroup.rotation.y =
+					-directionSign * amount * (Math.PI / 2);
+				this.secondaryPanelGroup.rotation.y =
+					directionSign * amount * (Math.PI / 2);
+			} else {
+				const hingeSign = this.hingeSide === "left" ? -1 : 1;
+				this.hingeGroup.position.set(
+					this.hingeSide === "left" ? -this.width / 2 : this.width / 2,
+					this.height / 2,
+					0,
+				);
+				this.hingeGroup.rotation.y =
+					hingeSign * directionSign * amount * (Math.PI / 2);
+			}
+			return;
+		}
+
+		if (this.panelCount === 2) {
+			this.hingeGroup.position.set(
+				-panelWidth / 2 - panelWidth * amount,
+				this.height / 2,
+				0,
+			);
+			this.secondaryPanelGroup.position.set(
+				panelWidth / 2 + panelWidth * amount,
+				this.height / 2,
+				0,
+			);
+		} else {
+			const direction = this.hingeSide === "left" ? -1 : 1;
+			this.hingeGroup.position.set(
+				direction * this.width * amount,
+				this.height / 2,
+				0,
+			);
 		}
 	}
 }

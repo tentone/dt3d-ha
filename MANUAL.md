@@ -140,11 +140,18 @@ dialog. Card-wide single- and double-click defaults can be `open`, `toggle`, or
 The wall inspector provides height and thickness controls plus an optional
 baseboard along the bottom. Doors support configurable trim, left/right hinges,
 inward/outward swing, multiple knob styles, and a positioned glazed opening.
+Choose a single or double door and select **Hinged** or **Sliding** operation.
+
 Windows support glass tint, opacity, and roughness; configurable frames; split
 pane grids with custom rows, columns, bar size, and spacing; and horizontal
-blinds. Set **Blind position (% down)** to `0` to raise the blinds, `100` to
-lower them, or any intermediate value for a partial opening. These settings are
-saved with the space.
+blinds. A window can use one or two sliding or hinged sashes. For either doors
+or windows, set **Opening (%)** to `0` for closed, `100` for fully open, or an
+intermediate value for a partial opening. The **Open** toggle is a shortcut for
+fully open/closed.
+
+Set **Blind position (% down)** to `0` to raise the blinds, `100` to lower them,
+or any intermediate value for a partial blind opening. These settings are saved
+with the space.
 
 The live wall label helps with length. The distance and angle tools in the
 **Measure** section are useful for checking the plan.

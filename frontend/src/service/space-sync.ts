@@ -870,7 +870,11 @@ export class SpaceSync {
 						color,
 						customization,
 					);
-					door.setOpen(openState);
+					if (typeof customization?.openAmount === "number") {
+						door.setOpenAmount(customization.openAmount);
+					} else {
+						door.setOpen(openState);
+					}
 					object = door;
 					materialTarget = door.doorMesh;
 				} else {
@@ -889,7 +893,11 @@ export class SpaceSync {
 					const windowMesh = windowObj.getObjectByName(
 						"Window Panel",
 					) as Mesh | null;
-					windowObj.setOpen(openState);
+					if (typeof customization?.openAmount === "number") {
+						windowObj.setOpenAmount(customization.openAmount);
+					} else {
+						windowObj.setOpen(openState);
+					}
 					object = windowObj;
 					materialTarget = windowMesh;
 				}

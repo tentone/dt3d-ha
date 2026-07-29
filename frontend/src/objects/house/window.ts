@@ -9,6 +9,11 @@ export type WindowDimensions = {
 };
 
 export type WindowCustomization = {
+	openingType: "sliding" | "hinged";
+	panelCount: 1 | 2;
+	hingeSide: "left" | "right";
+	openingDirection: "inward" | "outward";
+	openAmount: number;
 	borderEnabled: boolean;
 	borderThickness: number;
 	borderDepth: number;
@@ -32,6 +37,11 @@ const DEFAULT_WINDOW_DIMENSIONS: WindowDimensions = {
 };
 
 const DEFAULT_WINDOW_CUSTOMIZATION: WindowCustomization = {
+	openingType: "sliding",
+	panelCount: 1,
+	hingeSide: "left",
+	openingDirection: "inward",
+	openAmount: 0,
 	borderEnabled: true,
 	borderThickness: 0.06,
 	borderDepth: 0.03,
@@ -70,6 +80,16 @@ export class WindowObject extends DTObject {
 
 	public open = false;
 
+	public openingType: WindowCustomization["openingType"];
+
+	public panelCount: WindowCustomization["panelCount"];
+
+	public hingeSide: WindowCustomization["hingeSide"];
+
+	public openingDirection: WindowCustomization["openingDirection"];
+
+	public openAmount: number;
+
 	public borderEnabled: boolean;
 
 	public borderThickness: number;
@@ -103,13 +123,19 @@ export class WindowObject extends DTObject {
 
 	private sashGroup: Group;
 
+	private secondarySashGroup: Group;
+
 	private frameGroup: Group;
 
 	private gridGroup: Group;
 
+	private secondaryGridGroup: Group;
+
 	private blindsGroup: Group;
 
 	private windowMesh: Mesh;
+
+	private secondaryWindowMesh: Mesh;
 
 	private frameMaterial: MeshStandardMaterial;
 
@@ -129,6 +155,24 @@ export class WindowObject extends DTObject {
 		this.thickness =
 			dimensions.thickness ?? DEFAULT_WINDOW_DIMENSIONS.thickness;
 
+		this.openingType =
+			customization.openingType ?? DEFAULT_WINDOW_CUSTOMIZATION.openingType;
+		this.panelCount =
+			customization.panelCount === 2
+				? 2
+				: DEFAULT_WINDOW_CUSTOMIZATION.panelCount;
+		this.hingeSide =
+			customization.hingeSide ?? DEFAULT_WINDOW_CUSTOMIZATION.hingeSide;
+		this.openingDirection =
+			customization.openingDirection ??
+			DEFAULT_WINDOW_CUSTOMIZATION.openingDirection;
+		this.openAmount = Math.min(
+			100,
+			Math.max(
+				0,
+				customization.openAmount ?? DEFAULT_WINDOW_CUSTOMIZATION.openAmount,
+			),
+		);
 		this.borderEnabled =
 			customization.borderEnabled ?? DEFAULT_WINDOW_CUSTOMIZATION.borderEnabled;
 		this.borderThickness =
@@ -203,6 +247,17 @@ export class WindowObject extends DTObject {
 		this.windowMesh.name = "Window Panel";
 		this.sashGroup.add(this.windowMesh);
 
+		this.secondarySashGroup = new Group();
+		this.secondarySashGroup.name = "Window Sash 2";
+		(this.secondarySashGroup as any).internal = true;
+		this.add(this.secondarySashGroup);
+		this.secondaryWindowMesh = new Mesh(
+			new BoxGeometry(1, 1, 1),
+			this.windowMesh.material,
+		);
+		this.secondaryWindowMesh.name = "Window Panel 2";
+		this.secondarySashGroup.add(this.secondaryWindowMesh);
+
 		this.frameGroup = new Group();
 		this.frameGroup.name = "Window Border";
 		(this.frameGroup as any).internal = true;
@@ -211,6 +266,10 @@ export class WindowObject extends DTObject {
 		this.gridGroup = new Group();
 		this.gridGroup.name = "Window Grid";
 		this.sashGroup.add(this.gridGroup);
+
+		this.secondaryGridGroup = new Group();
+		this.secondaryGridGroup.name = "Window Grid 2";
+		this.secondarySashGroup.add(this.secondaryGridGroup);
 
 		this.blindsGroup = new Group();
 		this.blindsGroup.name = "Window Blinds";
@@ -225,16 +284,28 @@ export class WindowObject extends DTObject {
 		});
 
 		this.updateGeometry();
-		this.setOpen(this.open);
+		this.setOpenAmount(this.openAmount);
 	}
 
 	public setOpen(isOpen: boolean): void {
-		this.open = isOpen;
-		this.sashGroup.position.z = isOpen ? this.thickness + this.borderDepth : 0;
+		this.setOpenAmount(isOpen ? 100 : 0);
+	}
+
+	public setOpenAmount(amount: number): void {
+		if (!Number.isFinite(amount)) return;
+		this.openAmount = Math.min(100, Math.max(0, amount));
+		this.open = this.openAmount > 0;
+		this.applyOpeningTransform();
 	}
 
 	public toggleOpen(): void {
 		this.setOpen(!this.open);
+	}
+
+	public override update(_time: number): void {
+		if (this.secondaryWindowMesh.material !== this.windowMesh.material) {
+			this.secondaryWindowMesh.material = this.windowMesh.material;
+		}
 	}
 
 	public setBlindPosition(position: number): void {
@@ -268,6 +339,30 @@ export class WindowObject extends DTObject {
 	public setConfiguration(attribute: string, value: unknown): boolean {
 		if (attribute === "open") {
 			this.setOpen(Boolean(value));
+			return true;
+		}
+		if (attribute === "openAmount") {
+			const amount = Number(value);
+			if (!Number.isFinite(amount)) return false;
+			this.setOpenAmount(amount);
+			return true;
+		}
+		if (
+			(attribute === "openingType" &&
+				(value === "sliding" || value === "hinged")) ||
+			(attribute === "hingeSide" && (value === "left" || value === "right")) ||
+			(attribute === "openingDirection" &&
+				(value === "inward" || value === "outward"))
+		) {
+			(this as any)[attribute] = value;
+			this.updateGeometry();
+			return true;
+		}
+		if (attribute === "panelCount") {
+			const count = Number(value);
+			if (count !== 1 && count !== 2) return false;
+			this.panelCount = count;
+			this.updateGeometry();
 			return true;
 		}
 		if (attribute === "blindPosition") {
@@ -345,7 +440,7 @@ export class WindowObject extends DTObject {
 				? Math.min(20, Math.max(1, Math.round(number)))
 				: number;
 		this.updateGeometry();
-		this.setOpen(this.open);
+		this.setOpenAmount(this.openAmount);
 		return true;
 	}
 
@@ -355,6 +450,11 @@ export class WindowObject extends DTObject {
 
 	public getCustomization(): WindowCustomization {
 		return {
+			openingType: this.openingType,
+			panelCount: this.panelCount,
+			hingeSide: this.hingeSide,
+			openingDirection: this.openingDirection,
+			openAmount: this.openAmount,
 			borderEnabled: this.borderEnabled,
 			borderThickness: this.borderThickness,
 			borderDepth: this.borderDepth,
@@ -379,18 +479,21 @@ export class WindowObject extends DTObject {
 			this.height = source.height;
 			this.thickness = source.thickness;
 			this.open = source.open;
+			this.openAmount = source.openAmount;
 			Object.assign(this, source.getCustomization());
 			this.windowMesh.material = Array.isArray(source.windowMesh.material)
 				? source.windowMesh.material.map((material) => material.clone())
 				: source.windowMesh.material.clone();
+			this.secondaryWindowMesh.material = this.windowMesh.material;
 		}
 
 		this.updateGeometry();
-		this.setOpen(this.open);
+		this.setOpenAmount(this.openAmount);
 		if (recursive) {
 			for (const child of source.children) {
 				if (
 					child === source.sashGroup ||
+					child === source.secondarySashGroup ||
 					child === source.frameGroup ||
 					child === source.blindsGroup ||
 					(child as any).internal === true
@@ -409,14 +512,63 @@ export class WindowObject extends DTObject {
 			: 0;
 		const glassWidth = Math.max(0.02, this.width - border * 2);
 		const glassHeight = Math.max(0.02, this.height - border * 2);
-		const geometry = new BoxGeometry(glassWidth, glassHeight, this.thickness);
+		const panelWidth = glassWidth / this.panelCount;
+		const geometry = new BoxGeometry(panelWidth, glassHeight, this.thickness);
 		this.windowMesh.geometry.dispose();
 		this.windowMesh.geometry = geometry;
-		this.windowMesh.position.set(0, this.height / 2, 0);
+		this.secondaryWindowMesh.geometry.dispose();
+		this.secondaryWindowMesh.geometry = new BoxGeometry(
+			panelWidth,
+			glassHeight,
+			this.thickness,
+		);
+		this.secondaryWindowMesh.material = this.windowMesh.material;
+		this.secondarySashGroup.visible = this.panelCount === 2;
+		this.positionWindowPanels(glassWidth, panelWidth);
 
 		this.updateFrameGeometry(border);
-		this.updateGridGeometry(glassWidth, glassHeight);
+		this.updateGridGeometry(panelWidth, glassHeight);
 		this.updateBlindsGeometry();
+		this.applyOpeningTransform();
+	}
+
+	private positionWindowPanels(glassWidth: number, panelWidth: number): void {
+		this.sashGroup.rotation.set(0, 0, 0);
+		this.secondarySashGroup.rotation.set(0, 0, 0);
+		if (this.openingType === "hinged") {
+			if (this.panelCount === 2) {
+				this.sashGroup.position.set(-glassWidth / 2, 0, 0);
+				this.windowMesh.position.set(panelWidth / 2, this.height / 2, 0);
+				this.secondarySashGroup.position.set(glassWidth / 2, 0, 0);
+				this.secondaryWindowMesh.position.set(
+					-panelWidth / 2,
+					this.height / 2,
+					0,
+				);
+			} else {
+				const side = this.hingeSide === "left" ? -1 : 1;
+				this.sashGroup.position.set(side * glassWidth / 2, 0, 0);
+				this.windowMesh.position.set(
+					-side * panelWidth / 2,
+					this.height / 2,
+					0,
+				);
+			}
+			this.gridGroup.position.x = this.windowMesh.position.x;
+			this.secondaryGridGroup.position.x =
+				this.secondaryWindowMesh.position.x;
+			return;
+		}
+		this.windowMesh.position.set(0, this.height / 2, 0);
+		this.secondaryWindowMesh.position.set(0, this.height / 2, 0);
+		this.sashGroup.position.set(
+			this.panelCount === 2 ? -panelWidth / 2 : 0,
+			0,
+			0,
+		);
+		this.secondarySashGroup.position.set(panelWidth / 2, 0, 0);
+		this.gridGroup.position.x = 0;
+		this.secondaryGridGroup.position.x = 0;
 	}
 
 	private updateFrameGeometry(border: number): void {
@@ -453,10 +605,24 @@ export class WindowObject extends DTObject {
 
 	private updateGridGeometry(glassWidth: number, glassHeight: number): void {
 		disposeGroupGeometry(this.gridGroup);
+		disposeGroupGeometry(this.secondaryGridGroup);
 		this.gridGroup.visible = this.gridEnabled;
+		this.secondaryGridGroup.visible =
+			this.gridEnabled && this.panelCount === 2;
 		if (!this.gridEnabled) return;
 
 		this.gridMaterial.color = new Color(this.borderColor);
+		this.addGridToGroup(this.gridGroup, glassWidth, glassHeight);
+		if (this.panelCount === 2) {
+			this.addGridToGroup(this.secondaryGridGroup, glassWidth, glassHeight);
+		}
+	}
+
+	private addGridToGroup(
+		group: Group,
+		glassWidth: number,
+		glassHeight: number,
+	): void {
 		const bar = Math.min(
 			this.gridBarThickness,
 			glassWidth / 4,
@@ -481,7 +647,7 @@ export class WindowObject extends DTObject {
 				this.gridMaterial,
 			);
 			vertical.position.set(x, this.height / 2, 0);
-			this.gridGroup.add(vertical);
+			group.add(vertical);
 		}
 		for (let index = 1; index < this.gridRows; index += 1) {
 			const y = this.height / 2 + (index - this.gridRows / 2) * rowSpacing;
@@ -491,7 +657,7 @@ export class WindowObject extends DTObject {
 				this.gridMaterial,
 			);
 			horizontal.position.set(0, y, 0);
-			this.gridGroup.add(horizontal);
+			group.add(horizontal);
 		}
 	}
 
@@ -525,5 +691,51 @@ export class WindowObject extends DTObject {
 		);
 		headRail.position.set(0, top, this.thickness / 2 + 0.025);
 		this.blindsGroup.add(headRail);
+	}
+
+	private applyOpeningTransform(): void {
+		const border = this.borderEnabled
+			? Math.min(this.borderThickness, this.width / 3, this.height / 3)
+			: 0;
+		const glassWidth = Math.max(0.02, this.width - border * 2);
+		const panelWidth = glassWidth / this.panelCount;
+		const amount = this.openAmount / 100;
+		this.secondarySashGroup.visible = this.panelCount === 2;
+		this.sashGroup.rotation.set(0, 0, 0);
+		this.secondarySashGroup.rotation.set(0, 0, 0);
+
+		if (this.openingType === "hinged") {
+			const directionSign = this.openingDirection === "inward" ? 1 : -1;
+			if (this.panelCount === 2) {
+				this.sashGroup.position.set(-glassWidth / 2, 0, 0);
+				this.secondarySashGroup.position.set(glassWidth / 2, 0, 0);
+				this.sashGroup.rotation.y =
+					-directionSign * amount * (Math.PI / 2);
+				this.secondarySashGroup.rotation.y =
+					directionSign * amount * (Math.PI / 2);
+			} else {
+				const side = this.hingeSide === "left" ? -1 : 1;
+				this.sashGroup.position.set(side * glassWidth / 2, 0, 0);
+				this.sashGroup.rotation.y =
+					side * directionSign * amount * (Math.PI / 2);
+			}
+			return;
+		}
+
+		if (this.panelCount === 2) {
+			this.sashGroup.position.set(
+				-panelWidth / 2 - panelWidth * amount,
+				0,
+				0,
+			);
+			this.secondarySashGroup.position.set(
+				panelWidth / 2 + panelWidth * amount,
+				0,
+				0,
+			);
+		} else {
+			const direction = this.hingeSide === "left" ? -1 : 1;
+			this.sashGroup.position.set(direction * glassWidth * amount, 0, 0);
+		}
 	}
 }

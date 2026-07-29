@@ -60,6 +60,9 @@ const DOOR_CONFIGURATION_ATTRIBUTES = new Set([
 	"height",
 	"thickness",
 	"open",
+	"openAmount",
+	"operationType",
+	"panelCount",
 	"hingeSide",
 	"openingDirection",
 	"knobStyle",
@@ -83,6 +86,11 @@ const WINDOW_CONFIGURATION_ATTRIBUTES = new Set([
 	"height",
 	"thickness",
 	"open",
+	"openAmount",
+	"openingType",
+	"panelCount",
+	"hingeSide",
+	"openingDirection",
 	"glassColor",
 	"glassOpacity",
 	"glassRoughness",
@@ -196,6 +204,14 @@ export class DT3DObjectInspector extends LitElement {
 					updateMeshGeometry(object, {...snapshot});
 				};
 			}
+		}
+
+		if (
+			attribute === "open" &&
+			(object instanceof DoorObject || object instanceof WindowObject)
+		) {
+			const amount = object.openAmount;
+			return () => object.setOpenAmount(amount);
 		}
 
 		if (this.isHouseConfigurationAttribute(object, attribute)) {
@@ -710,6 +726,17 @@ export class DT3DObjectInspector extends LitElement {
 				editable: !locked,
 				enabled: true,
 			},
+			{
+				label: localManager.get("openingAmount"),
+				attribute: "openAmount",
+				type: "number",
+				tooltip: localManager.get("openingAmountTooltip"),
+				editable: !locked,
+				enabled: true,
+				min: 0,
+				max: 100,
+				step: 5,
+			},
 		];
 	}
 
@@ -717,11 +744,41 @@ export class DT3DObjectInspector extends LitElement {
 		if (!(this.selectedObject instanceof DoorObject)) return [];
 		return [
 			{
-				label: localManager.get("doorHingeSide"),
+				label: localManager.get("doorOperationType"),
+				attribute: "operationType",
+				type: "select",
+				tooltip: localManager.get("doorOperationTypeTooltip"),
+				editable: !locked,
+				enabled: true,
+				options: [
+					{label: localManager.get("hinged"), value: "hinged"},
+					{label: localManager.get("sliding"), value: "sliding"},
+				],
+			},
+			{
+				label: localManager.get("doorPanelCount"),
+				attribute: "panelCount",
+				type: "select",
+				tooltip: localManager.get("doorPanelCountTooltip"),
+				editable: !locked,
+				enabled: true,
+				options: [
+					{label: localManager.get("single"), value: 1},
+					{label: localManager.get("double"), value: 2},
+				],
+			},
+			{
+				label:
+					this.selectedObject.operationType === "sliding"
+						? localManager.get("slideSide")
+						: localManager.get("doorHingeSide"),
 				attribute: "hingeSide",
 				type: "select",
-				tooltip: localManager.get("doorHingeSideTooltip"),
-				editable: !locked,
+				tooltip:
+					this.selectedObject.operationType === "sliding"
+						? localManager.get("slideSideTooltip")
+						: localManager.get("doorHingeSideTooltip"),
+				editable: !locked && this.selectedObject.panelCount === 1,
 				enabled: true,
 				options: [
 					{label: localManager.get("left"), value: "left"},
@@ -733,7 +790,7 @@ export class DT3DObjectInspector extends LitElement {
 				attribute: "openingDirection",
 				type: "select",
 				tooltip: localManager.get("doorOpeningDirectionTooltip"),
-				editable: !locked,
+				editable: !locked && this.selectedObject.operationType === "hinged",
 				enabled: true,
 				options: [
 					{label: localManager.get("inward"), value: "inward"},
@@ -761,6 +818,66 @@ export class DT3DObjectInspector extends LitElement {
 				tooltip: localManager.get("doorKnobColorTooltip"),
 				editable: !locked && this.selectedObject.knobStyle !== "none",
 				enabled: true,
+			},
+		];
+	}
+
+	private getWindowOperationFields(locked: boolean): DynamicFormField[] {
+		if (!(this.selectedObject instanceof WindowObject)) return [];
+		return [
+			{
+				label: localManager.get("windowOpeningType"),
+				attribute: "openingType",
+				type: "select",
+				tooltip: localManager.get("windowOpeningTypeTooltip"),
+				editable: !locked,
+				enabled: true,
+				options: [
+					{label: localManager.get("sliding"), value: "sliding"},
+					{label: localManager.get("hinged"), value: "hinged"},
+				],
+			},
+			{
+				label: localManager.get("windowPanelCount"),
+				attribute: "panelCount",
+				type: "select",
+				tooltip: localManager.get("windowPanelCountTooltip"),
+				editable: !locked,
+				enabled: true,
+				options: [
+					{label: localManager.get("single"), value: 1},
+					{label: localManager.get("double"), value: 2},
+				],
+			},
+			{
+				label:
+					this.selectedObject.openingType === "sliding"
+						? localManager.get("slideSide")
+						: localManager.get("doorHingeSide"),
+				attribute: "hingeSide",
+				type: "select",
+				tooltip:
+					this.selectedObject.openingType === "sliding"
+						? localManager.get("slideSideTooltip")
+						: localManager.get("doorHingeSideTooltip"),
+				editable: !locked && this.selectedObject.panelCount === 1,
+				enabled: true,
+				options: [
+					{label: localManager.get("left"), value: "left"},
+					{label: localManager.get("right"), value: "right"},
+				],
+			},
+			{
+				label: localManager.get("openingDirection"),
+				attribute: "openingDirection",
+				type: "select",
+				tooltip: localManager.get("openingDirectionTooltip"),
+				editable: !locked && this.selectedObject.openingType === "hinged",
+				enabled: true,
+				options: [
+					{label: localManager.get("inward"), value: "inward"},
+					{label: localManager.get("outward"), value: "outward"},
+				],
 			},
 		];
 	}
@@ -1318,6 +1435,12 @@ export class DT3DObjectInspector extends LitElement {
 			"windowGlass",
 			localManager.get("windowGlass"),
 			this.getWindowGlassFields(locked),
+		);
+		this.addSubFormField(
+			fields,
+			"windowOperation",
+			localManager.get("windowOperation"),
+			this.getWindowOperationFields(locked),
 		);
 		this.addSubFormField(
 			fields,
