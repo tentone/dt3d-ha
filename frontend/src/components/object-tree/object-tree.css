@@ -60,7 +60,7 @@
 	user-select: none;
 	text-overflow: ellipsis;
 	white-space: nowrap;
-	width: 100%;
+	width: calc(100% - (var(--tree-depth, 0) * 16px));
 	height: 30px;
 	color: var(--primary-text-color);
 	display: flex;
@@ -86,9 +86,8 @@
 }
 
 .toggle-spacer {
-	display: inline-block;
-	flex: 0 0 16px;
-	width: 16px;
+    display: inline-block;
+    flex: 0 0 20px;
 }
 
 .node-icon {
@@ -105,17 +104,6 @@
 .tree-node.selected .node-icon {
 	color: var(--primary-text-color);
 	padding-right: 5px;
-}
-
-.node-label {
-    display: flex;
-    gap: 4px;
-    flex: 1 1 auto;
-    overflow: hidden;
-    align-items: center;
-    justify-content: flex-start;
-    flex-wrap: nowrap;
-    height: 30px;
 }
 
 .label-text {
@@ -170,11 +158,6 @@
 
 .default-viewport-icon {
 	color: var(--primary-color);
-	flex: 0 0 14px;
-	width: 14px;
-	height: 14px;
-	font-size: 14px;
-	line-height: 1;
 }
 
 .tree-section {

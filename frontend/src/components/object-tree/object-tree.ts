@@ -1596,7 +1596,6 @@ export class DT3DTree extends LitElement {
 									icon=${node.icon}
 									aria-hidden="true"
 								></ha-icon>
-								<span class="node-label">
 									<span class="label-text">${node.name}</span>
 									${node.locked
 		? html`<ha-icon
@@ -1612,7 +1611,6 @@ export class DT3DTree extends LitElement {
 												title=${localManager.get("defaultViewport")}
 											></ha-icon>`
 		: null}
-								</span>
 							</div>
 							${node.children &&
 							node.children.length &&
