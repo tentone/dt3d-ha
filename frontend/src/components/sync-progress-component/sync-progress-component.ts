@@ -19,8 +19,12 @@ export class SyncProgressComponent extends LitElement {
 	@property({attribute: false})
 	public progress: SyncProgressSnapshot = EMPTY_PROGRESS;
 
-	@property({type: Boolean, reflect: true, attribute: "sidebar-collapsed"})
-	public sidebarCollapsed = true;
+	@property({
+		type: Boolean,
+		reflect: true,
+		attribute: "object-sidebar-collapsed",
+	})
+	public objectSidebarCollapsed = true;
 
 	protected render() {
 		const progress = this.progress ?? EMPTY_PROGRESS;
@@ -30,9 +34,15 @@ export class SyncProgressComponent extends LitElement {
 
 		const finished = progress.completed + progress.failed;
 		const total = Math.max(progress.total, finished + progress.items.length, 1);
-		const percent = Math.min(100, Math.max(0, Math.round((finished / total) * 100)));
+		const percent = Math.min(
+			100,
+			Math.max(0, Math.round((finished / total) * 100)),
+		);
 		const activeItems = progress.items.slice(0, 4);
-		const remainingItems = Math.max(0, progress.items.length - activeItems.length);
+		const remainingItems = Math.max(
+			0,
+			progress.items.length - activeItems.length,
+		);
 		const isLoading = progress.items.some((item) =>
 			/^(load|read|cache|prepare)/i.test(item.operation),
 		);
@@ -56,23 +66,25 @@ export class SyncProgressComponent extends LitElement {
 				</div>
 				${activeItems.length > 0
 					? html`
-						<div class="sync-list">
-							${activeItems.map((item) => html`
-								<div class="sync-item">
-									<span class="sync-operation">${item.operation}</span>
-									<span class="sync-label">${item.label}</span>
-								</div>
-							`)}
-							${remainingItems > 0
-								? html`
-									<div class="sync-item">
-										<span class="sync-operation">Queued</span>
-										<span class="sync-label">${remainingItems} more</span>
-									</div>
-								`
-								: null}
-						</div>
-					`
+							<div class="sync-list">
+								${activeItems.map(
+									(item) => html`
+										<div class="sync-item">
+											<span class="sync-operation">${item.operation}</span>
+											<span class="sync-label">${item.label}</span>
+										</div>
+									`,
+								)}
+								${remainingItems > 0
+									? html`
+											<div class="sync-item">
+												<span class="sync-operation">Queued</span>
+												<span class="sync-label">${remainingItems} more</span>
+											</div>
+										`
+									: null}
+							</div>
+						`
 					: null}
 				${progress.failed > 0
 					? html`<div class="sync-failed">${progress.failed} failed</div>`

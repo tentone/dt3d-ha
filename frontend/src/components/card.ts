@@ -1,4 +1,5 @@
 import "./add-entity-modal/add-entity-modal.js";
+import "./bottom-bar/bottom-bar.js";
 import "./camera-toggle/camera-toggle.js";
 import "./confirmation-modal/confirmation-modal.js";
 import "./connection-status/connection-status.js";
@@ -6,9 +7,9 @@ import "./form-modal/form-modal.js";
 import "./hint-box/hint-box.js";
 import "./light-menu/light-menu.js";
 import "./mesh-menu/mesh-menu.js";
+import "./object-sidebar/object-sidebar.js";
 import "./object-tree/object-tree.js";
 import "./orientation-cube/orientation-cube.js";
-import "./side-bar/side-bar.js";
 import "./space-config-menu/space-config-menu.js";
 import "./space-selector/space-selector.js";
 import "./sync-progress-component/sync-progress-component.js";
@@ -16,13 +17,7 @@ import "./upload-menu/upload-menu.js";
 
 import {LitElement} from "lit";
 import {customElement} from "lit/decorators.js";
-import type {
-	Camera,
-	Intersection,
-	Object3D,
-	Quaternion,
-	Scene,
-} from "three";
+import type {Camera, Intersection, Object3D, Quaternion, Scene} from "three";
 import {
 	Box3,
 	BoxGeometry,
@@ -112,6 +107,7 @@ import {isModelFile, loadModelsFromFiles} from "../utils/loader-utils.js";
 import {LocalStorage} from "../utils/local-storage.js";
 import {findMesh} from "../utils/object3d-utils.js";
 import type {DT3DAddEntityModal} from "./add-entity-modal/add-entity-modal.js";
+import type {DT3DBottomBar} from "./bottom-bar/bottom-bar.js";
 import type {DT3DCameraToggle} from "./camera-toggle/camera-toggle.js";
 import type {
 	ConfirmationActionType,
@@ -127,12 +123,12 @@ import type {DT3DHintBox} from "./hint-box/hint-box.js";
 import type {DT3DLightMenu} from "./light-menu/light-menu.js";
 import type {DT3DMeshMenu} from "./mesh-menu/mesh-menu.js";
 import type {ObjectUpdateDetail} from "./object-inspector/object-inspector.js";
+import type {DT3DObjectSidebar} from "./object-sidebar/object-sidebar.js";
 import type {DT3DTree} from "./object-tree/object-tree.js";
 import type {
 	DT3DOrientationCube,
 	OrientationCubeDirection,
 } from "./orientation-cube/orientation-cube.js";
-import type {DT3DSidebar} from "./side-bar/side-bar.js";
 import type {
 	DT3DSpaceConfigMenu,
 	SpaceConfigUpdateDetail,
@@ -224,9 +220,14 @@ export class DT3DCard extends LitElement {
 	private space: Group;
 
 	/**
-	 * Sidebar element for tools and options.
+	 * Sidebar element for object creation and wall tools.
 	 */
-	public sidebar: DT3DSidebar;
+	public objectSidebar: DT3DObjectSidebar;
+
+	/**
+	 * Bottom editor toolbar for transforms, measurements, and scene settings.
+	 */
+	public bottomBar: DT3DBottomBar;
 
 	/**
 	 * Hint box element that shows contextual instructions to the user.
@@ -335,9 +336,7 @@ export class DT3DCard extends LitElement {
 		const key = event.key.toLowerCase();
 		if (modifier && !event.altKey && (key === "z" || key === "y")) {
 			const redo = key === "y" || event.shiftKey;
-			const changed = redo
-				? this.actionStack.redo()
-				: this.actionStack.undo();
+			const changed = redo ? this.actionStack.redo() : this.actionStack.undo();
 			if (changed) {
 				event.preventDefault();
 			}
@@ -359,37 +358,31 @@ export class DT3DCard extends LitElement {
 
 	private readonly actionStack = new ActionStack();
 
-	private transformStart:
-		| {
-				object: Object3D;
-				position: Vector3;
-				quaternion: Quaternion;
-				scale: Vector3;
-		  }
-		| null = null;
+	private transformStart: {
+		object: Object3D;
+		position: Vector3;
+		quaternion: Quaternion;
+		scale: Vector3;
+	} | null = null;
 
-	private multiTransformStart:
-		| {
-				pivotMatrixWorld: Matrix4;
-				objects: {
-					object: Object3D;
-					worldMatrix: Matrix4;
-					position: Vector3;
-					quaternion: Quaternion;
-					scale: Vector3;
-				}[];
-		  }
-		| null = null;
+	private multiTransformStart: {
+		pivotMatrixWorld: Matrix4;
+		objects: {
+			object: Object3D;
+			worldMatrix: Matrix4;
+			position: Vector3;
+			quaternion: Quaternion;
+			scale: Vector3;
+		}[];
+	} | null = null;
 
-	private collisionDrag:
-		| {
-				bounds: Box3;
-				ignoredObstacles: Set<CollisionObstacle>;
-				obstacles: CollisionObstacle[];
-				target: Object3D;
-				targetWorldPosition: Vector3;
-		  }
-		| null = null;
+	private collisionDrag: {
+		bounds: Box3;
+		ignoredObstacles: Set<CollisionObstacle>;
+		obstacles: CollisionObstacle[];
+		target: Object3D;
+		targetWorldPosition: Vector3;
+	} | null = null;
 
 	private collisionBoundsHelper: Mesh | null = null;
 
@@ -772,12 +765,16 @@ export class DT3DCard extends LitElement {
 			visualizationOnly ? [] : this.selectedObjects,
 		);
 
-		if (this.sidebar) {
-			this.sidebar.style.display = visualizationOnly ? "none" : "";
+		if (this.objectSidebar) {
+			this.objectSidebar.style.display = visualizationOnly ? "none" : "";
 			if (this.syncProgressComponent) {
-				this.syncProgressComponent.sidebarCollapsed =
-					visualizationOnly || this.sidebar.collapsed;
+				this.syncProgressComponent.objectSidebarCollapsed =
+					visualizationOnly || this.objectSidebar.collapsed;
 			}
+		}
+
+		if (this.bottomBar) {
+			this.bottomBar.style.display = visualizationOnly ? "none" : "";
 		}
 
 		if (this.tree) {
@@ -811,9 +808,11 @@ export class DT3DCard extends LitElement {
 
 			this.measurementManager?.setMode("none");
 			this.wallManager?.setMode("none");
-			if (this.sidebar) {
-				this.sidebar.measurementTool = "none";
-				this.sidebar.wallTool = "none";
+			if (this.bottomBar) {
+				this.bottomBar.measurementTool = "none";
+			}
+			if (this.objectSidebar) {
+				this.objectSidebar.wallTool = "none";
 			}
 
 			if (this.transform) {
@@ -830,7 +829,7 @@ export class DT3DCard extends LitElement {
 
 	private applyGridVisibility(): void {
 		this.sceneManager?.setGridEnabled(
-			!this.isVisualizationOnly() && (this.sidebar?.gridEnabled ?? true),
+			!this.isVisualizationOnly() && (this.bottomBar?.gridEnabled ?? true),
 		);
 	}
 
@@ -919,17 +918,14 @@ export class DT3DCard extends LitElement {
 
 		for (const [parent, parentMoves] of movesByParent) {
 			parentMoves.sort((first, second) => {
-				const firstIndex =
-					state === "old" ? first.oldIndex : first.newIndex;
-				const secondIndex =
-					state === "old" ? second.oldIndex : second.newIndex;
+				const firstIndex = state === "old" ? first.oldIndex : first.newIndex;
+				const secondIndex = state === "old" ? second.oldIndex : second.newIndex;
 				return firstIndex - secondIndex;
 			});
 
 			for (const move of parentMoves) {
 				const index = state === "old" ? move.oldIndex : move.newIndex;
-				const position =
-					state === "old" ? move.oldPosition : move.newPosition;
+				const position = state === "old" ? move.oldPosition : move.newPosition;
 				const quaternion =
 					state === "old" ? move.oldQuaternion : move.newQuaternion;
 				const scale = state === "old" ? move.oldScale : move.newScale;
@@ -1181,7 +1177,7 @@ export class DT3DCard extends LitElement {
 	): void {
 		this.endCollisionDrag();
 		if (
-			!this.sidebar?.collisionAvoidanceEnabled ||
+			!this.bottomBar?.collisionAvoidanceEnabled ||
 			this.transform?.getMode() !== "translate" ||
 			!this.space
 		) {
@@ -1210,7 +1206,7 @@ export class DT3DCard extends LitElement {
 	 */
 	private applyCollisionConstraint(): void {
 		const drag = this.collisionDrag;
-		if (!drag || !this.sidebar?.collisionAvoidanceEnabled) {
+		if (!drag || !this.bottomBar?.collisionAvoidanceEnabled) {
 			return;
 		}
 
@@ -1231,10 +1227,7 @@ export class DT3DCard extends LitElement {
 
 		if (!allowedWorldPosition.equals(proposedWorldPosition)) {
 			this.setObjectWorldPosition(drag.target, allowedWorldPosition);
-			if (
-				this.multiTransformStart &&
-				drag.target === this.selectionPivot
-			) {
+			if (this.multiTransformStart && drag.target === this.selectionPivot) {
 				this.applyMultiTransformDelta();
 			}
 		}
@@ -1274,14 +1267,10 @@ export class DT3DCard extends LitElement {
 				opacity: 0.4,
 				transparent: true,
 			});
-			this.collisionBoundsHelper = new Mesh(
-				new BoxGeometry(1, 1, 1),
-				material,
-			);
+			this.collisionBoundsHelper = new Mesh(new BoxGeometry(1, 1, 1), material);
 			this.collisionBoundsHelper.name = "Collision bounds";
-			(
-				this.collisionBoundsHelper as Mesh & { internal?: boolean }
-			).internal = true;
+			(this.collisionBoundsHelper as Mesh & { internal?: boolean }).internal =
+				true;
 			this.collisionBoundsHelper.renderOrder = 1000;
 			this.scene.add(this.collisionBoundsHelper);
 		}
@@ -1398,9 +1387,11 @@ export class DT3DCard extends LitElement {
 
 		this.measurementManager?.setMode("none");
 		this.wallManager?.setMode("none");
-		if (this.sidebar) {
-			this.sidebar.measurementTool = "none";
-			this.sidebar.wallTool = "none";
+		if (this.bottomBar) {
+			this.bottomBar.measurementTool = "none";
+		}
+		if (this.objectSidebar) {
+			this.objectSidebar.wallTool = "none";
 		}
 
 		this.moveToPointObject = object;
@@ -1551,9 +1542,7 @@ export class DT3DCard extends LitElement {
 		const afterMaterial = Array.isArray(mesh.material)
 			? mesh.material.map((material) => material.clone())
 			: mesh.material.clone();
-		const applyMaterial = (
-			material: typeof beforeMaterial,
-		): void => {
+		const applyMaterial = (material: typeof beforeMaterial): void => {
 			mesh.material = Array.isArray(material)
 				? material.map((item) => item.clone())
 				: material.clone();
@@ -2037,9 +2026,9 @@ export class DT3DCard extends LitElement {
 
 		if (this.isVisualizationOnly()) {
 			this.hintBox.message = "";
-		} else if (this.sidebar?.measurementTool === "distance") {
+		} else if (this.bottomBar?.measurementTool === "distance") {
 			this.hintBox.message = localManager.get("hintMeasureDistance");
-		} else if (this.sidebar?.measurementTool === "angle") {
+		} else if (this.bottomBar?.measurementTool === "angle") {
 			this.hintBox.message = localManager.get("hintMeasureAngle");
 		} else if (this.moveToPointObject) {
 			this.hintBox.message = localManager.get("hintMoveToPoint");
@@ -2795,9 +2784,7 @@ export class DT3DCard extends LitElement {
 			redo: () => apply(after),
 			sync: () =>
 				Promise.all(
-					viewports.map((item) =>
-						this.spaceSync?.syncObjectUpdate(item),
-					),
+					viewports.map((item) => this.spaceSync?.syncObjectUpdate(item)),
 				),
 		});
 	}
@@ -2994,14 +2981,20 @@ export class DT3DCard extends LitElement {
 		`;
 		this.content.appendChild(this.canvas);
 
-		this.sidebar = document.createElement("dt3d-sidebar") as DT3DSidebar;
-		this.sidebar.style.cssText = `
+		this.objectSidebar = document.createElement(
+			"dt3d-object-sidebar",
+		) as DT3DObjectSidebar;
+		this.objectSidebar.style.cssText = `
 			position: absolute;
 			top: 0;
 			left: 0;
 			height: 100%;
 		`;
-		this.content.appendChild(this.sidebar);
+		this.content.appendChild(this.objectSidebar);
+
+		this.bottomBar = document.createElement("dt3d-bottom-bar") as DT3DBottomBar;
+		this.bottomBar.objectSidebarCollapsed = this.objectSidebar.collapsed;
+		this.content.appendChild(this.bottomBar);
 
 		this.hintBox = document.createElement("dt3d-hint-box") as DT3DHintBox;
 		this.content.appendChild(this.hintBox);
@@ -3029,13 +3022,15 @@ export class DT3DCard extends LitElement {
 		this.syncProgressComponent = document.createElement(
 			"sync-progress-component",
 		) as SyncProgressComponent;
-		this.syncProgressComponent.sidebarCollapsed = this.sidebar.collapsed;
-		this.sidebar.addEventListener(
-			"sidebar-collapse-changed",
+		this.syncProgressComponent.objectSidebarCollapsed =
+			this.objectSidebar.collapsed;
+		this.objectSidebar.addEventListener(
+			"object-sidebar-collapse-changed",
 			(event: Event) => {
-				this.syncProgressComponent!.sidebarCollapsed = (
-					event as CustomEvent<{ collapsed: boolean }>
-				).detail.collapsed;
+				const {collapsed} = (event as CustomEvent<{ collapsed: boolean }>)
+					.detail;
+				this.syncProgressComponent!.objectSidebarCollapsed = collapsed;
+				this.bottomBar.objectSidebarCollapsed = collapsed;
 			},
 		);
 		this.content.appendChild(this.syncProgressComponent);
@@ -3122,7 +3117,7 @@ export class DT3DCard extends LitElement {
 							position: object.position.clone(),
 							quaternion: object.quaternion.clone(),
 							scale: object.scale.clone(),
-						  }
+						}
 						: null;
 					if (object) {
 						this.beginCollisionDrag([object], object);
@@ -3228,14 +3223,13 @@ export class DT3DCard extends LitElement {
 					label: object.name || "Object transform",
 					undo: () =>
 						applyTransform(start.position, start.quaternion, start.scale),
-					redo: () =>
-						applyTransform(end.position, end.quaternion, end.scale),
+					redo: () => applyTransform(end.position, end.quaternion, end.scale),
 					sync: () => this.spaceSync?.syncObjectUpdate(object),
 				});
 			},
 		);
 		this.applyGridVisibility();
-		this.sceneManager.setTransformSnapEnabled(this.sidebar.gridSnapEnabled);
+		this.sceneManager.setTransformSnapEnabled(this.bottomBar.gridSnapEnabled);
 
 		this.scene = this.sceneManager.scene;
 		this.camera = this.sceneManager.camera;
@@ -3257,7 +3251,7 @@ export class DT3DCard extends LitElement {
 				camera: this.camera,
 				space: this.space,
 				lastSelectedObject: this.lastSelectedObject,
-				gridSnapEnabled: this.sidebar.gridSnapEnabled,
+				gridSnapEnabled: this.bottomBar.gridSnapEnabled,
 				gridSnapSize: this.sceneManager.getGridSnapSize(),
 			}),
 			{
@@ -3355,7 +3349,7 @@ export class DT3DCard extends LitElement {
 
 		this.applyVisualizationMode();
 
-		this.sidebar.addEventListener("transform-tool-selected", (e: any) => {
+		this.bottomBar.addEventListener("transform-tool-selected", (e: any) => {
 			if (this.isVisualizationOnly()) {
 				return;
 			}
@@ -3374,59 +3368,59 @@ export class DT3DCard extends LitElement {
 			this.transform.setMode(tool);
 		});
 
-		this.sidebar.addEventListener("measurement-mode-selected", (e: any) => {
+		this.bottomBar.addEventListener("measurement-mode-selected", (e: any) => {
 			if (this.isVisualizationOnly()) {
 				return;
 			}
 
 			const mode = e.detail.mode as "distance" | "angle" | "none";
 			this.measurementManager?.setMode(mode);
-			this.sidebar.measurementTool = mode;
+			this.bottomBar.measurementTool = mode;
 
 			if (mode !== "none") {
 				this.wallManager?.setMode("none");
-				this.sidebar.wallTool = "none";
+				this.objectSidebar.wallTool = "none";
 				this.cancelMoveToPoint();
 			}
 
 			this.updateHintMessage();
 		});
 
-		this.sidebar.addEventListener("wall-tool-selected", (e: any) => {
+		this.objectSidebar.addEventListener("wall-tool-selected", (e: any) => {
 			if (this.isVisualizationOnly()) {
 				return;
 			}
 
 			const mode = e.detail.mode as "wall" | "door" | "window" | "none";
 			this.wallManager?.setMode(mode);
-			this.sidebar.wallTool = mode;
+			this.objectSidebar.wallTool = mode;
 			if (mode !== "none") {
 				this.measurementManager?.setMode("none");
-				this.sidebar.measurementTool = "none";
+				this.bottomBar.measurementTool = "none";
 				this.cancelMoveToPoint();
 			}
 
 			this.updateHintMessage();
 		});
 
-		this.sidebar.addEventListener("grid-visibility-toggle", (e: any) => {
+		this.bottomBar.addEventListener("grid-visibility-toggle", (e: any) => {
 			const enabled = e.detail.enabled as boolean;
 			this.sceneManager.setGridEnabled(enabled && !this.isVisualizationOnly());
 		});
 
-		this.sidebar.addEventListener("grid-snap-toggle", (e: any) => {
+		this.bottomBar.addEventListener("grid-snap-toggle", (e: any) => {
 			const enabled = e.detail.enabled as boolean;
 			this.sceneManager.setTransformSnapEnabled(enabled);
 		});
 
-		this.sidebar.addEventListener("collision-avoidance-toggle", (e: any) => {
+		this.bottomBar.addEventListener("collision-avoidance-toggle", (e: any) => {
 			const enabled = e.detail.enabled as boolean;
 			if (!enabled) {
 				this.endCollisionDrag();
 			}
 		});
 
-		this.sidebar.addEventListener("grid-config-open", () => {
+		this.bottomBar.addEventListener("grid-config-open", () => {
 			if (this.isVisualizationOnly()) {
 				return;
 			}
@@ -3434,7 +3428,7 @@ export class DT3DCard extends LitElement {
 			this.openGridConfigModal();
 		});
 
-		this.sidebar.addEventListener("mesh-menu-open", (event: Event) => {
+		this.objectSidebar.addEventListener("mesh-menu-open", (event: Event) => {
 			if (this.isVisualizationOnly()) {
 				return;
 			}
@@ -3444,14 +3438,14 @@ export class DT3DCard extends LitElement {
 			);
 		});
 
-		this.sidebar.addEventListener("upload-menu-open", (event: Event) => {
+		this.objectSidebar.addEventListener("upload-menu-open", (event: Event) => {
 			if (this.isVisualizationOnly()) return;
 			this.openUploadMenu(
 				(event as CustomEvent<{ left: number; top: number } | null>).detail,
 			);
 		});
 
-		this.sidebar.addEventListener("add-object", (e: any) => {
+		this.objectSidebar.addEventListener("add-object", (e: any) => {
 			if (this.isVisualizationOnly()) {
 				return;
 			}
@@ -3537,7 +3531,7 @@ export class DT3DCard extends LitElement {
 			}
 		});
 
-		this.sidebar.addEventListener("light-menu-open", (event: Event) => {
+		this.objectSidebar.addEventListener("light-menu-open", (event: Event) => {
 			if (this.isVisualizationOnly()) return;
 			this.openLightMenu(
 				(event as CustomEvent<{ left: number; top: number } | null>).detail,
@@ -3851,8 +3845,9 @@ export class DT3DCard extends LitElement {
 		}
 
 		object.userData.entityId = id;
-		object.position.set(0,0,0);
-		const entityName = this.hassInstance?.states?.[id]?.attributes?.friendly_name;
+		object.position.set(0, 0, 0);
+		const entityName =
+			this.hassInstance?.states?.[id]?.attributes?.friendly_name;
 		this.addToScene(object, entityName || id);
 	}
 

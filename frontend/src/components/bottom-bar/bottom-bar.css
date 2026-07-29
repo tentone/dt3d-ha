@@ -1,0 +1,117 @@
+:host {
+	position: absolute;
+	inset: 0;
+	z-index: 105;
+	display: block;
+	overflow: hidden;
+	pointer-events: none;
+}
+
+.editor-toolbar,
+.settings-toolbar {
+	position: absolute;
+	bottom: 20px;
+	display: flex;
+	align-items: center;
+	padding: 6px;
+	border: 1px solid color-mix(in srgb, var(--divider-color) 80%, transparent);
+	border-radius: 10px;
+	background: color-mix(in srgb, var(--card-background-color) 92%, transparent);
+	box-shadow: 0 6px 18px var(--shadow-color);
+	pointer-events: auto;
+	backdrop-filter: blur(8px);
+}
+
+.editor-toolbar {
+	left: 50%;
+	max-width: calc(100% - 40px);
+	transform: translateX(-50%);
+}
+
+.settings-toolbar {
+	left: 150px;
+	gap: 2px;
+	padding: 4px;
+	transition: left 0.2s ease;
+}
+
+:host([object-sidebar-collapsed]) .settings-toolbar {
+	left: 20px;
+}
+
+.tool-group {
+	display: flex;
+	gap: 4px;
+}
+
+.group-space {
+	width: 22px;
+	flex: 0 0 22px;
+}
+
+button {
+	display: inline-grid;
+	width: 38px;
+	height: 38px;
+	padding: 0;
+	place-items: center;
+	border: 0;
+	border-radius: 7px;
+	background: transparent;
+	color: var(--primary-text-color);
+	cursor: pointer;
+	font: inherit;
+	transition:
+		background-color 0.16s ease,
+		color 0.16s ease,
+		transform 0.16s ease;
+}
+
+.settings-toolbar button {
+	width: 32px;
+	height: 32px;
+	border-radius: 6px;
+}
+
+button:hover {
+	background: color-mix(in srgb, var(--primary-color) 16%, transparent);
+}
+
+button:focus-visible {
+	outline: 2px solid var(--primary-color);
+	outline-offset: 1px;
+}
+
+button:active {
+	transform: scale(0.94);
+}
+
+button.selected {
+	background: var(--primary-color);
+	color: var(--text-primary-color);
+}
+
+.tippy-box[data-theme~="dt3d-bottom-bar"] {
+	background-color: var(--card-background-color);
+	color: var(--primary-text-color);
+}
+
+.tippy-box[data-theme~="dt3d-bottom-bar"][data-placement^="top"]
+	> .tippy-arrow::before {
+	border-top-color: var(--card-background-color);
+}
+
+@media (max-width: 760px) {
+	.editor-toolbar {
+		bottom: 68px;
+	}
+
+	.settings-toolbar {
+		left: 50%;
+		transform: translateX(-50%);
+	}
+
+	:host([object-sidebar-collapsed]) .settings-toolbar {
+		left: 50%;
+	}
+}

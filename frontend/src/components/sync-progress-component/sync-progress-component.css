@@ -1,6 +1,6 @@
 :host {
 	position: absolute;
-	bottom: 12px;
+	top: 12px;
 	left: 142px;
 	z-index: 110;
 	width: min(320px, calc(100% - 154px));
@@ -10,7 +10,7 @@
 		width 0.2s ease;
 }
 
-:host([sidebar-collapsed]) {
+:host([object-sidebar-collapsed]) {
 	left: 12px;
 	width: min(320px, calc(100% - 24px));
 }
