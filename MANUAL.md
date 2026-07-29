@@ -185,12 +185,13 @@ space appearance settings.
 
 ### Measurement tools
 
- - The **Measure** section of the left toolbar provides temporary distance and angle measurements.
+ - The **Measure** section of the toolbar provides distance and angle measurements.
  - Measurement points must be placed on a visible object surface.
  - While taking measurement a tooltip guides the user through the process.
- - Select **Clear measurements** to leave measurement mode and remove the current measurement.
- - Measurements are editor helpers only: they are not saved with the space and are replaced when a new measurement is started.
- - Selecting another tool (e.g. wall tool) also exits measurement mode.
+ - Completed distances and angles remain visible while you add more measurements or switch tools.
+ - Select **Clear measurements** to leave measurement mode and remove every completed or unfinished measurement.
+ - Measurements are editor helpers only and are not saved with the space.
+ - Selecting another tool (e.g. wall tool) exits measurement mode without removing completed measurements.
 
 <img src="readme/measurements.png" width="500">
 

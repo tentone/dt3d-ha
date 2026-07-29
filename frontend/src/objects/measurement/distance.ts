@@ -2,7 +2,7 @@ import type {Vector3} from "three";
 import {BufferGeometry, Color, Group, Line, LineBasicMaterial} from "three";
 
 import {getCSSVar} from "../../utils/css-utils";
-import {TextSprite} from "../helpers/text-sprite";
+import {CSSText} from "../helpers/css-text.js";
 import {Marker} from "./marker";
 
 /**
@@ -31,7 +31,7 @@ export class DistanceMeasurement extends Group {
 
 		const distance = start.distanceTo(end);
 
-		const label = new TextSprite(`${distance.toFixed(2)}m`);
+		const label = new CSSText(`${distance.toFixed(2)}m`);
 		label.position.copy(start.clone().add(end).multiplyScalar(0.5));
 		label.position.y += 0.2;
 

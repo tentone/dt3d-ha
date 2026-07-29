@@ -3386,6 +3386,17 @@ export class DT3DCard extends LitElement {
 			this.updateHintMessage();
 		});
 
+		this.bottomBar.addEventListener("measurements-clear", () => {
+			if (this.isVisualizationOnly()) {
+				return;
+			}
+
+			this.measurementManager?.setMode("none");
+			this.measurementManager?.clear();
+			this.bottomBar.measurementTool = "none";
+			this.updateHintMessage();
+		});
+
 		this.objectSidebar.addEventListener("wall-tool-selected", (e: any) => {
 			if (this.isVisualizationOnly()) {
 				return;

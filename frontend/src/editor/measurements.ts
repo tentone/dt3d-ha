@@ -1,5 +1,5 @@
-import type {Camera,Group, Vector3} from "three";
-import {Raycaster, Vector2} from "three";
+import type {Camera, Vector3} from "three";
+import {Group, Raycaster, Vector2} from "three";
 
 import {AngleMeasurement} from "../objects/measurement/angle.js";
 import {DistanceMeasurement} from "../objects/measurement/distance.js";
@@ -21,7 +21,9 @@ export class MeasurementManager {
 
 	private points: Vector3[] = [];
 
-	private helpers: Group;
+	private completedMeasurements = new Group();
+
+	private draftMarkers = new Group();
 
 	private raycaster = new Raycaster();
 
@@ -30,8 +32,8 @@ export class MeasurementManager {
 	private getContext: () => MeasurementContext;
 
 	public constructor(helpers: Group, getContext: () => MeasurementContext) {
-		this.helpers = helpers;
 		this.getContext = getContext;
+		helpers.add(this.completedMeasurements, this.draftMarkers);
 	}
 
 	/**
@@ -39,7 +41,7 @@ export class MeasurementManager {
 	 */
 	public setMode(mode: MeasurementMode): void {
 		this.mode = mode;
-		this.clear();
+		this.clearDraft();
 	}
 
 	/**
@@ -50,11 +52,19 @@ export class MeasurementManager {
 	}
 
 	/**
-	 * Clear the current measurement points and helpers.
+	 * Clear all draft and completed measurements.
 	 */
 	public clear(): void {
+		this.clearDraft();
+		this.completedMeasurements.clear();
+	}
+
+	/**
+	 * Clear only the unfinished measurement points.
+	 */
+	private clearDraft(): void {
 		this.points = [];
-		this.helpers.clear();
+		this.draftMarkers.clear();
 	}
 
 	/**
@@ -103,25 +113,23 @@ export class MeasurementManager {
 
 		if (this.mode === "distance" && this.points.length === 2) {
 			const points = [...this.points];
-			this.helpers.clear();
-			this.helpers.add(new DistanceMeasurement(points));
-			this.points = [];
+			this.clearDraft();
+			this.completedMeasurements.add(new DistanceMeasurement(points));
 
 			return;
 		}
 
 		if (this.mode === "angle" && this.points.length === 3) {
 			const points = [...this.points];
-			this.helpers.clear();
-			this.helpers.add(new AngleMeasurement(points));
-			this.points = [];
+			this.clearDraft();
+			this.completedMeasurements.add(new AngleMeasurement(points));
 
 			return;
 		}
 
-		this.helpers.clear();
+		this.draftMarkers.clear();
 		this.points.forEach((markerPoint) => {
-			this.helpers.add(new Marker(markerPoint));
+			this.draftMarkers.add(new Marker(markerPoint));
 		});
 	}
 }

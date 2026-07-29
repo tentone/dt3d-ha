@@ -74,6 +74,16 @@ export class DT3DBottomBar extends LitElement {
 		);
 	}
 
+	private handleMeasurementsClear(): void {
+		this.measurementTool = "none";
+		this.dispatchEvent(
+			new CustomEvent("measurements-clear", {
+				bubbles: true,
+				composed: true,
+			}),
+		);
+	}
+
 	private handleGridToggle(): void {
 		this.gridEnabled = !this.gridEnabled;
 		this.dispatchEvent(
@@ -213,8 +223,8 @@ export class DT3DBottomBar extends LitElement {
 					${this.renderButton(
 						"mdi:cancel",
 						localManager.get("clearMeasurements"),
-						this.measurementTool === "none",
-						() => this.handleMeasurementSelect("none"),
+						false,
+						() => this.handleMeasurementsClear(),
 					)}
 				</div>
 			</nav>
