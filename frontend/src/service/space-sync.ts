@@ -83,8 +83,8 @@ const MATERIAL_RESOURCE_READY_DATA_KEY = "materialResourceReady";
 const RESOURCE_PLACEHOLDER_DATA_KEY = "resourcePlaceholder";
 
 type StoredBoundingBox = {
-	max: { x: number; y: number; z: number };
-	min: { x: number; y: number; z: number };
+	max: {x: number; y: number; z: number};
+	min: {x: number; y: number; z: number};
 };
 
 type LegacyMetadataMigration = {
@@ -109,7 +109,9 @@ function serializeMaterial(
 	}
 }
 
-async function parseSerializedMaterial(data: unknown): Promise<Material | null> {
+async function parseSerializedMaterial(
+	data: unknown,
+): Promise<Material | null> {
 	if (!data || typeof data !== "object") {
 		return null;
 	}
@@ -574,8 +576,10 @@ export class SpaceSync {
 			: null;
 		let shouldCacheSpace = false;
 		if (!instances) {
-			instances = await this.trackProgress("Load scene objects", space.name, () =>
-				this.apiClient.listObjects(space.id),
+			instances = await this.trackProgress(
+				"Load scene objects",
+				space.name,
+				() => this.apiClient.listObjects(space.id),
 			);
 			shouldCacheSpace = canUseCache;
 		}
@@ -764,8 +768,7 @@ export class SpaceSync {
 				mesh.userData[GEOMETRY_FILE_ID_DATA_KEY] = geometryFileId;
 				mesh.userData[RESOURCE_PLACEHOLDER_DATA_KEY] = true;
 				if (storedBoundingBox) {
-					mesh.userData[GEOMETRY_BOUNDING_BOX_DATA_KEY] =
-						storedBoundingBox;
+					mesh.userData[GEOMETRY_BOUNDING_BOX_DATA_KEY] = storedBoundingBox;
 				} else {
 					needsLegacyGeometryBoundingBox = true;
 				}
@@ -791,8 +794,7 @@ export class SpaceSync {
 				);
 				mesh.userData[RESOURCE_PLACEHOLDER_DATA_KEY] = true;
 				if (storedBoundingBox) {
-					mesh.userData[GEOMETRY_BOUNDING_BOX_DATA_KEY] =
-						storedBoundingBox;
+					mesh.userData[GEOMETRY_BOUNDING_BOX_DATA_KEY] = storedBoundingBox;
 				} else {
 					needsLegacyGeometryBoundingBox = true;
 				}
@@ -801,9 +803,7 @@ export class SpaceSync {
 					label: instance.name,
 					load: async () => {
 						const geometry = new BufferGeometryLoader().parse(data.geometry);
-						if (
-							!this.isResourceTargetCurrent(mesh, resourceLoadGeneration)
-						) {
+						if (!this.isResourceTargetCurrent(mesh, resourceLoadGeneration)) {
 							geometry.dispose();
 							return;
 						}
@@ -826,7 +826,15 @@ export class SpaceSync {
 				materialTarget = mesh;
 			} else if (meshType === "wall") {
 				const wallData = data.wall as
-					| { length?: number; height?: number; thickness?: number }
+					| {
+							length?: number;
+							height?: number;
+							thickness?: number;
+							baseboardEnabled?: boolean;
+							baseboardHeight?: number;
+							baseboardDepth?: number;
+							baseboardColor?: string;
+					  }
 					| undefined;
 				const wall = new WallObject(
 					{
@@ -835,15 +843,24 @@ export class SpaceSync {
 						thickness: wallData?.thickness,
 					},
 					color,
+					{
+						baseboardEnabled: wallData?.baseboardEnabled,
+						baseboardHeight: wallData?.baseboardHeight,
+						baseboardDepth: wallData?.baseboardDepth,
+						baseboardColor: wallData?.baseboardColor,
+					},
 				);
 				object = wall;
 				materialTarget = wall.wallMesh;
 			} else if (meshType === "door" || meshType === "window") {
 				const dims = data.dimensions as
-					| { width?: number; height?: number; thickness?: number }
+					| {width?: number; height?: number; thickness?: number}
 					| undefined;
 				const openState = data.open === true;
 				if (meshType === "door") {
+					const customization = data.door as
+						| Partial<ReturnType<DoorObject["getCustomization"]>>
+						| undefined;
 					const door = new DoorObject(
 						{
 							width: dims?.width,
@@ -851,11 +868,15 @@ export class SpaceSync {
 							thickness: dims?.thickness,
 						},
 						color,
+						customization,
 					);
 					door.setOpen(openState);
 					object = door;
 					materialTarget = door.doorMesh;
 				} else {
+					const customization = data.window as
+						| Partial<ReturnType<WindowObject["getCustomization"]>>
+						| undefined;
 					const windowObj = new WindowObject(
 						{
 							width: dims?.width,
@@ -863,6 +884,7 @@ export class SpaceSync {
 							thickness: dims?.thickness,
 						},
 						color,
+						customization,
 					);
 					const windowMesh = windowObj.getObjectByName(
 						"Window Panel",
@@ -982,10 +1004,7 @@ export class SpaceSync {
 						const material = await deserializeMaterial(data.material);
 						if (material) {
 							if (
-								!this.isResourceTargetCurrent(
-									target,
-									resourceLoadGeneration,
-								)
+								!this.isResourceTargetCurrent(target, resourceLoadGeneration)
 							) {
 								const materials = Array.isArray(material)
 									? material
@@ -1008,10 +1027,7 @@ export class SpaceSync {
 								? data.textureName
 								: "Texture",
 							() =>
-								this.isResourceTargetCurrent(
-									target,
-									resourceLoadGeneration,
-								),
+								this.isResourceTargetCurrent(target, resourceLoadGeneration),
 						);
 						materialReady &&= textureApplied;
 					}
@@ -1090,6 +1106,7 @@ export class SpaceSync {
 				length: object.length,
 				height: object.height,
 				thickness: object.thickness,
+				...object.getCustomization(),
 			};
 			const material = object.wallMesh.material as any;
 			if (material?.color?.getHexString) {
@@ -1106,6 +1123,7 @@ export class SpaceSync {
 				height: object.height,
 				thickness: object.thickness,
 			};
+			data.door = object.getCustomization();
 			const material = object.doorMesh.material as any;
 			if (material?.color?.getHexString) {
 				data.color = material.color.getHexString();
@@ -1121,6 +1139,7 @@ export class SpaceSync {
 				height: object.height,
 				thickness: object.thickness,
 			};
+			data.window = object.getCustomization();
 			const material = object.getWindowMaterial();
 			if (material?.color?.getHexString) {
 				data.color = material.color.getHexString();
@@ -1260,17 +1279,15 @@ export class SpaceSync {
 			"Create object",
 			this.getObjectLabel(object),
 			() =>
-				this.apiClient
-					.createObject(spaceId, payload)
-					.then(async (response) => {
-						if (
-							this.activeSpaceId === spaceId &&
-							this.shouldPersistObject(object)
-						) {
-							this.setObjectApiId(object, response.id);
-						}
-						await this.cache.invalidateSpace(response.space_id);
-					}),
+				this.apiClient.createObject(spaceId, payload).then(async (response) => {
+					if (
+						this.activeSpaceId === spaceId &&
+						this.shouldPersistObject(object)
+					) {
+						this.setObjectApiId(object, response.id);
+					}
+					await this.cache.invalidateSpace(response.space_id);
+				}),
 		);
 
 		this.pendingObjectCreates.set(object.uuid, createPromise);
@@ -1359,21 +1376,21 @@ export class SpaceSync {
 		data: Record<string, any>,
 	): void {
 		const position = data.position as
-			| { x?: number; y?: number; z?: number }
+			| {x?: number; y?: number; z?: number}
 			| undefined;
 		if (position) {
 			object.position.set(position.x ?? 0, position.y ?? 0, position.z ?? 0);
 		}
 
 		const rotation = data.rotation as
-			| { x?: number; y?: number; z?: number }
+			| {x?: number; y?: number; z?: number}
 			| undefined;
 		if (rotation) {
 			object.rotation.set(rotation.x ?? 0, rotation.y ?? 0, rotation.z ?? 0);
 		}
 
 		const scale = data.scale as
-			| { x?: number; y?: number; z?: number }
+			| {x?: number; y?: number; z?: number}
 			| undefined;
 		if (scale) {
 			object.scale.set(scale.x ?? 1, scale.y ?? 1, scale.z ?? 1);
@@ -1452,8 +1469,7 @@ export class SpaceSync {
 
 		const placeholderGeometry = object.geometry;
 		object.geometry = geometry;
-		object.userData[GEOMETRY_FILE_GEOMETRY_UUID_USER_DATA_KEY] =
-			geometry.uuid;
+		object.userData[GEOMETRY_FILE_GEOMETRY_UUID_USER_DATA_KEY] = geometry.uuid;
 		delete object.userData[RESOURCE_PLACEHOLDER_DATA_KEY];
 		placeholderGeometry.dispose();
 		this.tree.refreshSelectedObject();

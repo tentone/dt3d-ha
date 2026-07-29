@@ -120,7 +120,7 @@ dialog. Card-wide single- and double-click defaults can be `open`, `toggle`, or
 `nothing`. Each entity can inherit or override those defaults in its inspector;
 **Toggle** is only offered for `light` and `switch` objects.
 
-### Draw a floor plan with walls, doors, and windows
+### Draw a base floor plan
 
 1. Add or import a floor/plane so the wall tool has a surface to intersect.
 2. Optionally enable grid snapping and set the required snap size.
@@ -128,16 +128,28 @@ dialog. Card-wide single- and double-click defaults can be `open`, `toggle`, or
    each following point to draw connected wall segments continuously. End on any
    part of an existing wall to finish the run, or choose **Exit wall tools**.
 4. Select a wall in the canvas or object tree.
-5. Choose **Add door to selected wall** or **Add window to selected wall**, then
-   double-click the canvas. The opening is created as a child of that wall.
-6. Select the wall, door, or window to edit dimensions, transform, material, and
-   open state. Choose **Exit wall tools** when finished.
-
-The wall inspector exposes height and thickness; the live wall label helps with
-length. The distance and angle tools in the **Measure** section are useful for
-checking the plan.
 
 <img src="readme/5_layout_editor.png" width="500">
+
+### Add doors and windows
+5. Choose **Add door** or **Add window**, then
+   double-click the canvas. The opening is created as a child of that wall.
+6. Select the wall, door, or window to edit its dimensions, transform, material,
+   and detailed appearance. Choose **Exit wall tools** when finished.
+
+The wall inspector provides height and thickness controls plus an optional
+baseboard along the bottom. Doors support configurable trim, left/right hinges,
+inward/outward swing, multiple knob styles, and a positioned glazed opening.
+Windows support glass tint, opacity, and roughness; configurable frames; split
+pane grids with custom rows, columns, bar size, and spacing; and horizontal
+blinds. Set **Blind position (% down)** to `0` to raise the blinds, `100` to
+lower them, or any intermediate value for a partial opening. These settings are
+saved with the space.
+
+The live wall label helps with length. The distance and angle tools in the
+**Measure** section are useful for checking the plan.
+
+<img src="readme/windows_door.png" width="500">
 
 ### Set up viewports
 

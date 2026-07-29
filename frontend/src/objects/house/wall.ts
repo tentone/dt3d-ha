@@ -1,12 +1,13 @@
-import type {
-	Vector3} from "three";
+import type {Vector3} from "three";
 import {
 	BoxGeometry,
+	Color,
 	ExtrudeGeometry,
+	Group,
 	Mesh,
 	MeshStandardMaterial,
 	Path,
-	Shape
+	Shape,
 } from "three";
 
 import {DTObject} from "../dt-object.js";
@@ -20,6 +21,13 @@ type WallDimensions = {
 	thickness: number;
 };
 
+export type WallCustomization = {
+	baseboardEnabled: boolean;
+	baseboardHeight: number;
+	baseboardDepth: number;
+	baseboardColor: string;
+};
+
 const DEFAULT_WALL_DIMENSIONS: WallDimensions = {
 	length: 2,
 	height: 2.4,
@@ -27,6 +35,13 @@ const DEFAULT_WALL_DIMENSIONS: WallDimensions = {
 };
 
 const DEFAULT_WALL_COLOR = 0xc9c7c2;
+
+const DEFAULT_WALL_CUSTOMIZATION: WallCustomization = {
+	baseboardEnabled: false,
+	baseboardHeight: 0.12,
+	baseboardDepth: 0.018,
+	baseboardColor: "#f2f0e9",
+};
 
 export class WallObject extends DTObject {
 	/**
@@ -43,6 +58,17 @@ export class WallObject extends DTObject {
 	 * Thickness of the wall in meters.
 	 */
 	public thickness: number;
+
+	/**
+	 * Whether decorative trim is rendered along the bottom of the wall.
+	 */
+	public baseboardEnabled: boolean;
+
+	public baseboardHeight: number;
+
+	public baseboardDepth: number;
+
+	public baseboardColor: string;
 
 	/**
 	 * Mesh to represent the wall.
@@ -73,12 +99,30 @@ export class WallObject extends DTObject {
 	 */
 	private lastOpeningsSignature = "";
 
-	constructor(dimensions: Partial<WallDimensions> = {}, color = DEFAULT_WALL_COLOR) {
+	private baseboardGroup: Group;
+
+	private baseboardMaterial: MeshStandardMaterial;
+
+	constructor(
+		dimensions: Partial<WallDimensions> = {},
+		color = DEFAULT_WALL_COLOR,
+		customization: Partial<WallCustomization> = {},
+	) {
 		super();
 
 		this.length = dimensions.length ?? DEFAULT_WALL_DIMENSIONS.length;
 		this.height = dimensions.height ?? DEFAULT_WALL_DIMENSIONS.height;
 		this.thickness = dimensions.thickness ?? DEFAULT_WALL_DIMENSIONS.thickness;
+		this.baseboardEnabled =
+			customization.baseboardEnabled ??
+			DEFAULT_WALL_CUSTOMIZATION.baseboardEnabled;
+		this.baseboardHeight =
+			customization.baseboardHeight ??
+			DEFAULT_WALL_CUSTOMIZATION.baseboardHeight;
+		this.baseboardDepth =
+			customization.baseboardDepth ?? DEFAULT_WALL_CUSTOMIZATION.baseboardDepth;
+		this.baseboardColor =
+			customization.baseboardColor ?? DEFAULT_WALL_CUSTOMIZATION.baseboardColor;
 
 		this.name = "Wall";
 		this.userData.meshType = "wall";
@@ -88,6 +132,15 @@ export class WallObject extends DTObject {
 		this.wallMesh.name = "Wall Body";
 		this.wallMesh.userData.wallPart = "body";
 		this.add(this.wallMesh);
+
+		this.baseboardGroup = new Group();
+		this.baseboardGroup.name = "Wall Baseboard";
+		this.baseboardGroup.userData.wallPart = "baseboard";
+		(this.baseboardGroup as any).internal = true;
+		this.add(this.baseboardGroup);
+		this.baseboardMaterial = new MeshStandardMaterial({
+			color: this.baseboardColor,
+		});
 
 		this.updateGeometry();
 	}
@@ -143,6 +196,49 @@ export class WallObject extends DTObject {
 
 		this.thickness = thickness;
 		this.updateGeometry();
+	}
+
+	public setConfiguration(attribute: string, value: unknown): boolean {
+		if (attribute === "height" || attribute === "thickness") {
+			const number = Number(value);
+			if (!Number.isFinite(number) || number <= 0) return false;
+			if (attribute === "height") {
+				this.setHeight(number);
+			} else {
+				this.setThickness(number);
+			}
+			return true;
+		}
+		if (attribute === "baseboardEnabled") {
+			this.baseboardEnabled = Boolean(value);
+			this.updateBaseboardGeometry();
+			return true;
+		}
+		if (attribute === "baseboardColor") {
+			if (typeof value !== "string" || !/^#[0-9a-fA-F]{6}$/.test(value)) {
+				return false;
+			}
+			this.baseboardColor = value;
+			this.updateBaseboardGeometry();
+			return true;
+		}
+		if (attribute === "baseboardHeight" || attribute === "baseboardDepth") {
+			const number = Number(value);
+			if (!Number.isFinite(number) || number < 0) return false;
+			this[attribute] = number;
+			this.updateBaseboardGeometry();
+			return true;
+		}
+		return false;
+	}
+
+	public getCustomization(): WallCustomization {
+		return {
+			baseboardEnabled: this.baseboardEnabled,
+			baseboardHeight: this.baseboardHeight,
+			baseboardDepth: this.baseboardDepth,
+			baseboardColor: this.baseboardColor,
+		};
 	}
 
 	/**
@@ -209,23 +305,32 @@ export class WallObject extends DTObject {
 	}
 
 	public override copy(source: this, recursive: boolean = true): this {
-		super.copy(source, recursive);
+		super.copy(source, false);
 		if (source instanceof WallObject) {
 			this.length = source.length;
 			this.height = source.height;
 			this.thickness = source.thickness;
 			this.doorCount = source.doorCount;
 			this.windowCount = source.windowCount;
+			Object.assign(this, source.getCustomization());
+			this.wallMesh.material = Array.isArray(source.wallMesh.material)
+				? source.wallMesh.material.map((material) => material.clone())
+				: source.wallMesh.material.clone();
 		}
 
-		const mesh = this.getObjectByProperty(
-			"userData.wallPart",
-			"body",
-		) as Mesh | null;
-		if (mesh) {
-			this.wallMesh = mesh;
-			this.updateGeometry();
+		if (recursive) {
+			for (const child of source.children) {
+				if (
+					child === source.wallMesh ||
+					child === source.baseboardGroup ||
+					(child as any).internal === true
+				) {
+					continue;
+				}
+				this.add(child.clone(true));
+			}
 		}
+		this.updateGeometry();
 		return this;
 	}
 
@@ -242,7 +347,59 @@ export class WallObject extends DTObject {
 		if (this.lengthLabel) {
 			this.lengthLabel.position.set(0, this.height + 0.2, 0);
 		}
+		this.updateBaseboardGeometry();
 		this.lastOpeningsSignature = this.getOpeningsSignature();
+	}
+
+	private updateBaseboardGeometry(): void {
+		for (const child of [...this.baseboardGroup.children]) {
+			if (child instanceof Mesh) {
+				child.geometry.dispose();
+			}
+			this.baseboardGroup.remove(child);
+		}
+		this.baseboardGroup.visible = this.baseboardEnabled;
+		if (!this.baseboardEnabled || this.baseboardHeight <= 0) {
+			return;
+		}
+
+		this.baseboardMaterial.color = new Color(this.baseboardColor);
+		const doorIntervals = this.children
+			.filter((child): child is DoorObject => child instanceof DoorObject)
+			.filter((door) => door.position.y <= this.baseboardHeight)
+			.map((door) => ({
+				left: Math.max(-this.length / 2, door.position.x - door.width / 2),
+				right: Math.min(this.length / 2, door.position.x + door.width / 2),
+			}))
+			.sort((a, b) => a.left - b.left);
+
+		const segments: Array<{left: number; right: number}> = [];
+		let cursor = -this.length / 2;
+		for (const interval of doorIntervals) {
+			if (interval.left > cursor) {
+				segments.push({left: cursor, right: interval.left});
+			}
+			cursor = Math.max(cursor, interval.right);
+		}
+		if (cursor < this.length / 2) {
+			segments.push({left: cursor, right: this.length / 2});
+		}
+
+		const depth = this.thickness + this.baseboardDepth * 2;
+		for (const segment of segments) {
+			const width = segment.right - segment.left;
+			if (width <= 0.001) continue;
+			const mesh = new Mesh(
+				new BoxGeometry(width, this.baseboardHeight, depth),
+				this.baseboardMaterial,
+			);
+			mesh.position.set(
+				(segment.left + segment.right) / 2,
+				this.baseboardHeight / 2,
+				0,
+			);
+			this.baseboardGroup.add(mesh);
+		}
 	}
 
 	private createWallShape(): Shape {
@@ -272,8 +429,18 @@ export class WallObject extends DTObject {
 		return shape;
 	}
 
-	private getOpenings(): Array<{ width: number; height: number; x: number; y: number }> {
-		const openings: Array<{ width: number; height: number; x: number; y: number }> = [];
+	private getOpenings(): Array<{
+		width: number;
+		height: number;
+		x: number;
+		y: number;
+	}> {
+		const openings: Array<{
+			width: number;
+			height: number;
+			x: number;
+			y: number;
+		}> = [];
 		for (const child of this.children) {
 			if (child instanceof DoorObject) {
 				openings.push({
@@ -306,6 +473,6 @@ export class WallObject extends DTObject {
 		const parts = this.getOpenings().map((opening) =>
 			[opening.width, opening.height, opening.x, opening.y].join(","),
 		);
-		return `${this.length}|${this.height}|${this.thickness}|${parts.join(";")}`;
+		return `${this.length}|${this.height}|${this.thickness}|${this.baseboardEnabled}|${this.baseboardHeight}|${this.baseboardDepth}|${parts.join(";")}`;
 	}
 }

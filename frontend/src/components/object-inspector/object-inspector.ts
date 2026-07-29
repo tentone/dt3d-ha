@@ -46,6 +46,62 @@ export type ObjectUpdateDetail = {
 	redo: () => void;
 };
 
+const WALL_CONFIGURATION_ATTRIBUTES = new Set([
+	"height",
+	"thickness",
+	"baseboardEnabled",
+	"baseboardHeight",
+	"baseboardDepth",
+	"baseboardColor",
+]);
+
+const DOOR_CONFIGURATION_ATTRIBUTES = new Set([
+	"width",
+	"height",
+	"thickness",
+	"open",
+	"hingeSide",
+	"openingDirection",
+	"knobStyle",
+	"knobColor",
+	"borderEnabled",
+	"borderWidth",
+	"borderDepth",
+	"borderColor",
+	"windowEnabled",
+	"windowWidth",
+	"windowHeight",
+	"windowPositionX",
+	"windowPositionY",
+	"windowBorderWidth",
+	"windowColor",
+	"windowOpacity",
+]);
+
+const WINDOW_CONFIGURATION_ATTRIBUTES = new Set([
+	"width",
+	"height",
+	"thickness",
+	"open",
+	"glassColor",
+	"glassOpacity",
+	"glassRoughness",
+	"borderEnabled",
+	"borderThickness",
+	"borderDepth",
+	"borderColor",
+	"gridEnabled",
+	"gridRows",
+	"gridColumns",
+	"gridBarThickness",
+	"gridHorizontalSpacing",
+	"gridVerticalSpacing",
+	"blindsEnabled",
+	"blindPosition",
+	"blindSlatSpacing",
+	"blindColor",
+]);
+
 @customElement("dt3d-object-inspector")
 export class DT3DObjectInspector extends LitElement {
 	static styles = unsafeCSS(componentStyles);
@@ -95,6 +151,20 @@ export class DT3DObjectInspector extends LitElement {
 		return current;
 	}
 
+	private isHouseConfigurationAttribute(
+		object: Object3D,
+		attribute: string,
+	): object is WallObject | DoorObject | WindowObject {
+		return (
+			(object instanceof WallObject &&
+				WALL_CONFIGURATION_ATTRIBUTES.has(attribute)) ||
+			(object instanceof DoorObject &&
+				DOOR_CONFIGURATION_ATTRIBUTES.has(attribute)) ||
+			(object instanceof WindowObject &&
+				WINDOW_CONFIGURATION_ATTRIBUTES.has(attribute))
+		);
+	}
+
 	/**
 	 * Capture only the mutable state represented by a form field. Keeping the
 	 * memento field-sized avoids replacing live Three.js objects during undo.
@@ -128,25 +198,9 @@ export class DT3DObjectInspector extends LitElement {
 			}
 		}
 
-		if (attribute === "height" && object instanceof WallObject) {
-			const value = object.height;
-			return () => object.setHeight(value);
-		}
-
-		if (attribute === "thickness" && object instanceof WallObject) {
-			const value = object.thickness;
-			return () => object.setThickness(value);
-		}
-
-		if (attribute === "open") {
-			if (object instanceof DoorObject) {
-				const value = object.open;
-				return () => object.setOpen(value);
-			}
-			if (object instanceof WindowObject) {
-				const value = object.open;
-				return () => object.setOpen(value);
-			}
+		if (this.isHouseConfigurationAttribute(object, attribute)) {
+			const value = this.getNestedAttribute(object, attribute);
+			return () => object.setConfiguration(attribute, value);
 		}
 
 		if (attribute === "color" && object instanceof StaticLightObject) {
@@ -323,11 +377,7 @@ export class DT3DObjectInspector extends LitElement {
 				)
 					.then((changed) => {
 						if (!changed) return;
-						const redo = this.captureRestore(
-							updatedObject,
-							attribute,
-							type,
-						);
+						const redo = this.captureRestore(updatedObject, attribute, type);
 						this.dispatchUpdated(attribute, undo, redo);
 						this.requestUpdate();
 					})
@@ -347,17 +397,10 @@ export class DT3DObjectInspector extends LitElement {
 			) {
 				return;
 			}
-		} else if (attribute === "height" || attribute === "thickness") {
-			if (!(this.selectedObject instanceof WallObject)) {
-				return;
-			}
-			const rawValue = Number(value);
-			if (Number.isNaN(rawValue)) return;
-			if (attribute === "height") {
-				this.selectedObject.setHeight(rawValue);
-			} else {
-				this.selectedObject.setThickness(rawValue);
-			}
+		} else if (
+			this.isHouseConfigurationAttribute(this.selectedObject, attribute)
+		) {
+			if (!this.selectedObject.setConfiguration(attribute, value)) return;
 		} else if (attribute.startsWith("geometry.")) {
 			if (!(this.selectedObject instanceof Mesh)) {
 				return;
@@ -370,12 +413,6 @@ export class DT3DObjectInspector extends LitElement {
 			geometryParameters[parameterName] = value as number | boolean;
 			if (!updateMeshGeometry(this.selectedObject, geometryParameters)) {
 				return;
-			}
-		} else if (attribute === "open") {
-			if (this.selectedObject instanceof DoorObject) {
-				this.selectedObject.setOpen(Boolean(value));
-			} else if (this.selectedObject instanceof WindowObject) {
-				this.selectedObject.setOpen(Boolean(value));
 			}
 		} else if (
 			attribute === "clickAction" ||
@@ -587,6 +624,42 @@ export class DT3DObjectInspector extends LitElement {
 				editable: !locked,
 				enabled: true,
 			},
+			{
+				label: localManager.get("baseboardEnabled"),
+				attribute: "baseboardEnabled",
+				type: "boolean",
+				tooltip: localManager.get("baseboardEnabledTooltip"),
+				editable: !locked,
+				enabled: true,
+			},
+			{
+				label: localManager.get("baseboardHeight"),
+				attribute: "baseboardHeight",
+				type: "number",
+				tooltip: localManager.get("baseboardHeightTooltip"),
+				editable: !locked && this.selectedObject.baseboardEnabled,
+				enabled: true,
+				min: 0.01,
+				step: 0.01,
+			},
+			{
+				label: localManager.get("baseboardDepth"),
+				attribute: "baseboardDepth",
+				type: "number",
+				tooltip: localManager.get("baseboardDepthTooltip"),
+				editable: !locked && this.selectedObject.baseboardEnabled,
+				enabled: true,
+				min: 0,
+				step: 0.005,
+			},
+			{
+				label: localManager.get("baseboardColor"),
+				attribute: "baseboardColor",
+				type: "color",
+				tooltip: localManager.get("baseboardColorTooltip"),
+				editable: !locked && this.selectedObject.baseboardEnabled,
+				enabled: true,
+			},
 		];
 	}
 
@@ -600,11 +673,305 @@ export class DT3DObjectInspector extends LitElement {
 
 		return [
 			{
+				label: localManager.get("openingWidth"),
+				attribute: "width",
+				type: "number",
+				tooltip: localManager.get("openingWidthTooltip"),
+				editable: !locked,
+				enabled: true,
+				min: 0.1,
+				step: 0.01,
+			},
+			{
+				label: localManager.get("openingHeight"),
+				attribute: "height",
+				type: "number",
+				tooltip: localManager.get("openingHeightTooltip"),
+				editable: !locked,
+				enabled: true,
+				min: 0.1,
+				step: 0.01,
+			},
+			{
+				label: localManager.get("openingThickness"),
+				attribute: "thickness",
+				type: "number",
+				tooltip: localManager.get("openingThicknessTooltip"),
+				editable: !locked,
+				enabled: true,
+				min: 0.01,
+				step: 0.01,
+			},
+			{
 				label: localManager.get("open"),
 				attribute: "open",
 				type: "boolean",
 				tooltip: localManager.get("openTooltip"),
 				editable: !locked,
+				enabled: true,
+			},
+		];
+	}
+
+	private getDoorHardwareFields(locked: boolean): DynamicFormField[] {
+		if (!(this.selectedObject instanceof DoorObject)) return [];
+		return [
+			{
+				label: localManager.get("doorHingeSide"),
+				attribute: "hingeSide",
+				type: "select",
+				tooltip: localManager.get("doorHingeSideTooltip"),
+				editable: !locked,
+				enabled: true,
+				options: [
+					{label: localManager.get("left"), value: "left"},
+					{label: localManager.get("right"), value: "right"},
+				],
+			},
+			{
+				label: localManager.get("doorOpeningDirection"),
+				attribute: "openingDirection",
+				type: "select",
+				tooltip: localManager.get("doorOpeningDirectionTooltip"),
+				editable: !locked,
+				enabled: true,
+				options: [
+					{label: localManager.get("inward"), value: "inward"},
+					{label: localManager.get("outward"), value: "outward"},
+				],
+			},
+			{
+				label: localManager.get("doorKnobStyle"),
+				attribute: "knobStyle",
+				type: "select",
+				tooltip: localManager.get("doorKnobStyleTooltip"),
+				editable: !locked,
+				enabled: true,
+				options: [
+					{label: localManager.get("none"), value: "none"},
+					{label: localManager.get("round"), value: "round"},
+					{label: localManager.get("lever"), value: "lever"},
+					{label: localManager.get("bar"), value: "bar"},
+				],
+			},
+			{
+				label: localManager.get("doorKnobColor"),
+				attribute: "knobColor",
+				type: "color",
+				tooltip: localManager.get("doorKnobColorTooltip"),
+				editable: !locked && this.selectedObject.knobStyle !== "none",
+				enabled: true,
+			},
+		];
+	}
+
+	private getBorderFields(locked: boolean): DynamicFormField[] {
+		const object = this.selectedObject;
+		if (!(object instanceof DoorObject) && !(object instanceof WindowObject)) {
+			return [];
+		}
+		const enabled = object.borderEnabled;
+		const widthAttribute =
+			object instanceof DoorObject ? "borderWidth" : "borderThickness";
+		return [
+			{
+				label: localManager.get("borderEnabled"),
+				attribute: "borderEnabled",
+				type: "boolean",
+				tooltip: localManager.get("borderEnabledTooltip"),
+				editable: !locked,
+				enabled: true,
+			},
+			{
+				label: localManager.get("borderThickness"),
+				attribute: widthAttribute,
+				type: "number",
+				tooltip: localManager.get("borderThicknessTooltip"),
+				editable: !locked && enabled,
+				enabled: true,
+				min: 0.005,
+				step: 0.005,
+			},
+			{
+				label: localManager.get("borderDepth"),
+				attribute: "borderDepth",
+				type: "number",
+				tooltip: localManager.get("borderDepthTooltip"),
+				editable: !locked && enabled,
+				enabled: true,
+				min: 0,
+				step: 0.005,
+			},
+			{
+				label: localManager.get("borderColor"),
+				attribute: "borderColor",
+				type: "color",
+				tooltip: localManager.get("borderColorTooltip"),
+				editable: !locked && enabled,
+				enabled: true,
+			},
+		];
+	}
+
+	private getDoorWindowFields(locked: boolean): DynamicFormField[] {
+		if (!(this.selectedObject instanceof DoorObject)) return [];
+		const enabled = this.selectedObject.windowEnabled;
+		return [
+			{
+				label: localManager.get("doorWindowEnabled"),
+				attribute: "windowEnabled",
+				type: "boolean",
+				tooltip: localManager.get("doorWindowEnabledTooltip"),
+				editable: !locked,
+				enabled: true,
+			},
+			...[
+				["doorWindowWidth", "windowWidth", 0.01],
+				["doorWindowHeight", "windowHeight", 0.01],
+				["doorWindowPositionX", "windowPositionX", 0.01],
+				["doorWindowPositionY", "windowPositionY", 0.01],
+				["doorWindowBorderWidth", "windowBorderWidth", 0.005],
+			].map(([label, attribute, step]) => ({
+				label: localManager.get(label as string),
+				attribute: attribute as string,
+				type: "number" as const,
+				tooltip: localManager.get(`${label}Tooltip`),
+				editable: !locked && enabled,
+				enabled: true,
+				step: step as number,
+				min:
+					attribute === "windowPositionX" || attribute === "windowPositionY"
+						? undefined
+						: 0.01,
+			})),
+			{
+				label: localManager.get("doorWindowColor"),
+				attribute: "windowColor",
+				type: "color",
+				tooltip: localManager.get("doorWindowColorTooltip"),
+				editable: !locked && enabled,
+				enabled: true,
+			},
+			{
+				label: localManager.get("doorWindowOpacity"),
+				attribute: "windowOpacity",
+				type: "number",
+				tooltip: localManager.get("doorWindowOpacityTooltip"),
+				editable: !locked && enabled,
+				enabled: true,
+				min: 0,
+				max: 1,
+				step: 0.05,
+			},
+		];
+	}
+
+	private getWindowGlassFields(locked: boolean): DynamicFormField[] {
+		if (!(this.selectedObject instanceof WindowObject)) return [];
+		return [
+			{
+				label: localManager.get("glassColor"),
+				attribute: "glassColor",
+				type: "color",
+				tooltip: localManager.get("glassColorTooltip"),
+				editable: !locked,
+				enabled: true,
+			},
+			{
+				label: localManager.get("glassOpacity"),
+				attribute: "glassOpacity",
+				type: "number",
+				tooltip: localManager.get("glassOpacityTooltip"),
+				editable: !locked,
+				enabled: true,
+				min: 0,
+				max: 1,
+				step: 0.05,
+			},
+			{
+				label: localManager.get("glassRoughness"),
+				attribute: "glassRoughness",
+				type: "number",
+				tooltip: localManager.get("glassRoughnessTooltip"),
+				editable: !locked,
+				enabled: true,
+				min: 0,
+				max: 1,
+				step: 0.05,
+			},
+		];
+	}
+
+	private getWindowGridFields(locked: boolean): DynamicFormField[] {
+		if (!(this.selectedObject instanceof WindowObject)) return [];
+		const enabled = this.selectedObject.gridEnabled;
+		return [
+			{
+				label: localManager.get("windowGridEnabled"),
+				attribute: "gridEnabled",
+				type: "boolean",
+				tooltip: localManager.get("windowGridEnabledTooltip"),
+				editable: !locked,
+				enabled: true,
+			},
+			...[
+				["windowGridRows", "gridRows", 1, 1],
+				["windowGridColumns", "gridColumns", 1, 1],
+				["windowGridBarThickness", "gridBarThickness", 0.005, 0.005],
+				["windowGridHorizontalSpacing", "gridHorizontalSpacing", 0.01, 0],
+				["windowGridVerticalSpacing", "gridVerticalSpacing", 0.01, 0],
+			].map(([label, attribute, step, min]) => ({
+				label: localManager.get(label as string),
+				attribute: attribute as string,
+				type: "number" as const,
+				tooltip: localManager.get(`${label}Tooltip`),
+				editable: !locked && enabled,
+				enabled: true,
+				step: step as number,
+				min: min as number,
+			})),
+		];
+	}
+
+	private getWindowBlindFields(locked: boolean): DynamicFormField[] {
+		if (!(this.selectedObject instanceof WindowObject)) return [];
+		const enabled = this.selectedObject.blindsEnabled;
+		return [
+			{
+				label: localManager.get("windowBlindsEnabled"),
+				attribute: "blindsEnabled",
+				type: "boolean",
+				tooltip: localManager.get("windowBlindsEnabledTooltip"),
+				editable: !locked,
+				enabled: true,
+			},
+			{
+				label: localManager.get("windowBlindPosition"),
+				attribute: "blindPosition",
+				type: "number",
+				tooltip: localManager.get("windowBlindPositionTooltip"),
+				editable: !locked && enabled,
+				enabled: true,
+				min: 0,
+				max: 100,
+				step: 5,
+			},
+			{
+				label: localManager.get("windowBlindSlatSpacing"),
+				attribute: "blindSlatSpacing",
+				type: "number",
+				tooltip: localManager.get("windowBlindSlatSpacingTooltip"),
+				editable: !locked && enabled,
+				enabled: true,
+				min: 0.02,
+				step: 0.01,
+			},
+			{
+				label: localManager.get("windowBlindColor"),
+				attribute: "blindColor",
+				type: "color",
+				tooltip: localManager.get("windowBlindColorTooltip"),
+				editable: !locked && enabled,
 				enabled: true,
 			},
 		];
@@ -927,6 +1294,42 @@ export class DT3DObjectInspector extends LitElement {
 				? localManager.get("door")
 				: localManager.get("window"),
 			this.getOpeningFields(locked),
+		);
+		this.addSubFormField(
+			fields,
+			"doorHardware",
+			localManager.get("doorHardware"),
+			this.getDoorHardwareFields(locked),
+		);
+		this.addSubFormField(
+			fields,
+			"border",
+			localManager.get("border"),
+			this.getBorderFields(locked),
+		);
+		this.addSubFormField(
+			fields,
+			"doorWindow",
+			localManager.get("doorWindow"),
+			this.getDoorWindowFields(locked),
+		);
+		this.addSubFormField(
+			fields,
+			"windowGlass",
+			localManager.get("windowGlass"),
+			this.getWindowGlassFields(locked),
+		);
+		this.addSubFormField(
+			fields,
+			"windowGrid",
+			localManager.get("windowGrid"),
+			this.getWindowGridFields(locked),
+		);
+		this.addSubFormField(
+			fields,
+			"windowBlinds",
+			localManager.get("windowBlinds"),
+			this.getWindowBlindFields(locked),
 		);
 		this.addSubFormField(
 			fields,
