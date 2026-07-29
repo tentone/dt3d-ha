@@ -1,4 +1,4 @@
-import * as mdiIcons from "@mdi/js";
+import {mdiCameraOutline} from "@mdi/js";
 import {
 	type BufferGeometry,
 	type Material,
@@ -135,7 +135,7 @@ export class ViewportObject extends DTObject {
 		this.defaultViewport = defaultViewport;
 		this.userData.objectInstanceType = VIEWPORT_OBJECT_TYPE;
 
-		const icon = new IconSprite(mdiIcons.mdiCameraOutline, 0x2f80ed, 0.4);
+		const icon = new IconSprite(mdiCameraOutline, 0x2f80ed, 0.4);
 		icon.internal = true;
 		icon.position.y = 0.14;
 		this.add(icon);

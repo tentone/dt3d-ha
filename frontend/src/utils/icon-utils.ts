@@ -1,10 +1,67 @@
-import * as mdiIcons from "@mdi/js";
+import {
+	mdiAccount,
+	mdiAirFilter,
+	mdiAirHumidifier,
+	mdiAlarmPanel,
+	mdiBell,
+	mdiBullhorn,
+	mdiCalendar,
+	mdiCalendarAlert,
+	mdiCalendarClock,
+	mdiCast,
+	mdiCheckboxBlankCircleOutline,
+	mdiClockOutline,
+	mdiCounter,
+	mdiFan,
+	mdiFlower,
+	mdiFormatListBulleted,
+	mdiFormatListChecks,
+	mdiFormTextbox,
+	mdiGauge,
+	mdiGestureTapButton,
+	mdiGoogleCirclesCommunities,
+	mdiHelpCircleOutline,
+	mdiImage,
+	mdiImageSearch,
+	mdiLightbulb,
+	mdiLock,
+	mdiMapMarker,
+	mdiMapMarkerDistance,
+	mdiMapMarkerRadius,
+	mdiMessageText,
+	mdiMicrophoneMessage,
+	mdiNumeric,
+	mdiPackageUp,
+	mdiPalette,
+	mdiRemote,
+	mdiRobot,
+	mdiRobotMower,
+	mdiRobotVacuum,
+	mdiSatelliteUplink,
+	mdiScriptText,
+	mdiSpeakerMessage,
+	mdiTag,
+	mdiThermostat,
+	mdiTimerOutline,
+	mdiToggleSwitch,
+	mdiValve,
+	mdiVideo,
+	mdiWaterBoiler,
+	mdiWeatherPartlyCloudy,
+	mdiWhiteBalanceSunny,
+	mdiWindowShutter,
+} from "@mdi/js";
+import {strFromU8, unzlibSync} from "fflate";
 import {Color} from "three";
+import compressedMdiIconCatalog from "virtual:mdi-icon-catalog";
 
-export const DEFAULT_HA_ICON = mdiIcons.mdiHelpCircleOutline;
+import {decodeBase64} from "./base64.js";
+
+export const DEFAULT_HA_ICON = mdiHelpCircleOutline;
 export const HA_ICON_CANVAS_SIZE = 256;
 
 const ICON_VIEWBOX_SIZE = 24;
+let mdiIconCatalog: Record<string, string> | undefined;
 
 /**
  * Default icons for Home Assistant entities, keyed by entity domain.
@@ -13,64 +70,64 @@ const ICON_VIEWBOX_SIZE = 24;
  * value (or when that value cannot be resolved).
  */
 export const DEFAULT_ENTITY_ICONS: Readonly<Record<string, string>> = Object.freeze({
-	air_quality: mdiIcons.mdiAirFilter,
-	alarm_control_panel: mdiIcons.mdiAlarmPanel,
-	assist_satellite: mdiIcons.mdiSatelliteUplink,
-	automation: mdiIcons.mdiRobot,
-	binary_sensor: mdiIcons.mdiCheckboxBlankCircleOutline,
-	button: mdiIcons.mdiGestureTapButton,
-	calendar: mdiIcons.mdiCalendar,
-	camera: mdiIcons.mdiVideo,
-	climate: mdiIcons.mdiThermostat,
-	conversation: mdiIcons.mdiMessageText,
-	counter: mdiIcons.mdiCounter,
-	cover: mdiIcons.mdiWindowShutter,
-	date: mdiIcons.mdiCalendar,
-	datetime: mdiIcons.mdiCalendarClock,
-	device_tracker: mdiIcons.mdiMapMarker,
-	event: mdiIcons.mdiCalendarAlert,
-	fan: mdiIcons.mdiFan,
-	group: mdiIcons.mdiGoogleCirclesCommunities,
-	humidifier: mdiIcons.mdiAirHumidifier,
-	image: mdiIcons.mdiImage,
-	image_processing: mdiIcons.mdiImageSearch,
-	input_boolean: mdiIcons.mdiToggleSwitch,
-	input_button: mdiIcons.mdiGestureTapButton,
-	input_datetime: mdiIcons.mdiCalendarClock,
-	input_number: mdiIcons.mdiNumeric,
-	input_select: mdiIcons.mdiFormatListBulleted,
-	input_text: mdiIcons.mdiFormTextbox,
-	lawn_mower: mdiIcons.mdiRobotMower,
-	light: mdiIcons.mdiLightbulb,
-	lock: mdiIcons.mdiLock,
-	media_player: mdiIcons.mdiCast,
-	notify: mdiIcons.mdiBell,
-	number: mdiIcons.mdiNumeric,
-	person: mdiIcons.mdiAccount,
-	plant: mdiIcons.mdiFlower,
-	proximity: mdiIcons.mdiMapMarkerDistance,
-	remote: mdiIcons.mdiRemote,
-	scene: mdiIcons.mdiPalette,
-	schedule: mdiIcons.mdiCalendarClock,
-	script: mdiIcons.mdiScriptText,
-	select: mdiIcons.mdiFormatListBulleted,
-	sensor: mdiIcons.mdiGauge,
-	siren: mdiIcons.mdiBullhorn,
-	stt: mdiIcons.mdiMicrophoneMessage,
-	sun: mdiIcons.mdiWhiteBalanceSunny,
-	switch: mdiIcons.mdiToggleSwitch,
-	tag: mdiIcons.mdiTag,
-	text: mdiIcons.mdiFormTextbox,
-	time: mdiIcons.mdiClockOutline,
-	timer: mdiIcons.mdiTimerOutline,
-	todo: mdiIcons.mdiFormatListChecks,
-	tts: mdiIcons.mdiSpeakerMessage,
-	update: mdiIcons.mdiPackageUp,
-	vacuum: mdiIcons.mdiRobotVacuum,
-	valve: mdiIcons.mdiValve,
-	water_heater: mdiIcons.mdiWaterBoiler,
-	weather: mdiIcons.mdiWeatherPartlyCloudy,
-	zone: mdiIcons.mdiMapMarkerRadius,
+	air_quality: mdiAirFilter,
+	alarm_control_panel: mdiAlarmPanel,
+	assist_satellite: mdiSatelliteUplink,
+	automation: mdiRobot,
+	binary_sensor: mdiCheckboxBlankCircleOutline,
+	button: mdiGestureTapButton,
+	calendar: mdiCalendar,
+	camera: mdiVideo,
+	climate: mdiThermostat,
+	conversation: mdiMessageText,
+	counter: mdiCounter,
+	cover: mdiWindowShutter,
+	date: mdiCalendar,
+	datetime: mdiCalendarClock,
+	device_tracker: mdiMapMarker,
+	event: mdiCalendarAlert,
+	fan: mdiFan,
+	group: mdiGoogleCirclesCommunities,
+	humidifier: mdiAirHumidifier,
+	image: mdiImage,
+	image_processing: mdiImageSearch,
+	input_boolean: mdiToggleSwitch,
+	input_button: mdiGestureTapButton,
+	input_datetime: mdiCalendarClock,
+	input_number: mdiNumeric,
+	input_select: mdiFormatListBulleted,
+	input_text: mdiFormTextbox,
+	lawn_mower: mdiRobotMower,
+	light: mdiLightbulb,
+	lock: mdiLock,
+	media_player: mdiCast,
+	notify: mdiBell,
+	number: mdiNumeric,
+	person: mdiAccount,
+	plant: mdiFlower,
+	proximity: mdiMapMarkerDistance,
+	remote: mdiRemote,
+	scene: mdiPalette,
+	schedule: mdiCalendarClock,
+	script: mdiScriptText,
+	select: mdiFormatListBulleted,
+	sensor: mdiGauge,
+	siren: mdiBullhorn,
+	stt: mdiMicrophoneMessage,
+	sun: mdiWhiteBalanceSunny,
+	switch: mdiToggleSwitch,
+	tag: mdiTag,
+	text: mdiFormTextbox,
+	time: mdiClockOutline,
+	timer: mdiTimerOutline,
+	todo: mdiFormatListChecks,
+	tts: mdiSpeakerMessage,
+	update: mdiPackageUp,
+	vacuum: mdiRobotVacuum,
+	valve: mdiValve,
+	water_heater: mdiWaterBoiler,
+	weather: mdiWeatherPartlyCloudy,
+	zone: mdiMapMarkerRadius,
 });
 
 export type IconCanvasColor = Color | number | string;
@@ -116,7 +173,7 @@ export function resolveHaIconPath(
 			.map((part) => part.charAt(0).toUpperCase() + part.slice(1))
 			.join("");
 
-	return (mdiIcons as Record<string, string>)[exportName] ?? fallbackIcon;
+	return getMdiIconCatalog()[exportName] ?? fallbackIcon;
 }
 
 /**
@@ -245,4 +302,13 @@ function colorToCss(color: IconCanvasColor): string {
 	}
 
 	return `#${color.toString(16).padStart(6, "0")}`;
+}
+
+function getMdiIconCatalog(): Record<string, string> {
+	if (mdiIconCatalog) return mdiIconCatalog;
+
+	mdiIconCatalog = JSON.parse(
+		strFromU8(unzlibSync(decodeBase64(compressedMdiIconCatalog))),
+	) as Record<string, string>;
+	return mdiIconCatalog;
 }

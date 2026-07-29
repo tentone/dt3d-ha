@@ -17,11 +17,11 @@ import {
 	SpotLight,
 	Vector3,
 } from "three";
-import {Sky} from "three/examples/jsm/Addons.js";
 import {FlyControls} from "three/examples/jsm/controls/FlyControls.js";
 import {MapControls} from "three/examples/jsm/controls/MapControls.js";
 import {OrbitControls} from "three/examples/jsm/controls/OrbitControls";
 import {TransformControls} from "three/examples/jsm/controls/TransformControls";
+import {Sky} from "three/examples/jsm/objects/Sky.js";
 
 /**
  * Editor camera mode (2D or 3D)

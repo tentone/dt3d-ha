@@ -1,4 +1,4 @@
-import {Color} from "three/src/math/Color.js";
+import {Color} from "three";
 
 import {resolveEntityIconPath} from "../utils/icon-utils.js";
 import {EntityObject} from "./entity-object.js";

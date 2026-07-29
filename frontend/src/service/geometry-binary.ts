@@ -1,7 +1,9 @@
 import draco3d from "draco3d";
-import decoderWasmUrl from "draco3d/draco_decoder.wasm?url&inline";
-import encoderWasmUrl from "draco3d/draco_encoder.wasm?url&inline";
+import {unzlibSync} from "fflate";
 import {BufferAttribute, BufferGeometry} from "three";
+import {decoderWasm, encoderWasm} from "virtual:draco-wasm";
+
+import {decodeBase64} from "../utils/base64.js";
 
 type GeometryTypedArray =
 	| Float32Array
@@ -244,31 +246,20 @@ function serializeGeometryLegacy(geometry: BufferGeometry): ArrayBuffer {
 	return createBinaryPayload(LEGACY_MAGIC, metadata, body);
 }
 
-function decodeInlineWasm(url: string): Uint8Array {
-	const marker = "base64,";
-	const dataOffset = url.indexOf(marker);
-	if (dataOffset < 0) {
-		throw new Error("Draco WebAssembly module was not bundled inline");
-	}
-
-	const binary = atob(url.slice(dataOffset + marker.length));
-	const bytes = new Uint8Array(binary.length);
-	for (let index = 0; index < binary.length; index += 1) {
-		bytes[index] = binary.charCodeAt(index);
-	}
-	return bytes;
+function decodeCompressedWasm(value: string): Uint8Array {
+	return unzlibSync(decodeBase64(value));
 }
 
 function getEncoderModule(): Promise<any> {
 	encoderModulePromise ??= draco3d.createEncoderModule({
-		wasmBinary: decodeInlineWasm(encoderWasmUrl),
+		wasmBinary: decodeCompressedWasm(encoderWasm),
 	});
 	return encoderModulePromise;
 }
 
 function getDecoderModule(): Promise<any> {
 	decoderModulePromise ??= draco3d.createDecoderModule({
-		wasmBinary: decodeInlineWasm(decoderWasmUrl),
+		wasmBinary: decodeCompressedWasm(decoderWasm),
 	});
 	return decoderModulePromise;
 }
