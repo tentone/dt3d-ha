@@ -1,7 +1,7 @@
-import {html, LitElement, type PropertyValues, unsafeCSS} from "lit";
+import "../tooltip/tooltip.js";
+
+import {html, LitElement, unsafeCSS} from "lit";
 import {customElement} from "lit/decorators.js";
-import tippy, {type Instance, type Props} from "tippy.js";
-import tippyStyles from "tippy.js/dist/tippy.css?inline";
 
 import {localManager} from "../../locale/locale.js";
 import {LocalStorage} from "../../utils/local-storage.js";
@@ -19,7 +19,7 @@ const OBJECT_SIDEBAR_COLLAPSED_STORAGE_KEY = "sidebar-collapsed";
  */
 @customElement("dt3d-object-sidebar")
 export class DT3DObjectSidebar extends LitElement {
-	static styles = unsafeCSS(componentStyles + tippyStyles);
+	static styles = unsafeCSS(componentStyles);
 
 	static properties = {
 		collapsed: {type: Boolean, reflect: true},
@@ -30,18 +30,6 @@ export class DT3DObjectSidebar extends LitElement {
 		LocalStorage.read(OBJECT_SIDEBAR_COLLAPSED_STORAGE_KEY, true) ?? true;
 
 	public wallTool: WallOptions = "none";
-
-	private tooltipInstances: Array<Instance<Props>> = [];
-
-	public disconnectedCallback(): void {
-		this.destroyTooltips();
-		super.disconnectedCallback();
-	}
-
-	protected firstUpdated(_changedProperties: PropertyValues<this>): void {
-		super.firstUpdated(_changedProperties);
-		this.createTooltips();
-	}
 
 	private toggleCollapse(): void {
 		this.collapsed = !this.collapsed;
@@ -120,127 +108,146 @@ export class DT3DObjectSidebar extends LitElement {
 		);
 	}
 
-	private createTooltips(): void {
-		this.destroyTooltips();
-		const tooltipTargets = Array.from(
-			this.renderRoot?.querySelectorAll<HTMLElement>("[data-tooltip]") ?? [],
-		);
-
-		tooltipTargets.forEach((element) => {
-			const content = element.dataset.tooltip;
-			if (!content) {
-				return;
-			}
-
-			const instance = tippy(element, {
-				content,
-				placement: "right",
-				theme: "dt3d-object-sidebar",
-				appendTo: () => this.renderRoot as unknown as Element,
-			});
-
-			this.tooltipInstances.push(instance);
-		});
-	}
-
-	private destroyTooltips(): void {
-		this.tooltipInstances.forEach((instance) => instance.destroy());
-		this.tooltipInstances = [];
-	}
-
 	render() {
 		return html`
-			<button
-				class="collapse-btn"
-				@click=${this.toggleCollapse}
-				data-tooltip=${localManager.get("collapseSidebar")}
-				aria-label=${localManager.get("collapseSidebar")}
-				title=${localManager.get("collapseSidebar")}
+			<dt3d-tooltip
+				.content=${localManager.get("collapseSidebar")}
+				placement="right"
 			>
-				${this.collapsed
-					? html`<ha-icon icon="mdi:arrow-right-drop-circle-outline"></ha-icon>`
-					: html`<ha-icon icon="mdi:arrow-left-drop-circle-outline"></ha-icon>`}
-			</button>
+				<button
+					class="collapse-btn"
+					@click=${this.toggleCollapse}
+					aria-label=${localManager.get("collapseSidebar")}
+				>
+					${this.collapsed
+						? html`<ha-icon
+								icon="mdi:arrow-right-drop-circle-outline"
+							></ha-icon>`
+						: html`<ha-icon
+								icon="mdi:arrow-left-drop-circle-outline"
+							></ha-icon>`}
+				</button>
+			</dt3d-tooltip>
 			<div class="object-sidebar-content">
 				<section class="object-sidebar-section">
 					<div class="object-sidebar-title">${localManager.get("add")}</div>
-					<button
-						@click=${(event: MouseEvent) => this.handleMeshMenuOpen(event)}
-						data-tooltip=${localManager.get("addMesh")}
-						aria-label=${localManager.get("addMesh")}
+					<dt3d-tooltip
+						.content=${localManager.get("addMesh")}
+						placement="right"
 					>
-						<ha-icon icon="mdi:shape-outline"></ha-icon>
-					</button>
-					<button
-						@click=${(event: MouseEvent) => this.handleUploadMenuOpen(event)}
-						data-tooltip=${localManager.get("uploadModel")}
-						aria-label=${localManager.get("uploadModel")}
+						<button
+							@click=${(event: MouseEvent) => this.handleMeshMenuOpen(event)}
+							aria-label=${localManager.get("addMesh")}
+						>
+							<ha-icon icon="mdi:shape-outline"></ha-icon>
+						</button>
+					</dt3d-tooltip>
+					<dt3d-tooltip
+						.content=${localManager.get("uploadModel")}
+						placement="right"
 					>
-						<ha-icon icon="mdi:upload-box-outline"></ha-icon>
-					</button>
-					<button
-						@click=${() => this.handleAddObject("entity")}
-						data-tooltip=${localManager.get("addEntity")}
-						aria-label=${localManager.get("addEntity")}
+						<button
+							@click=${(event: MouseEvent) => this.handleUploadMenuOpen(event)}
+							aria-label=${localManager.get("uploadModel")}
+						>
+							<ha-icon icon="mdi:upload-box-outline"></ha-icon>
+						</button>
+					</dt3d-tooltip>
+					<dt3d-tooltip
+						.content=${localManager.get("addEntity")}
+						placement="right"
 					>
-						<ha-icon icon="mdi:state-machine"></ha-icon>
-					</button>
-					<button
-						@click=${(event: MouseEvent) => this.handleLightMenuOpen(event)}
-						data-tooltip=${localManager.get("addStaticLight")}
-						aria-label=${localManager.get("addStaticLight")}
+						<button
+							@click=${() => this.handleAddObject("entity")}
+							aria-label=${localManager.get("addEntity")}
+						>
+							<ha-icon icon="mdi:state-machine"></ha-icon>
+						</button>
+					</dt3d-tooltip>
+					<dt3d-tooltip
+						.content=${localManager.get("addStaticLight")}
+						placement="right"
 					>
-						<ha-icon icon="mdi:lightbulb-on-outline"></ha-icon>
-					</button>
-					<button
-						@click=${() => this.handleAddObject("group")}
-						data-tooltip=${localManager.get("addGroup")}
-						aria-label=${localManager.get("addGroup")}
+						<button
+							@click=${(event: MouseEvent) => this.handleLightMenuOpen(event)}
+							aria-label=${localManager.get("addStaticLight")}
+						>
+							<ha-icon icon="mdi:lightbulb-on-outline"></ha-icon>
+						</button>
+					</dt3d-tooltip>
+					<dt3d-tooltip
+						.content=${localManager.get("addGroup")}
+						placement="right"
 					>
-						<ha-icon icon="mdi:folder-plus-outline"></ha-icon>
-					</button>
-					<button
-						@click=${() => this.handleAddObject("viewport")}
-						data-tooltip=${localManager.get("addViewport")}
-						aria-label=${localManager.get("addViewport")}
+						<button
+							@click=${() => this.handleAddObject("group")}
+							aria-label=${localManager.get("addGroup")}
+						>
+							<ha-icon icon="mdi:folder-plus-outline"></ha-icon>
+						</button>
+					</dt3d-tooltip>
+					<dt3d-tooltip
+						.content=${localManager.get("addViewport")}
+						placement="right"
 					>
-						<ha-icon icon="mdi:camera-plus-outline"></ha-icon>
-					</button>
+						<button
+							@click=${() => this.handleAddObject("viewport")}
+							aria-label=${localManager.get("addViewport")}
+						>
+							<ha-icon icon="mdi:camera-plus-outline"></ha-icon>
+						</button>
+					</dt3d-tooltip>
 				</section>
 				<section class="object-sidebar-section">
 					<div class="object-sidebar-title">${localManager.get("walls")}</div>
-					<button
-						@click=${() => this.handleWallSelect("wall")}
-						class=${this.wallTool === "wall" ? "selected" : ""}
-						data-tooltip=${localManager.get("drawWall")}
-						aria-label=${localManager.get("drawWall")}
+					<dt3d-tooltip
+						.content=${localManager.get("drawWall")}
+						placement="right"
 					>
-						<ha-icon icon="mdi:vector-line"></ha-icon>
-					</button>
-					<button
-						@click=${() => this.handleWallSelect("door")}
-						class=${this.wallTool === "door" ? "selected" : ""}
-						data-tooltip=${localManager.get("addDoor")}
-						aria-label=${localManager.get("addDoor")}
+						<button
+							@click=${() => this.handleWallSelect("wall")}
+							class=${this.wallTool === "wall" ? "selected" : ""}
+							aria-label=${localManager.get("drawWall")}
+						>
+							<ha-icon icon="mdi:vector-line"></ha-icon>
+						</button>
+					</dt3d-tooltip>
+					<dt3d-tooltip
+						.content=${localManager.get("addDoor")}
+						placement="right"
 					>
-						<ha-icon icon="mdi:door"></ha-icon>
-					</button>
-					<button
-						@click=${() => this.handleWallSelect("window")}
-						class=${this.wallTool === "window" ? "selected" : ""}
-						data-tooltip=${localManager.get("addWindow")}
-						aria-label=${localManager.get("addWindow")}
+						<button
+							@click=${() => this.handleWallSelect("door")}
+							class=${this.wallTool === "door" ? "selected" : ""}
+							aria-label=${localManager.get("addDoor")}
+						>
+							<ha-icon icon="mdi:door"></ha-icon>
+						</button>
+					</dt3d-tooltip>
+					<dt3d-tooltip
+						.content=${localManager.get("addWindow")}
+						placement="right"
 					>
-						<ha-icon icon="mdi:window-closed-variant"></ha-icon>
-					</button>
-					<button
-						@click=${() => this.handleWallSelect("none")}
-						class=${this.wallTool === "none" ? "selected" : ""}
-						data-tooltip=${localManager.get("exitWallTools")}
-						aria-label=${localManager.get("exitWallTools")}
+						<button
+							@click=${() => this.handleWallSelect("window")}
+							class=${this.wallTool === "window" ? "selected" : ""}
+							aria-label=${localManager.get("addWindow")}
+						>
+							<ha-icon icon="mdi:window-closed-variant"></ha-icon>
+						</button>
+					</dt3d-tooltip>
+					<dt3d-tooltip
+						.content=${localManager.get("exitWallTools")}
+						placement="right"
 					>
-						<ha-icon icon="mdi:cancel"></ha-icon>
-					</button>
+						<button
+							@click=${() => this.handleWallSelect("none")}
+							class=${this.wallTool === "none" ? "selected" : ""}
+							aria-label=${localManager.get("exitWallTools")}
+						>
+							<ha-icon icon="mdi:cancel"></ha-icon>
+						</button>
+					</dt3d-tooltip>
 				</section>
 			</div>
 		`;

@@ -91,16 +91,6 @@ button.selected {
 	color: var(--text-primary-color);
 }
 
-.tippy-box[data-theme~="dt3d-bottom-bar"] {
-	background-color: var(--card-background-color);
-	color: var(--primary-text-color);
-}
-
-.tippy-box[data-theme~="dt3d-bottom-bar"][data-placement^="top"]
-	> .tippy-arrow::before {
-	border-top-color: var(--card-background-color);
-}
-
 @media (max-width: 760px) {
 	.editor-toolbar {
 		bottom: 68px;

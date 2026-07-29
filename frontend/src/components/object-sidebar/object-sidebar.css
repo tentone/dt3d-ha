@@ -90,13 +90,3 @@ button.selected {
 button:active {
 	background: var(--darker-primary-color);
 }
-
-.tippy-box[data-theme~="dt3d-object-sidebar"] {
-	background-color: var(--card-background-color);
-	color: var(--primary-text-color);
-}
-
-.tippy-box[data-theme~="dt3d-object-sidebar"][data-placement^="right"]
-	> .tippy-arrow::before {
-	border-right-color: var(--card-background-color);
-}

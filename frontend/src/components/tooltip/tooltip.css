@@ -1,0 +1,83 @@
+:host {
+	display: contents;
+}
+
+.tooltip {
+	position: fixed;
+	inset: auto;
+	z-index: 10000;
+	width: max-content;
+	max-width: min(260px, calc(100vw - 10px));
+	margin: 0;
+	padding: 5px 9px;
+	overflow: visible;
+	box-sizing: border-box;
+	border: 0;
+	border-radius: 4px;
+	background: var(--card-background-color, #333);
+	box-shadow: 0 2px 8px var(--shadow-color, rgb(0 0 0 / 25%));
+	color: var(--primary-text-color, #fff);
+	font-family: inherit;
+	font-size: 14px;
+	font-weight: normal;
+	line-height: 1.4;
+	text-align: left;
+	white-space: normal;
+	pointer-events: none;
+	opacity: 0;
+	transform: scale(0.96);
+	transition:
+		opacity 0.15s ease,
+		transform 0.15s ease;
+}
+
+.tooltip:not([data-open]) {
+	display: none;
+}
+
+.tooltip[data-visible] {
+	opacity: 1;
+	transform: scale(1);
+}
+
+.tooltip::before {
+	position: absolute;
+	width: 0;
+	height: 0;
+	border: 6px solid transparent;
+	content: "";
+}
+
+.tooltip[data-placement="top"]::before {
+	top: 100%;
+	left: var(--tooltip-arrow-offset);
+	border-top-color: var(--card-background-color, #333);
+	transform: translateX(-50%);
+}
+
+.tooltip[data-placement="bottom"]::before {
+	bottom: 100%;
+	left: var(--tooltip-arrow-offset);
+	border-bottom-color: var(--card-background-color, #333);
+	transform: translateX(-50%);
+}
+
+.tooltip[data-placement="left"]::before {
+	top: var(--tooltip-arrow-offset);
+	left: 100%;
+	border-left-color: var(--card-background-color, #333);
+	transform: translateY(-50%);
+}
+
+.tooltip[data-placement="right"]::before {
+	top: var(--tooltip-arrow-offset);
+	right: 100%;
+	border-right-color: var(--card-background-color, #333);
+	transform: translateY(-50%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.tooltip {
+		transition: none;
+	}
+}

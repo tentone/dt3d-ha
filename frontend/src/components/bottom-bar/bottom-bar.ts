@@ -1,7 +1,7 @@
-import {html, LitElement, type PropertyValues, unsafeCSS} from "lit";
+import "../tooltip/tooltip.js";
+
+import {html, LitElement, unsafeCSS} from "lit";
 import {customElement} from "lit/decorators.js";
-import tippy, {type Instance, type Props} from "tippy.js";
-import tippyStyles from "tippy.js/dist/tippy.css?inline";
 
 import {localManager} from "../../locale/locale.js";
 import {LocalStorage} from "../../utils/local-storage.js";
@@ -17,7 +17,7 @@ const COLLISION_AVOIDANCE_STORAGE_KEY = "collision-avoidance";
  */
 @customElement("dt3d-bottom-bar")
 export class DT3DBottomBar extends LitElement {
-	static styles = unsafeCSS(componentStyles + tippyStyles);
+	static styles = unsafeCSS(componentStyles);
 
 	static properties = {
 		transformTool: {type: String},
@@ -39,18 +39,6 @@ export class DT3DBottomBar extends LitElement {
 	public collisionAvoidanceEnabled =
 		LocalStorage.read(COLLISION_AVOIDANCE_STORAGE_KEY, false) ?? false;
 	public objectSidebarCollapsed = true;
-
-	private tooltipInstances: Array<Instance<Props>> = [];
-
-	public disconnectedCallback(): void {
-		this.destroyTooltips();
-		super.disconnectedCallback();
-	}
-
-	protected firstUpdated(_changedProperties: PropertyValues<this>): void {
-		super.firstUpdated(_changedProperties);
-		this.createTooltips();
-	}
 
 	private handleTransformSelect(tool: TransformOptions): void {
 		this.transformTool = tool;
@@ -130,34 +118,6 @@ export class DT3DBottomBar extends LitElement {
 		);
 	}
 
-	private createTooltips(): void {
-		this.destroyTooltips();
-		const tooltipTargets = Array.from(
-			this.renderRoot?.querySelectorAll<HTMLElement>("[data-tooltip]") ?? [],
-		);
-
-		tooltipTargets.forEach((element) => {
-			const content = element.dataset.tooltip;
-			if (!content) {
-				return;
-			}
-
-			const instance = tippy(element, {
-				content,
-				placement: "top",
-				theme: "dt3d-bottom-bar",
-				appendTo: () => this.renderRoot as unknown as Element,
-			});
-
-			this.tooltipInstances.push(instance);
-		});
-	}
-
-	private destroyTooltips(): void {
-		this.tooltipInstances.forEach((instance) => instance.destroy());
-		this.tooltipInstances = [];
-	}
-
 	private renderButton(
 		icon: string,
 		label: string,
@@ -165,15 +125,16 @@ export class DT3DBottomBar extends LitElement {
 		onClick: () => void,
 	) {
 		return html`
-			<button
-				class=${selected ? "selected" : ""}
-				@click=${onClick}
-				data-tooltip=${label}
-				aria-label=${label}
-				aria-pressed=${selected}
-			>
-				<ha-icon icon=${icon}></ha-icon>
-			</button>
+			<dt3d-tooltip .content=${label} placement="top">
+				<button
+					class=${selected ? "selected" : ""}
+					@click=${onClick}
+					aria-label=${label}
+					aria-pressed=${selected}
+				>
+					<ha-icon icon=${icon}></ha-icon>
+				</button>
+			</dt3d-tooltip>
 		`;
 	}
 
