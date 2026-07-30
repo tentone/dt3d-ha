@@ -1,14 +1,13 @@
 import type {Vector3} from "three";
 import {
 	BoxGeometry,
+	BufferGeometry,
 	Color,
-	ExtrudeGeometry,
 	Group,
 	Mesh,
 	MeshStandardMaterial,
-	Path,
-	Shape,
 } from "three";
+import {mergeGeometries} from "three/examples/jsm/utils/BufferGeometryUtils.js";
 
 import {DTObject} from "../dt-object.js";
 import {TextSprite} from "../helpers/text-sprite.js";
@@ -267,7 +266,7 @@ export class WallObject extends DTObject {
 		this.doorCount += 1;
 		const door = new DoorObject();
 		door.name = `Door ${this.doorCount}`;
-		door.position.x = wallOffset;
+		door.position.x = this.clampOpeningOffset(wallOffset, door.width);
 		door.position.y = 0;
 		this.add(door);
 		this.updateGeometry();
@@ -283,7 +282,7 @@ export class WallObject extends DTObject {
 		this.windowCount += 1;
 		const window = new WindowObject();
 		window.name = `Window ${this.windowCount}`;
-		window.position.x = wallOffset;
+		window.position.x = this.clampOpeningOffset(wallOffset, window.width);
 		window.position.y = 1.2;
 		this.add(window);
 		this.updateGeometry();
@@ -335,12 +334,7 @@ export class WallObject extends DTObject {
 	}
 
 	private updateGeometry(): void {
-		const shape = this.createWallShape();
-		const geometry = new ExtrudeGeometry(shape, {
-			depth: this.thickness,
-			bevelEnabled: false,
-		});
-		geometry.translate(0, 0, -this.thickness / 2);
+		const geometry = this.createWallGeometry();
 		this.wallMesh.geometry.dispose();
 		this.wallMesh.geometry = geometry;
 		this.wallMesh.position.set(0, 0, 0);
@@ -402,31 +396,101 @@ export class WallObject extends DTObject {
 		}
 	}
 
-	private createWallShape(): Shape {
+	/**
+	 * Build the wall from solid rectangular cells around every opening.
+	 *
+	 * Unlike a polygon hole, a cell layout remains valid when a door touches
+	 * the floor or an opening reaches a wall edge. Every cell uses the wall's
+	 * full depth, so even a very thin door/window always cuts through the wall.
+	 */
+	private createWallGeometry(): BufferGeometry {
+		const epsilon = 1e-6;
 		const halfLength = this.length / 2;
-		const shape = new Shape();
-		shape.moveTo(-halfLength, 0);
-		shape.lineTo(halfLength, 0);
-		shape.lineTo(halfLength, this.height);
-		shape.lineTo(-halfLength, this.height);
-		shape.lineTo(-halfLength, 0);
+		const openings = this.getOpenings()
+			.map(({width, height, x, y}) => ({
+				left: Math.max(-halfLength, x - width / 2),
+				right: Math.min(halfLength, x + width / 2),
+				bottom: Math.max(0, y - height / 2),
+				top: Math.min(this.height, y + height / 2),
+			}))
+			.filter(
+				({left, right, bottom, top}) =>
+					right - left > epsilon && top - bottom > epsilon,
+			);
+		const xBoundaries = [
+			-halfLength,
+			halfLength,
+			...openings.flatMap(({left, right}) => [left, right]),
+		]
+			.sort((left, right) => left - right)
+			.filter(
+				(value, index, values) =>
+					index === 0 || value - values[index - 1] > epsilon,
+			);
+		const cells: BoxGeometry[] = [];
 
-		for (const opening of this.getOpenings()) {
-			const {width, height, x, y} = opening;
-			const left = x - width / 2;
-			const right = x + width / 2;
-			const bottom = y - height / 2;
-			const top = y + height / 2;
-			const hole = new Path();
-			hole.moveTo(left, bottom);
-			hole.lineTo(right, bottom);
-			hole.lineTo(right, top);
-			hole.lineTo(left, top);
-			hole.lineTo(left, bottom);
-			shape.holes.push(hole);
+		const addCell = (
+			left: number,
+			right: number,
+			bottom: number,
+			top: number,
+		): void => {
+			if (right - left <= epsilon || top - bottom <= epsilon) {
+				return;
+			}
+			const geometry = new BoxGeometry(
+				right - left,
+				top - bottom,
+				this.thickness,
+			);
+			geometry.translate((left + right) / 2, (bottom + top) / 2, 0);
+			cells.push(geometry);
+		};
+
+		for (let index = 0; index < xBoundaries.length - 1; index += 1) {
+			const left = xBoundaries[index];
+			const right = xBoundaries[index + 1];
+			const blockedIntervals = openings
+				.filter(
+					(opening) =>
+						opening.left < right - epsilon &&
+						opening.right > left + epsilon,
+				)
+				.map(({bottom, top}) => ({bottom, top}))
+				.sort((first, second) => first.bottom - second.bottom);
+			let solidStart = 0;
+
+			for (const interval of blockedIntervals) {
+				if (interval.bottom > solidStart + epsilon) {
+					addCell(left, right, solidStart, interval.bottom);
+				}
+				solidStart = Math.max(solidStart, interval.top);
+				if (solidStart >= this.height - epsilon) {
+					break;
+				}
+			}
+			if (solidStart < this.height - epsilon) {
+				addCell(left, right, solidStart, this.height);
+			}
 		}
 
-		return shape;
+		if (cells.length === 0) {
+			return new BufferGeometry();
+		}
+		if (cells.length === 1) {
+			return cells[0];
+		}
+
+		const geometry = mergeGeometries(cells);
+		for (const cell of cells) {
+			cell.dispose();
+		}
+		return geometry;
+	}
+
+	private clampOpeningOffset(offset: number, width: number): number {
+		const maximumOffset = Math.max(0, (this.length - width) / 2);
+		return Math.min(maximumOffset, Math.max(-maximumOffset, offset));
 	}
 
 	private getOpenings(): Array<{

@@ -67,6 +67,10 @@ import {
 import {applyImageTextureToMesh} from "../editor/material-texture.js";
 import {MeasurementManager} from "../editor/measurements.js";
 import {createMeshObject, resolveMeshType} from "../editor/mesh-handler.js";
+import {
+	isWallOpeningObject,
+	snapOpeningToNearestWall,
+} from "../editor/opening-snap.js";
 import {RendererManager} from "../editor/renderer.js";
 import type {
 	CameraMode,
@@ -412,6 +416,8 @@ export class DT3DCard extends LitElement {
 
 	private transformStart: {
 		object: Object3D;
+		parent: Object3D | null;
+		index: number;
 		position: Vector3;
 		quaternion: Quaternion;
 		scale: Vector3;
@@ -2439,25 +2445,50 @@ export class DT3DCard extends LitElement {
 			return true;
 		}
 
+		const oldParent = object.parent;
+		const oldIndex = oldParent.children.indexOf(object);
 		const oldPosition = object.position.clone();
-		object.parent.updateWorldMatrix(true, false);
-		const newPosition = object.parent.worldToLocal(worldPoint.clone());
-		const applyPosition = (position: Vector3): void => {
-			object.position.copy(position);
-			object.updateMatrix();
-			object.updateWorldMatrix(false, true);
-			this.refreshAfterObjectMutation(object);
-		};
+		const oldQuaternion = object.quaternion.clone();
+		const oldScale = object.scale.clone();
+		this.setObjectWorldPosition(object, worldPoint);
+		if (this.space && isWallOpeningObject(object)) {
+			snapOpeningToNearestWall(object, this.space);
+		}
+		const newParent = object.parent;
+		const newIndex = newParent?.children.indexOf(object) ?? -1;
+		const newPosition = object.position.clone();
+		const newQuaternion = object.quaternion.clone();
+		const newScale = object.scale.clone();
 
-		applyPosition(newPosition);
+		this.refreshAfterObjectMutation(object);
 		this.cancelMoveToPoint();
 
-		if (!oldPosition.equals(newPosition)) {
+		if (
+			oldParent &&
+			newParent &&
+			(oldParent !== newParent ||
+				!oldPosition.equals(newPosition) ||
+				!oldQuaternion.equals(newQuaternion) ||
+				!oldScale.equals(newScale))
+		) {
+			const move: HierarchyMoveSnapshot = {
+				object,
+				oldParent,
+				oldIndex,
+				oldPosition,
+				oldQuaternion,
+				oldScale,
+				newParent,
+				newIndex,
+				newPosition,
+				newQuaternion,
+				newScale,
+			};
 			this.recordAction({
-				type: "update-object",
+				type: oldParent === newParent ? "update-object" : "move-object",
 				label: `${object.name || "Object"}: position`,
-				undo: () => applyPosition(oldPosition),
-				redo: () => applyPosition(newPosition),
+				undo: () => this.placeObjects([move], "old"),
+				redo: () => this.placeObjects([move], "new"),
 				sync: () => this.spaceSync?.syncObjectUpdate(object),
 			});
 		}
@@ -3739,6 +3770,8 @@ export class DT3DCard extends LitElement {
 					this.transformStart = object
 						? {
 							object,
+							parent: object.parent,
+							index: object.parent?.children.indexOf(object) ?? -1,
 							position: object.position.clone(),
 							quaternion: object.quaternion.clone(),
 							scale: object.scale.clone(),
@@ -3819,16 +3852,50 @@ export class DT3DCard extends LitElement {
 				}
 
 				const {object} = start;
+				if (
+					this.sceneManager.transform.getMode() === "translate" &&
+					this.space &&
+					isWallOpeningObject(object)
+				) {
+					snapOpeningToNearestWall(object, this.space);
+					this.refreshAfterObjectMutation(object);
+				}
 				const end = {
+					parent: object.parent,
+					index: object.parent?.children.indexOf(object) ?? -1,
 					position: object.position.clone(),
 					quaternion: object.quaternion.clone(),
 					scale: object.scale.clone(),
 				};
 				if (
+					start.parent === end.parent &&
 					start.position.equals(end.position) &&
 					start.quaternion.equals(end.quaternion) &&
 					start.scale.equals(end.scale)
 				) {
+					return;
+				}
+				if (start.parent && end.parent && start.parent !== end.parent) {
+					const move: HierarchyMoveSnapshot = {
+						object,
+						oldParent: start.parent,
+						oldIndex: start.index,
+						oldPosition: start.position,
+						oldQuaternion: start.quaternion,
+						oldScale: start.scale,
+						newParent: end.parent,
+						newIndex: end.index,
+						newPosition: end.position,
+						newQuaternion: end.quaternion,
+						newScale: end.scale,
+					};
+					this.recordAction({
+						type: "move-object",
+						label: object.name || "Object transform",
+						undo: () => this.placeObjects([move], "old"),
+						redo: () => this.placeObjects([move], "new"),
+						sync: () => this.spaceSync?.syncObjectUpdate(object),
+					});
 					return;
 				}
 				const applyTransform = (
@@ -4214,6 +4281,58 @@ export class DT3DCard extends LitElement {
 				return;
 			}
 			this.sceneManager.applyShadowSettingsToObject(updatedObject);
+
+			if (
+				detail.attribute === "position" &&
+				this.space &&
+				isWallOpeningObject(updatedObject)
+			) {
+				detail.undo();
+				const oldParent = updatedObject.parent;
+				const oldIndex = oldParent?.children.indexOf(updatedObject) ?? -1;
+				const oldPosition = updatedObject.position.clone();
+				const oldQuaternion = updatedObject.quaternion.clone();
+				const oldScale = updatedObject.scale.clone();
+
+				detail.redo();
+				updatedObject.updateMatrix();
+				updatedObject.updateWorldMatrix(false, true);
+				snapOpeningToNearestWall(updatedObject, this.space);
+
+				const newParent = updatedObject.parent;
+				const newIndex = newParent?.children.indexOf(updatedObject) ?? -1;
+				const move =
+					oldParent && newParent
+						? {
+							object: updatedObject,
+							oldParent,
+							oldIndex,
+							oldPosition,
+							oldQuaternion,
+							oldScale,
+							newParent,
+							newIndex,
+							newPosition: updatedObject.position.clone(),
+							newQuaternion: updatedObject.quaternion.clone(),
+							newScale: updatedObject.scale.clone(),
+						}
+						: null;
+
+				this.refreshAfterObjectMutation(updatedObject);
+				if (move) {
+					this.recordAction({
+						type:
+							move.oldParent === move.newParent
+								? "update-object"
+								: "move-object",
+						label: `${updatedObject.name || "Object"}: position`,
+						undo: () => this.placeObjects([move], "old"),
+						redo: () => this.placeObjects([move], "new"),
+						sync: () => this.spaceSync?.syncObjectUpdate(updatedObject),
+					});
+				}
+				return;
+			}
 
 			const changedDefaultViewports =
 				updatedObject instanceof ViewportObject && updatedObject.defaultViewport
