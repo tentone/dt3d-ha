@@ -53,6 +53,9 @@ service_key: <secret> # Same as the backend addon configuration
 navigation_controls: orbit
 vr_mode: false # Show VR entry on supported WebXR devices
 ar_mode: false # Show AR entry on supported WebXR devices
+ar_location_based: false # Anchor AR using a Home Assistant location entity
+ar_location_entity: ""
+ar_environment_orientation: 0 # Clockwise degrees from geographic north
 visualization_only: false # Set to true to disable editing and object creation
 general:
   developmentMode:
@@ -62,6 +65,8 @@ general:
 VR and AR require a browser/device with immersive WebXR support and a secure
 Home Assistant page (HTTPS). In AR, DT3D automatically hides the sky and uses a
 transparent scene background so the device camera feed remains visible.
+Location-based AR additionally requires device location and compass permission.
+The selected entity must expose numeric `latitude` and `longitude` attributes.
 
 <img src="readme/6_card_configuration.png" width="500">
 

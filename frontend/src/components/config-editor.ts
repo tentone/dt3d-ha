@@ -34,9 +34,11 @@ export class DT3DConfigEditor extends LitElement {
 	static styles = unsafeCSS(componentStyles);
 
 	static properties = {
+		hass: {attribute: false},
 		_config: {state: true},
 		_spaces: {state: true},
 	};
+	public hass: any;
 	private _config: any;
 	private _spaces: SpaceResponse[] = [];
 	private spacesConnectionKey = "";
@@ -59,6 +61,9 @@ export class DT3DConfigEditor extends LitElement {
 			navigation_controls: "orbit",
 			vr_mode: false,
 			ar_mode: false,
+			ar_location_based: false,
+			ar_location_entity: "",
+			ar_environment_orientation: 0,
 			orientation_cube: false,
 			visualization_only: false,
 			entity_click_action: entityInteractions.click,
@@ -85,6 +90,22 @@ export class DT3DConfigEditor extends LitElement {
 				config?.enable_ar ??
 				config?.enableAr,
 		);
+		this._config.ar_location_based = booleanConfig(
+			config?.ar_location_based ?? config?.arLocationBased,
+		);
+		this._config.ar_location_entity = String(
+			config?.ar_location_entity ?? config?.arLocationEntity ?? "",
+		);
+		const environmentOrientation = Number(
+			config?.ar_environment_orientation ??
+				config?.arEnvironmentOrientation ??
+				0,
+		);
+		this._config.ar_environment_orientation = Number.isFinite(
+			environmentOrientation,
+		)
+			? environmentOrientation
+			: 0;
 		this._config.navigation_controls = normalizeNavigationControlsType(
 			config?.navigation_controls ??
 				config?.navigationControls ??
@@ -240,6 +261,33 @@ export class DT3DConfigEditor extends LitElement {
 		this.scheduleSpacesReload();
 	}
 
+	private getLocationEntities(): {entityId: string; label: string}[] {
+		return Object.entries(this.hass?.states ?? {})
+			.filter(([, state]: [string, any]) => {
+				if (
+					state?.attributes?.latitude === null ||
+					state?.attributes?.latitude === undefined ||
+					state?.attributes?.latitude === "" ||
+					state?.attributes?.longitude === null ||
+					state?.attributes?.longitude === undefined ||
+					state?.attributes?.longitude === ""
+				) {
+					return false;
+				}
+
+				const latitude = Number(state?.attributes?.latitude);
+				const longitude = Number(state?.attributes?.longitude);
+				return Number.isFinite(latitude) && Number.isFinite(longitude);
+			})
+			.map(([entityId, state]: [string, any]) => ({
+				entityId,
+				label: state?.attributes?.friendly_name
+					? `${state.attributes.friendly_name} (${entityId})`
+					: entityId,
+			}))
+			.sort((left, right) => left.label.localeCompare(right.label));
+	}
+
 	/**
 	 * Presented to the user to configure the card.
 	 */
@@ -263,6 +311,12 @@ export class DT3DConfigEditor extends LitElement {
 		const orientationCube = booleanConfig(this._config.orientation_cube);
 		const vrMode = booleanConfig(this._config.vr_mode);
 		const arMode = booleanConfig(this._config.ar_mode);
+		const arLocationBased = booleanConfig(this._config.ar_location_based);
+		const arLocationEntity = String(this._config.ar_location_entity ?? "");
+		const arEnvironmentOrientation = Number(
+			this._config.ar_environment_orientation ?? 0,
+		);
+		const locationEntities = this.getLocationEntities();
 		const navigationControls = normalizeNavigationControlsType(
 			this._config.navigation_controls,
 		);
@@ -401,6 +455,80 @@ export class DT3DConfigEditor extends LitElement {
 								<p>${localManager.get("arModeDescription")}</p>
 							</div>
 						</div>
+						${arMode
+							? html`
+									<div class="checkbox-field">
+										<input
+											id="ar-location-based"
+											type="checkbox"
+											data-key="ar_location_based"
+											?checked=${arLocationBased}
+											@change=${this.onValueChanged}
+										/>
+										<div>
+											<label for="ar-location-based">
+												${localManager.get("arLocationBased")}
+											</label>
+											<p>${localManager.get("arLocationBasedDescription")}</p>
+										</div>
+									</div>
+									${arLocationBased
+										? html`
+												<div class="field">
+													<label>
+														${localManager.get("arLocationEntity")}
+													</label>
+													<select
+														data-key="ar_location_entity"
+														.value=${arLocationEntity}
+														@change=${this.onValueChanged}
+														required>
+														<option value="" disabled>
+															${locationEntities.length > 0
+																? localManager.get("selectLocationEntity")
+																: localManager.get("noLocationEntities")}
+														</option>
+														${locationEntities.map(
+															(entity) => html`
+																<option value=${entity.entityId}>
+																	${entity.label}
+																</option>
+															`,
+														)}
+													</select>
+													<p>
+														${localManager.get(
+															"arLocationEntityDescription",
+														)}
+													</p>
+												</div>
+												<div class="field">
+													<label>
+														${localManager.get(
+															"arEnvironmentOrientation",
+														)}
+													</label>
+													<input
+														type="number"
+														data-key="ar_environment_orientation"
+														data-value-type="number"
+														.value=${String(arEnvironmentOrientation)}
+														@change=${this.onValueChanged}
+														min="0"
+														max="359.99"
+														step="0.01"
+														required
+													/>
+													<p>
+														${localManager.get(
+															"arEnvironmentOrientationDescription",
+														)}
+													</p>
+												</div>
+											`
+										: ""}
+								`
+							: ""}
 						<div class="checkbox-field">
 							<input
 								id="visualization-only"

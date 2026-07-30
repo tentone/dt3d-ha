@@ -231,6 +231,9 @@ navigation_controls: orbit
 orientation_cube: false
 vr_mode: false
 ar_mode: false
+ar_location_based: false
+ar_location_entity: ""
+ar_environment_orientation: 0
 visualization_only: true
 entity_click_action: open
 entity_double_click_action: open
@@ -262,6 +265,9 @@ spaces there. Leave `default_viewport` empty to follow the space's default.
 | `orientation_cube`                       | `false`            | Shows the camera orientation cube.                                               |
 | `vr_mode`                                | `false`            | Shows a VR button when immersive VR is available through WebXR.                  |
 | `ar_mode`                                | `false`            | Shows an AR button when immersive AR is available through WebXR.                  |
+| `ar_location_based`                      | `false`            | Centers AR on a Home Assistant location entity.                                  |
+| `ar_location_entity`                     | empty              | Entity ID with numeric `latitude` and `longitude` attributes.                     |
+| `ar_environment_orientation`             | `0`                | Front-of-environment bearing, clockwise in degrees from geographic north.         |
 | `visualization_only`                     | `false`            | Hides all editing and space-management controls.                                 |
 | `entity_click_action`                    | `nothing`          | `open`, `toggle`, or `nothing`.                                                  |
 | `entity_double_click_action`             | `open`             | `open`, `toggle`, or `nothing`.                                                  |
@@ -277,7 +283,10 @@ per-card. Tone mapping, post-processing, and daylight are per-space.
 
 WebXR immersive modes require a supported browser/device and HTTPS. During an
 AR session, the sky is hidden and the scene background is forced transparent;
-the saved space appearance is restored when AR ends.
+the saved space appearance is restored when AR ends. Location-based AR also
+requires device geolocation and absolute-orientation permission. It converts
+the device-to-entity geographic offset to meters and aligns the space using the
+configured bearing.
 
 <img src="readme/6_card_configuration.png" width="500">
 

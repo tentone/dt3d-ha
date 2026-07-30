@@ -158,6 +158,29 @@ type ConfirmationOptions = {
 	onConfirm: () => void;
 };
 
+type GeographicCoordinates = {
+	latitude: number;
+	longitude: number;
+	altitude: number | null;
+};
+
+type SpaceTransformSnapshot = {
+	position: Vector3;
+	quaternion: Quaternion;
+};
+
+type DeviceOrientationEventWithCompass = DeviceOrientationEvent & {
+	webkitCompassHeading?: number;
+	webkitCompassAccuracy?: number;
+};
+
+type DeviceOrientationEventConstructorWithPermission =
+	typeof DeviceOrientationEvent & {
+		requestPermission?: (
+			absolute?: boolean,
+		) => Promise<"granted" | "denied" | "prompt">;
+	};
+
 type HierarchyMoveSnapshot = {
 	object: Object3D;
 	oldParent: Object3D;
@@ -254,7 +277,9 @@ export class DT3DCard extends LitElement {
 
 	private controlsEnabledBeforeXr = true;
 
-	private cameraModeBeforeXr: CameraMode | null = null;
+	private cameraViewportBeforeXr: CameraViewportConfig | null = null;
+
+	private arSpaceTransform: SpaceTransformSnapshot | null = null;
 
 	private orientationCube: DT3DOrientationCube | null = null;
 
@@ -472,6 +497,7 @@ export class DT3DCard extends LitElement {
 
 		this.updateSkyFromDateTime();
 		this.updateEntityObjects();
+		void this.refreshXrAvailability();
 	}
 
 	/**
@@ -544,6 +570,22 @@ export class DT3DCard extends LitElement {
 		const arMode = booleanConfig(
 			config.ar_mode ?? config.arMode ?? config.enable_ar ?? config.enableAr,
 		);
+		const arLocationBased = booleanConfig(
+			config.ar_location_based ?? config.arLocationBased,
+		);
+		const arLocationEntity = String(
+			config.ar_location_entity ?? config.arLocationEntity ?? "",
+		).trim();
+		const parsedArEnvironmentOrientation = Number(
+			config.ar_environment_orientation ??
+				config.arEnvironmentOrientation ??
+				0,
+		);
+		const arEnvironmentOrientation = Number.isFinite(
+			parsedArEnvironmentOrientation,
+		)
+			? parsedArEnvironmentOrientation
+			: 0;
 		const navigationControls = normalizeNavigationControlsType(
 			config.navigation_controls ??
 				config.navigationControls ??
@@ -564,6 +606,9 @@ export class DT3DCard extends LitElement {
 		};
 		this.config = {
 			...mergedConfig,
+			ar_environment_orientation: arEnvironmentOrientation,
+			ar_location_based: arLocationBased,
+			ar_location_entity: arLocationEntity,
 			ar_mode: arMode,
 			orientation_cube: orientationCube,
 			navigation_controls: navigationControls,
@@ -608,6 +653,55 @@ export class DT3DCard extends LitElement {
 		return this.isXrModeEnabled("vr") || this.isXrModeEnabled("ar");
 	}
 
+	private isLocationBasedArEnabled(): boolean {
+		return this.config?.ar_location_based === true;
+	}
+
+	private getArLocationTarget(): GeographicCoordinates | null {
+		const entityId = this.config?.ar_location_entity;
+		if (
+			!this.isLocationBasedArEnabled() ||
+			typeof entityId !== "string" ||
+			!entityId
+		) {
+			return null;
+		}
+
+		const attributes = this.hassInstance?.states?.[entityId]?.attributes;
+		if (
+			attributes?.latitude === null ||
+			attributes?.latitude === undefined ||
+			attributes?.latitude === "" ||
+			attributes?.longitude === null ||
+			attributes?.longitude === undefined ||
+			attributes?.longitude === ""
+		) {
+			return null;
+		}
+
+		const latitude = Number(attributes?.latitude);
+		const longitude = Number(attributes?.longitude);
+		if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+			return null;
+		}
+
+		const altitude =
+			attributes?.altitude === null ||
+			attributes?.altitude === undefined ||
+			attributes?.altitude === ""
+				? Number.NaN
+				: Number(attributes.altitude);
+		return {
+			latitude,
+			longitude,
+			altitude: Number.isFinite(altitude) ? altitude : null,
+		};
+	}
+
+	private hasValidArLocationConfiguration(): boolean {
+		return !this.isLocationBasedArEnabled() || this.getArLocationTarget() !== null;
+	}
+
 	private applyXrConfiguration(): void {
 		this.rendererManager?.setXrEnabled(
 			this.isAnyXrModeEnabled() || this.activeXrSession !== null,
@@ -649,7 +743,8 @@ export class DT3DCard extends LitElement {
 		this.bindXrSystem();
 		const system = this.xrSystem;
 		const vrEnabled = this.isXrModeEnabled("vr");
-		const arEnabled = this.isXrModeEnabled("ar");
+		const arEnabled =
+			this.isXrModeEnabled("ar") && this.hasValidArLocationConfiguration();
 
 		if (!system || (!vrEnabled && !arEnabled)) {
 			controls.vrAvailable = false;
@@ -725,8 +820,233 @@ export class DT3DCard extends LitElement {
 		return options;
 	}
 
+	private getCurrentDevicePosition(): Promise<GeographicCoordinates> {
+		return new Promise((resolve, reject) => {
+			if (!navigator.geolocation) {
+				reject(new Error("Geolocation is not supported by this browser"));
+				return;
+			}
+
+			navigator.geolocation.getCurrentPosition(
+				(position) => {
+					resolve({
+						latitude: position.coords.latitude,
+						longitude: position.coords.longitude,
+						altitude: position.coords.altitude,
+					});
+				},
+				(error) => reject(error),
+				{
+					enableHighAccuracy: true,
+					maximumAge: 0,
+					timeout: 15000,
+				},
+			);
+		});
+	}
+
+	private getDeviceHeading(): Promise<number | null> {
+		if (
+			typeof window === "undefined" ||
+			typeof DeviceOrientationEvent === "undefined"
+		) {
+			return Promise.resolve(null);
+		}
+
+		const orientationEvent =
+			DeviceOrientationEvent as DeviceOrientationEventConstructorWithPermission;
+		let permission: Promise<"granted" | "denied" | "prompt">;
+		try {
+			permission = orientationEvent.requestPermission
+				? orientationEvent.requestPermission(true)
+				: Promise.resolve("granted");
+		} catch {
+			return Promise.resolve(null);
+		}
+
+		return permission
+			.then((result) => {
+				if (result !== "granted") {
+					return null;
+				}
+
+				return new Promise<number | null>((resolve) => {
+					let completed = false;
+					const finish = (heading: number | null): void => {
+						if (completed) {
+							return;
+						}
+
+						completed = true;
+						window.clearTimeout(timeout);
+						window.removeEventListener(
+							"deviceorientationabsolute",
+							handleOrientation,
+						);
+						window.removeEventListener("deviceorientation", handleOrientation);
+						resolve(heading);
+					};
+					const handleOrientation = (event: DeviceOrientationEvent): void => {
+						const compassEvent = event as DeviceOrientationEventWithCompass;
+						const webkitHeading = Number(compassEvent.webkitCompassHeading);
+						if (Number.isFinite(webkitHeading)) {
+							finish(((webkitHeading % 360) + 360) % 360);
+							return;
+						}
+
+						const alpha = Number(event.alpha);
+						if (!event.absolute || !Number.isFinite(alpha)) {
+							return;
+						}
+
+						const screenAngle = Number(window.screen.orientation?.angle ?? 0);
+						finish(((360 - alpha + screenAngle) % 360 + 360) % 360);
+					};
+					const timeout = window.setTimeout(() => finish(null), 3000);
+
+					window.addEventListener(
+						"deviceorientationabsolute",
+						handleOrientation,
+					);
+					window.addEventListener("deviceorientation", handleOrientation);
+				});
+			})
+			.catch(() => null);
+	}
+
+	private getGeographicOffset(
+		device: GeographicCoordinates,
+		target: GeographicCoordinates,
+		heading: number,
+	): Vector3 {
+		const earthRadius = 6378137;
+		const degreesToRadians = Math.PI / 180;
+		const latitudeDelta =
+			(target.latitude - device.latitude) * degreesToRadians;
+		const longitudeDeltaDegrees =
+			((target.longitude - device.longitude + 540) % 360) - 180;
+		const longitudeDelta = longitudeDeltaDegrees * degreesToRadians;
+		const meanLatitude =
+			((target.latitude + device.latitude) / 2) * degreesToRadians;
+		const north = latitudeDelta * earthRadius;
+		const east = longitudeDelta * earthRadius * Math.cos(meanLatitude);
+		const headingRadians = heading * degreesToRadians;
+		const altitude =
+			target.altitude !== null && device.altitude !== null
+				? target.altitude - device.altitude
+				: 0;
+
+		return new Vector3(
+			east * Math.cos(headingRadians) - north * Math.sin(headingRadians),
+			altitude,
+			-east * Math.sin(headingRadians) - north * Math.cos(headingRadians),
+		);
+	}
+
+	private applyLocationBasedArTransform(
+		device: GeographicCoordinates,
+		heading: number | null,
+	): void {
+		const target = this.getArLocationTarget();
+		if (!target || !this.space || this.arSpaceTransform) {
+			return;
+		}
+
+		const resolvedHeading = heading ?? 0;
+		if (heading === null) {
+			console.warn(
+				"DT3D: Compass heading unavailable; using the XR reference orientation for location-based AR",
+			);
+		}
+
+		this.arSpaceTransform = {
+			position: this.space.position.clone(),
+			quaternion: this.space.quaternion.clone(),
+		};
+
+		this.space.updateWorldMatrix(true, true);
+		const bounds = new Box3().setFromObject(this.space);
+		const localCenter = bounds.isEmpty()
+			? new Vector3()
+			: this.space.worldToLocal(bounds.getCenter(new Vector3()));
+		const geographicOffset = this.getGeographicOffset(
+			device,
+			target,
+			resolvedHeading,
+		);
+		const orientation = Number(this.config?.ar_environment_orientation ?? 0);
+		const yaw =
+			((resolvedHeading - orientation) * Math.PI) / 180;
+		const yawQuaternion = new Quaternion().setFromAxisAngle(
+			new Vector3(0, 1, 0),
+			yaw,
+		);
+		const nextQuaternion = yawQuaternion
+			.clone()
+			.multiply(this.arSpaceTransform.quaternion);
+		const centerOffset = localCenter
+			.clone()
+			.multiply(this.space.scale)
+			.applyQuaternion(nextQuaternion);
+
+		this.space.quaternion.copy(nextQuaternion);
+		this.space.position.set(
+			geographicOffset.x - centerOffset.x,
+			this.arSpaceTransform.position.y + geographicOffset.y,
+			geographicOffset.z - centerOffset.z,
+		);
+		this.space.updateMatrix();
+		this.space.updateWorldMatrix(false, true);
+	}
+
+	private restoreLocationBasedArTransform(): void {
+		if (!this.arSpaceTransform || !this.space) {
+			return;
+		}
+
+		this.space.position.copy(this.arSpaceTransform.position);
+		this.space.quaternion.copy(this.arSpaceTransform.quaternion);
+		this.space.updateMatrix();
+		this.space.updateWorldMatrix(false, true);
+		this.arSpaceTransform = null;
+	}
+
+	private async applyLocationBasedArWhenReady(
+		session: XRSession,
+		position: Promise<GeographicCoordinates>,
+		heading: Promise<number | null>,
+	): Promise<void> {
+		try {
+			const [devicePosition, deviceHeading] = await Promise.all([
+				position,
+				heading,
+			]);
+			if (this.activeXrSession !== session || this.activeXrMode !== "ar") {
+				return;
+			}
+
+			this.applyLocationBasedArTransform(devicePosition, deviceHeading);
+		} catch (error) {
+			console.error(
+				"DT3D: Location-based AR requires access to the device location",
+				error,
+			);
+			if (this.activeXrSession === session) {
+				try {
+					await session.end();
+				} catch {
+					// The session may already be closing.
+				}
+			}
+		}
+	}
+
 	private async toggleXrSession(mode: XrMode): Promise<void> {
-		if (this.xrSessionRequestPending || !this.isXrModeEnabled(mode)) {
+		if (
+			this.xrSessionRequestPending ||
+			!this.isXrModeEnabled(mode) ||
+			(mode === "ar" && !this.hasValidArLocationConfiguration())
+		) {
 			return;
 		}
 
@@ -746,6 +1066,20 @@ export class DT3DCard extends LitElement {
 
 		this.xrSessionRequestPending = true;
 		this.updateXrControlState();
+		const locationBasedAr =
+			mode === "ar" && this.isLocationBasedArEnabled();
+		const devicePosition = locationBasedAr
+			? this.getCurrentDevicePosition()
+			: null;
+		if (devicePosition) {
+			// The XR permission prompt can resolve after geolocation rejects.
+			// Attach a handler immediately; the positioning task still receives
+			// and handles the original rejection once the session starts.
+			void devicePosition.catch(() => undefined);
+		}
+		const deviceHeading = locationBasedAr
+			? this.getDeviceHeading()
+			: null;
 
 		let session: XRSession | null = null;
 		try {
@@ -760,13 +1094,21 @@ export class DT3DCard extends LitElement {
 			this.activeXrMode = mode;
 			session.addEventListener("end", this.handleXrSessionEnd, {once: true});
 			this.controlsEnabledBeforeXr = this.controls?.enabled ?? true;
-			this.cameraModeBeforeXr = this.sceneManager.getCameraMode();
+			this.cameraViewportBeforeXr =
+				this.sceneManager.captureViewportConfig();
 			this.setEditorCameraMode("perspective");
 			this.controls.enabled = false;
 			this.sceneManager.setImmersiveMode(mode);
 			this.updateXrControlState();
 
 			await this.rendererManager.setXrSession(session);
+			if (devicePosition && deviceHeading) {
+				void this.applyLocationBasedArWhenReady(
+					session,
+					devicePosition,
+					deviceHeading,
+				);
+			}
 		} catch (error) {
 			console.error(`DT3D: Failed to enter ${mode.toUpperCase()} mode`, error);
 			if (session) {
@@ -792,11 +1134,23 @@ export class DT3DCard extends LitElement {
 		this.activeXrSession = null;
 		this.activeXrMode = null;
 		this.sceneManager?.setImmersiveMode(null);
+		this.restoreLocationBasedArTransform();
 
-		const previousCameraMode = this.cameraModeBeforeXr;
-		this.cameraModeBeforeXr = null;
-		if (previousCameraMode) {
-			this.setEditorCameraMode(previousCameraMode);
+		const previousViewport = this.cameraViewportBeforeXr;
+		this.cameraViewportBeforeXr = null;
+		if (previousViewport) {
+			this.sceneManager.applyViewportConfig(previousViewport);
+			this.camera = this.sceneManager.camera;
+			this.controls = this.sceneManager.controls;
+			this.transform = this.sceneManager.transform;
+			this.rendererManager.setCamera(this.camera);
+			this.rendererManager.setControls(this.controls);
+			if (this.orientationCube) {
+				this.orientationCube.camera = this.camera;
+			}
+			if (this.cameraToggle) {
+				this.cameraToggle.mode = this.sceneManager.getCameraMode();
+			}
 		}
 		if (this.controls) {
 			this.controls.enabled = this.controlsEnabledBeforeXr;
