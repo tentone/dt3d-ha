@@ -51,11 +51,17 @@ address: http://homeassistant.local
 port: 8080
 service_key: <secret> # Same as the backend addon configuration
 navigation_controls: orbit
+vr_mode: false # Show VR entry on supported WebXR devices
+ar_mode: false # Show AR entry on supported WebXR devices
 visualization_only: false # Set to true to disable editing and object creation
 general:
   developmentMode:
     enabled: false
 ```
+
+VR and AR require a browser/device with immersive WebXR support and a secure
+Home Assistant page (HTTPS). In AR, DT3D automatically hides the sky and uses a
+transparent scene background so the device camera feed remains visible.
 
 <img src="readme/6_card_configuration.png" width="500">
 

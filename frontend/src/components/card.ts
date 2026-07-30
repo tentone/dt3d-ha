@@ -14,6 +14,7 @@ import "./space-config-menu/space-config-menu.js";
 import "./space-selector/space-selector.js";
 import "./sync-progress-component/sync-progress-component.js";
 import "./upload-menu/upload-menu.js";
+import "./xr-controls/xr-controls.js";
 
 import {LitElement} from "lit";
 import {customElement} from "lit/decorators.js";
@@ -136,6 +137,7 @@ import type {
 import type {DT3DSpaceSelector} from "./space-selector/space-selector.js";
 import type {SyncProgressComponent} from "./sync-progress-component/sync-progress-component.js";
 import type {DT3DUploadMenu} from "./upload-menu/upload-menu.js";
+import type {DT3DXrControls, XrMode} from "./xr-controls/xr-controls.js";
 
 const SPACE_SCENE_CONFIG_STORAGE_KEY = "space-scene-config";
 const GRID_CONFIG_STORAGE_KEY = "grid-config";
@@ -238,6 +240,22 @@ export class DT3DCard extends LitElement {
 
 	private cameraToggle: DT3DCameraToggle | null = null;
 
+	private xrControls: DT3DXrControls | null = null;
+
+	private xrSystem: XRSystem | null = null;
+
+	private xrAvailabilitySequence = 0;
+
+	private activeXrSession: XRSession | null = null;
+
+	private activeXrMode: XrMode | null = null;
+
+	private xrSessionRequestPending = false;
+
+	private controlsEnabledBeforeXr = true;
+
+	private cameraModeBeforeXr: CameraMode | null = null;
+
 	private orientationCube: DT3DOrientationCube | null = null;
 
 	private objectTreeResizeObserver: ResizeObserver | null = null;
@@ -312,6 +330,15 @@ export class DT3DCard extends LitElement {
 
 	private entityInteractions: EntityInteractionConfig =
 		normalizeEntityInteractionConfig();
+
+	private readonly handleXrDeviceChange = (): void => {
+		void this.refreshXrAvailability();
+	};
+
+	private readonly handleXrSessionEnd = (event: Event): void => {
+		const session = event.currentTarget as XRSession;
+		queueMicrotask(() => this.finishXrSession(session));
+	};
 
 	private readonly handleKeyDown = (event: KeyboardEvent): void => {
 		if (event.defaultPrevented || event.repeat) {
@@ -511,6 +538,12 @@ export class DT3DCard extends LitElement {
 		const orientationCube = booleanConfig(
 			config.orientation_cube ?? config.orientationCube,
 		);
+		const vrMode = booleanConfig(
+			config.vr_mode ?? config.vrMode ?? config.enable_vr ?? config.enableVr,
+		);
+		const arMode = booleanConfig(
+			config.ar_mode ?? config.arMode ?? config.enable_ar ?? config.enableAr,
+		);
 		const navigationControls = normalizeNavigationControlsType(
 			config.navigation_controls ??
 				config.navigationControls ??
@@ -531,9 +564,11 @@ export class DT3DCard extends LitElement {
 		};
 		this.config = {
 			...mergedConfig,
+			ar_mode: arMode,
 			orientation_cube: orientationCube,
 			navigation_controls: navigationControls,
 			visualization_only: visualizationOnly,
+			vr_mode: vrMode,
 			entity_click_action: this.entityInteractions.click,
 			entity_double_click_action: this.entityInteractions.doubleClick,
 		};
@@ -541,6 +576,7 @@ export class DT3DCard extends LitElement {
 		this.applyNavigationControls();
 		this.applyGeneralConfig();
 		this.applyVisualizationMode();
+		this.applyXrConfiguration();
 
 		console.log("DT3D: Config set:", this.config);
 	}
@@ -562,6 +598,212 @@ export class DT3DCard extends LitElement {
 			this.getNavigationControlsType(),
 		);
 		this.rendererManager?.setControls(this.controls);
+	}
+
+	private isXrModeEnabled(mode: XrMode): boolean {
+		return this.config?.[`${mode}_mode`] === true;
+	}
+
+	private isAnyXrModeEnabled(): boolean {
+		return this.isXrModeEnabled("vr") || this.isXrModeEnabled("ar");
+	}
+
+	private applyXrConfiguration(): void {
+		this.rendererManager?.setXrEnabled(
+			this.isAnyXrModeEnabled() || this.activeXrSession !== null,
+		);
+
+		if (
+			this.activeXrSession &&
+			this.activeXrMode &&
+			!this.isXrModeEnabled(this.activeXrMode)
+		) {
+			void this.activeXrSession.end();
+		}
+
+		void this.refreshXrAvailability();
+	}
+
+	private bindXrSystem(): void {
+		const system =
+			typeof navigator === "undefined" ? null : (navigator.xr ?? null);
+		if (this.xrSystem === system) {
+			return;
+		}
+
+		this.xrSystem?.removeEventListener(
+			"devicechange",
+			this.handleXrDeviceChange,
+		);
+		this.xrSystem = system;
+		this.xrSystem?.addEventListener("devicechange", this.handleXrDeviceChange);
+	}
+
+	private async refreshXrAvailability(): Promise<void> {
+		const controls = this.xrControls;
+		const requestSequence = ++this.xrAvailabilitySequence;
+		if (!controls) {
+			return;
+		}
+
+		this.bindXrSystem();
+		const system = this.xrSystem;
+		const vrEnabled = this.isXrModeEnabled("vr");
+		const arEnabled = this.isXrModeEnabled("ar");
+
+		if (!system || (!vrEnabled && !arEnabled)) {
+			controls.vrAvailable = false;
+			controls.arAvailable = false;
+			controls.hidden = true;
+			this.updateViewerControlPositions();
+			return;
+		}
+
+		const [vrAvailable, arAvailable] = await Promise.all([
+			vrEnabled
+				? system.isSessionSupported("immersive-vr").catch(() => false)
+				: false,
+			arEnabled
+				? system.isSessionSupported("immersive-ar").catch(() => false)
+				: false,
+		]);
+
+		if (
+			requestSequence !== this.xrAvailabilitySequence ||
+			controls !== this.xrControls
+		) {
+			return;
+		}
+
+		controls.vrAvailable = vrAvailable;
+		controls.arAvailable = arAvailable;
+		controls.hidden = !vrAvailable && !arAvailable;
+		this.updateXrControlState();
+		this.updateViewerControlPositions();
+	}
+
+	private updateXrControlState(): void {
+		if (!this.xrControls) {
+			return;
+		}
+
+		this.xrControls.activeMode = this.activeXrMode ?? "";
+		this.xrControls.busy = this.xrSessionRequestPending;
+		if (this.cameraToggle) {
+			this.cameraToggle.hidden = this.activeXrSession !== null;
+		}
+	}
+
+	private setEditorCameraMode(mode: CameraMode): void {
+		if (!this.sceneManager || this.sceneManager.getCameraMode() === mode) {
+			return;
+		}
+
+		this.sceneManager.setCameraMode(mode);
+		this.camera = this.sceneManager.camera;
+		this.controls = this.sceneManager.controls;
+		this.transform = this.sceneManager.transform;
+		this.rendererManager.setCamera(this.camera);
+		this.rendererManager.setControls(this.controls);
+		if (this.orientationCube) {
+			this.orientationCube.camera = this.camera;
+		}
+		if (this.cameraToggle) {
+			this.cameraToggle.mode = mode;
+		}
+	}
+
+	private createXrSessionOptions(mode: XrMode): XRSessionInit {
+		const optionalFeatures = ["local-floor", "bounded-floor", "hand-tracking"];
+		const options: XRSessionInit = {optionalFeatures};
+
+		if (mode === "ar" && this.content) {
+			optionalFeatures.push("dom-overlay");
+			options.domOverlay = {root: this.content};
+		}
+
+		return options;
+	}
+
+	private async toggleXrSession(mode: XrMode): Promise<void> {
+		if (this.xrSessionRequestPending || !this.isXrModeEnabled(mode)) {
+			return;
+		}
+
+		if (this.activeXrSession) {
+			try {
+				await this.activeXrSession.end();
+			} catch (error) {
+				console.error("DT3D: Failed to exit immersive mode", error);
+			}
+			return;
+		}
+
+		const system = this.xrSystem;
+		if (!system || !this.rendererManager || !this.sceneManager) {
+			return;
+		}
+
+		this.xrSessionRequestPending = true;
+		this.updateXrControlState();
+
+		let session: XRSession | null = null;
+		try {
+			const sessionMode: XRSessionMode =
+				mode === "vr" ? "immersive-vr" : "immersive-ar";
+			session = await system.requestSession(
+				sessionMode,
+				this.createXrSessionOptions(mode),
+			);
+
+			this.activeXrSession = session;
+			this.activeXrMode = mode;
+			session.addEventListener("end", this.handleXrSessionEnd, {once: true});
+			this.controlsEnabledBeforeXr = this.controls?.enabled ?? true;
+			this.cameraModeBeforeXr = this.sceneManager.getCameraMode();
+			this.setEditorCameraMode("perspective");
+			this.controls.enabled = false;
+			this.sceneManager.setImmersiveMode(mode);
+			this.updateXrControlState();
+
+			await this.rendererManager.setXrSession(session);
+		} catch (error) {
+			console.error(`DT3D: Failed to enter ${mode.toUpperCase()} mode`, error);
+			if (session) {
+				try {
+					await session.end();
+				} catch {
+					// The browser may already have closed a partially started session.
+				}
+				this.finishXrSession(session);
+			}
+		} finally {
+			this.xrSessionRequestPending = false;
+			this.updateXrControlState();
+		}
+	}
+
+	private finishXrSession(session: XRSession): void {
+		if (this.activeXrSession !== session) {
+			return;
+		}
+
+		session.removeEventListener("end", this.handleXrSessionEnd);
+		this.activeXrSession = null;
+		this.activeXrMode = null;
+		this.sceneManager?.setImmersiveMode(null);
+
+		const previousCameraMode = this.cameraModeBeforeXr;
+		this.cameraModeBeforeXr = null;
+		if (previousCameraMode) {
+			this.setEditorCameraMode(previousCameraMode);
+		}
+		if (this.controls) {
+			this.controls.enabled = this.controlsEnabledBeforeXr;
+		}
+
+		this.rendererManager?.setXrEnabled(this.isAnyXrModeEnabled());
+		this.updateXrControlState();
 	}
 
 	private isOrientationCubeEnabled(): boolean {
@@ -621,15 +863,24 @@ export class DT3DCard extends LitElement {
 			this.orientationCube.style.bottom = `${VIEWER_CONTROL_MARGIN}px`;
 		}
 
+		const cubeHeight =
+			this.orientationCube?.getBoundingClientRect().height ?? 0;
+		const cameraBottom = this.orientationCube
+			? VIEWER_CONTROL_MARGIN + cubeHeight + VIEWER_CONTROL_GAP
+			: VIEWER_CONTROL_MARGIN;
+
 		if (this.cameraToggle) {
-			const cubeHeight =
-				this.orientationCube?.getBoundingClientRect().height ?? 0;
-			const bottom = this.orientationCube
-				? VIEWER_CONTROL_MARGIN + cubeHeight + VIEWER_CONTROL_GAP
-				: VIEWER_CONTROL_MARGIN;
 			this.cameraToggle.style.left = "auto";
 			this.cameraToggle.style.right = right;
-			this.cameraToggle.style.bottom = `${bottom}px`;
+			this.cameraToggle.style.bottom = `${cameraBottom}px`;
+		}
+
+		if (this.xrControls) {
+			this.xrControls.style.left = "auto";
+			this.xrControls.style.right = right;
+			this.xrControls.style.bottom = `${
+				cameraBottom + 48 + VIEWER_CONTROL_GAP
+			}px`;
 		}
 	}
 
@@ -2941,6 +3192,7 @@ export class DT3DCard extends LitElement {
 	 */
 	public connectedCallback() {
 		window.addEventListener("keydown", this.handleKeyDown);
+		this.bindXrSystem();
 		const minimumHeight = this.isInsideMasonryView()
 			? `${DEFAULT_CARD_HEIGHT}px`
 			: "0";
@@ -2948,6 +3200,7 @@ export class DT3DCard extends LitElement {
 
 		if (this.container) {
 			this.applyOrientationCubeVisibility();
+			this.applyXrConfiguration();
 			return;
 		}
 
@@ -3309,16 +3562,21 @@ export class DT3DCard extends LitElement {
 		this.cameraToggle.mode = this.sceneManager.getCameraMode();
 		this.cameraToggle.addEventListener("camera-mode-change", (event: Event) => {
 			const {mode} = (event as CustomEvent<{ mode: CameraMode }>).detail;
-
-			this.sceneManager.setCameraMode(mode);
-			this.camera = this.sceneManager.camera;
-			this.rendererManager.setCamera(this.camera);
-			if (this.orientationCube) {
-				this.orientationCube.camera = this.camera;
-			}
+			this.setEditorCameraMode(mode);
 		});
 
 		this.content.appendChild(this.cameraToggle);
+
+		this.xrControls = document.createElement(
+			"dt3d-xr-controls",
+		) as DT3DXrControls;
+		this.xrControls.hidden = true;
+		this.xrControls.addEventListener("xr-session-toggle", (event: Event) => {
+			const {mode} = (event as CustomEvent<{ mode: XrMode }>).detail;
+			void this.toggleXrSession(mode);
+		});
+		this.content.appendChild(this.xrControls);
+		this.applyXrConfiguration();
 		this.updateViewerControlPositions();
 
 		this.spaceSelector = document.createElement(
@@ -3808,6 +4066,15 @@ export class DT3DCard extends LitElement {
 
 	public disconnectedCallback(): void {
 		window.removeEventListener("keydown", this.handleKeyDown);
+		this.xrAvailabilitySequence += 1;
+		this.xrSystem?.removeEventListener(
+			"devicechange",
+			this.handleXrDeviceChange,
+		);
+		this.xrSystem = null;
+		if (this.activeXrSession) {
+			void this.activeXrSession.end();
+		}
 		this.objectTreeResizeObserver?.disconnect();
 		this.objectTreeResizeObserver = null;
 		if (this.persistSpaceConfigTimer !== null) {

@@ -57,6 +57,8 @@ export class DT3DConfigEditor extends LitElement {
 			default_space: "",
 			default_viewport: "",
 			navigation_controls: "orbit",
+			vr_mode: false,
+			ar_mode: false,
 			orientation_cube: false,
 			visualization_only: false,
 			entity_click_action: entityInteractions.click,
@@ -70,6 +72,18 @@ export class DT3DConfigEditor extends LitElement {
 			config?.default_viewport ?? config?.defaultViewport ?? "";
 		this._config.orientation_cube = booleanConfig(
 			config?.orientation_cube ?? config?.orientationCube,
+		);
+		this._config.vr_mode = booleanConfig(
+			config?.vr_mode ??
+				config?.vrMode ??
+				config?.enable_vr ??
+				config?.enableVr,
+		);
+		this._config.ar_mode = booleanConfig(
+			config?.ar_mode ??
+				config?.arMode ??
+				config?.enable_ar ??
+				config?.enableAr,
 		);
 		this._config.navigation_controls = normalizeNavigationControlsType(
 			config?.navigation_controls ??
@@ -247,6 +261,8 @@ export class DT3DConfigEditor extends LitElement {
 		);
 		const visualizationOnly = booleanConfig(this._config.visualization_only);
 		const orientationCube = booleanConfig(this._config.orientation_cube);
+		const vrMode = booleanConfig(this._config.vr_mode);
+		const arMode = booleanConfig(this._config.ar_mode);
 		const navigationControls = normalizeNavigationControlsType(
 			this._config.navigation_controls,
 		);
@@ -357,6 +373,32 @@ export class DT3DConfigEditor extends LitElement {
 									>${localManager.get("orientationCube")}</label
 								>
 								<p>${localManager.get("orientationCubeDescription")}</p>
+							</div>
+						</div>
+						<div class="checkbox-field">
+							<input
+								id="vr-mode"
+								type="checkbox"
+								data-key="vr_mode"
+								?checked=${vrMode}
+								@change=${this.onValueChanged}
+							/>
+							<div>
+								<label for="vr-mode">${localManager.get("vrMode")}</label>
+								<p>${localManager.get("vrModeDescription")}</p>
+							</div>
+						</div>
+						<div class="checkbox-field">
+							<input
+								id="ar-mode"
+								type="checkbox"
+								data-key="ar_mode"
+								?checked=${arMode}
+								@change=${this.onValueChanged}
+							/>
+							<div>
+								<label for="ar-mode">${localManager.get("arMode")}</label>
+								<p>${localManager.get("arModeDescription")}</p>
 							</div>
 						</div>
 						<div class="checkbox-field">

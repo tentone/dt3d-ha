@@ -229,6 +229,8 @@ default_space: 7b9b4c3d-choose-a-space-id
 default_viewport: 6a8a2d10-optional-viewport-object-id
 navigation_controls: orbit
 orientation_cube: false
+vr_mode: false
+ar_mode: false
 visualization_only: true
 entity_click_action: open
 entity_double_click_action: open
@@ -258,6 +260,8 @@ spaces there. Leave `default_viewport` empty to follow the space's default.
 | `default_viewport`                       | space default      | Viewport object ID opened by this card.                                          |
 | `navigation_controls`                    | `orbit`            | Camera interaction style: `orbit`, `map`, or `fly`.                              |
 | `orientation_cube`                       | `false`            | Shows the camera orientation cube.                                               |
+| `vr_mode`                                | `false`            | Shows a VR button when immersive VR is available through WebXR.                  |
+| `ar_mode`                                | `false`            | Shows an AR button when immersive AR is available through WebXR.                  |
 | `visualization_only`                     | `false`            | Hides all editing and space-management controls.                                 |
 | `entity_click_action`                    | `nothing`          | `open`, `toggle`, or `nothing`.                                                  |
 | `entity_double_click_action`             | `open`             | `open`, `toggle`, or `nothing`.                                                  |
@@ -270,6 +274,10 @@ spaces there. Leave `default_viewport` empty to follow the space's default.
 
 Connection, antialiasing, resolution, shadow maps, and development mode are
 per-card. Tone mapping, post-processing, and daylight are per-space.
+
+WebXR immersive modes require a supported browser/device and HTTPS. During an
+AR session, the sky is hidden and the scene background is forced transparent;
+the saved space appearance is restored when AR ends.
 
 <img src="readme/6_card_configuration.png" width="500">
 

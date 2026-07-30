@@ -196,6 +196,36 @@ export class RendererManager {
 	 */
 	private running: boolean = false;
 
+	private xrEnabled = false;
+
+	private onUpdate?: (time: number) => void;
+
+	private previousFrameTime = 0;
+
+	private readonly animate = (time: DOMHighResTimeStamp): void => {
+		if (!this.running) {
+			return;
+		}
+
+		const delta =
+			this.previousFrameTime === 0 ? 0 : (time - this.previousFrameTime) / 1000;
+		this.previousFrameTime = time;
+		if (!this.renderer.xr.isPresenting) {
+			this.controls?.update(delta);
+		}
+		this.onUpdate?.(time);
+
+		if (this.renderer.xr.isPresenting) {
+			// EffectComposer does not produce a stereo XR framebuffer. Render the
+			// scene directly while immersive and keep post-processing for the card.
+			this.renderer.render(this.scene, this.camera);
+			return;
+		}
+
+		this.cssRenderer.render(this.scene, this.camera);
+		this.composer.render();
+	};
+
 	constructor(
 		camera: Camera,
 		canvas: HTMLCanvasElement,
@@ -236,6 +266,7 @@ export class RendererManager {
 		// Scene.background supplies solid backgrounds. Keep the renderer clear
 		// transparent so spaces configured without one expose the card behind them.
 		renderer.setClearColor(0x000000, 0);
+		renderer.xr.enabled = this.xrEnabled;
 		this.applyRenderingConfig(renderer);
 
 		return renderer;
@@ -437,8 +468,10 @@ export class RendererManager {
 		this.renderingConfig = nextConfig;
 
 		if (antialiasingChanged) {
+			const previousRenderer = this.renderer;
+			previousRenderer.setAnimationLoop(null);
 			this.disposePostProcessingPipeline();
-			this.renderer.dispose();
+			previousRenderer.dispose();
 			this.renderer = this.createRenderer();
 			const pipeline = this.createPostProcessingPipeline();
 			this.composer = pipeline.composer;
@@ -446,6 +479,9 @@ export class RendererManager {
 			this.postProcessingPasses = pipeline.passes;
 			this.selectionOutline = pipeline.selectionOutline;
 			this.setSelectedObjects(this.selectedObjects);
+			if (this.running) {
+				this.renderer.setAnimationLoop(this.animate);
+			}
 			return;
 		}
 
@@ -459,35 +495,44 @@ export class RendererManager {
 	 * @param onUpdate - Callback called before rendering.
 	 */
 	public start(onUpdate?: (time: number) => void): void {
+		this.onUpdate = onUpdate;
+		this.previousFrameTime = 0;
 		this.running = true;
-		let previousTime = 0;
-		const animate = (time: number) => {
-			if (this.running) {
-				requestAnimationFrame(animate);
-			}
-
-			const delta = previousTime === 0 ? 0 : (time - previousTime) / 1000;
-			previousTime = time;
-			this.controls?.update(delta);
-			onUpdate?.(time);
-
-			this.cssRenderer.render(this.scene, this.camera);
-			this.composer.render();
-		};
-
-		animate(0);
+		this.renderer.setAnimationLoop(this.animate);
 	}
 
 	/**
 	 * Stop the rendering loop and destroy all resources.
 	 */
 	public stop(): void {
+		this.running = false;
+		this.renderer.setAnimationLoop(null);
 		this.controls?.dispose();
 		this.disposePostProcessingPipeline();
 		this.renderer.dispose();
 		this.scene.clear();
+	}
 
-		this.running = false;
+	/**
+	 * Enable or disable WebXR support on the underlying renderer.
+	 */
+	public setXrEnabled(enabled: boolean): void {
+		this.xrEnabled = enabled;
+		this.renderer.xr.enabled = enabled;
+	}
+
+	/**
+	 * Hand an immersive session to Three.js.
+	 */
+	public async setXrSession(session: XRSession | null): Promise<void> {
+		if (session) {
+			this.setXrEnabled(true);
+			// "local" is a core immersive reference space and works even when a
+			// device does not grant the optional floor-tracking feature.
+			this.renderer.xr.setReferenceSpaceType("local");
+		}
+
+		await this.renderer.xr.setSession(session);
 	}
 
 	/**

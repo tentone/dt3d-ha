@@ -426,6 +426,12 @@ export class SceneManager {
 	private sky: Sky | null = null;
 
 	/**
+	 * Active immersive presentation mode. AR temporarily suppresses all scene
+	 * background imagery so the device camera can show through the XR layer.
+	 */
+	private immersiveMode: "vr" | "ar" | null = null;
+
+	/**
 	 * Current solar position supplied by Home Assistant's date/time configuration.
 	 */
 	private dateTimeSunPosition: SunPosition | null = null;
@@ -581,6 +587,18 @@ export class SceneManager {
 		this.applyAppearanceConfig();
 
 		return this.getSpaceSceneConfig();
+	}
+
+	/**
+	 * Apply temporary scene presentation rules for an immersive session.
+	 */
+	public setImmersiveMode(mode: "vr" | "ar" | null): void {
+		if (this.immersiveMode === mode) {
+			return;
+		}
+
+		this.immersiveMode = mode;
+		this.applyAppearanceConfig();
 	}
 
 	/**
@@ -1297,11 +1315,14 @@ export class SceneManager {
 	 * Apply the sky visibility and fallback scene background.
 	 */
 	private applyAppearanceConfig(): void {
+		const augmentedReality = this.immersiveMode === "ar";
+
 		if (this.sky) {
-			this.sky.visible = this.spaceSceneConfig.sky.enabled;
+			this.sky.visible = !augmentedReality && this.spaceSceneConfig.sky.enabled;
 		}
 
 		this.scene.background =
+			augmentedReality ||
 			this.spaceSceneConfig.background.type === "transparent"
 				? null
 				: new Color(this.spaceSceneConfig.background.color);

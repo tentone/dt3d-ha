@@ -17,6 +17,10 @@ export class DT3DCameraToggle extends LitElement {
 			z-index: 5;
 		}
 
+		:host([hidden]) {
+			display: none;
+		}
+
 		dt3d-floating-button {
 			right: 0;
 			bottom: 0;
