@@ -25,6 +25,7 @@ import {WallObject} from "../../objects/house/wall.js";
 import {WindowObject} from "../../objects/house/window.js";
 import {StaticLightObject} from "../../objects/static-light.js";
 import {ViewportObject} from "../../objects/viewport-object.js";
+import {resolveUserObject} from "../../utils/internal-object.js";
 import {LocalStorage} from "../../utils/local-storage.js";
 import componentStyles from "./object-tree.css?inline";
 
@@ -926,14 +927,19 @@ export class DT3DTree extends LitElement {
 	 * @param event - If select event shoudl be dispatched.
 	 */
 	public selectObject(id: UUID, event: boolean = false) {
-		if (!this.scene?.getObjectByProperty("uuid", id)) {
+		const requestedObject = this.scene?.getObjectByProperty("uuid", id) ?? null;
+		const object =
+			requestedObject === this.scene
+				? requestedObject
+				: resolveUserObject(requestedObject, this.scene);
+		if (!object) {
 			return;
 		}
 
-		this.selectedId = id;
-		this.selectedIds = new Set([id]);
-		this.selectedObject = this.scene.getObjectByProperty("uuid", id);
-		this.revealNode(id);
+		this.selectedId = object.uuid;
+		this.selectedIds = new Set([object.uuid]);
+		this.selectedObject = object;
+		this.revealNode(object.uuid);
 
 		if (event) {
 			this.dispatchSelection();

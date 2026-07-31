@@ -620,7 +620,12 @@ export function findMaterialObject(
 
 	let result: MaterialObject | null = null;
 	object.traverse((child) => {
-		if (!result && !isInternalDescendant(child, object) && hasMaterial(child)) {
+		const exposedByOwner = child.userData.ownerMaterialTarget === true;
+		if (
+			!result &&
+			(!isInternalDescendant(child, object) || exposedByOwner) &&
+			hasMaterial(child)
+		) {
 			result = child;
 		}
 	});

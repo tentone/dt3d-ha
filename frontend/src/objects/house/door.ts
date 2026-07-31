@@ -11,6 +11,7 @@ import {
 	SphereGeometry,
 } from "three";
 
+import {markObjectInternal} from "../../utils/internal-object.js";
 import {DTObject} from "../dt-object.js";
 
 export type DoorDimensions = {
@@ -226,45 +227,44 @@ export class DoorObject extends DTObject {
 		this.name = "Door";
 		this.userData.meshType = "door";
 
-		this.hingeGroup = new Group();
+		this.hingeGroup = markObjectInternal(new Group());
 		this.hingeGroup.name = "Door Hinge";
-		(this.hingeGroup as any).internal = true;
 		this.add(this.hingeGroup);
 
 		const material = new MeshStandardMaterial({color});
-		this.doorMesh = new Mesh(new BoxGeometry(1, 1, 1), material);
+		this.doorMesh = markObjectInternal(
+			new Mesh(new BoxGeometry(1, 1, 1), material),
+		);
 		this.doorMesh.name = "Door Panel";
+		this.doorMesh.userData.ownerMaterialTarget = true;
 		this.hingeGroup.add(this.doorMesh);
 
-		this.secondaryPanelGroup = new Group();
+		this.secondaryPanelGroup = markObjectInternal(new Group());
 		this.secondaryPanelGroup.name = "Door Secondary Panel";
-		(this.secondaryPanelGroup as any).internal = true;
 		this.add(this.secondaryPanelGroup);
-		this.secondaryDoorMesh = new Mesh(
-			new BoxGeometry(1, 1, 1),
-			this.doorMesh.material,
+		this.secondaryDoorMesh = markObjectInternal(
+			new Mesh(new BoxGeometry(1, 1, 1), this.doorMesh.material),
 		);
 		this.secondaryDoorMesh.name = "Door Panel 2";
 		this.secondaryPanelGroup.add(this.secondaryDoorMesh);
 
-		this.borderGroup = new Group();
+		this.borderGroup = markObjectInternal(new Group());
 		this.borderGroup.name = "Door Border";
-		(this.borderGroup as any).internal = true;
 		this.add(this.borderGroup);
 
-		this.hardwareGroup = new Group();
+		this.hardwareGroup = markObjectInternal(new Group());
 		this.hardwareGroup.name = "Door Hardware";
 		this.hingeGroup.add(this.hardwareGroup);
 
-		this.secondaryHardwareGroup = new Group();
+		this.secondaryHardwareGroup = markObjectInternal(new Group());
 		this.secondaryHardwareGroup.name = "Door Hardware 2";
 		this.secondaryPanelGroup.add(this.secondaryHardwareGroup);
 
-		this.doorWindowGroup = new Group();
+		this.doorWindowGroup = markObjectInternal(new Group());
 		this.doorWindowGroup.name = "Door Window";
 		this.hingeGroup.add(this.doorWindowGroup);
 
-		this.secondaryDoorWindowGroup = new Group();
+		this.secondaryDoorWindowGroup = markObjectInternal(new Group());
 		this.secondaryDoorWindowGroup.name = "Door Window 2";
 		this.secondaryPanelGroup.add(this.secondaryDoorWindowGroup);
 
@@ -462,7 +462,7 @@ export class DoorObject extends DTObject {
 					child === source.hingeGroup ||
 					child === source.secondaryPanelGroup ||
 					child === source.borderGroup ||
-					(child as any).internal === true
+					child.internal === true
 				) {
 					continue;
 				}
@@ -479,6 +479,13 @@ export class DoorObject extends DTObject {
 		this.updateHardwareGeometry();
 		this.updateWindowGeometry();
 		this.applyOpeningTransform();
+		for (const group of [
+			this.hingeGroup,
+			this.secondaryPanelGroup,
+			this.borderGroup,
+		]) {
+			markObjectInternal(group, true);
+		}
 	}
 
 	private clampWindow(): void {

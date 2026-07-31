@@ -1,5 +1,6 @@
 import {BoxGeometry, Color, Group, Mesh, MeshStandardMaterial} from "three";
 
+import {markObjectInternal} from "../../utils/internal-object.js";
 import {DTObject} from "../dt-object.js";
 
 export type WindowDimensions = {
@@ -231,9 +232,8 @@ export class WindowObject extends DTObject {
 		this.name = "Window";
 		this.userData.meshType = "window";
 
-		this.sashGroup = new Group();
+		this.sashGroup = markObjectInternal(new Group());
 		this.sashGroup.name = "Window Sash";
-		(this.sashGroup as any).internal = true;
 		this.add(this.sashGroup);
 
 		const material = new MeshStandardMaterial({
@@ -243,37 +243,36 @@ export class WindowObject extends DTObject {
 			roughness: 0.08,
 			metalness: 0.04,
 		});
-		this.windowMesh = new Mesh(new BoxGeometry(1, 1, 1), material);
+		this.windowMesh = markObjectInternal(
+			new Mesh(new BoxGeometry(1, 1, 1), material),
+		);
 		this.windowMesh.name = "Window Panel";
+		this.windowMesh.userData.ownerMaterialTarget = true;
 		this.sashGroup.add(this.windowMesh);
 
-		this.secondarySashGroup = new Group();
+		this.secondarySashGroup = markObjectInternal(new Group());
 		this.secondarySashGroup.name = "Window Sash 2";
-		(this.secondarySashGroup as any).internal = true;
 		this.add(this.secondarySashGroup);
-		this.secondaryWindowMesh = new Mesh(
-			new BoxGeometry(1, 1, 1),
-			this.windowMesh.material,
+		this.secondaryWindowMesh = markObjectInternal(
+			new Mesh(new BoxGeometry(1, 1, 1), this.windowMesh.material),
 		);
 		this.secondaryWindowMesh.name = "Window Panel 2";
 		this.secondarySashGroup.add(this.secondaryWindowMesh);
 
-		this.frameGroup = new Group();
+		this.frameGroup = markObjectInternal(new Group());
 		this.frameGroup.name = "Window Border";
-		(this.frameGroup as any).internal = true;
 		this.add(this.frameGroup);
 
-		this.gridGroup = new Group();
+		this.gridGroup = markObjectInternal(new Group());
 		this.gridGroup.name = "Window Grid";
 		this.sashGroup.add(this.gridGroup);
 
-		this.secondaryGridGroup = new Group();
+		this.secondaryGridGroup = markObjectInternal(new Group());
 		this.secondaryGridGroup.name = "Window Grid 2";
 		this.secondarySashGroup.add(this.secondaryGridGroup);
 
-		this.blindsGroup = new Group();
+		this.blindsGroup = markObjectInternal(new Group());
 		this.blindsGroup.name = "Window Blinds";
-		(this.blindsGroup as any).internal = true;
 		this.add(this.blindsGroup);
 
 		this.frameMaterial = new MeshStandardMaterial({color: this.borderColor});
@@ -496,7 +495,7 @@ export class WindowObject extends DTObject {
 					child === source.secondarySashGroup ||
 					child === source.frameGroup ||
 					child === source.blindsGroup ||
-					(child as any).internal === true
+					child.internal === true
 				) {
 					continue;
 				}
@@ -530,6 +529,14 @@ export class WindowObject extends DTObject {
 		this.updateGridGeometry(panelWidth, glassHeight);
 		this.updateBlindsGeometry();
 		this.applyOpeningTransform();
+		for (const group of [
+			this.sashGroup,
+			this.secondarySashGroup,
+			this.frameGroup,
+			this.blindsGroup,
+		]) {
+			markObjectInternal(group, true);
+		}
 	}
 
 	private positionWindowPanels(glassWidth: number, panelWidth: number): void {

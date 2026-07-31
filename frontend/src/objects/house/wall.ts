@@ -9,6 +9,7 @@ import {
 } from "three";
 import {mergeGeometries} from "three/examples/jsm/utils/BufferGeometryUtils.js";
 
+import {markObjectInternal} from "../../utils/internal-object.js";
 import {DTObject} from "../dt-object.js";
 import {TextSprite} from "../helpers/text-sprite.js";
 import {DoorObject} from "./door.js";
@@ -127,15 +128,17 @@ export class WallObject extends DTObject {
 		this.userData.meshType = "wall";
 
 		const material = new MeshStandardMaterial({color});
-		this.wallMesh = new Mesh(new BoxGeometry(1, 1, 1), material);
+		this.wallMesh = markObjectInternal(
+			new Mesh(new BoxGeometry(1, 1, 1), material),
+		);
 		this.wallMesh.name = "Wall Body";
 		this.wallMesh.userData.wallPart = "body";
+		this.wallMesh.userData.ownerMaterialTarget = true;
 		this.add(this.wallMesh);
 
-		this.baseboardGroup = new Group();
+		this.baseboardGroup = markObjectInternal(new Group());
 		this.baseboardGroup.name = "Wall Baseboard";
 		this.baseboardGroup.userData.wallPart = "baseboard";
-		(this.baseboardGroup as any).internal = true;
 		this.add(this.baseboardGroup);
 		this.baseboardMaterial = new MeshStandardMaterial({
 			color: this.baseboardColor,
@@ -285,9 +288,8 @@ export class WallObject extends DTObject {
 	public updateLabel(): void {
 		const labelText = `${this.length.toFixed(2)}m`;
 		if (!this.lengthLabel) {
-			this.lengthLabel = new TextSprite(labelText);
+			this.lengthLabel = markObjectInternal(new TextSprite(labelText));
 			this.lengthLabel.scale.setScalar(0.25);
-			(this.lengthLabel as any).internal = true;
 			this.add(this.lengthLabel);
 		} else {
 			this.lengthLabel.setText(labelText);
@@ -359,7 +361,7 @@ export class WallObject extends DTObject {
 				if (
 					child === source.wallMesh ||
 					child === source.baseboardGroup ||
-					(child as any).internal === true
+					child.internal === true
 				) {
 					continue;
 				}
@@ -420,9 +422,11 @@ export class WallObject extends DTObject {
 		for (const segment of segments) {
 			const width = segment.right - segment.left;
 			if (width <= 0.001) continue;
-			const mesh = new Mesh(
-				new BoxGeometry(width, this.baseboardHeight, depth),
-				this.baseboardMaterial,
+			const mesh = markObjectInternal(
+				new Mesh(
+					new BoxGeometry(width, this.baseboardHeight, depth),
+					this.baseboardMaterial,
+				),
 			);
 			mesh.position.set(
 				(segment.left + segment.right) / 2,

@@ -108,6 +108,7 @@ import {
 	findImageFile,
 	pickLocalFiles,
 } from "../utils/file-utils.js";
+import {resolveUserObject} from "../utils/internal-object.js";
 import {isModelFile, loadModelsFromFiles} from "../utils/loader-utils.js";
 import {LocalStorage} from "../utils/local-storage.js";
 import {findMesh} from "../utils/object3d-utils.js";
@@ -1741,7 +1742,13 @@ export class DT3DCard extends LitElement {
 
 	/** Store and display a complete object selection. */
 	private setSelectedObjects(objects: Object3D[]): void {
-		const uniqueObjects = [...new Set(objects)];
+		const uniqueObjects = [
+			...new Set(
+				objects
+					.map((object) => resolveUserObject(object, this.space))
+					.filter((object): object is Object3D => Boolean(object)),
+			),
+		];
 		if (uniqueObjects.length === 0 && this.moveToPointObject) {
 			this.cancelMoveToPoint();
 		}
@@ -2216,11 +2223,13 @@ export class DT3DCard extends LitElement {
 		// Pick object and trigger click interaction
 		const {object} = this.pickObjectFromEvent(event);
 		this.setSelectedObject(object);
-		object?.onInteraction({
-			type: "click",
-			event: event,
-			hass: this.hassInstance,
-		});
+		if (object instanceof DTObject) {
+			object.onInteraction({
+				type: "click",
+				event: event,
+				hass: this.hassInstance,
+			});
+		}
 
 		if (!(object instanceof EntityObject)) {
 			return;
@@ -2297,7 +2306,8 @@ export class DT3DCard extends LitElement {
 		}
 
 		const {object} = this.pickObjectFromEvent(event);
-		if (object === this.hoveredObject) {
+		const interactiveObject = object instanceof DTObject ? object : null;
+		if (interactiveObject === this.hoveredObject) {
 			return;
 		}
 
@@ -2310,7 +2320,7 @@ export class DT3DCard extends LitElement {
 			});
 		}
 
-		this.hoveredObject = object;
+		this.hoveredObject = interactiveObject;
 
 		// If there is a new hovered object, send pointerenter
 		if (this.hoveredObject) {
@@ -2323,13 +2333,13 @@ export class DT3DCard extends LitElement {
 	}
 
 	/**
-	 * Pick digital tiwn object using the raycaster.
+	 * Pick the first user-managed object owning a raycast hit.
 	 *
 	 * @param event - Mouse event to get pointer coordinates
 	 * @returns - Object fround in interaction
 	 */
 	private pickObjectFromEvent(event: MouseEvent): {
-		object: DTObject | null;
+		object: Object3D | null;
 		intersection: Intersection<Object3D> | null;
 	} {
 		if (!this.canvas || !this.camera || !this.space) {
@@ -2347,25 +2357,10 @@ export class DT3DCard extends LitElement {
 		);
 
 		for (const intersection of intersects) {
-			let current: Object3D | null = intersection.object;
-			let internalHit = false;
-
-			while (current) {
-				if (current instanceof DTObject && current?.internal !== true) {
-					return {object: current, intersection};
-				}
-
-				if (current?.internal === true) {
-					internalHit = true;
-				}
-
-				current = current.parent;
+			const object = resolveUserObject(intersection.object, this.space);
+			if (object) {
+				return {object, intersection};
 			}
-
-			if (internalHit) {
-				continue;
-			}
-			return {object: null, intersection};
 		}
 
 		return {object: null, intersection: null};
@@ -2502,9 +2497,7 @@ export class DT3DCard extends LitElement {
 	 * @param event - Pointer or mouse event to resolve.
 	 */
 	private resolveSceneContextMenuTarget(event: MouseEvent): Object3D | null {
-		const {object, intersection} = this.pickObjectFromEvent(event);
-
-		return object ?? intersection?.object ?? null;
+		return this.pickObjectFromEvent(event).object;
 	}
 
 	/**
@@ -4432,23 +4425,24 @@ export class DT3DCard extends LitElement {
 				}
 			}
 
-			const {object, intersection} = this.pickObjectFromEvent(event);
-			if (intersection && !this.isVisualizationOnly()) {
-				const target = object ?? (intersection.object as Object3D);
-				this.attachTransform(target);
-				this.tree.selectObject(target.uuid);
-				this.setSelectedObject(target);
+			const {object} = this.pickObjectFromEvent(event);
+			if (object && !this.isVisualizationOnly()) {
+				this.attachTransform(object);
+				this.tree.selectObject(object.uuid);
+				this.setSelectedObject(object);
 			}
 
 			if (object instanceof ViewportObject) {
 				this.activateViewport(object);
 			}
 
-			object?.onInteraction({
-				type: "dblclick",
-				event: event,
-				hass: this.hassInstance,
-			});
+			if (object instanceof DTObject) {
+				object.onInteraction({
+					type: "dblclick",
+					event: event,
+					hass: this.hassInstance,
+				});
+			}
 
 			if (object instanceof EntityObject) {
 				this.performEntityAction(

@@ -1,5 +1,7 @@
 import {Box3, Mesh, type Object3D, Vector3} from "three";
 
+import {isInternalObject} from "../utils/internal-object.js";
+
 const COLLISION_EPSILON = 1e-6;
 const AXES = ["x", "y", "z"] as const;
 
@@ -42,7 +44,7 @@ export function collectCollisionObstacles(
 
 	const visit = (object: Object3D, insideMovingObject: boolean): void => {
 		const isMovingObject = insideMovingObject || movingRoots.has(object);
-		if (isMovingObject || object.visible === false || isInternalObject(object)) {
+		if (isMovingObject || object.visible === false) {
 			return;
 		}
 
@@ -59,6 +61,9 @@ export function collectCollisionObstacles(
 	};
 
 	for (const child of space.children) {
+		if (isInternalObject(child)) {
+			continue;
+		}
 		visit(child, false);
 	}
 
@@ -136,7 +141,7 @@ export function getInitiallyOverlappingObstacles(
 }
 
 function expandBoundsFromObject(bounds: Box3, object: Object3D): void {
-	if (object.visible === false || isInternalObject(object)) {
+	if (object.visible === false) {
 		return;
 	}
 
@@ -161,10 +166,6 @@ function getMeshBounds(mesh: Mesh): Box3 | null {
 	return geometryBounds
 		? geometryBounds.clone().applyMatrix4(mesh.matrixWorld)
 		: null;
-}
-
-function isInternalObject(object: Object3D): boolean {
-	return (object as Object3D & { internal?: boolean }).internal === true;
 }
 
 function strictlyIntersects(first: Box3, second: Box3): boolean {

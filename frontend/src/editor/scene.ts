@@ -746,10 +746,6 @@ export class SceneManager {
 				this.applyShadowMapResolution(child);
 			}
 
-			if ((child as any).internal === true) {
-				return;
-			}
-
 			if (child instanceof Mesh) {
 				child.castShadow = this.shadowsEnabled;
 				child.receiveShadow = this.shadowsEnabled;
