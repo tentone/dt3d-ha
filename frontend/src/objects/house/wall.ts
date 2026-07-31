@@ -1,4 +1,4 @@
-import type {Vector3} from "three";
+import type {Object3D, Vector3} from "three";
 import {
 	BoxGeometry,
 	BufferGeometry,
@@ -241,6 +241,45 @@ export class WallObject extends DTObject {
 	}
 
 	/**
+	 * Keep the wall cut-outs in sync when an opening is attached directly.
+	 *
+	 * Saved scenes are rebuilt by creating every object first and restoring the
+	 * parent/child hierarchy afterwards. Rebuilding here ensures a reloaded wall
+	 * is updated as soon as each saved door or window is reattached, without
+	 * depending on a later render-frame update.
+	 */
+	public override add(...objects: Object3D[]): this {
+		super.add(...objects);
+		if (
+			this.wallMesh &&
+			objects.some(
+				(object) =>
+					object instanceof DoorObject || object instanceof WindowObject,
+			)
+		) {
+			this.updateGeometry();
+		}
+		return this;
+	}
+
+	/**
+	 * Restore the solid wall immediately when an opening is removed or moved to
+	 * another wall. The per-frame signature check remains as a fallback for
+	 * opening dimension and transform changes.
+	 */
+	public override remove(...objects: Object3D[]): this {
+		const removesOpening = objects.some(
+			(object) =>
+				object instanceof DoorObject || object instanceof WindowObject,
+		);
+		super.remove(...objects);
+		if (this.wallMesh && removesOpening) {
+			this.updateGeometry();
+		}
+		return this;
+	}
+
+	/**
 	 * Update label with the length of the wall.
 	 */
 	public updateLabel(): void {
@@ -269,7 +308,6 @@ export class WallObject extends DTObject {
 		door.position.x = this.clampOpeningOffset(wallOffset, door.width);
 		door.position.y = 0;
 		this.add(door);
-		this.updateGeometry();
 		return door;
 	}
 
@@ -285,7 +323,6 @@ export class WallObject extends DTObject {
 		window.position.x = this.clampOpeningOffset(wallOffset, window.width);
 		window.position.y = 1.2;
 		this.add(window);
-		this.updateGeometry();
 		return window;
 	}
 
