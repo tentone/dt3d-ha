@@ -20,6 +20,11 @@
 	width: 100%;
 }
 
+.selector select option {
+	background-color: var(--card-background-color, #fff);
+	color: var(--primary-text-color, #212121);
+}
+
 label {
 	font-size: 12px;
 	font-weight: 600;
