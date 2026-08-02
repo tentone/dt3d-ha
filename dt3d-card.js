@@ -2123,7 +2123,7 @@ let Lo = class extends ln {
     return Fe`
 		<div class="connection-status-container">
 			<div style="margin: 5px;" class="${this.success ? "connection-status-success" : "connection-status-error"}">
-				${this.msg}<br>${"2026-08-02T16:09:02.564Z"}
+				${this.msg}<br>${"2026-08-02T16:19:57.157Z"}
 			</div>
 		</div>`;
   }
@@ -46867,19 +46867,13 @@ class eu extends Un {
 		`, this.root.appendChild(this.status), this.overlay = new U4(this.root), this.overlay.internal = !0, this.overlay.position.y = 1.2, this.overlay.scale.setScalar(45e-4), this.overlay.visible = !1, this.add(this.overlay), this.setEntity(t);
   }
   /**
-   * Start refreshing the camera still image after the object is added to the scene.
-   */
-  initialize() {
-    this.startRefreshTimer();
-  }
-  /**
    * Stop refresh work and detach DOM resources before the object is removed.
    */
   dispose() {
     this.stopRefreshTimer(), this.root.remove();
   }
   onInteraction(e) {
-    super.onInteraction(e), e.type === "pointerenter" ? (this.isHovered = !0, this.updatePreviewVisibility()) : e.type === "pointerleave" && (this.isHovered = !1, this.updatePreviewVisibility());
+    super.onInteraction(e), e.type === "pointerenter" ? (this.isHovered = !0, this.updatePreviewVisibility(), this.startRefreshTimer()) : e.type === "pointerleave" && (this.isHovered = !1, this.updatePreviewVisibility(), this.stopRefreshTimer());
   }
   /**
    * Update the camera overlay from the latest Home Assistant state.
@@ -46897,16 +46891,17 @@ class eu extends Un {
       return;
     }
     const i = n !== this.imageUrl;
-    this.imageUrl = n, this.icon.setColor(e.state === "unavailable" ? 8421504 : 2003199), (i || !this.image.src) && this.refreshImage();
+    this.imageUrl = n, this.icon.setColor(e.state === "unavailable" ? 8421504 : 2003199), this.isHovered && (i || !this.image.getAttribute("src")) && this.refreshImage();
   }
   createEntityClone() {
     return new eu(this.entityId, this.getEntity());
   }
   /**
-   * Start the periodic camera image refresh loop.
+   * Load immediately and start the periodic camera image refresh loop while the
+   * preview is visible.
    */
   startRefreshTimer() {
-    this.stopRefreshTimer(), this.refreshTimer = window.setInterval(() => {
+    this.stopRefreshTimer(), this.refreshImage(), this.refreshTimer = window.setInterval(() => {
       this.refreshImage();
     }, Jk);
   }
@@ -46920,7 +46915,7 @@ class eu extends Un {
    * Refresh the still image with a cache-busting query parameter.
    */
   refreshImage() {
-    if (!this.imageUrl)
+    if (!this.isHovered || !this.imageUrl)
       return;
     this.image.getAttribute("src") || this.setStatus("Loading camera image...");
     const e = new URL(this.imageUrl);

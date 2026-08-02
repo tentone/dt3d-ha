@@ -51,7 +51,7 @@ export class EntityCamera extends EntityObject {
 	private imageUrl: string | null = null;
 
 	/**
-	 * Periodic still-image refresh timer started when the object is initialized.
+	 * Periodic still-image refresh timer active only while the preview is visible.
 	 */
 	private refreshTimer: number | null = null;
 
@@ -139,13 +139,6 @@ export class EntityCamera extends EntityObject {
 	}
 
 	/**
-	 * Start refreshing the camera still image after the object is added to the scene.
-	 */
-	public override initialize(): void {
-		this.startRefreshTimer();
-	}
-
-	/**
 	 * Stop refresh work and detach DOM resources before the object is removed.
 	 */
 	public override dispose(): void {
@@ -159,9 +152,11 @@ export class EntityCamera extends EntityObject {
 		if (event.type === "pointerenter") {
 			this.isHovered = true;
 			this.updatePreviewVisibility();
+			this.startRefreshTimer();
 		} else if (event.type === "pointerleave") {
 			this.isHovered = false;
 			this.updatePreviewVisibility();
+			this.stopRefreshTimer();
 		}
 	}
 
@@ -190,7 +185,7 @@ export class EntityCamera extends EntityObject {
 		this.imageUrl = nextUrl;
 		this.icon.setColor(entity.state === "unavailable" ? 0x808080 : 0x1e90ff);
 
-		if (changed || !this.image.src) {
+		if (this.isHovered && (changed || !this.image.getAttribute("src"))) {
 			this.refreshImage();
 		}
 	}
@@ -200,10 +195,12 @@ export class EntityCamera extends EntityObject {
 	}
 
 	/**
-	 * Start the periodic camera image refresh loop.
+	 * Load immediately and start the periodic camera image refresh loop while the
+	 * preview is visible.
 	 */
 	private startRefreshTimer(): void {
 		this.stopRefreshTimer();
+		this.refreshImage();
 		this.refreshTimer = window.setInterval(() => {
 			this.refreshImage();
 		}, CAMERA_REFRESH_INTERVAL_MS);
@@ -225,7 +222,7 @@ export class EntityCamera extends EntityObject {
 	 * Refresh the still image with a cache-busting query parameter.
 	 */
 	private refreshImage(): void {
-		if (!this.imageUrl) {
+		if (!this.isHovered || !this.imageUrl) {
 			return;
 		}
 

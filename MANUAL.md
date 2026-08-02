@@ -354,8 +354,8 @@ Then optimize in this order:
 4. Keep antialiasing off on high-DPI displays. Test it only after resolution and
    shadows are acceptable.
 5. Prefer optimized `.glb` models, fewer polygons/materials, compressed
-   textures, and fewer camera entities. Camera objects refresh their still
-   images regularly and add network/DOM work.
+   textures, and fewer camera entities. Camera objects load and refresh their
+   still images only while their pointer-hover preview is visible.
 6. Split very large homes into separate spaces or dashboard views so clients do
    not render everything at once.
 
