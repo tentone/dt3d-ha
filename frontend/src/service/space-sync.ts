@@ -413,6 +413,13 @@ export class SpaceSync {
 			if (child instanceof DTObject) {
 				child.dispose();
 			}
+			const cssObject = child as Object3D & {
+				element?: HTMLElement;
+				isCSS3DObject?: boolean;
+			};
+			if (cssObject.isCSS3DObject === true) {
+				cssObject.element?.remove();
+			}
 		});
 		this.space.clear();
 		this.sceneManager.requestShadowMapUpdate();

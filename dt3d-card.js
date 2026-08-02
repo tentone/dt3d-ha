@@ -2135,7 +2135,7 @@ let No = class extends ni {
     return Fe`
 		<div class="connection-status-container">
 			<div style="margin: 5px;" class="${this.success ? "connection-status-success" : "connection-status-error"}">
-				${this.msg}<br>${"2026-08-02T19:11:26.791Z"}
+				${this.msg}<br>${"2026-08-02T20:20:21.288Z"}
 			</div>
 		</div>`;
   }
@@ -50878,6 +50878,8 @@ class mU {
   clearSpace() {
     this.resourceLoadGeneration += 1, this.space.traverse((e) => {
       e instanceof ii && e.dispose();
+      const t = e;
+      t.isCSS3DObject === !0 && t.element?.remove();
     }), this.space.clear(), this.sceneManager.requestShadowMapUpdate(), this.objectApiIds.clear(), this.pendingObjectCreates.clear();
   }
   /**
