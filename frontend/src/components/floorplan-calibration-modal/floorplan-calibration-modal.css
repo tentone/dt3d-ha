@@ -80,7 +80,7 @@ p {
 	background-size: 16px 16px;
 }
 
-img {
+canvas {
 	display: block;
 	width: auto;
 	height: auto;
@@ -89,43 +89,6 @@ img {
 	user-select: none;
 	touch-action: none;
 	cursor: crosshair;
-}
-
-svg {
-	position: absolute;
-	inset: 0;
-	width: 100%;
-	height: 100%;
-	pointer-events: none;
-	overflow: visible;
-}
-
-.reference-line {
-	stroke: #ff2d55;
-	stroke-width: 4;
-	stroke-linecap: round;
-}
-
-.point-marker {
-	stroke: white;
-	stroke-width: 3;
-}
-
-.start-point {
-	fill: #00b84a;
-}
-
-.end-point {
-	fill: #ff2d55;
-}
-
-text {
-	fill: #ff2d55;
-	stroke: white;
-	stroke-width: 3;
-	paint-order: stroke;
-	font: bold 18px sans-serif;
-	text-anchor: middle;
 }
 
 .calibration-controls {

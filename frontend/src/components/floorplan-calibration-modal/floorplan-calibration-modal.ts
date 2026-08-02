@@ -1,5 +1,6 @@
-import {html, LitElement, nothing, unsafeCSS} from "lit";
-import {customElement, property, state} from "lit/decorators.js";
+import type {PropertyValues} from "lit";
+import {html, LitElement, unsafeCSS} from "lit";
+import {customElement, property, query, state} from "lit/decorators.js";
 
 import type {
 	FloorplanCalibration,
@@ -9,6 +10,8 @@ import {localManager} from "../../locale/locale.js";
 import componentStyles from "./floorplan-calibration-modal.css?inline";
 
 export type FloorplanCalibrationSubmitDetail = FloorplanCalibration;
+
+const MAX_CANVAS_DIMENSION = 4096;
 
 @customElement("dt3d-floorplan-calibration-modal")
 export class DT3DFloorplanCalibrationModal extends LitElement {
@@ -32,6 +35,15 @@ export class DT3DFloorplanCalibrationModal extends LitElement {
 	@state()
 	private imageHeight = 0;
 
+	@query("canvas")
+	private canvas: HTMLCanvasElement;
+
+	private sourceImage: HTMLImageElement | null = null;
+
+	private canvasResizeObserver: ResizeObserver | null = null;
+
+	private imageLoadSequence = 0;
+
 	private close(): void {
 		this.dispatchEvent(new CustomEvent("modal-close", {
 			bubbles: true,
@@ -39,10 +51,125 @@ export class DT3DFloorplanCalibrationModal extends LitElement {
 		}));
 	}
 
-	private handleImageLoad(event: Event): void {
-		const image = event.currentTarget as HTMLImageElement;
-		this.imageWidth = image.naturalWidth;
-		this.imageHeight = image.naturalHeight;
+	protected firstUpdated(): void {
+		this.canvasResizeObserver = new ResizeObserver(() => this.drawCanvas());
+		this.canvasResizeObserver.observe(this.canvas);
+	}
+
+	protected updated(changedProperties: PropertyValues): void {
+		if (changedProperties.has("imageUrl")) {
+			this.loadImage();
+		} else if (changedProperties.has("points")) {
+			this.drawCanvas();
+		}
+	}
+
+	public disconnectedCallback(): void {
+		super.disconnectedCallback();
+		this.imageLoadSequence += 1;
+		this.canvasResizeObserver?.disconnect();
+		this.canvasResizeObserver = null;
+	}
+
+	private loadImage(): void {
+		const sequence = ++this.imageLoadSequence;
+		const image = new Image();
+		image.addEventListener("load", () => {
+			if (sequence !== this.imageLoadSequence) {
+				return;
+			}
+
+			this.sourceImage = image;
+			this.imageWidth = image.naturalWidth;
+			this.imageHeight = image.naturalHeight;
+			this.points = [];
+			void this.updateComplete.then(() => this.drawCanvas());
+		});
+		image.addEventListener("error", () => {
+			if (sequence !== this.imageLoadSequence) {
+				return;
+			}
+			this.sourceImage = null;
+			this.imageWidth = 0;
+			this.imageHeight = 0;
+			this.drawCanvas();
+		});
+		image.src = this.imageUrl;
+	}
+
+	private drawCanvas(): void {
+		if (!this.canvas) {
+			return;
+		}
+
+		const context = this.canvas.getContext("2d");
+		if (!context) {
+			return;
+		}
+
+		if (!this.sourceImage || !this.imageWidth || !this.imageHeight) {
+			context.clearRect(0, 0, this.canvas.width, this.canvas.height);
+			return;
+		}
+
+		const resolutionScale = Math.min(
+			1,
+			MAX_CANVAS_DIMENSION / Math.max(this.imageWidth, this.imageHeight),
+		);
+		const canvasWidth = Math.max(1, Math.round(this.imageWidth * resolutionScale));
+		const canvasHeight = Math.max(
+			1,
+			Math.round(this.imageHeight * resolutionScale),
+		);
+		if (
+			this.canvas.width !== canvasWidth ||
+			this.canvas.height !== canvasHeight
+		) {
+			this.canvas.width = canvasWidth;
+			this.canvas.height = canvasHeight;
+		}
+
+		context.clearRect(0, 0, canvasWidth, canvasHeight);
+		context.drawImage(this.sourceImage, 0, 0, canvasWidth, canvasHeight);
+
+		const bounds = this.canvas.getBoundingClientRect();
+		const cssToCanvasScale =
+			bounds.width > 0 ? canvasWidth / bounds.width : 1;
+		const toCanvasPoint = (point: ImagePoint): ImagePoint => ({
+			x: point.x * (canvasWidth / this.imageWidth),
+			y: point.y * (canvasHeight / this.imageHeight),
+		});
+		const canvasPoints = this.points.map(toCanvasPoint);
+
+		if (canvasPoints.length === 2) {
+			context.save();
+			context.beginPath();
+			context.moveTo(canvasPoints[0].x, canvasPoints[0].y);
+			context.lineTo(canvasPoints[1].x, canvasPoints[1].y);
+			context.strokeStyle = "#ff2d55";
+			context.lineWidth = 4 * cssToCanvasScale;
+			context.lineCap = "round";
+			context.stroke();
+			context.restore();
+		}
+
+		canvasPoints.forEach((point, index) => {
+			const radius = 10 * cssToCanvasScale;
+			context.save();
+			context.beginPath();
+			context.arc(point.x, point.y, radius, 0, Math.PI * 2);
+			context.fillStyle = index === 0 ? "#00b84a" : "#ff2d55";
+			context.fill();
+			context.strokeStyle = "white";
+			context.lineWidth = 3 * cssToCanvasScale;
+			context.stroke();
+			context.fillStyle = "white";
+			context.font = `bold ${12 * cssToCanvasScale}px sans-serif`;
+			context.textAlign = "center";
+			context.textBaseline = "middle";
+			context.fillText(String(index + 1), point.x, point.y);
+			context.restore();
+		});
 	}
 
 	private selectPoint(event: PointerEvent): void {
@@ -51,8 +178,8 @@ export class DT3DFloorplanCalibrationModal extends LitElement {
 		}
 		event.preventDefault();
 
-		const image = event.currentTarget as HTMLImageElement;
-		const bounds = image.getBoundingClientRect();
+		const canvas = event.currentTarget as HTMLCanvasElement;
+		const bounds = canvas.getBoundingClientRect();
 		const point = {
 			x: Math.min(
 				this.imageWidth,
@@ -130,8 +257,6 @@ export class DT3DFloorplanCalibrationModal extends LitElement {
 	}
 
 	public render() {
-		const [pointA, pointB] = this.points;
-		const markerRadius = Math.max(this.imageWidth, this.imageHeight) * 0.01;
 		return html`
 			<div class="overlay" @click=${this.close} @keydown=${this.handleKeyDown}>
 				<form
@@ -160,51 +285,11 @@ export class DT3DFloorplanCalibrationModal extends LitElement {
 					</header>
 
 					<div class="image-stage">
-						<img
-							src=${this.imageUrl}
-							alt=${this.imageName}
-							draggable="false"
-							@load=${this.handleImageLoad}
+						<canvas
+							role="img"
+							aria-label=${this.imageName}
 							@pointerdown=${this.selectPoint}
-						/>
-						${this.imageWidth && this.imageHeight
-							? html`
-								<svg
-									viewBox=${`0 0 ${this.imageWidth} ${this.imageHeight}`}
-									aria-hidden="true"
-								>
-									${pointA && pointB
-										? html`<line
-												class="reference-line"
-												x1=${pointA.x}
-												y1=${pointA.y}
-												x2=${pointB.x}
-												y2=${pointB.y}
-												vector-effect="non-scaling-stroke"
-											></line>`
-										: nothing}
-									${this.points.map(
-										(point, index) => html`
-											<circle
-												class=${`point-marker ${index === 0 ? "start-point" : "end-point"}`}
-												cx=${point.x}
-												cy=${point.y}
-												r=${markerRadius}
-												vector-effect="non-scaling-stroke"
-											></circle>
-											<text
-												x=${point.x}
-												y=${point.y}
-												dy=${-markerRadius * 1.6}
-												style=${`font-size: ${markerRadius * 2.5}px`}
-											>
-												${index + 1}
-											</text>
-										`,
-									)}
-								</svg>
-							`
-							: nothing}
+						></canvas>
 					</div>
 
 					<div class="calibration-controls">
