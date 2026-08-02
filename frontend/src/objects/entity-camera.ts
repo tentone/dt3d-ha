@@ -5,7 +5,8 @@ import type {DTInteractionEvent} from "./dt-object.js";
 import {EntityObject} from "./entity-object.js";
 import {IconSprite} from "./helpers/icon-sprite.js";
 
-const CAMERA_REFRESH_INTERVAL_MS = 5000;
+// 334 ms keeps request starts at or below three frames per second.
+const CAMERA_MIN_FRAME_INTERVAL_MS = 334;
 
 /**
  * Camera entity representation with an image preview shown on pointer hover.
@@ -51,9 +52,15 @@ export class EntityCamera extends EntityObject {
 	private imageUrl: string | null = null;
 
 	/**
-	 * Periodic still-image refresh timer active only while the preview is visible.
+	 * Next-frame timer active only while the preview is visible.
 	 */
 	private refreshTimer: number | null = null;
+
+	/** Whether a camera image request is currently in flight. */
+	private imageRequestPending = false;
+
+	/** Start time of the most recent image request, used to enforce the FPS cap. */
+	private lastImageRequestAt = 0;
 
 	/**
 	 * Whether the camera preview should be visible.
@@ -101,9 +108,11 @@ export class EntityCamera extends EntityObject {
 			object-fit: cover;
 			background: var(--secondary-background-color);
 		`;
-		this.image.addEventListener("load", () => this.setStatus(""));
+		this.image.addEventListener("load", () =>
+			this.handleImageRequestSettled(true),
+		);
 		this.image.addEventListener("error", () =>
-			this.setStatus("Camera image unavailable"),
+			this.handleImageRequestSettled(false),
 		);
 		this.root.appendChild(this.image);
 
@@ -142,7 +151,9 @@ export class EntityCamera extends EntityObject {
 	 * Stop refresh work and detach DOM resources before the object is removed.
 	 */
 	public override dispose(): void {
+		this.isHovered = false;
 		this.stopRefreshTimer();
+		this.image.removeAttribute("src");
 		this.root.remove();
 	}
 
@@ -176,7 +187,10 @@ export class EntityCamera extends EntityObject {
 		const nextUrl = EntityCamera.resolveImageUrl(entity);
 		if (!nextUrl) {
 			this.imageUrl = null;
-			this.image.removeAttribute("src");
+			this.stopRefreshTimer();
+			if (!this.imageRequestPending) {
+				this.image.removeAttribute("src");
+			}
 			this.setStatus("Camera image unavailable");
 			return;
 		}
@@ -186,7 +200,7 @@ export class EntityCamera extends EntityObject {
 		this.icon.setColor(entity.state === "unavailable" ? 0x808080 : 0x1e90ff);
 
 		if (this.isHovered && (changed || !this.image.getAttribute("src"))) {
-			this.refreshImage();
+			this.scheduleNextRefresh();
 		}
 	}
 
@@ -195,34 +209,71 @@ export class EntityCamera extends EntityObject {
 	}
 
 	/**
-	 * Load immediately and start the periodic camera image refresh loop while the
-	 * preview is visible.
+	 * Start the completion-driven camera image refresh loop.
 	 */
 	private startRefreshTimer(): void {
 		this.stopRefreshTimer();
-		this.refreshImage();
-		this.refreshTimer = window.setInterval(() => {
-			this.refreshImage();
-		}, CAMERA_REFRESH_INTERVAL_MS);
+		this.scheduleNextRefresh();
 	}
 
 	/**
-	 * Stop the periodic camera image refresh loop.
+	 * Stop any scheduled camera image refresh.
 	 */
 	private stopRefreshTimer(): void {
 		if (this.refreshTimer === null) {
 			return;
 		}
 
-		window.clearInterval(this.refreshTimer);
+		window.clearTimeout(this.refreshTimer);
 		this.refreshTimer = null;
+	}
+
+	/**
+	 * Schedule a request after both the previous request has settled and the
+	 * minimum frame interval has elapsed.
+	 */
+	private scheduleNextRefresh(): void {
+		if (
+			!this.isHovered ||
+			!this.imageUrl ||
+			this.imageRequestPending ||
+			this.refreshTimer !== null
+		) {
+			return;
+		}
+
+		const elapsed = Date.now() - this.lastImageRequestAt;
+		const delay = Math.max(0, CAMERA_MIN_FRAME_INTERVAL_MS - elapsed);
+		if (delay === 0) {
+			this.refreshImage();
+			return;
+		}
+
+		this.refreshTimer = window.setTimeout(() => {
+			this.refreshTimer = null;
+			this.refreshImage();
+		}, delay);
+	}
+
+	/** Finish one request before allowing the next frame to be requested. */
+	private handleImageRequestSettled(loaded: boolean): void {
+		this.imageRequestPending = false;
+
+		if (!this.imageUrl) {
+			this.image.removeAttribute("src");
+			this.setStatus("Camera image unavailable");
+			return;
+		}
+
+		this.setStatus(loaded ? "" : "Camera image unavailable");
+		this.scheduleNextRefresh();
 	}
 
 	/**
 	 * Refresh the still image with a cache-busting query parameter.
 	 */
 	private refreshImage(): void {
-		if (!this.isHovered || !this.imageUrl) {
+		if (!this.isHovered || !this.imageUrl || this.imageRequestPending) {
 			return;
 		}
 
@@ -232,6 +283,8 @@ export class EntityCamera extends EntityObject {
 
 		const url = new URL(this.imageUrl);
 		url.searchParams.set("dt3d_refresh", Date.now().toString());
+		this.imageRequestPending = true;
+		this.lastImageRequestAt = Date.now();
 		this.image.src = url.toString();
 	}
 

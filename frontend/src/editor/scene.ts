@@ -795,6 +795,7 @@ export class SceneManager {
 		shadow.map = null;
 		shadow.mapPass?.dispose();
 		shadow.mapPass = null;
+		shadow.bias = 0.0001;
 		shadow.needsUpdate = true;
 	}
 

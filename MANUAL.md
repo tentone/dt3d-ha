@@ -109,7 +109,7 @@ Home Assistant state supplied to the card.
 | ---------------- | --------------------------------------------------------- | ------------- |
 | `sensor`         | State-aware icon and name/state hover label               | No            |
 | `binary_sensor`  | Icon and color derived from the binary state              | No            |
-| `camera`         | Round icon with a large still-image preview on pointer hover; refreshed approximately every 5 seconds | No            |
+| `camera`         | Round icon with a large still-image preview on pointer hover; requests are serialized and capped at 3 FPS | No            |
 | `climate`        | HVAC-mode color and target temperature while active       | No            |
 | `light`          | State/color icon plus a configurable 3D light source      | Yes           |
 | `switch`         | State icon and name/state hover label                     | Yes           |
