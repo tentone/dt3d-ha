@@ -346,8 +346,7 @@ export const normalizeShadowMapQuality = (
 			return "medium";
 	}
 
-	// Legacy values described the directional-light resolution. Preserve their
-	// intent by selecting the equivalent (or nearest available) quality preset.
+	// Legacy values described the directional-light resolution. Preserve their intent by selecting the equivalent (or nearest available) quality preset.
 	const parsed = typeof value === "string" ? Number(value) : value;
 	if (parsed === 8192) {
 		return "very_high";

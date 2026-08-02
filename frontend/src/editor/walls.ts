@@ -159,8 +159,7 @@ export class WallManager {
 		this.draft.setFromPoints(this.draftStart, placement.point);
 		this.finalizeWall();
 
-		// Reaching any point along an existing wall closes the current run.
-		// Otherwise, the end point immediately becomes the next wall's start.
+		// Reaching any point along an existing wall closes the current run. Otherwise, the end point immediately becomes the next wall's start.
 		if (!placement.connectedWall) {
 			this.draftStart = placement.point.clone();
 			this.createDraft(this.draftStart);
@@ -260,8 +259,7 @@ export class WallManager {
 		let wallOffset: number | null = null;
 
 		if (connectedWall) {
-			// Join the new segment to the existing wall's center line, whether the
-			// user clicked its face, one of its ends, or anywhere in the middle.
+			// Join the new segment to the existing wall's center line, whether the user clicked its face, one of its ends, or anywhere in the middle.
 			const wallPoint = connectedWall.worldToLocal(intersection.point.clone());
 			wallOffset = Math.min(
 				connectedWall.length / 2,

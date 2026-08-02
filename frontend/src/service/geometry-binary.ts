@@ -250,28 +250,6 @@ function decodeCompressedWasm(value: string): Uint8Array {
 	return unzlibSync(decodeBase64(value));
 }
 
-function getEncoderModule(): Promise<any> {
-	encoderModulePromise ??= draco3d.createEncoderModule({
-		wasmBinary: decodeCompressedWasm(encoderWasm),
-	});
-	return encoderModulePromise;
-}
-
-function getDecoderModule(): Promise<any> {
-	decoderModulePromise ??= draco3d.createDecoderModule({
-		wasmBinary: decodeCompressedWasm(decoderWasm),
-	});
-	return decoderModulePromise;
-}
-
-function getDracoAttributeType(module: any, name: string): number {
-	if (name === "position") return module.POSITION;
-	if (name === "normal") return module.NORMAL;
-	if (name === "color") return module.COLOR;
-	if (name === "uv" || /^uv\d+$/.test(name)) return module.TEX_COORD;
-	return module.GENERIC;
-}
-
 function addDracoAttribute(
 	module: any,
 	builder: any,
@@ -280,7 +258,16 @@ function addDracoAttribute(
 	attribute: any,
 ): DracoAttributeMetadata {
 	const array = getAttributeArray(attribute);
-	const attributeType = getDracoAttributeType(module, name);
+	const attributeType =
+		name === "position"
+			? module.POSITION
+			: name === "normal"
+				? module.NORMAL
+				: name === "color"
+					? module.COLOR
+					: name === "uv" || /^uv\d+$/.test(name)
+						? module.TEX_COORD
+						: module.GENERIC;
 	let uniqueId: number;
 
 	switch (array.constructor.name) {
@@ -382,22 +369,13 @@ function addDracoAttribute(
 	};
 }
 
-function canEncodeWithDraco(geometry: BufferGeometry): boolean {
-	const position = geometry.getAttribute("position");
-	if (!position || position.count === 0) return false;
-
-	const elementCount = geometry.index?.count ?? position.count;
-	if (elementCount % 3 !== 0) return false;
-
-	return Object.values(geometry.attributes).every(
-		(attribute) => attribute.count === position.count,
-	);
-}
-
 async function serializeGeometryDraco(
 	geometry: BufferGeometry,
 ): Promise<ArrayBuffer> {
-	const module = await getEncoderModule();
+	encoderModulePromise ??= draco3d.createEncoderModule({
+		wasmBinary: decodeCompressedWasm(encoderWasm),
+	});
+	const module = await encoderModulePromise;
 	const builder = new module.MeshBuilder();
 	const mesh = new module.Mesh();
 	const encoder = new module.Encoder();
@@ -485,13 +463,21 @@ async function serializeGeometryDraco(
 /**
  * Serialize a BufferGeometry into a compact binary payload.
  *
- * The database stores only the returned file id; this payload is stored by the
- * backend as an opaque file and decoded by the frontend when the mesh hydrates.
+ * The database stores only the returned file id; this payload is stored by the backend as an opaque file and decoded by the frontend when the mesh hydrates.
  */
 export async function serializeGeometryToBinary(
 	geometry: BufferGeometry,
 ): Promise<ArrayBuffer> {
-	if (!canEncodeWithDraco(geometry)) {
+	const position = geometry.getAttribute("position");
+	const elementCount = geometry.index?.count ?? position?.count ?? 0;
+	if (
+		!position ||
+		position.count === 0 ||
+		elementCount % 3 !== 0 ||
+		!Object.values(geometry.attributes).every(
+			(attribute) => attribute.count === position.count,
+		)
+	) {
 		return serializeGeometryLegacy(geometry);
 	}
 
@@ -620,7 +606,10 @@ async function deserializeGeometryDraco(
 		);
 	}
 
-	const module = await getDecoderModule();
+	decoderModulePromise ??= draco3d.createDecoderModule({
+		wasmBinary: decodeCompressedWasm(decoderWasm),
+	});
+	const module = await decoderModulePromise;
 	const buffer = new module.DecoderBuffer();
 	const decoder = new module.Decoder();
 	const mesh = new module.Mesh();

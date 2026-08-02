@@ -5,8 +5,7 @@ export type EditorActionType =
 	| "move-object";
 
 /**
- * A reversible editor mutation. The scene mutation is synchronous so the
- * editor responds immediately; sync persists the resulting state afterwards.
+ * A reversible editor mutation. The scene mutation is synchronous so the editor responds immediately; sync persists the resulting state afterwards.
  */
 export type EditorAction = {
 	type: EditorActionType;
@@ -85,8 +84,7 @@ export class ActionStack {
 	}
 
 	/**
-	 * Start a new history without cancelling writes already queued for the
-	 * previous space.
+	 * Start a new history without cancelling writes already queued for the previous space.
 	 */
 	public clear(): void {
 		this.undoActions = [];

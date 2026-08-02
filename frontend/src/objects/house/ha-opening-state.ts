@@ -5,9 +5,7 @@ export type HaEntityState = {
 };
 
 /**
- * Convert a Home Assistant entity to an openness percentage.
- * Numeric states are interpreted as 0-100. Cover entities commonly expose
- * their analog value as `current_position`, so that is accepted too.
+ * Convert a Home Assistant entity to an openness percentage. Numeric states are interpreted as 0-100. Cover entities commonly expose their analog value as `current_position`, so that is accepted too.
  */
 export function getHaOpeningPercentage(
 	entity: HaEntityState | null | undefined,

@@ -246,10 +246,7 @@ export class WallObject extends DTObject {
 	/**
 	 * Keep the wall cut-outs in sync when an opening is attached directly.
 	 *
-	 * Saved scenes are rebuilt by creating every object first and restoring the
-	 * parent/child hierarchy afterwards. Rebuilding here ensures a reloaded wall
-	 * is updated as soon as each saved door or window is reattached, without
-	 * depending on a later render-frame update.
+	 * Saved scenes are rebuilt by creating every object first and restoring the parent/child hierarchy afterwards. Rebuilding here ensures a reloaded wall is updated as soon as each saved door or window is reattached, without depending on a later render-frame update.
 	 */
 	public override add(...objects: Object3D[]): this {
 		super.add(...objects);
@@ -266,9 +263,7 @@ export class WallObject extends DTObject {
 	}
 
 	/**
-	 * Restore the solid wall immediately when an opening is removed or moved to
-	 * another wall. The per-frame signature check remains as a fallback for
-	 * opening dimension and transform changes.
+	 * Restore the solid wall immediately when an opening is removed or moved to another wall. The per-frame signature check remains as a fallback for opening dimension and transform changes.
 	 */
 	public override remove(...objects: Object3D[]): this {
 		const removesOpening = objects.some(
@@ -440,9 +435,7 @@ export class WallObject extends DTObject {
 	/**
 	 * Build the wall from solid rectangular cells around every opening.
 	 *
-	 * Unlike a polygon hole, a cell layout remains valid when a door touches
-	 * the floor or an opening reaches a wall edge. Every cell uses the wall's
-	 * full depth, so even a very thin door/window always cuts through the wall.
+	 * Unlike a polygon hole, a cell layout remains valid when a door touches the floor or an opening reaches a wall edge. Every cell uses the wall's full depth, so even a very thin door/window always cuts through the wall.
 	 */
 	private createWallGeometry(): BufferGeometry {
 		const epsilon = 1e-6;

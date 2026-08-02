@@ -8,8 +8,7 @@ export type MeshShadowSettings = {
 };
 
 /**
- * Apply persisted shadow preferences to a mesh. Missing preferences default to
- * enabled to preserve the rendering behaviour of existing spaces.
+ * Apply persisted shadow preferences to a mesh. Missing preferences default to enabled to preserve the rendering behaviour of existing spaces.
  */
 export function initializeMeshShadowSettings(
 	mesh: Mesh,

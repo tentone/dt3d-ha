@@ -23,9 +23,7 @@ export function isInternalObject(object: Object3D | null | undefined): boolean {
 /**
  * Resolve a raycast hit to the user-managed object that owns it.
  *
- * A rendered mesh can sit below one or more internal groups. The highest
- * internal object in that branch defines the system-managed subtree, so the
- * object directly above it is the one the user may select.
+ * A rendered mesh can sit below one or more internal groups. The highest internal object in that branch defines the system-managed subtree, so the object directly above it is the one the user may select.
  */
 export function resolveUserObject(
 	object: Object3D | null | undefined,

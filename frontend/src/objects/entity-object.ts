@@ -88,10 +88,7 @@ export abstract class EntityObject extends DTObject {
 	/**
 	 * Clone an entity without invoking its constructor with missing entity data.
 	 *
-	 * Three.js normally clones an Object3D with `new this.constructor()`. Entity
-	 * constructors require an entity ID and state, so subclasses create a valid
-	 * instance first. Its constructor already recreates the internal visuals;
-	 * only user-added children should then be cloned from the source hierarchy.
+	 * Three.js normally clones an Object3D with `new this.constructor()`. Entity constructors require an entity ID and state, so subclasses create a valid instance first. Its constructor already recreates the internal visuals; only user-added children should then be cloned from the source hierarchy.
 	 */
 	public override clone(recursive: boolean = true): this {
 		const clone = this.createEntityClone();

@@ -59,23 +59,7 @@ const normalizeVector = (
 	};
 };
 
-const normalizeQuaternion = (
-	value: unknown,
-	fallback: { w: number; x: number; y: number; z: number },
-): { w: number; x: number; y: number; z: number } => {
-	const source = value && typeof value === "object"
-		? value as { w?: unknown; x?: unknown; y?: unknown; z?: unknown }
-		: {};
-
-	return {
-		w: numberOrDefault(source.w, fallback.w),
-		x: numberOrDefault(source.x, fallback.x),
-		y: numberOrDefault(source.y, fallback.y),
-		z: numberOrDefault(source.z, fallback.z),
-	};
-};
-
-const normalizeViewportConfig = (config: Partial<CameraViewportConfig> = {},): CameraViewportConfig => {
+const cloneViewportConfig = (config: Partial<CameraViewportConfig> = {},): CameraViewportConfig => {
 	const fallback = DEFAULT_VIEWPORT_CONFIG;
 	const normalized: CameraViewportConfig = {
 		direction: normalizeVector(config.direction, fallback.direction),
@@ -90,10 +74,18 @@ const normalizeViewportConfig = (config: Partial<CameraViewportConfig> = {},): C
 	};
 
 	if (config.quaternion) {
-		normalized.quaternion = normalizeQuaternion(
-			config.quaternion,
-			fallback.quaternion!,
-		);
+		const source = config.quaternion as {
+			w?: unknown;
+			x?: unknown;
+			y?: unknown;
+			z?: unknown;
+		};
+		normalized.quaternion = {
+			w: numberOrDefault(source.w, fallback.quaternion!.w),
+			x: numberOrDefault(source.x, fallback.quaternion!.x),
+			y: numberOrDefault(source.y, fallback.quaternion!.y),
+			z: numberOrDefault(source.z, fallback.quaternion!.z),
+		};
 	}
 
 	if (config.target) {
@@ -102,8 +94,6 @@ const normalizeViewportConfig = (config: Partial<CameraViewportConfig> = {},): C
 
 	return normalized;
 };
-
-const cloneViewportConfig = (config: Partial<CameraViewportConfig>): CameraViewportConfig => normalizeViewportConfig(config);
 
 /**
  * Saved camera viewport marker.

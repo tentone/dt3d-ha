@@ -11,9 +11,7 @@ const CAMERA_MIN_FRAME_INTERVAL_MS = 334;
 /**
  * Camera entity representation with an image preview shown on pointer hover.
  *
- * The object is still a normal persisted Home Assistant entity object. The
- * camera-specific behavior lives entirely in the visual children: a round 3D
- * marker for picking/placement and a CSS3D sprite with the latest still image.
+ * The object is still a normal persisted Home Assistant entity object. The camera-specific behavior lives entirely in the visual children: a round 3D marker for picking/placement and a CSS3D sprite with the latest still image.
  */
 export class EntityCamera extends EntityObject {
 	/**
@@ -229,8 +227,7 @@ export class EntityCamera extends EntityObject {
 	}
 
 	/**
-	 * Schedule a request after both the previous request has settled and the
-	 * minimum frame interval has elapsed.
+	 * Schedule a request after both the previous request has settled and the minimum frame interval has elapsed.
 	 */
 	private scheduleNextRefresh(): void {
 		if (

@@ -172,44 +172,35 @@ export function pickLocalImage(host: HTMLElement): Promise<File | null> {
 	});
 }
 
-const readDroppedFile = (entry: DroppedFileSystemEntry): Promise<File> =>
-	new Promise((resolve, reject) => {
-		if (!entry.file) {
-			reject(new Error(`Unable to read dropped file ${entry.name}`));
-			return;
-		}
-		entry.file(resolve, reject);
-	});
-
-async function readDroppedDirectory(
-	entry: DroppedFileSystemEntry,
-): Promise<DroppedFileSystemEntry[]> {
-	const reader = entry.createReader?.();
-	if (!reader) return [];
-
-	const entries: DroppedFileSystemEntry[] = [];
-	while (true) {
-		const batch = await new Promise<DroppedFileSystemEntry[]>(
-			(resolve, reject) => reader.readEntries(resolve, reject),
-		);
-		if (batch.length === 0) return entries;
-		entries.push(...batch);
-	}
-}
-
 async function collectDroppedEntryFiles(
 	entry: DroppedFileSystemEntry,
 	parentPath = "",
 ): Promise<File[]> {
 	const entryPath = `${parentPath}${entry.name}`;
 	if (entry.isFile) {
-		const file = await readDroppedFile(entry);
+		const file = await new Promise<File>((resolve, reject) => {
+			if (!entry.file) {
+				reject(new Error(`Unable to read dropped file ${entry.name}`));
+				return;
+			}
+			entry.file(resolve, reject);
+		});
 		droppedFileAssetPaths.set(file, entryPath);
 		return [file];
 	}
 
 	if (!entry.isDirectory) return [];
-	const children = await readDroppedDirectory(entry);
+	const reader = entry.createReader?.();
+	const children: DroppedFileSystemEntry[] = [];
+	if (reader) {
+		while (true) {
+			const batch = await new Promise<DroppedFileSystemEntry[]>(
+				(resolve, reject) => reader.readEntries(resolve, reject),
+			);
+			if (batch.length === 0) break;
+			children.push(...batch);
+		}
+	}
 	const files = await Promise.all(
 		children.map((child) =>
 			collectDroppedEntryFiles(child, `${entryPath}/`),

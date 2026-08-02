@@ -1,30 +1,27 @@
 # Digital Twin 3D for Home Assistant (DT3D)
 
-[![Add the DT3D add-on repository to Home Assistant](https://my.home-assistant.io/badges/supervisor_add_addon_repository.svg)](https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2Ftentone%2Fdt3d-ha)
-[![Add the DT3D frontend to HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=tentone&repository=dt3d-ha&category=plugin)
+[![Add the DT3D add-on repository to Home Assistant](https://my.home-assistant.io/badges/supervisor_add_addon_repository.svg)](https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2Ftentone%2Fdt3d-ha) [![Add the DT3D frontend to HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=tentone&repository=dt3d-ha&category=plugin)
 
- - DT3D is a Home Assistant addon and dashboard card to create a digital twin of a home.
- - Features a integrated 3D editor to create and modify the digital twin, add 3D elements, and link them with HA entities.
- - The project is split into a HA frontend card and a Home Assistant app/add-on that stores 3D scene data.
- - The system allows to create multiple spaces (environments) in the same deployment.
- - For installation and connection instructions, see the [setup guide](SETUP_GUIDE.md).
- - For end-user instructions, see the [user manual](MANUAL.md).
+- DT3D is a Home Assistant addon and dashboard card to create a digital twin of a home.
+- Features a integrated 3D editor to create and modify the digital twin, add 3D elements, and link them with HA entities.
+- The project is split into a HA frontend card and a Home Assistant app/add-on that stores 3D scene data.
+- The system allows to create multiple spaces (environments) in the same deployment.
+- For installation and connection instructions, see the [setup guide](SETUP_GUIDE.md).
+- For end-user instructions, see the [user manual](MANUAL.md).
 
 <img src="readme/0_screenshot.png" width="400">
 <img src="readme/3_add_objects.png" width="400">
 
 ## System architecture
 
- - DT3D uses a dedicated addon to store  3D scene data separate from Home Assistant entity.
- - The frontend card communicates with the addon directly through REST API calls.
-    - It is required that the addon is reachable from the Home Assistant frontend, and complies with the CORS policy.
- - Frontend card: renders the scene, provides the editor, consumes Home Assistant entity states, opens entity dialogs, and calls Home Assistant services in the same way as any other custom frontend card.
- - Backend app/add-on provides the 3D space API and persists spaces, object hierarchies, transforms, materials, viewports, space configuration and uploaded geometry.
- - The frontend stores editor preferences and a versioned cache of space objects and geometry in browser storage. The backend remains the source of truth and invalidates cached space data after changes.
- - Persistent spaces and objects are synchronized to the backend.
- - Home Assistant entity state is consumed live and is not copied into the DT3D database as an alternative entity registry.
-
-
+- DT3D uses a dedicated addon to store 3D scene data separate from Home Assistant entity.
+- The frontend card communicates with the addon directly through REST API calls.
+  - It is required that the addon is reachable from the Home Assistant frontend, and complies with the CORS policy.
+- Frontend card: renders the scene, provides the editor, consumes Home Assistant entity states, opens entity dialogs, and calls Home Assistant services in the same way as any other custom frontend card.
+- Backend app/add-on provides the 3D space API and persists spaces, object hierarchies, transforms, materials, viewports, space configuration and uploaded geometry.
+- The frontend stores editor preferences and a versioned cache of space objects and geometry in browser storage. The backend remains the source of truth and invalidates cached space data after changes.
+- Persistent spaces and objects are synchronized to the backend.
+- Home Assistant entity state is consumed live and is not copied into the DT3D database as an alternative entity registry.
 
 ## Frontend Card
 
@@ -33,17 +30,18 @@
 - The built custom element is registered as `dt3d-card` and is used in Home Assistant as `custom:dt3d-card`.
 
 ### Build and test
- - Setup node.js and npm on your development machine.
- - Install dependencies and build the frontend card using `npm install` and `npm run build` in the `frontend` directory.
- - The built bundle is written to `frontend/dist/dt3d-card.js`
- - To test copy the bundle to Home Assistant's `/config/www` directory and register it as a JavaScript module resource in **Settings → Dashboards → three-dot menu → Resources**:
- - Hard-refresh the browser after replacing the bundle to ensure the new version is loaded.
+
+- Setup node.js and npm on your development machine.
+- Install dependencies and build the frontend card using `npm install` and `npm run build` in the `frontend` directory.
+- The built bundle is written to `frontend/dist/dt3d-card.js`
+- To test copy the bundle to Home Assistant's `/config/www` directory and register it as a JavaScript module resource in **Settings → Dashboards → three-dot menu → Resources**:
+- Hard-refresh the browser after replacing the bundle to ensure the new version is loaded.
 
 ### Setup
- 
- - Frontend card can be configured trough the GUI or using YAML in a dashboard view.
- - Use HTTPS for the backend when the Home Assistant page uses HTTPS; browsers block calls from a secure page to an insecure backend.
- - Sample configuration for a dashboard view:
+
+- Frontend card can be configured trough the GUI or using YAML in a dashboard view.
+- Use HTTPS for the backend when the Home Assistant page uses HTTPS; browsers block calls from a secure page to an insecure backend.
+- Sample configuration for a dashboard view:
 
 ```yaml
 type: custom:dt3d-card
@@ -62,11 +60,7 @@ general:
     enabled: false
 ```
 
-VR and AR require a browser/device with immersive WebXR support and a secure
-Home Assistant page (HTTPS). In AR, DT3D automatically hides the sky and uses a
-transparent scene background so the device camera feed remains visible.
-Location-based AR additionally requires device location and compass permission.
-The selected entity must expose numeric `latitude` and `longitude` attributes.
+VR and AR require a browser/device with immersive WebXR support and a secure Home Assistant page (HTTPS). In AR, DT3D automatically hides the sky and uses a transparent scene background so the device camera feed remains visible. Location-based AR additionally requires device location and compass permission. The selected entity must expose numeric `latitude` and `longitude` attributes.
 
 <img src="readme/6_card_configuration.png" width="500">
 
@@ -78,20 +72,22 @@ The selected entity must expose numeric `latitude` and `longitude` attributes.
 - Optional TLS using a configured certificate/key pair or a generated self-signed certificate
 
 ### Build and test
- - Go with the version supported by `addon/backend/go.mod`.
- - Can run directly from the development machine with `go run main.go` or using docker.
- - Alternatively copy the content from `addon/*` to a Home Assistant `/addons/dt3d` directory and install as a local app/add-on.
- - Open **Settings → Apps** (or **Settings → Add-ons** on older versions), open the store, and reload it from the three-dot menu.
- - Open the local **DT3D** entry and select **Install** or **Rebuild**.
- - Configure at least a non-empty `service_key`, then start the app/add-on.
- - There is a deployment bash script that copies the backend over SSH, reloads the store, and then installs, rebuilds, or restarts the local app/add-on `./addon/deploy.sh <ssh-user> '<ssh-password>' [ha-host] [ssh-port]`
-    - It requires the Home Assistant **Terminal & SSH** app/add-on and `sshpass` on the development computer.
 
+- Go with the version supported by `addon/backend/go.mod`.
+- Can run directly from the development machine with `go run main.go` or using docker.
+- Alternatively copy the content from `addon/*` to a Home Assistant `/addons/dt3d` directory and install as a local app/add-on.
+- Open **Settings → Apps** (or **Settings → Add-ons** on older versions), open the store, and reload it from the three-dot menu.
+- Open the local **DT3D** entry and select **Install** or **Rebuild**.
+- Configure at least a non-empty `service_key`, then start the app/add-on.
+- There is a deployment bash script that copies the backend over SSH, reloads the store, and then installs, rebuilds, or restarts the local app/add-on `./addon/deploy.sh <ssh-user> '<ssh-password>' [ha-host] [ssh-port]`
+  - It requires the Home Assistant **Terminal & SSH** app/add-on and `sshpass` on the development computer.
 
 ### Configuration
- - The addon configuration can be set in the Home Assistant GUI or using YAML.
- - For HTTPS and certificates, follow the [network and TLS section of the setup guide](SETUP_GUIDE.md#network-and-tls-setup).
- - Here is a sample configuration for the backend add-on.
+
+- The addon configuration can be set in the Home Assistant GUI or using YAML.
+- For HTTPS and certificates, follow the [network and TLS section of the setup guide](SETUP_GUIDE.md#network-and-tls-setup).
+- Here is a sample configuration for the backend add-on.
+
 ```yaml
 port: 8080
 service_key: <secret> # Can be anything, used for header-based authentication
@@ -100,17 +96,14 @@ ssl_key: ""
 use_self_signed_certificate: false
 ```
 
-
 ### Data Structure
 
- - Inside the Home Assistant app/add-on:
- - SQLite uses `/data/data.db`, inside Home Assistant's persistent add-on data volume. It survives add-on restarts, rebuilds, and upgrades.
- - Generated or normalized TLS files live under `/data`.
- - Imported binary geometry lives under `/data/dt3d-geometries`.
- - Certificates mounted from Home Assistant are available under `/ssl`.
- - The frontend can download and upload spaces as portable `.dt3d` ZIP
-   archives. Each archive contains a versioned `space.json` database snapshot
-   and the space's persisted assets under `assets/`.
+- Inside the Home Assistant app/add-on:
+- SQLite uses `/data/data.db`, inside Home Assistant's persistent add-on data volume. It survives add-on restarts, rebuilds, and upgrades.
+- Generated or normalized TLS files live under `/data`.
+- Imported binary geometry lives under `/data/dt3d-geometries`.
+- Certificates mounted from Home Assistant are available under `/ssl`.
+- The frontend can download and upload spaces as portable `.dt3d` ZIP archives. Each archive contains a versioned `space.json` database snapshot and the space's persisted assets under `assets/`.
 
 ## Repository structure
 

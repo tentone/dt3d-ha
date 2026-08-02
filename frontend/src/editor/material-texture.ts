@@ -61,8 +61,7 @@ export async function applyImageTextureToMesh(
 }
 
 /**
- * Apply an image file to a specific texture property on every compatible
- * material in the target.
+ * Apply an image file to a specific texture property on every compatible material in the target.
  */
 export async function applyImageTextureToMaterial(
 	target: MaterialTarget,
@@ -99,7 +98,14 @@ export async function applyImageTextureToMaterial(
 	disposeUnreferencedTextures(target, replacedTextures);
 
 	if (property === "map" && isMesh(target)) {
-		updateLegacyTextureData(target, dataUrl, file.name, texture);
+		target.userData.textureDataUrl = dataUrl;
+		target.userData.textureName = file.name;
+		const predominantColor = getTexturePredominantColor(texture);
+		if (predominantColor) {
+			target.userData[TEXTURE_PREDOMINANT_COLOR_DATA_KEY] = predominantColor;
+		} else {
+			delete target.userData[TEXTURE_PREDOMINANT_COLOR_DATA_KEY];
+		}
 	}
 	return true;
 }
@@ -187,15 +193,11 @@ export function clearMaterialTexture(
 	disposeUnreferencedTextures(target, replacedTextures);
 
 	if (property === "map" && isMesh(target)) {
-		clearLegacyTextureData(target);
+		delete target.userData.textureDataUrl;
+		delete target.userData.textureName;
+		delete target.userData[TEXTURE_PREDOMINANT_COLOR_DATA_KEY];
 	}
 	return true;
-}
-
-function clearLegacyTextureData(mesh: Mesh): void {
-	delete mesh.userData.textureDataUrl;
-	delete mesh.userData.textureName;
-	delete mesh.userData[TEXTURE_PREDOMINANT_COLOR_DATA_KEY];
 }
 
 function configureTexture(texture: Texture, property: string): void {
@@ -250,25 +252,8 @@ function isMesh(target: MaterialTarget): target is Mesh {
 	return "isMesh" in target && target.isMesh === true;
 }
 
-function updateLegacyTextureData(
-	mesh: Mesh,
-	dataUrl: string,
-	textureName: string,
-	texture: Texture,
-): void {
-	mesh.userData.textureDataUrl = dataUrl;
-	mesh.userData.textureName = textureName;
-	const predominantColor = getTexturePredominantColor(texture);
-	if (predominantColor) {
-		mesh.userData[TEXTURE_PREDOMINANT_COLOR_DATA_KEY] = predominantColor;
-	} else {
-		delete mesh.userData[TEXTURE_PREDOMINANT_COLOR_DATA_KEY];
-	}
-}
-
 /**
- * Find the most common quantized color in a texture. Sampling a small canvas
- * keeps this inexpensive even when the source image is large.
+ * Find the most common quantized color in a texture. Sampling a small canvas keeps this inexpensive even when the source image is large.
  */
 export function getTexturePredominantColor(texture: Texture): string | null {
 	const image = texture.image as

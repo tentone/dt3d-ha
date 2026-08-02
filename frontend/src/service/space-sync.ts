@@ -136,23 +136,6 @@ async function parseSerializedMaterial(
 	return materialLoader.parse(materialData);
 }
 
-async function deserializeMaterial(
-	data: unknown,
-): Promise<Material | Material[] | null> {
-	if (Array.isArray(data)) {
-		const materials = (
-			await Promise.all(data.map((item) => parseSerializedMaterial(item)))
-		).filter((material): material is Material => Boolean(material));
-		if (materials.length > 0) {
-			return materials;
-		}
-	} else if (data && typeof data === "object") {
-		return parseSerializedMaterial(data);
-	}
-
-	return null;
-}
-
 function createPlaceholderMaterial(color: number): MeshStandardMaterial {
 	const material = new MeshStandardMaterial({
 		color,
@@ -235,25 +218,6 @@ function getMeshPredominantTextureColor(mesh: Mesh): string | null {
 		: null;
 }
 
-function getMeshMaterialColor(mesh: Mesh): string | null {
-	const materials = Array.isArray(mesh.material)
-		? mesh.material
-		: [mesh.material];
-	for (const material of materials) {
-		if (
-			"color" in material &&
-			material.color &&
-			typeof material.color === "object" &&
-			"getHexString" in material.color &&
-			typeof material.color.getHexString === "function"
-		) {
-			return material.color.getHexString();
-		}
-	}
-
-	return null;
-}
-
 function storeMeshPredominantTextureColor(
 	data: Record<string, any>,
 	mesh: Mesh,
@@ -295,48 +259,6 @@ function storeGeometryBoundingBox(data: Record<string, any>, mesh: Mesh): void {
 			z: boundingBox.max.z,
 		},
 	};
-}
-
-function replaceMeshMaterial(
-	mesh: Mesh,
-	material: Material | Material[],
-): void {
-	const oldMaterials = Array.isArray(mesh.material)
-		? mesh.material
-		: [mesh.material];
-	mesh.material = material;
-	for (const oldMaterial of oldMaterials) oldMaterial.dispose();
-}
-
-function normalizeObjectInstanceType(
-	type: string,
-): "mesh" | "entity" | "group" | "viewport" | "static-light" | null {
-	switch (type.trim().toLowerCase()) {
-		case "mesh":
-			return "mesh";
-		case "entity":
-			return "entity";
-		case "viewport":
-			return "viewport";
-		case "static-light":
-		case "static_light":
-			return "static-light";
-		case "group":
-		case "3dmodel":
-			return "group";
-		default:
-			return null;
-	}
-}
-
-function getDeclaredObjectInstanceType(object: Object3D): string | null {
-	const type = object.userData[OBJECT_INSTANCE_TYPE_USER_DATA_KEY];
-	if (typeof type !== "string") {
-		return null;
-	}
-
-	const trimmedType = type.trim();
-	return trimmedType || null;
 }
 
 /**
@@ -428,8 +350,7 @@ export class SpaceSync {
 	}
 
 	/**
-	 * Fetch spaces from the API and load the configured space when available.
-	 * When no spaces exist, a default space is created automatically.
+	 * Fetch spaces from the API and load the configured space when available. When no spaces exist, a default space is created automatically.
 	 */
 	public async initializeSpaceFromApi(
 		preferredSpaceId?: string,
@@ -545,8 +466,7 @@ export class SpaceSync {
 	}
 
 	/**
-	 * Delete a space. When the active space is deleted, activate the next
-	 * available space or reset the editor to an unsaved default scene.
+	 * Delete a space. When the active space is deleted, activate the next available space or reset the editor to an unsaved default scene.
 	 */
 	public async deleteSpace(spaceId: string): Promise<SpaceResponse | null> {
 		await this.apiClient.deleteSpace(spaceId);
@@ -751,7 +671,33 @@ export class SpaceSync {
 	): Object3D | null {
 		const data = instance.data ?? {};
 		const declaredType = instance.type.trim();
-		const instanceType = normalizeObjectInstanceType(instance.type);
+		let instanceType:
+			| "mesh"
+			| "entity"
+			| "group"
+			| "viewport"
+			| "static-light"
+			| null;
+		switch (instance.type.trim().toLowerCase()) {
+			case "mesh":
+			case "entity":
+			case "viewport":
+				instanceType = instance.type.trim().toLowerCase() as
+					| "mesh"
+					| "entity"
+					| "viewport";
+				break;
+			case "static-light":
+			case "static_light":
+				instanceType = "static-light";
+				break;
+			case "group":
+			case "3dmodel":
+				instanceType = "group";
+				break;
+			default:
+				instanceType = null;
+		}
 		let object: Object3D | null = null;
 		let materialTarget: Mesh | null = null;
 		let needsLegacyGeometryBoundingBox = false;
@@ -1028,7 +974,17 @@ export class SpaceSync {
 				load: async () => {
 					let materialReady = !hasSerializedMaterial;
 					if (hasSerializedMaterial) {
-						const material = await deserializeMaterial(data.material);
+						let material: Material | Material[] | null = null;
+						if (Array.isArray(data.material)) {
+							const materials = (
+								await Promise.all(
+									data.material.map((item) => parseSerializedMaterial(item)),
+								)
+							).filter((item): item is Material => Boolean(item));
+							if (materials.length > 0) material = materials;
+						} else if (data.material && typeof data.material === "object") {
+							material = await parseSerializedMaterial(data.material);
+						}
 						if (material) {
 							if (
 								!this.isResourceTargetCurrent(target, resourceLoadGeneration)
@@ -1041,7 +997,11 @@ export class SpaceSync {
 								}
 								return;
 							}
-							replaceMeshMaterial(target, material);
+							const oldMaterials = Array.isArray(target.material)
+								? target.material
+								: [target.material];
+							target.material = material;
+							for (const oldMaterial of oldMaterials) oldMaterial.dispose();
 							materialReady = true;
 						}
 					}
@@ -1086,7 +1046,9 @@ export class SpaceSync {
 			return null;
 		}
 
-		const declaredType = getDeclaredObjectInstanceType(object);
+		const storedType = object.userData[OBJECT_INSTANCE_TYPE_USER_DATA_KEY];
+		const declaredType =
+			typeof storedType === "string" ? storedType.trim() || null : null;
 		let type = declaredType ?? "group";
 		const data: Record<string, any> = {
 			sortOrder: object.parent
@@ -1562,7 +1524,15 @@ export class SpaceSync {
 				migration.texturePredominantColor &&
 				getMeshPredominantTextureColor(mesh) !== null;
 			const materialColorReady =
-				migration.materialColor && getMeshMaterialColor(mesh) !== null;
+				migration.materialColor &&
+				(Array.isArray(mesh.material) ? mesh.material : [mesh.material]).some(
+					(material) =>
+						"color" in material &&
+						material.color &&
+						typeof material.color === "object" &&
+						"getHexString" in material.color &&
+						typeof material.color.getHexString === "function",
+				);
 			delete mesh.userData[LEGACY_METADATA_MIGRATION_DATA_KEY];
 
 			if (
@@ -1594,29 +1564,29 @@ export class SpaceSync {
 	): Promise<void> {
 		let nextTaskIndex = 0;
 		const workerCount = Math.min(3, tasks.length);
-		const runWorker = async () => {
-			while (
-				nextTaskIndex < tasks.length &&
-				resourceLoadGeneration === this.resourceLoadGeneration
-			) {
-				const task = tasks[nextTaskIndex];
-				nextTaskIndex += 1;
-				try {
-					await this.trackProgress(task.operation, task.label, task.load);
-				} catch (error) {
-					console.error(
-						`DT3D: ${task.operation} failed for ${task.label}`,
-						error,
-					);
+		await Promise.all(
+			Array.from({length: workerCount}, async () => {
+				while (
+					nextTaskIndex < tasks.length &&
+					resourceLoadGeneration === this.resourceLoadGeneration
+				) {
+					const task = tasks[nextTaskIndex];
+					nextTaskIndex += 1;
+					try {
+						await this.trackProgress(task.operation, task.label, task.load);
+					} catch (error) {
+						console.error(
+							`DT3D: ${task.operation} failed for ${task.label}`,
+							error,
+						);
+					}
+
+					await new Promise<void>((resolve) => {
+						window.setTimeout(resolve, 0);
+					});
 				}
-
-				await new Promise<void>((resolve) => {
-					window.setTimeout(resolve, 0);
-				});
-			}
-		};
-
-		await Promise.all(Array.from({length: workerCount}, () => runWorker()));
+			}),
+		);
 	}
 
 	private isResourceTargetCurrent(

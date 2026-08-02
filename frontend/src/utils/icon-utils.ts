@@ -66,8 +66,7 @@ let mdiIconCatalog: Record<string, string> | undefined;
 /**
  * Default icons for Home Assistant entities, keyed by entity domain.
  *
- * These are used only when an entity does not provide an `attributes.icon`
- * value (or when that value cannot be resolved).
+ * These are used only when an entity does not provide an `attributes.icon` value (or when that value cannot be resolved).
  */
 export const DEFAULT_ENTITY_ICONS: Readonly<Record<string, string>> = Object.freeze({
 	air_quality: mdiAirFilter,
@@ -173,7 +172,10 @@ export function resolveHaIconPath(
 			.map((part) => part.charAt(0).toUpperCase() + part.slice(1))
 			.join("");
 
-	return getMdiIconCatalog()[exportName] ?? fallbackIcon;
+	mdiIconCatalog ??= JSON.parse(
+		strFromU8(unzlibSync(decodeBase64(compressedMdiIconCatalog))),
+	) as Record<string, string>;
+	return mdiIconCatalog[exportName] ?? fallbackIcon;
 }
 
 /**
@@ -250,7 +252,13 @@ export function renderIconPathToCanvas(
 
 	ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-	ctx.fillStyle = colorToCss(options.backgroundColor ?? 0x1e90ff);
+	const backgroundColor = options.backgroundColor ?? 0x1e90ff;
+	ctx.fillStyle =
+		typeof backgroundColor === "string"
+			? backgroundColor
+			: backgroundColor instanceof Color
+				? `#${backgroundColor.getHexString()}`
+				: `#${backgroundColor.toString(16).padStart(6, "0")}`;
 	ctx.beginPath();
 	ctx.arc(center, center, circleRadius, 0, Math.PI * 2);
 	ctx.fill();
@@ -290,25 +298,4 @@ export function renderIconPathToCanvas(
 	}
 
 	return canvas;
-}
-
-function colorToCss(color: IconCanvasColor): string {
-	if (typeof color === "string") {
-		return color;
-	}
-
-	if (color instanceof Color) {
-		return `#${color.getHexString()}`;
-	}
-
-	return `#${color.toString(16).padStart(6, "0")}`;
-}
-
-function getMdiIconCatalog(): Record<string, string> {
-	if (mdiIconCatalog) return mdiIconCatalog;
-
-	mdiIconCatalog = JSON.parse(
-		strFromU8(unzlibSync(decodeBase64(compressedMdiIconCatalog))),
-	) as Record<string, string>;
-	return mdiIconCatalog;
 }

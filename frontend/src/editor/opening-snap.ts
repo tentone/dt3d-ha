@@ -22,9 +22,7 @@ export function isWallOpeningObject(
 /**
  * Attach an opening to the closest finite wall segment.
  *
- * The opening is centered through the wall depth, aligned with the wall, and
- * kept within the wall's horizontal and vertical bounds. Its visible panel
- * thickness does not participate in placement or in the wall cut.
+ * The opening is centered through the wall depth, aligned with the wall, and kept within the wall's horizontal and vertical bounds. Its visible panel thickness does not participate in placement or in the wall cut.
  */
 export function snapOpeningToNearestWall(
 	opening: WallOpeningObject,

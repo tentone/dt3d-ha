@@ -117,9 +117,7 @@ export const MESH_GEOMETRY_PARAMETER_DEFINITIONS: Record<string, MeshGeometryPar
 /**
  * Normalize a partial parameter set for a mesh type.
  *
- * Missing values are filled from the parameter definitions, invalid numeric
- * values fall back to defaults, minimum values are enforced, and integer
- * parameters are rounded.
+ * Missing values are filled from the parameter definitions, invalid numeric values fall back to defaults, minimum values are enforced, and integer parameters are rounded.
  *
  * @param type - Mesh type whose definitions should be used.
  * @param parameters - Partial or complete parameter values to normalize.
@@ -143,9 +141,7 @@ function normalizeGeometryParameters(type: string, parameters: MeshGeometryParam
 /**
  * Read editable geometry parameters from a mesh object.
  *
- * Values explicitly stored in `userData.geometryParameters` take precedence over
- * three.js geometry `parameters`, allowing edited values to persist after the
- * geometry is rebuilt.
+ * Values explicitly stored in `userData.geometryParameters` take precedence over three.js geometry `parameters`, allowing edited values to persist after the geometry is rebuilt.
  *
  * @param object - Object to inspect.
  * @returns Normalized geometry parameters, or null when the object is not a supported mesh.
@@ -190,9 +186,7 @@ function createGeometry(type: string, parameters: MeshGeometryParameters): Buffe
 /**
  * Rebuild a mesh object's geometry from constructor parameters.
  *
- * The previous geometry is disposed to release GPU resources, and normalized
- * values are stored on `userData.geometryParameters` for future inspector reads
- * and persistence.
+ * The previous geometry is disposed to release GPU resources, and normalized values are stored on `userData.geometryParameters` for future inspector reads and persistence.
  *
  * @param object - Mesh object to update.
  * @param parameters - New constructor parameter values.
@@ -215,8 +209,7 @@ export function updateMeshGeometry(object: Object3D, parameters: MeshGeometryPar
 }
 
 /**
- * Resolve the mesh type of an object based on its `userData.meshType` marker or
- * the runtime three.js geometry type.
+ * Resolve the mesh type of an object based on its `userData.meshType` marker or the runtime three.js geometry type.
  *
  * @param object - Object to resolve.
  * @returns Mesh type identifier, or null if the object is not a supported mesh.

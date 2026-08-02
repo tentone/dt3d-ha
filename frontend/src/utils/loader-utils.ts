@@ -50,12 +50,6 @@ export async function loadModelsFromFiles(
 	}
 }
 
-function createLoadingManager(assets: LocalFileAssets): LoadingManager {
-	const manager = new LoadingManager();
-	manager.setURLModifier((url) => assets.resolveUrl(url));
-	return manager;
-}
-
 function loadModelFromFile(
 	file: File,
 	assets: LocalFileAssets,
@@ -68,7 +62,8 @@ function loadModelFromFile(
 	}
 
 	return new Promise((resolve) => {
-		const manager = createLoadingManager(assets);
+		const manager = new LoadingManager();
+		manager.setURLModifier((url) => assets.resolveUrl(url));
 		const url = assets.getVirtualUrl(file);
 		let loaderFinished = false;
 		let managerFinished = false;
@@ -172,7 +167,20 @@ async function loadObjModel(
 	const materialReferences = [
 		...source.matchAll(/^\s*mtllib\s+(.+?)\s*$/gim),
 	].map((match) => match[1]);
-	const materialFile = findObjMaterialFile(file, assets, materialReferences);
+	let materialFile: File | null = null;
+	for (const reference of materialReferences) {
+		materialFile = assets.findReferencedFile(reference, file);
+		if (materialFile) break;
+	}
+	if (!materialFile) {
+		const expectedName = file.name.replace(/\.obj$/i, ".mtl");
+		materialFile = assets.findReferencedFile(expectedName, file);
+	}
+	if (!materialFile) {
+		const siblingMaterialFiles = assets.findSiblingFiles(file, "mtl");
+		materialFile =
+			siblingMaterialFiles.length === 1 ? siblingMaterialFiles[0] : null;
+	}
 	const loader = new OBJLoader(manager);
 
 	if (materialFile) {
@@ -188,22 +196,4 @@ async function loadObjModel(
 	}
 
 	return loader.loadAsync(url);
-}
-
-function findObjMaterialFile(
-	objFile: File,
-	assets: LocalFileAssets,
-	references: string[],
-): File | null {
-	for (const reference of references) {
-		const file = assets.findReferencedFile(reference, objFile);
-		if (file) return file;
-	}
-
-	const expectedName = objFile.name.replace(/\.obj$/i, ".mtl");
-	const matchingFile = assets.findReferencedFile(expectedName, objFile);
-	if (matchingFile) return matchingFile;
-
-	const siblingMaterialFiles = assets.findSiblingFiles(objFile, "mtl");
-	return siblingMaterialFiles.length === 1 ? siblingMaterialFiles[0] : null;
 }

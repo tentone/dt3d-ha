@@ -15,8 +15,7 @@ export type CollisionMovementResult = {
 };
 
 /**
- * Calculate an axis-aligned world-space box around the visible mesh geometry
- * belonging to a set of object roots.
+ * Calculate an axis-aligned world-space box around the visible mesh geometry belonging to a set of object roots.
  */
 export function getObjectBounds(objects: Object3D[]): Box3 {
 	const bounds = new Box3();
@@ -30,8 +29,7 @@ export function getObjectBounds(objects: Object3D[]): Box3 {
 }
 
 /**
- * Build world-space collision boxes for every visible mesh outside the moving
- * object hierarchy.
+ * Build world-space collision boxes for every visible mesh outside the moving object hierarchy.
  */
 export function collectCollisionObstacles(
 	space: Object3D,
@@ -73,9 +71,7 @@ export function collectCollisionObstacles(
 /**
  * Clamp a requested translation against static axis-aligned obstacle boxes.
  *
- * Swept bounds prevent tunnelling during fast or diagonal movement. After a
- * hit, the remaining movement is projected along the obstacle face so the
- * object can slide naturally.
+ * Swept bounds prevent tunnelling during fast or diagonal movement. After a hit, the remaining movement is projected along the obstacle face so the object can slide naturally.
  */
 export function resolveCollisionMovement(
 	startBounds: Box3,
@@ -127,9 +123,7 @@ export function resolveCollisionMovement(
 }
 
 /**
- * Return obstacles that already overlap the moving object. They are ignored
- * until the object leaves them so enabling collision avoidance never traps an
- * object that was previously placed inside another one.
+ * Return obstacles that already overlap the moving object. They are ignored until the object leaves them so enabling collision avoidance never traps an object that was previously placed inside another one.
  */
 export function getInitiallyOverlappingObstacles(
 	bounds: Box3,

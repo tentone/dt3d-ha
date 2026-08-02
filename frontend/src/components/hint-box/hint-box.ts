@@ -4,16 +4,14 @@ import {customElement, property} from "lit/decorators.js";
 import componentStyles from "./hint-box.css?inline";
 
 /**
- * HintBox displays a contextual instruction message to guide the user
- * while a tool (measurement, wall, door, window) is active.
+ * HintBox displays a contextual instruction message to guide the user while a tool (measurement, wall, door, window) is active.
  */
 @customElement("dt3d-hint-box")
 export class DT3DHintBox extends LitElement {
 	static styles = unsafeCSS(componentStyles);
 
 	/**
-	 * The instruction message to display.
-	 * Set to an empty string to hide the box.
+	 * The instruction message to display. Set to an empty string to hide the box.
 	 */
 	@property({type: String})
 	public message = "";

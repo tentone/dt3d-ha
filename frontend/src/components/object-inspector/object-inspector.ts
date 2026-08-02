@@ -193,8 +193,7 @@ export class DT3DObjectInspector extends LitElement {
 	}
 
 	/**
-	 * Capture only the mutable state represented by a form field. Keeping the
-	 * memento field-sized avoids replacing live Three.js objects during undo.
+	 * Capture only the mutable state represented by a form field. Keeping the memento field-sized avoids replacing live Three.js objects during undo.
 	 */
 	private captureRestore(
 		object: Object3D,

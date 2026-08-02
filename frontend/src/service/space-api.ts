@@ -105,8 +105,7 @@ export class SpaceApi {
 	}
 
 	/**
-	 * Get lightweight metadata for all spaces from the backend.
-	 * Object instances are loaded on demand for the selected space.
+	 * Get lightweight metadata for all spaces from the backend. Object instances are loaded on demand for the selected space.
 	 */
 	public listSpaces(): Promise<SpaceResponse[]> {
 		return this.fetchJson<SpaceResponse[]>("/spaces?include_objects=false");

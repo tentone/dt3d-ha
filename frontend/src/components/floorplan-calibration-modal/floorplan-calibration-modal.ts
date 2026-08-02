@@ -135,11 +135,10 @@ export class DT3DFloorplanCalibrationModal extends LitElement {
 		const bounds = this.canvas.getBoundingClientRect();
 		const cssToCanvasScale =
 			bounds.width > 0 ? canvasWidth / bounds.width : 1;
-		const toCanvasPoint = (point: ImagePoint): ImagePoint => ({
+		const canvasPoints = this.points.map((point): ImagePoint => ({
 			x: point.x * (canvasWidth / this.imageWidth),
 			y: point.y * (canvasHeight / this.imageHeight),
-		});
-		const canvasPoints = this.points.map(toCanvasPoint);
+		}));
 
 		if (canvasPoints.length === 2) {
 			context.save();

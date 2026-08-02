@@ -46,8 +46,7 @@ export type DynamicFormInputField = {
 	/** Restrict entity options by matching their ID or friendly name. */
 	entityFilter?: RegExp | string;
 	/**
-	 * Whether a Vector3 field should offer linked, proportional axis editing.
-	 * The value also controls the initial linked state.
+	 * Whether a Vector3 field should offer linked, proportional axis editing. The value also controls the initial linked state.
 	 */
 	linked?: boolean;
 	options?: Array<{
@@ -592,8 +591,7 @@ export class DynamicForm extends LitElement {
 		};
 		this.dispatchFieldChange(field.attribute, field.type, value);
 
-		// Consumers update the backing data in response to the event. Refresh this
-		// component too so that the other two inputs immediately show their values.
+		// Consumers update the backing data in response to the event. Refresh this component too so that the other two inputs immediately show their values.
 		this.requestUpdate();
 	}
 

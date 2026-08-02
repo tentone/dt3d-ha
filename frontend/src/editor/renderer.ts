@@ -30,11 +30,7 @@ import {SSAOPass} from "three/examples/jsm/postprocessing/SSAOPass.js";
 import {UnrealBloomPass} from "three/examples/jsm/postprocessing/UnrealBloomPass.js";
 import {CSS3DRenderer} from "three/examples/jsm/renderers/CSS3DRenderer.js";
 
-import type {
-	RenderingConfig,
-	ShadowMapMode,
-	ToneMappingMode,
-} from "./general-config.js";
+import type {RenderingConfig} from "./general-config.js";
 import {normalizeGeneralConfig} from "./general-config.js";
 import type {NavigationControls, ShadowMapCapabilities} from "./scene.js";
 
@@ -59,8 +55,7 @@ const SELECTION_OUTLINE_COLOR = 0xffff00;
 /**
  * Outline pass for editor selections.
  *
- * Editor helpers are hidden while the selection mask is rendered, and the
- * mask intentionally ignores scene depth so occluded selections remain clear.
+ * Editor helpers are hidden while the selection mask is rendered, and the mask intentionally ignores scene depth so occluded selections remain clear.
  */
 class SelectionOutlinePass extends OutlinePass {
 	public excludedObjects: Object3D[] = [];
@@ -110,34 +105,6 @@ class SelectionOutlinePass extends OutlinePass {
 		}
 	}
 }
-
-const getToneMapping = (mode: ToneMappingMode) => {
-	switch (mode) {
-		case "linear":
-			return LinearToneMapping;
-		case "reinhard":
-			return ReinhardToneMapping;
-		case "cineon":
-			return CineonToneMapping;
-		case "aces_filmic":
-			return ACESFilmicToneMapping;
-		default:
-			return NoToneMapping;
-	}
-};
-
-const getShadowMapType = (type: ShadowMapMode) => {
-	switch (type) {
-		case "basic":
-			return BasicShadowMap;
-		case "pcf_soft":
-			return PCFSoftShadowMap;
-		case "vsm":
-			return VSMShadowMap;
-		default:
-			return PCFShadowMap;
-	}
-};
 
 /**
  * RendererManager handles WebGL and CSS renderers along with the render loop.
@@ -216,8 +183,7 @@ export class RendererManager {
 		this.onUpdate?.(time);
 
 		if (this.renderer.xr.isPresenting) {
-			// EffectComposer does not produce a stereo XR framebuffer. Render the
-			// scene directly while immersive and keep post-processing for the card.
+			// EffectComposer does not produce a stereo XR framebuffer. Render the scene directly while immersive and keep post-processing for the card.
 			this.renderer.render(this.scene, this.camera);
 			return;
 		}
@@ -263,8 +229,7 @@ export class RendererManager {
 			antialias: this.renderingConfig.antialiasing,
 			canvas: this.canvas,
 		});
-		// Scene.background supplies solid backgrounds. Keep the renderer clear
-		// transparent so spaces configured without one expose the card behind them.
+		// Scene.background supplies solid backgrounds. Keep the renderer clear transparent so spaces configured without one expose the card behind them.
 		renderer.setClearColor(0x000000, 0);
 		renderer.xr.enabled = this.xrEnabled;
 		this.applyRenderingConfig(renderer);
@@ -279,11 +244,36 @@ export class RendererManager {
 		const pixelRatio =
 			(window.devicePixelRatio || 1) * this.renderingConfig.resolution;
 		renderer.setPixelRatio(pixelRatio);
-		renderer.toneMapping = getToneMapping(this.renderingConfig.toneMapping);
+		switch (this.renderingConfig.toneMapping) {
+			case "linear":
+				renderer.toneMapping = LinearToneMapping;
+				break;
+			case "reinhard":
+				renderer.toneMapping = ReinhardToneMapping;
+				break;
+			case "cineon":
+				renderer.toneMapping = CineonToneMapping;
+				break;
+			case "aces_filmic":
+				renderer.toneMapping = ACESFilmicToneMapping;
+				break;
+			default:
+				renderer.toneMapping = NoToneMapping;
+		}
 		renderer.shadowMap.enabled = this.renderingConfig.shadowMap.enabled;
-		renderer.shadowMap.type = getShadowMapType(
-			this.renderingConfig.shadowMap.type,
-		);
+		switch (this.renderingConfig.shadowMap.type) {
+			case "basic":
+				renderer.shadowMap.type = BasicShadowMap;
+				break;
+			case "pcf_soft":
+				renderer.shadowMap.type = PCFSoftShadowMap;
+				break;
+			case "vsm":
+				renderer.shadowMap.type = VSMShadowMap;
+				break;
+			default:
+				renderer.shadowMap.type = PCFShadowMap;
+		}
 		renderer.setSize(this.width, this.height, false);
 
 		if (composer) {
@@ -535,8 +525,7 @@ export class RendererManager {
 	public async setXrSession(session: XRSession | null): Promise<void> {
 		if (session) {
 			this.setXrEnabled(true);
-			// "local" is a core immersive reference space and works even when a
-			// device does not grant the optional floor-tracking feature.
+			// "local" is a core immersive reference space and works even when a device does not grant the optional floor-tracking feature.
 			this.renderer.xr.setReferenceSpaceType("local");
 		}
 

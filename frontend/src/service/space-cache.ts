@@ -35,9 +35,7 @@ function waitForTransaction(transaction: IDBTransaction): Promise<void> {
 }
 
 /**
- * Persistent browser cache for the data and binary assets required to render a
- * space. IndexedDB is used because geometry files can be much larger than the
- * synchronous localStorage quota.
+ * Persistent browser cache for the data and binary assets required to render a space. IndexedDB is used because geometry files can be much larger than the synchronous localStorage quota.
  */
 export class SpaceDataCache {
 	private databasePromise: Promise<IDBDatabase | null> | null = null;

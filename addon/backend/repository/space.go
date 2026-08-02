@@ -24,8 +24,7 @@ func (r *SpaceRepository) Create(space *models.Space) error {
 			return err
 		}
 
-		// The first space is the natural default. A later explicit default
-		// atomically replaces the previous one.
+		// The first space is the natural default. A later explicit default atomically replaces the previous one.
 		space.IsDefault = space.IsDefault || count == 0
 		if space.IsDefault {
 			if err := tx.Model(&models.Space{}).

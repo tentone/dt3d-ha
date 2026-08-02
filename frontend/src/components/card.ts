@@ -550,9 +550,7 @@ export class DT3DCard extends LitElement {
 	}
 
 	/**
-	 * Apply Home Assistant's local solar position to date/time-following skies.
-	 * The sun integration calculates these values from HA's configured clock and
-	 * location and refreshes them as the current time changes.
+	 * Apply Home Assistant's local solar position to date/time-following skies. The sun integration calculates these values from HA's configured clock and location and refreshes them as the current time changes.
 	 */
 	private updateSkyFromDateTime(): void {
 		const attributes = this.hassInstance?.states?.["sun.sun"]?.attributes;
@@ -569,8 +567,7 @@ export class DT3DCard extends LitElement {
 	/**
 	 * Select 3D model files or a model directory to upload.
 	 *
-	 * All selected files are made available to the model loaders so external
-	 * material, texture, and buffer references can be resolved.
+	 * All selected files are made available to the model loaders so external material, texture, and buffer references can be resolved.
 	 *
 	 * @param directory - Whether to select a complete directory instead of files.
 	 */
@@ -1177,9 +1174,7 @@ export class DT3DCard extends LitElement {
 			? this.getCurrentDevicePosition()
 			: null;
 		if (devicePosition) {
-			// The XR permission prompt can resolve after geolocation rejects.
-			// Attach a handler immediately; the positioning task still receives
-			// and handles the original rejection once the session starts.
+			// The XR permission prompt can resolve after geolocation rejects. Attach a handler immediately; the positioning task still receives and handles the original rejection once the session starts.
 			void devicePosition.catch(() => undefined);
 		}
 		const deviceHeading = locationBasedAr
@@ -2102,8 +2097,7 @@ export class DT3DCard extends LitElement {
 	}
 
 	/**
-	 * Enter a one-shot mode that places an object at the next scene
-	 * double-click.
+	 * Enter a one-shot mode that places an object at the next scene double-click.
 	 */
 	private beginMoveToPoint(objectId: string): void {
 		if (!this.space || this.isVisualizationOnly()) {
@@ -2212,9 +2206,7 @@ export class DT3DCard extends LitElement {
 		const parent = original.parent ?? this.space;
 		const clone = original.clone(true);
 
-		// Object3D.clone() copies userData, including the API IDs assigned to the
-		// original hierarchy. Remove them so persistence creates new records
-		// instead of updating the originals.
+		// Object3D.clone() copies userData, including the API IDs assigned to the original hierarchy. Remove them so persistence creates new records instead of updating the originals.
 		clone.traverse((child) => {
 			delete child.userData.apiId;
 		});
@@ -2309,8 +2301,7 @@ export class DT3DCard extends LitElement {
 
 		this.tree?.closeContextMenu();
 
-		// Keep the pending object selected while waiting for the placement
-		// double-click. Browsers emit click events before dblclick.
+		// Keep the pending object selected while waiting for the placement double-click. Browsers emit click events before dblclick.
 		if (this.moveToPointObject) {
 			return;
 		}
@@ -2322,9 +2313,7 @@ export class DT3DCard extends LitElement {
 
 		this.clearPendingEntityClickAction();
 
-		// Pick the object only to trigger its single-click interaction. Canvas
-		// selection is intentionally reserved for the double-click handler so the
-		// transform controls, tree, and inspector always change together.
+		// Pick the object only to trigger its single-click interaction. Canvas selection is intentionally reserved for the double-click handler so the transform controls, tree, and inspector always change together.
 		const {object} = this.pickObjectFromEvent(event);
 		if (object instanceof DTObject) {
 			object.onInteraction({
@@ -2338,8 +2327,7 @@ export class DT3DCard extends LitElement {
 			return;
 		}
 
-		// A browser emits click events before dblclick. Delay the single-click
-		// action so a double-click can cancel it and run only its own action.
+		// A browser emits click events before dblclick. Delay the single-click action so a double-click can cancel it and run only its own action.
 		const action = this.resolveEntityAction(object, "click");
 		if (event.detail > 1 || action === "nothing") {
 			return;
@@ -2470,8 +2458,7 @@ export class DT3DCard extends LitElement {
 	}
 
 	/**
-	 * Resolve a world-space placement point while ignoring the object being
-	 * moved. Empty scene areas fall back to the world ground plane.
+	 * Resolve a world-space placement point while ignoring the object being moved. Empty scene areas fall back to the world ground plane.
 	 */
 	private pickMoveToPointPosition(
 		event: MouseEvent,
@@ -4816,8 +4803,7 @@ export class DT3DCard extends LitElement {
 	/**
 	 * Check whether Home Assistant mounted the card in its masonry view.
 	 *
-	 * Dashboard views use shadow DOM, so walk through the shadow hosts instead
-	 * of relying on `closest()`, which cannot cross those boundaries.
+	 * Dashboard views use shadow DOM, so walk through the shadow hosts instead of relying on `closest()`, which cannot cross those boundaries.
 	 */
 	private isInsideMasonryView(): boolean {
 		let root = this.getRootNode();
@@ -4833,8 +4819,7 @@ export class DT3DCard extends LitElement {
 	}
 
 	/**
-	 * Height hint used by Home Assistant to balance masonry columns.
-	 * One masonry size unit is 50 pixels.
+	 * Height hint used by Home Assistant to balance masonry columns. One masonry size unit is 50 pixels.
 	 */
 	public getCardSize(): number {
 		return Math.ceil(DEFAULT_CARD_HEIGHT / MASONRY_CARD_UNIT_HEIGHT);

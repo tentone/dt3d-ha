@@ -621,24 +621,24 @@ export function findMaterialObject(
 	let result: MaterialObject | null = null;
 	object.traverse((child) => {
 		const exposedByOwner = child.userData.ownerMaterialTarget === true;
+		let current: Object3D | null = child;
+		let internalDescendant = false;
+		while (current && current !== object) {
+			if (current.internal === true) {
+				internalDescendant = true;
+				break;
+			}
+			current = current.parent;
+		}
 		if (
 			!result &&
-			(!isInternalDescendant(child, object) || exposedByOwner) &&
+			(!internalDescendant || exposedByOwner) &&
 			hasMaterial(child)
 		) {
 			result = child;
 		}
 	});
 	return result;
-}
-
-function isInternalDescendant(child: Object3D, root: Object3D): boolean {
-	let current: Object3D | null = child;
-	while (current && current !== root) {
-		if (current.internal === true) return true;
-		current = current.parent;
-	}
-	return false;
 }
 
 function hasMaterial(object: Object3D): object is MaterialObject {
@@ -680,39 +680,6 @@ export function getMaterialPropertyDefinitions(
 	);
 }
 
-function cloneMaterialProperty(value: unknown): unknown {
-	if (
-		value &&
-		typeof value === "object" &&
-		"clone" in value &&
-		typeof (value as {clone?: unknown}).clone === "function"
-	) {
-		return (value as {clone: () => unknown}).clone();
-	}
-	if (Array.isArray(value)) return [...value];
-	return value;
-}
-
-function createCompatibleMaterial(
-	type: string,
-	source: Material,
-): Material | null {
-	const Constructor = MATERIAL_CONSTRUCTORS[type];
-	if (!Constructor) return null;
-
-	const material = new Constructor();
-	const sourceData = source as unknown as Record<string, unknown>;
-	const targetData = material as unknown as Record<string, unknown>;
-	for (const property of TRANSFERABLE_PROPERTIES) {
-		if (property in sourceData && property in targetData) {
-			targetData[property] = cloneMaterialProperty(sourceData[property]);
-		}
-	}
-	material.userData = {...source.userData};
-	material.needsUpdate = true;
-	return material;
-}
-
 export function changeMaterialType(
 	object: MaterialObject,
 	type: string,
@@ -720,9 +687,31 @@ export function changeMaterialType(
 	if (!getCompatibleMaterialTypes(object).includes(type)) return false;
 
 	const oldMaterials = getMaterials(object);
-	const newMaterials = oldMaterials.map((material) =>
-		createCompatibleMaterial(type, material),
-	);
+	const newMaterials = oldMaterials.map((source) => {
+		const Constructor = MATERIAL_CONSTRUCTORS[type];
+		if (!Constructor) return null;
+
+		const material = new Constructor();
+		const sourceData = source as unknown as Record<string, unknown>;
+		const targetData = material as unknown as Record<string, unknown>;
+		for (const property of TRANSFERABLE_PROPERTIES) {
+			if (!(property in sourceData) || !(property in targetData)) continue;
+
+			const value = sourceData[property];
+			targetData[property] =
+				value &&
+				typeof value === "object" &&
+				"clone" in value &&
+				typeof (value as {clone?: unknown}).clone === "function"
+					? (value as {clone: () => unknown}).clone()
+					: Array.isArray(value)
+						? [...value]
+						: value;
+		}
+		material.userData = {...source.userData};
+		material.needsUpdate = true;
+		return material;
+	});
 	if (newMaterials.some((material) => !material)) return false;
 
 	object.material = Array.isArray(object.material)

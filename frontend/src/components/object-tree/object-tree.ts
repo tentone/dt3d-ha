@@ -163,8 +163,7 @@ export class DT3DTree extends LitElement {
 	private selectedId: UUID = null;
 
 	/**
-	 * All selected node IDs. `selectedId` remains the range anchor and primary
-	 * selection for scrolling and single-selection behavior.
+	 * All selected node IDs. `selectedId` remains the range anchor and primary selection for scrolling and single-selection behavior.
 	 */
 	@state()
 	private selectedIds: Set<UUID> = new Set();
@@ -504,9 +503,7 @@ export class DT3DTree extends LitElement {
 	/**
 	 * Reconcile the existing tree with the current Three.js scene graph.
 	 *
-	 * Existing nodes are reused by UUID and only their metadata/children are updated.
-	 * This preserves expanded state and gives Lit stable keyed nodes to patch instead
-	 * of rebuilding the whole rendered tree.
+	 * Existing nodes are reused by UUID and only their metadata/children are updated. This preserves expanded state and gives Lit stable keyed nodes to patch instead of rebuilding the whole rendered tree.
 	 *
 	 * @param scene - Scene or object subtree to diff into the current tree.
 	 */
@@ -734,8 +731,7 @@ export class DT3DTree extends LitElement {
 	}
 
 	/**
-	 * Filter nodes recursively, retaining matches and the ancestors needed to
-	 * reach them.
+	 * Filter nodes recursively, retaining matches and the ancestors needed to reach them.
 	 *
 	 * @param nodes - Tree nodes to filter.
 	 * @param query - Normalized search text.
@@ -951,8 +947,7 @@ export class DT3DTree extends LitElement {
 	}
 
 	/**
-	 * Apply standard tree multi-selection behavior. Ctrl/Cmd toggles individual
-	 * nodes while Shift selects the visual range from the primary node.
+	 * Apply standard tree multi-selection behavior. Ctrl/Cmd toggles individual nodes while Shift selects the visual range from the primary node.
 	 */
 	private handleNodeSelection(event: MouseEvent, node: TreeNode): void {
 		const additive = event.ctrlKey || event.metaKey;
@@ -1266,9 +1261,7 @@ export class DT3DTree extends LitElement {
 	}
 
 	/**
-	 * Resolve whether the pointer means insert before, reparent inside, or insert
-	 * after a node. The scene node only accepts children, making it the root drop
-	 * target.
+	 * Resolve whether the pointer means insert before, reparent inside, or insert after a node. The scene node only accepts children, making it the root drop target.
 	 */
 	private getDropPosition(event: DragEvent, node: TreeNode): DropPosition {
 		if (node.id === this.scene?.uuid) {
@@ -1361,8 +1354,7 @@ export class DT3DTree extends LitElement {
 	}
 
 	/**
-	 * Move selected Object3Ds together and preserve each world transform by
-	 * converting its old world matrix into the new parent's local space.
+	 * Move selected Object3Ds together and preserve each world transform by converting its old world matrix into the new parent's local space.
 	 */
 	private moveObjects(
 		objectIds: UUID[],

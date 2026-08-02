@@ -117,13 +117,20 @@ export async function exportSpaceArchive(
 	};
 	files[MANIFEST_PATH] = strToU8(JSON.stringify(archive, null, "\t"));
 
-	const zipped = await zipFiles(files);
+	const zipped = await new Promise<Uint8Array>((resolve, reject) => {
+		zip(files, {level: 6}, (error, data) => {
+			if (error) {
+				reject(error);
+				return;
+			}
+			resolve(data);
+		});
+	});
 	return new Blob([zipped], {type: DT3D_ARCHIVE_MIME_TYPE});
 }
 
 /**
- * Validate a .dt3d archive and recreate its space through the existing API.
- * A partially imported space is deleted if any upload or database write fails.
+ * Validate a .dt3d archive and recreate its space through the existing API. A partially imported space is deleted if any upload or database write fails.
  */
 export async function importSpaceArchive(
 	apiClient: SpaceApi,
@@ -163,7 +170,7 @@ export async function importSpaceArchive(
 			const geometry = files[geometryArchivePath(oldGeometryId)];
 			const response = await apiClient.uploadGeometry(
 				createdSpace.id,
-				toArrayBuffer(geometry),
+				geometry.slice().buffer,
 			);
 			geometryIdMap.set(oldGeometryId, response.id);
 		}
@@ -232,14 +239,42 @@ function externalizeDataUrls(
 	knownPaths: Map<string, string>,
 ): unknown {
 	if (typeof value === "string") {
-		const parsed = parseDataUrl(value);
+		const match = /^data:([^;,]*)(;base64)?,(.*)$/s.exec(value);
+		let parsed: {data: Uint8Array; mimeType: string} | null = null;
+		if (match) {
+			const mimeType = match[1] || "application/octet-stream";
+			const payload = match[3];
+			try {
+				if (match[2]) {
+					const binary = atob(payload);
+					const data = new Uint8Array(binary.length);
+					for (let index = 0; index < binary.length; index += 1) {
+						data[index] = binary.charCodeAt(index);
+					}
+					parsed = {data, mimeType};
+				} else {
+					parsed = {data: strToU8(decodeURIComponent(payload)), mimeType};
+				}
+			} catch {
+				parsed = null;
+			}
+		}
 		if (!parsed) {
 			return value;
 		}
 
 		let assetPath = knownPaths.get(value);
 		if (!assetPath) {
-			assetPath = `${EMBEDDED_ASSET_PATH_PREFIX}asset-${assets.length + 1}${extensionForMimeType(parsed.mimeType)}`;
+			const extensions: Record<string, string> = {
+				"image/avif": ".avif",
+				"image/gif": ".gif",
+				"image/jpeg": ".jpg",
+				"image/png": ".png",
+				"image/svg+xml": ".svg",
+				"image/webp": ".webp",
+			};
+			const extension = extensions[parsed.mimeType.toLowerCase()] ?? ".bin";
+			assetPath = `${EMBEDDED_ASSET_PATH_PREFIX}asset-${assets.length + 1}${extension}`;
 			knownPaths.set(value, assetPath);
 			files[assetPath] = parsed.data;
 			assets.push({
@@ -288,7 +323,14 @@ function restoreEmbeddedAssets(
 					`The DT3D archive is missing embedded asset "${path}".`,
 				);
 			}
-			return toDataUrl(data, asset.mime_type);
+			let binary = "";
+			const chunkSize = 0x8000;
+			for (let offset = 0; offset < data.length; offset += chunkSize) {
+				binary += String.fromCharCode(
+					...data.subarray(offset, offset + chunkSize),
+				);
+			}
+			return `data:${asset.mime_type};base64,${btoa(binary)}`;
 		}
 		if (Array.isArray(current)) {
 			return current.map(restore);
@@ -307,7 +349,15 @@ function restoreEmbeddedAssets(
 async function parseSpaceArchive(data: Uint8Array): Promise<ParsedArchive> {
 	let files: ArchiveFiles;
 	try {
-		files = await unzipFiles(data);
+		files = await new Promise<ArchiveFiles>((resolve, reject) => {
+			unzip(data, (error, contents) => {
+				if (error) {
+					reject(error);
+					return;
+				}
+				resolve(contents);
+			});
+		});
 	} catch {
 		throw new Error("The selected file is not a valid DT3D archive.");
 	}
@@ -541,52 +591,6 @@ function geometryArchivePath(geometryId: string): string {
 	return `${GEOMETRY_PATH_PREFIX}${geometryId}.dt3dgeo`;
 }
 
-function parseDataUrl(
-	value: string,
-): { data: Uint8Array; mimeType: string } | null {
-	const match = /^data:([^;,]*)(;base64)?,(.*)$/s.exec(value);
-	if (!match) {
-		return null;
-	}
-
-	const mimeType = match[1] || "application/octet-stream";
-	const payload = match[3];
-	try {
-		if (match[2]) {
-			const binary = atob(payload);
-			const data = new Uint8Array(binary.length);
-			for (let index = 0; index < binary.length; index += 1) {
-				data[index] = binary.charCodeAt(index);
-			}
-			return {data, mimeType};
-		}
-		return {data: strToU8(decodeURIComponent(payload)), mimeType};
-	} catch {
-		return null;
-	}
-}
-
-function toDataUrl(data: Uint8Array, mimeType: string): string {
-	let binary = "";
-	const chunkSize = 0x8000;
-	for (let offset = 0; offset < data.length; offset += chunkSize) {
-		binary += String.fromCharCode(...data.subarray(offset, offset + chunkSize));
-	}
-	return `data:${mimeType};base64,${btoa(binary)}`;
-}
-
-function extensionForMimeType(mimeType: string): string {
-	const extensions: Record<string, string> = {
-		"image/avif": ".avif",
-		"image/gif": ".gif",
-		"image/jpeg": ".jpg",
-		"image/png": ".png",
-		"image/svg+xml": ".svg",
-		"image/webp": ".webp",
-	};
-	return extensions[mimeType.toLowerCase()] ?? ".bin";
-}
-
 function isSafeArchivePath(path: string): boolean {
 	return (
 		Boolean(path) &&
@@ -601,32 +605,4 @@ function isSafeArchivePath(path: string): boolean {
 
 function isRecord(value: unknown): value is Record<string, any> {
 	return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-function toArrayBuffer(data: Uint8Array): ArrayBuffer {
-	return data.slice().buffer;
-}
-
-function zipFiles(files: ArchiveFiles): Promise<Uint8Array> {
-	return new Promise((resolve, reject) => {
-		zip(files, {level: 6}, (error, data) => {
-			if (error) {
-				reject(error);
-				return;
-			}
-			resolve(data);
-		});
-	});
-}
-
-function unzipFiles(data: Uint8Array): Promise<ArchiveFiles> {
-	return new Promise((resolve, reject) => {
-		unzip(data, (error, files) => {
-			if (error) {
-				reject(error);
-				return;
-			}
-			resolve(files);
-		});
-	});
 }

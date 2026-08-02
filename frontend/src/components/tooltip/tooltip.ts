@@ -13,8 +13,7 @@ let tooltipId = 0;
 /**
  * Tooltip for a single slotted control.
  *
- * The tooltip opens on hover or keyboard focus and is rendered in the browser's
- * top layer so it is not clipped by scrollable toolbars and sidebars.
+ * The tooltip opens on hover or keyboard focus and is rendered in the browser's top layer so it is not clipped by scrollable toolbars and sidebars.
  */
 @customElement("dt3d-tooltip")
 export class DT3DTooltip extends LitElement {

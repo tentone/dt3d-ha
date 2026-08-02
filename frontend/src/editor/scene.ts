@@ -223,11 +223,6 @@ const booleanOrDefault = (value: unknown, fallback: boolean): boolean => {
 	return fallback;
 };
 
-const normalizeBackgroundType = (value: unknown): BackgroundType =>
-	typeof value === "string" && value.trim().toLowerCase() === "transparent"
-		? "transparent"
-		: "solid";
-
 /**
  * Merge partial daylight settings with defaults and constrain numeric values.
  *
@@ -287,7 +282,11 @@ export const normalizeSpaceSceneConfig = (
 
 	return {
 		background: {
-			type: normalizeBackgroundType(background.type),
+			type:
+				typeof background.type === "string" &&
+				background.type.trim().toLowerCase() === "transparent"
+					? "transparent"
+					: "solid",
 			color: normalizeColor(background.color, DEFAULT_BACKGROUND_CONFIG.color),
 		},
 		daylight: normalizeDaylightConfig(config.daylight),
@@ -378,8 +377,7 @@ export class SceneManager {
 		DEFAULT_NAVIGATION_CONTROLS;
 
 	/**
-	 * FlyControls has no target, so retain a focus point for saved viewports and
-	 * orientation-cube actions.
+	 * FlyControls has no target, so retain a focus point for saved viewports and orientation-cube actions.
 	 */
 	private navigationTarget = new Vector3();
 
@@ -460,8 +458,7 @@ export class SceneManager {
 	private sky: Sky | null = null;
 
 	/**
-	 * Active immersive presentation mode. AR temporarily suppresses all scene
-	 * background imagery so the device camera can show through the XR layer.
+	 * Active immersive presentation mode. AR temporarily suppresses all scene background imagery so the device camera can show through the XR layer.
 	 */
 	private immersiveMode: "vr" | "ar" | null = null;
 
@@ -647,8 +644,7 @@ export class SceneManager {
 	}
 
 	/**
-	 * Update the solar position derived from Home Assistant's current date, time,
-	 * and location. Manual daylight angles remain the fallback when unavailable.
+	 * Update the solar position derived from Home Assistant's current date, time, and location. Manual daylight angles remain the fallback when unavailable.
 	 */
 	public setDateTimeSunPosition(position: SunPosition | null): void {
 		if (
@@ -801,8 +797,7 @@ export class SceneManager {
 	}
 
 	/**
-	 * Initialize mesh shadow preferences and apply shadow-map settings to lights
-	 * in a newly added object subtree.
+	 * Initialize mesh shadow preferences and apply shadow-map settings to lights in a newly added object subtree.
 	 */
 	public applyShadowSettingsToObject(object: Object3D): void {
 		object.traverse((child) => {
@@ -1138,8 +1133,7 @@ export class SceneManager {
 	}
 
 	/**
-	 * Position the camera on a world axis while preserving its orbit target and
-	 * distance from that target.
+	 * Position the camera on a world axis while preserving its orbit target and distance from that target.
 	 *
 	 * @param direction - Axis pointing from the orbit target to the camera.
 	 */
@@ -1162,8 +1156,7 @@ export class SceneManager {
 	}
 
 	/**
-	 * Center the current view on a world-space bounding box and fit it in the
-	 * viewport while preserving the current viewing direction.
+	 * Center the current view on a world-space bounding box and fit it in the viewport while preserving the current viewing direction.
 	 *
 	 * @param bounds - World-space bounds to frame.
 	 * @param padding - Scale applied around the projected bounds.

@@ -15,8 +15,7 @@ function compressToBase64(value) {
 	return Buffer.from(deflateSync(value, {level: 9})).toString("base64");
 }
 
-// Keep the complete runtime icon/codec support without storing large,
-// gzip-friendly data verbatim in the single-file HACS artifact.
+// Keep the complete runtime icon/codec support without storing large, gzip-friendly data verbatim in the single-file HACS artifact.
 const mdiIconCatalog = compressToBase64(
 	JSON.stringify(
 		Object.fromEntries(
@@ -71,8 +70,7 @@ function externalDracoLoaderAssets() {
 			}
 
 			let replacementCount = 0;
-			// loader-utils always calls setDecoderPath(), so Three's bundled
-			// fallback URLs are unreachable and would only inline duplicate codecs.
+			// loader-utils always calls setDecoderPath(), so Three's bundled fallback URLs are unreachable and would only inline duplicate codecs.
 			const transformedCode = code.replace(dracoAssetPattern, () => {
 				replacementCount += 1;
 				return '""';
