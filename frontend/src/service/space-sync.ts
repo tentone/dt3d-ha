@@ -21,6 +21,7 @@ import {
 	createMeshObject,
 	getMeshGeometryParameters,
 } from "../editor/mesh-handler.js";
+import {initializeMeshShadowSettings} from "../editor/mesh-shadows.js";
 import type {CameraViewportConfig, SceneManager} from "../editor/scene.js";
 import {DTObject} from "../objects/dt-object.js";
 import {EntityGeneric} from "../objects/entity-generic.js";
@@ -965,6 +966,17 @@ export class SpaceSync {
 			return null;
 		}
 
+		if (object instanceof Mesh) {
+			initializeMeshShadowSettings(object, {
+				castShadow:
+					typeof data.castShadow === "boolean" ? data.castShadow : undefined,
+				receiveShadow:
+					typeof data.receiveShadow === "boolean"
+						? data.receiveShadow
+						: undefined,
+			});
+		}
+
 		object.name = instance.name || object.name;
 		object.userData[OBJECT_INSTANCE_TYPE_USER_DATA_KEY] =
 			declaredType || instance.type;
@@ -1217,6 +1229,11 @@ export class SpaceSync {
 				}
 				storeMeshPredominantTextureColor(data, object);
 			}
+		}
+
+		if (object instanceof Mesh) {
+			data.castShadow = object.castShadow;
+			data.receiveShadow = object.receiveShadow;
 		}
 
 		if (object instanceof DTObject) {

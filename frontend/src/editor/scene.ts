@@ -24,6 +24,7 @@ import {TransformControls} from "three/examples/jsm/controls/TransformControls";
 import {Sky} from "three/examples/jsm/objects/Sky.js";
 
 import type {ShadowMapQuality} from "./general-config.js";
+import {ensureMeshShadowSettings} from "./mesh-shadows.js";
 
 /**
  * Editor camera mode (2D or 3D)
@@ -718,7 +719,7 @@ export class SceneManager {
 	}
 
 	/**
-	 * Enable or disable shadows for scene lights and mesh objects.
+	 * Enable or disable shadow-map rendering for the scene.
 	 */
 	public setShadowsEnabled(
 		enabled: boolean,
@@ -800,7 +801,8 @@ export class SceneManager {
 	}
 
 	/**
-	 * Apply the current shadow settings to a newly added object subtree.
+	 * Initialize mesh shadow preferences and apply shadow-map settings to lights
+	 * in a newly added object subtree.
 	 */
 	public applyShadowSettingsToObject(object: Object3D): void {
 		object.traverse((child) => {
@@ -812,8 +814,7 @@ export class SceneManager {
 			}
 
 			if (child instanceof Mesh) {
-				child.castShadow = this.shadowsEnabled;
-				child.receiveShadow = this.shadowsEnabled;
+				ensureMeshShadowSettings(child);
 			}
 		});
 		this.requestShadowMapUpdate();

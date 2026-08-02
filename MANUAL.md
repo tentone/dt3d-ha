@@ -200,6 +200,7 @@ The optional orientation cube is separate from saved viewports. Double-click a c
 
  <img src="readme/groups_editor.png" width="500">
 
+
 ### Configure a space
 
 Open **Space configuration** (cog icon) beside the space selector. The form also
@@ -347,8 +348,11 @@ Then optimize in this order:
 1. Lower `resolution` from `1` to `0.75`, then `0.5`. This usually gives the
    largest improvement with the smallest visual change.
 2. Disable shadow maps. If shadows are required, use `basic` first, limit the
-   number of shadow-casting lights, and disable **Cast shadows** on lights that
-   do not need them.
+   number of shadow-casting lights, and disable **Cast shadows** on lights and
+   meshes that do not need them.
+      - Select a mesh and expand **Shadows** in the object inspector. **Cast shadows**
+controls whether the mesh projects a shadow, while **Receive shadows** controls
+whether shadows are drawn on its surface.
 3. Disable post-processing in **Space configuration**. Avoid stacking several
    effects; GTAO and SSAO cannot be enabled together.
 4. Keep antialiasing off on high-DPI displays. Test it only after resolution and

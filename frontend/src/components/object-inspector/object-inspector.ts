@@ -588,6 +588,31 @@ export class DT3DObjectInspector extends LitElement {
 		];
 	}
 
+	private getShadowFields(locked: boolean): DynamicFormField[] {
+		if (!(this.selectedObject instanceof Mesh)) {
+			return [];
+		}
+
+		return [
+			{
+				label: localManager.get("meshCastShadows"),
+				attribute: "castShadow",
+				type: "boolean",
+				tooltip: localManager.get("meshCastShadowsTooltip"),
+				editable: !locked,
+				enabled: true,
+			},
+			{
+				label: localManager.get("meshReceiveShadows"),
+				attribute: "receiveShadow",
+				type: "boolean",
+				tooltip: localManager.get("meshReceiveShadowsTooltip"),
+				editable: !locked,
+				enabled: true,
+			},
+		];
+	}
+
 	private getMaterialFields(locked: boolean): DynamicFormField[] {
 		const materialObject = findMaterialObject(this.selectedObject);
 		if (!materialObject) return [];
@@ -1585,6 +1610,12 @@ export class DT3DObjectInspector extends LitElement {
 			"transform",
 			localManager.get("transform"),
 			this.getTransformFields(locked),
+		);
+		this.addSubFormField(
+			fields,
+			"shadows",
+			localManager.get("shadows"),
+			this.getShadowFields(locked),
 		);
 		this.addSubFormField(
 			fields,
