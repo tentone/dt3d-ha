@@ -2128,7 +2128,7 @@ let Lo = class extends ai {
     return Fe`
 		<div class="connection-status-container">
 			<div style="margin: 5px;" class="${this.success ? "connection-status-success" : "connection-status-error"}">
-				${this.msg}<br>${"2026-08-02T16:31:31.684Z"}
+				${this.msg}<br>${"2026-08-02T16:51:19.198Z"}
 			</div>
 		</div>`;
   }
@@ -41258,7 +41258,10 @@ class ek {
    */
   applyShadowSettingsToObject(e) {
     e.traverse((t) => {
-      (t instanceof On || t instanceof an) && this.applyShadowMapResolution(t, this.pointShadowMapResolution), t instanceof le && XF(t);
+      (t instanceof On || t instanceof an) && this.applyShadowMapResolution(
+        t,
+        this.pointShadowMapResolution
+      ), t instanceof le && XF(t);
     }), this.requestShadowMapUpdate();
   }
   /**
