@@ -5,8 +5,9 @@ import {localManager} from "../../locale/locale.js";
 import componentStyles from "../mesh-menu/mesh-menu.css?inline";
 
 const UPLOAD_OPTIONS = [
-	{labelKey: "uploadModelFiles", directory: false},
-	{labelKey: "uploadModelDirectory", directory: true},
+	{labelKey: "uploadModelFiles", action: "model-files"},
+	{labelKey: "uploadModelDirectory", action: "model-directory"},
+	{labelKey: "uploadFloorplan", action: "floorplan"},
 ];
 
 @customElement("dt3d-upload-menu")
@@ -23,9 +24,9 @@ export class DT3DUploadMenu extends LitElement {
 		}));
 	}
 
-	private select(directory: boolean): void {
-		this.dispatchEvent(new CustomEvent("upload-model", {
-			detail: {directory},
+	private select(action: string): void {
+		this.dispatchEvent(new CustomEvent("upload-selected", {
+			detail: {action},
 			bubbles: true,
 			composed: true,
 		}));
@@ -42,7 +43,7 @@ export class DT3DUploadMenu extends LitElement {
 			>
 				${UPLOAD_OPTIONS.map((option) => html`
 					<button
-						@click=${() => this.select(option.directory)}
+						@click=${() => this.select(option.action)}
 						aria-label=${localManager.get(option.labelKey)}
 					>
 						${localManager.get(option.labelKey)}

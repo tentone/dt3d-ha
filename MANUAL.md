@@ -122,7 +122,11 @@ dialog. Card-wide single- and double-click defaults can be `open`, `toggle`, or
 
 ### Draw a base floor plan
 
-1. Add or import a floor/plane so the wall tool has a surface to intersect.
+1. Open **Upload assets** and choose **Add floorplan reference**. Select a 2D
+   floorplan image, click two points whose real separation is known, enter that
+   distance in meters, and choose **Add floorplan**. DT3D creates a horizontal
+   textured plane at the calibrated real-world size. You can also add or import
+   a floor/plane manually.
 2. Optionally enable grid snapping and set the required snap size.
 3. Select **Draw wall**. Double-click once for the start point, then double-click
    each following point to draw connected wall segments continuously. End on any

@@ -3,6 +3,7 @@ import "./bottom-bar/bottom-bar.js";
 import "./camera-toggle/camera-toggle.js";
 import "./confirmation-modal/confirmation-modal.js";
 import "./connection-status/connection-status.js";
+import "./floorplan-calibration-modal/floorplan-calibration-modal.js";
 import "./form-modal/form-modal.js";
 import "./hint-box/hint-box.js";
 import "./light-menu/light-menu.js";
@@ -48,6 +49,7 @@ import type {
 	EntityInteractionConfig,
 } from "../editor/entity-actions.js";
 import {normalizeEntityInteractionConfig} from "../editor/entity-actions.js";
+import {createFloorplanReferenceMesh} from "../editor/floorplan-reference.js";
 import type {
 	CardGeneralConfig,
 	GeneralConfig,
@@ -109,6 +111,8 @@ import {
 	collectDroppedFiles,
 	findImageFile,
 	pickLocalFiles,
+	pickLocalImage,
+	readFileAsDataUrl,
 } from "../utils/file-utils.js";
 import {resolveUserObject} from "../utils/internal-object.js";
 import {isModelFile, loadModelsFromFiles} from "../utils/loader-utils.js";
@@ -126,6 +130,10 @@ import type {
 	DynamicFormEntityOption,
 	DynamicFormField,
 } from "./dynamic-form/dynamic-form.js";
+import type {
+	DT3DFloorplanCalibrationModal,
+	FloorplanCalibrationSubmitDetail,
+} from "./floorplan-calibration-modal/floorplan-calibration-modal.js";
 import type {
 	DT3DFormModal,
 	FormModalSubmitDetail,
@@ -485,6 +493,8 @@ export class DT3DCard extends LitElement {
 
 	private uploadMenu: DT3DUploadMenu | null = null;
 
+	private floorplanCalibrationModal: DT3DFloorplanCalibrationModal | null = null;
+
 	private confirmationModal: DT3DConfirmationModal | null = null;
 
 	private gridConfigModal: DT3DFormModal | null = null;
@@ -584,6 +594,62 @@ export class DT3DCard extends LitElement {
 			if (position) object.position.copy(position);
 			this.addToScene(object, file.name);
 		});
+	}
+
+	/** Select an image and open the two-point floorplan calibration flow. */
+	private selectFloorplanImage(): void {
+		if (!this.space || this.isVisualizationOnly()) {
+			return;
+		}
+
+		const host = this.content ?? this;
+		void pickLocalImage(host)
+			.then(async (file) => {
+				if (!file) {
+					return;
+				}
+
+				const imageUrl = await readFileAsDataUrl(file);
+				this.openFloorplanCalibrationModal(file, imageUrl);
+			})
+			.catch((error) => console.error("Unable to load floorplan image", error));
+	}
+
+	/** Prompt for two image points and create the scaled reference plane. */
+	private openFloorplanCalibrationModal(file: File, imageUrl: string): void {
+		if (!this.content || this.isVisualizationOnly()) {
+			return;
+		}
+
+		this.floorplanCalibrationModal?.remove();
+		const modal = document.createElement(
+			"dt3d-floorplan-calibration-modal",
+		) as DT3DFloorplanCalibrationModal;
+		modal.imageUrl = imageUrl;
+		modal.imageName = file.name;
+
+		const closeModal = () => {
+			modal.remove();
+			if (this.floorplanCalibrationModal === modal) {
+				this.floorplanCalibrationModal = null;
+			}
+		};
+
+		modal.addEventListener("floorplan-calibrated", (event: Event) => {
+			const calibration = (
+				event as CustomEvent<FloorplanCalibrationSubmitDetail>
+			).detail;
+			closeModal();
+			void createFloorplanReferenceMesh(file, calibration)
+				.then((mesh) => this.addToScene(mesh, `Floorplan - ${file.name}`))
+				.catch((error) =>
+					console.error("Unable to create floorplan reference", error),
+				);
+		});
+		modal.addEventListener("modal-close", closeModal);
+
+		this.floorplanCalibrationModal = modal;
+		this.content.appendChild(modal);
 	}
 
 	/**
@@ -2658,9 +2724,11 @@ export class DT3DCard extends LitElement {
 			this.confirmationModal ||
 			this.gridConfigModal ||
 			this.spaceFormModal ||
+			this.floorplanCalibrationModal ||
 			this.spaceConfigMenu ||
 			this.meshMenu ||
 			this.lightMenu ||
+			this.uploadMenu ||
 			this.content?.querySelector("dt3d-add-entity-modal"),
 		);
 	}
@@ -2967,10 +3035,13 @@ export class DT3DCard extends LitElement {
 				contentRect.height - 8,
 			),
 		);
-		menu.addEventListener("upload-model", (event: Event) => {
-			const {directory} = (event as CustomEvent<{ directory: boolean }>)
-				.detail;
-			this.selectFiles(directory);
+		menu.addEventListener("upload-selected", (event: Event) => {
+			const {action} = (event as CustomEvent<{ action: string }>).detail;
+			if (action === "floorplan") {
+				this.selectFloorplanImage();
+			} else {
+				this.selectFiles(action === "model-directory");
+			}
 		});
 		menu.addEventListener("modal-close", () => {
 			menu.remove();
@@ -4599,6 +4670,8 @@ export class DT3DCard extends LitElement {
 		this.lightMenu = null;
 		this.uploadMenu?.remove();
 		this.uploadMenu = null;
+		this.floorplanCalibrationModal?.remove();
+		this.floorplanCalibrationModal = null;
 		this.confirmationModal?.remove();
 		this.confirmationModal = null;
 		this.gridConfigModal?.remove();

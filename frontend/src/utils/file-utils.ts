@@ -152,6 +152,26 @@ export function pickLocalFiles(
 	});
 }
 
+/** Open a browser picker for one image file. */
+export function pickLocalImage(host: HTMLElement): Promise<File | null> {
+	return new Promise((resolve) => {
+		const input = document.createElement("input");
+		input.type = "file";
+		input.accept = "image/*";
+		input.style.display = "none";
+
+		const complete = (file: File | null = null) => {
+			input.remove();
+			resolve(file);
+		};
+		input.addEventListener("change", () => complete(input.files?.[0] ?? null));
+		input.addEventListener("cancel", () => complete());
+
+		host.appendChild(input);
+		input.click();
+	});
+}
+
 const readDroppedFile = (entry: DroppedFileSystemEntry): Promise<File> =>
 	new Promise((resolve, reject) => {
 		if (!entry.file) {
