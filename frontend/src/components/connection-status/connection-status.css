@@ -1,7 +1,7 @@
 :host {
 	display: flex;
 	align-items: center;
-	width: 100%;
+	width: 50%;
 	height: 60px;
 	position: absolute;
 	bottom: 10px;

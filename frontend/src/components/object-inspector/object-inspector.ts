@@ -105,9 +105,16 @@ const WINDOW_CONFIGURATION_ATTRIBUTES = new Set([
 	"gridHorizontalSpacing",
 	"gridVerticalSpacing",
 	"blindsEnabled",
+	"blindPlacement",
 	"blindPosition",
 	"blindSlatSpacing",
 	"blindColor",
+	"shuttersEnabled",
+	"shutterPanelCount",
+	"shutterOpenAmount",
+	"shutterBladeCount",
+	"shutterBladeOpenAmount",
+	"shutterColor",
 ]);
 
 @customElement("dt3d-object-inspector")
@@ -1063,6 +1070,18 @@ export class DT3DObjectInspector extends LitElement {
 				enabled: true,
 			},
 			{
+				label: localManager.get("windowBlindPlacement"),
+				attribute: "blindPlacement",
+				type: "select",
+				tooltip: localManager.get("windowBlindPlacementTooltip"),
+				editable: !locked && enabled,
+				enabled: true,
+				options: [
+					{label: localManager.get("inside"), value: "inside"},
+					{label: localManager.get("outside"), value: "outside"},
+				],
+			},
+			{
 				label: localManager.get("windowBlindPosition"),
 				attribute: "blindPosition",
 				type: "number",
@@ -1088,6 +1107,74 @@ export class DT3DObjectInspector extends LitElement {
 				attribute: "blindColor",
 				type: "color",
 				tooltip: localManager.get("windowBlindColorTooltip"),
+				editable: !locked && enabled,
+				enabled: true,
+			},
+		];
+	}
+
+	private getWindowShutterFields(locked: boolean): DynamicFormField[] {
+		if (!(this.selectedObject instanceof WindowObject)) return [];
+		const enabled = this.selectedObject.shuttersEnabled;
+		return [
+			{
+				label: localManager.get("windowShuttersEnabled"),
+				attribute: "shuttersEnabled",
+				type: "boolean",
+				tooltip: localManager.get("windowShuttersEnabledTooltip"),
+				editable: !locked,
+				enabled: true,
+			},
+			{
+				label: localManager.get("windowShutterPanelCount"),
+				attribute: "shutterPanelCount",
+				type: "select",
+				tooltip: localManager.get("windowShutterPanelCountTooltip"),
+				editable: !locked && enabled,
+				enabled: true,
+				options: [
+					{label: localManager.get("single"), value: 1},
+					{label: localManager.get("double"), value: 2},
+				],
+			},
+			{
+				label: localManager.get("windowShutterOpenAmount"),
+				attribute: "shutterOpenAmount",
+				type: "number",
+				tooltip: localManager.get("windowShutterOpenAmountTooltip"),
+				editable: !locked && enabled,
+				enabled: true,
+				min: 0,
+				max: 100,
+				step: 5,
+			},
+			{
+				label: localManager.get("windowShutterBladeCount"),
+				attribute: "shutterBladeCount",
+				type: "number",
+				tooltip: localManager.get("windowShutterBladeCountTooltip"),
+				editable: !locked && enabled,
+				enabled: true,
+				min: 1,
+				max: 50,
+				step: 1,
+			},
+			{
+				label: localManager.get("windowShutterBladeOpenAmount"),
+				attribute: "shutterBladeOpenAmount",
+				type: "number",
+				tooltip: localManager.get("windowShutterBladeOpenAmountTooltip"),
+				editable: !locked && enabled,
+				enabled: true,
+				min: 0,
+				max: 100,
+				step: 5,
+			},
+			{
+				label: localManager.get("windowShutterColor"),
+				attribute: "shutterColor",
+				type: "color",
+				tooltip: localManager.get("windowShutterColorTooltip"),
 				editable: !locked && enabled,
 				enabled: true,
 			},
@@ -1453,6 +1540,12 @@ export class DT3DObjectInspector extends LitElement {
 			"windowBlinds",
 			localManager.get("windowBlinds"),
 			this.getWindowBlindFields(locked),
+		);
+		this.addSubFormField(
+			fields,
+			"windowShutters",
+			localManager.get("windowShutters"),
+			this.getWindowShutterFields(locked),
 		);
 		this.addSubFormField(
 			fields,

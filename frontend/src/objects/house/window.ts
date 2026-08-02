@@ -26,9 +26,16 @@ export type WindowCustomization = {
 	gridHorizontalSpacing: number;
 	gridVerticalSpacing: number;
 	blindsEnabled: boolean;
+	blindPlacement: "inside" | "outside";
 	blindPosition: number;
 	blindSlatSpacing: number;
 	blindColor: string;
+	shuttersEnabled: boolean;
+	shutterPanelCount: 1 | 2;
+	shutterOpenAmount: number;
+	shutterBladeCount: number;
+	shutterBladeOpenAmount: number;
+	shutterColor: string;
 };
 
 const DEFAULT_WINDOW_DIMENSIONS: WindowDimensions = {
@@ -54,9 +61,16 @@ const DEFAULT_WINDOW_CUSTOMIZATION: WindowCustomization = {
 	gridHorizontalSpacing: 0,
 	gridVerticalSpacing: 0,
 	blindsEnabled: false,
+	blindPlacement: "inside",
 	blindPosition: 0,
 	blindSlatSpacing: 0.06,
 	blindColor: "#dedbd2",
+	shuttersEnabled: false,
+	shutterPanelCount: 2,
+	shutterOpenAmount: 0,
+	shutterBladeCount: 12,
+	shutterBladeOpenAmount: 0,
+	shutterColor: "#4f6b47",
 };
 
 const DEFAULT_WINDOW_COLOR = 0x6aa6ff;
@@ -113,6 +127,8 @@ export class WindowObject extends DTObject {
 
 	public blindsEnabled: boolean;
 
+	public blindPlacement: WindowCustomization["blindPlacement"];
+
 	/**
 	 * Blind extension percentage: 0 is fully raised, 100 is fully lowered.
 	 */
@@ -121,6 +137,18 @@ export class WindowObject extends DTObject {
 	public blindSlatSpacing: number;
 
 	public blindColor: string;
+
+	public shuttersEnabled: boolean;
+
+	public shutterPanelCount: WindowCustomization["shutterPanelCount"];
+
+	public shutterOpenAmount: number;
+
+	public shutterBladeCount: number;
+
+	public shutterBladeOpenAmount: number;
+
+	public shutterColor: string;
 
 	private sashGroup: Group;
 
@@ -134,6 +162,10 @@ export class WindowObject extends DTObject {
 
 	private blindsGroup: Group;
 
+	private shutterGroup: Group;
+
+	private secondaryShutterGroup: Group;
+
 	private windowMesh: Mesh;
 
 	private secondaryWindowMesh: Mesh;
@@ -143,6 +175,8 @@ export class WindowObject extends DTObject {
 	private gridMaterial: MeshStandardMaterial;
 
 	private blindMaterial: MeshStandardMaterial;
+
+	private shutterMaterial: MeshStandardMaterial;
 
 	constructor(
 		dimensions: Partial<WindowDimensions> = {},
@@ -215,6 +249,9 @@ export class WindowObject extends DTObject {
 			DEFAULT_WINDOW_CUSTOMIZATION.gridVerticalSpacing;
 		this.blindsEnabled =
 			customization.blindsEnabled ?? DEFAULT_WINDOW_CUSTOMIZATION.blindsEnabled;
+		this.blindPlacement =
+			customization.blindPlacement ??
+			DEFAULT_WINDOW_CUSTOMIZATION.blindPlacement;
 		this.blindPosition = Math.min(
 			100,
 			Math.max(
@@ -228,6 +265,41 @@ export class WindowObject extends DTObject {
 			DEFAULT_WINDOW_CUSTOMIZATION.blindSlatSpacing;
 		this.blindColor =
 			customization.blindColor ?? DEFAULT_WINDOW_CUSTOMIZATION.blindColor;
+		this.shuttersEnabled =
+			customization.shuttersEnabled ??
+			DEFAULT_WINDOW_CUSTOMIZATION.shuttersEnabled;
+		this.shutterPanelCount =
+			customization.shutterPanelCount === 1
+				? 1
+				: DEFAULT_WINDOW_CUSTOMIZATION.shutterPanelCount;
+		this.shutterOpenAmount = Math.min(
+			100,
+			Math.max(
+				0,
+				customization.shutterOpenAmount ??
+					DEFAULT_WINDOW_CUSTOMIZATION.shutterOpenAmount,
+			),
+		);
+		this.shutterBladeCount = Math.min(
+			50,
+			Math.max(
+				1,
+				Math.round(
+					customization.shutterBladeCount ??
+						DEFAULT_WINDOW_CUSTOMIZATION.shutterBladeCount,
+				),
+			),
+		);
+		this.shutterBladeOpenAmount = Math.min(
+			100,
+			Math.max(
+				0,
+				customization.shutterBladeOpenAmount ??
+					DEFAULT_WINDOW_CUSTOMIZATION.shutterBladeOpenAmount,
+			),
+		);
+		this.shutterColor =
+			customization.shutterColor ?? DEFAULT_WINDOW_CUSTOMIZATION.shutterColor;
 
 		this.name = "Window";
 		this.userData.meshType = "window";
@@ -275,11 +347,23 @@ export class WindowObject extends DTObject {
 		this.blindsGroup.name = "Window Blinds";
 		this.add(this.blindsGroup);
 
+		this.shutterGroup = markObjectInternal(new Group());
+		this.shutterGroup.name = "Window Shutter";
+		this.add(this.shutterGroup);
+
+		this.secondaryShutterGroup = markObjectInternal(new Group());
+		this.secondaryShutterGroup.name = "Window Shutter 2";
+		this.add(this.secondaryShutterGroup);
+
 		this.frameMaterial = new MeshStandardMaterial({color: this.borderColor});
 		this.gridMaterial = new MeshStandardMaterial({color: this.borderColor});
 		this.blindMaterial = new MeshStandardMaterial({
 			color: this.blindColor,
 			roughness: 0.7,
+		});
+		this.shutterMaterial = new MeshStandardMaterial({
+			color: this.shutterColor,
+			roughness: 0.68,
 		});
 
 		this.updateGeometry();
@@ -323,6 +407,18 @@ export class WindowObject extends DTObject {
 		this.setBlindPosition(100);
 	}
 
+	public setShutterOpenAmount(amount: number): void {
+		if (!Number.isFinite(amount)) return;
+		this.shutterOpenAmount = Math.min(100, Math.max(0, amount));
+		this.applyShutterOpeningTransform();
+	}
+
+	public setShutterBladeOpenAmount(amount: number): void {
+		if (!Number.isFinite(amount)) return;
+		this.shutterBladeOpenAmount = Math.min(100, Math.max(0, amount));
+		this.updateShutterGeometry();
+	}
+
 	public get glassColor(): string {
 		return `#${this.getWindowMaterial().color.getHexString()}`;
 	}
@@ -350,6 +446,8 @@ export class WindowObject extends DTObject {
 			(attribute === "openingType" &&
 				(value === "sliding" || value === "hinged")) ||
 			(attribute === "hingeSide" && (value === "left" || value === "right")) ||
+			(attribute === "blindPlacement" &&
+				(value === "inside" || value === "outside")) ||
 			(attribute === "openingDirection" &&
 				(value === "inward" || value === "outward"))
 		) {
@@ -364,16 +462,36 @@ export class WindowObject extends DTObject {
 			this.updateGeometry();
 			return true;
 		}
+		if (attribute === "shutterPanelCount") {
+			const count = Number(value);
+			if (count !== 1 && count !== 2) return false;
+			this.shutterPanelCount = count;
+			this.updateShutterGeometry();
+			return true;
+		}
 		if (attribute === "blindPosition") {
 			const position = Number(value);
 			if (!Number.isFinite(position)) return false;
 			this.setBlindPosition(position);
 			return true;
 		}
+		if (attribute === "shutterOpenAmount") {
+			const amount = Number(value);
+			if (!Number.isFinite(amount)) return false;
+			this.setShutterOpenAmount(amount);
+			return true;
+		}
+		if (attribute === "shutterBladeOpenAmount") {
+			const amount = Number(value);
+			if (!Number.isFinite(amount)) return false;
+			this.setShutterBladeOpenAmount(amount);
+			return true;
+		}
 		if (
 			attribute === "borderEnabled" ||
 			attribute === "gridEnabled" ||
-			attribute === "blindsEnabled"
+			attribute === "blindsEnabled" ||
+			attribute === "shuttersEnabled"
 		) {
 			(this as any)[attribute] = Boolean(value);
 			this.updateGeometry();
@@ -382,6 +500,7 @@ export class WindowObject extends DTObject {
 		if (
 			attribute === "borderColor" ||
 			attribute === "blindColor" ||
+			attribute === "shutterColor" ||
 			attribute === "glassColor"
 		) {
 			if (typeof value !== "string" || !/^#[0-9a-fA-F]{6}$/.test(value)) {
@@ -418,6 +537,7 @@ export class WindowObject extends DTObject {
 			"gridHorizontalSpacing",
 			"gridVerticalSpacing",
 			"blindSlatSpacing",
+			"shutterBladeCount",
 		]);
 		if (!numericAttributes.has(attribute)) {
 			return false;
@@ -435,9 +555,11 @@ export class WindowObject extends DTObject {
 			return false;
 		}
 		(this as any)[attribute] =
-			attribute === "gridRows" || attribute === "gridColumns"
-				? Math.min(20, Math.max(1, Math.round(number)))
-				: number;
+			attribute === "shutterBladeCount"
+				? Math.min(50, Math.max(1, Math.round(number)))
+				: attribute === "gridRows" || attribute === "gridColumns"
+					? Math.min(20, Math.max(1, Math.round(number)))
+					: number;
 		this.updateGeometry();
 		this.setOpenAmount(this.openAmount);
 		return true;
@@ -465,9 +587,16 @@ export class WindowObject extends DTObject {
 			gridHorizontalSpacing: this.gridHorizontalSpacing,
 			gridVerticalSpacing: this.gridVerticalSpacing,
 			blindsEnabled: this.blindsEnabled,
+			blindPlacement: this.blindPlacement,
 			blindPosition: this.blindPosition,
 			blindSlatSpacing: this.blindSlatSpacing,
 			blindColor: this.blindColor,
+			shuttersEnabled: this.shuttersEnabled,
+			shutterPanelCount: this.shutterPanelCount,
+			shutterOpenAmount: this.shutterOpenAmount,
+			shutterBladeCount: this.shutterBladeCount,
+			shutterBladeOpenAmount: this.shutterBladeOpenAmount,
+			shutterColor: this.shutterColor,
 		};
 	}
 
@@ -495,6 +624,8 @@ export class WindowObject extends DTObject {
 					child === source.secondarySashGroup ||
 					child === source.frameGroup ||
 					child === source.blindsGroup ||
+					child === source.shutterGroup ||
+					child === source.secondaryShutterGroup ||
 					child.internal === true
 				) {
 					continue;
@@ -528,12 +659,15 @@ export class WindowObject extends DTObject {
 		this.updateFrameGeometry(border);
 		this.updateGridGeometry(panelWidth, glassHeight);
 		this.updateBlindsGeometry();
+		this.updateShutterGeometry();
 		this.applyOpeningTransform();
 		for (const group of [
 			this.sashGroup,
 			this.secondarySashGroup,
 			this.frameGroup,
 			this.blindsGroup,
+			this.shutterGroup,
+			this.secondaryShutterGroup,
 		]) {
 			markObjectInternal(group, true);
 		}
@@ -689,15 +823,141 @@ export class WindowObject extends DTObject {
 				new BoxGeometry(innerWidth, Math.min(0.025, spacing * 0.5), 0.025),
 				this.blindMaterial,
 			);
-			slat.position.set(0, y, this.thickness / 2 + 0.025);
+			const side = this.blindPlacement === "inside" ? 1 : -1;
+			slat.position.set(0, y, side * (this.thickness / 2 + 0.025));
 			this.blindsGroup.add(slat);
 		}
 		const headRail = new Mesh(
 			new BoxGeometry(innerWidth, Math.min(0.05, innerHeight), 0.04),
 			this.blindMaterial,
 		);
-		headRail.position.set(0, top, this.thickness / 2 + 0.025);
+		const side = this.blindPlacement === "inside" ? 1 : -1;
+		headRail.position.set(0, top, side * (this.thickness / 2 + 0.025));
 		this.blindsGroup.add(headRail);
+	}
+
+	private updateShutterGeometry(): void {
+		disposeGroupGeometry(this.shutterGroup);
+		disposeGroupGeometry(this.secondaryShutterGroup);
+		this.shutterGroup.visible = this.shuttersEnabled;
+		this.secondaryShutterGroup.visible =
+			this.shuttersEnabled && this.shutterPanelCount === 2;
+		if (!this.shuttersEnabled) return;
+
+		this.shutterMaterial.color = new Color(this.shutterColor);
+		const border = this.borderEnabled
+			? Math.min(this.borderThickness, this.width / 3, this.height / 3)
+			: 0;
+		const innerWidth = Math.max(0.02, this.width - border * 2);
+		const innerHeight = Math.max(0.02, this.height - border * 2);
+		const centerY = this.height / 2;
+		const panelWidth = innerWidth / this.shutterPanelCount;
+		const outsideZ = -(
+			this.thickness / 2 +
+			(this.borderEnabled ? this.borderDepth : 0) +
+			0.035
+		);
+
+		if (this.shutterPanelCount === 2) {
+			this.shutterGroup.position.set(-innerWidth / 2, 0, outsideZ);
+			this.secondaryShutterGroup.position.set(innerWidth / 2, 0, outsideZ);
+			this.addShutterPanel(
+				this.shutterGroup,
+				panelWidth,
+				innerHeight,
+				panelWidth / 2,
+				centerY,
+			);
+			this.addShutterPanel(
+				this.secondaryShutterGroup,
+				panelWidth,
+				innerHeight,
+				-panelWidth / 2,
+				centerY,
+			);
+		} else {
+			const side = this.hingeSide === "left" ? -1 : 1;
+			this.shutterGroup.position.set((side * innerWidth) / 2, 0, outsideZ);
+			this.addShutterPanel(
+				this.shutterGroup,
+				panelWidth,
+				innerHeight,
+				(-side * panelWidth) / 2,
+				centerY,
+			);
+		}
+		this.applyShutterOpeningTransform();
+	}
+
+	private addShutterPanel(
+		group: Group,
+		panelWidth: number,
+		panelHeight: number,
+		centerX: number,
+		centerY: number,
+	): void {
+		const rail = Math.min(0.06, panelWidth / 5, panelHeight / 8);
+		const depth = 0.04;
+		for (const side of [-1, 1]) {
+			const vertical = new Mesh(
+				new BoxGeometry(rail, panelHeight, depth),
+				this.shutterMaterial,
+			);
+			vertical.position.set(
+				centerX + side * (panelWidth / 2 - rail / 2),
+				centerY,
+				0,
+			);
+			group.add(vertical);
+
+			const horizontal = new Mesh(
+				new BoxGeometry(panelWidth - rail * 2, rail, depth),
+				this.shutterMaterial,
+			);
+			horizontal.position.set(
+				centerX,
+				centerY + side * (panelHeight / 2 - rail / 2),
+				0,
+			);
+			group.add(horizontal);
+		}
+
+		const bladeCount = Math.min(50, Math.max(1, this.shutterBladeCount));
+		const bladeAreaHeight = Math.max(0.01, panelHeight - rail * 2);
+		const bladeWidth = Math.max(0.01, panelWidth - rail * 2);
+		const pitch = bladeAreaHeight / bladeCount;
+		const bladeAngle = (this.shutterBladeOpenAmount / 100) * Math.PI * 0.45;
+		for (let index = 0; index < bladeCount; index += 1) {
+			const blade = new Mesh(
+				new BoxGeometry(bladeWidth, pitch * 0.92, 0.012),
+				this.shutterMaterial,
+			);
+			blade.name = "Window Shutter Blade";
+			blade.position.set(
+				centerX,
+				centerY - bladeAreaHeight / 2 + pitch * (index + 0.5),
+				0,
+			);
+			blade.rotation.x = bladeAngle;
+			group.add(blade);
+		}
+	}
+
+	private applyShutterOpeningTransform(): void {
+		this.shutterGroup.rotation.set(0, 0, 0);
+		this.secondaryShutterGroup.rotation.set(0, 0, 0);
+		this.secondaryShutterGroup.visible =
+			this.shuttersEnabled && this.shutterPanelCount === 2;
+		if (!this.shuttersEnabled) return;
+
+		const angle = (this.shutterOpenAmount / 100) * Math.PI;
+		if (this.shutterPanelCount === 2) {
+			this.shutterGroup.rotation.y = angle;
+			this.secondaryShutterGroup.rotation.y = -angle;
+		} else {
+			this.shutterGroup.rotation.y =
+				(this.hingeSide === "left" ? 1 : -1) * angle;
+		}
 	}
 
 	private applyOpeningTransform(): void {
