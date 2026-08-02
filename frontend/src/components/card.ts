@@ -2322,9 +2322,10 @@ export class DT3DCard extends LitElement {
 
 		this.clearPendingEntityClickAction();
 
-		// Pick object and trigger click interaction
+		// Pick the object only to trigger its single-click interaction. Canvas
+		// selection is intentionally reserved for the double-click handler so the
+		// transform controls, tree, and inspector always change together.
 		const {object} = this.pickObjectFromEvent(event);
-		this.setSelectedObject(object);
 		if (object instanceof DTObject) {
 			object.onInteraction({
 				type: "click",

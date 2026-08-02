@@ -2135,7 +2135,7 @@ let No = class extends ni {
     return Fe`
 		<div class="connection-status-container">
 			<div style="margin: 5px;" class="${this.success ? "connection-status-success" : "connection-status-error"}">
-				${this.msg}<br>${"2026-08-02T20:20:21.288Z"}
+				${this.msg}<br>${"2026-08-02T20:23:06.645Z"}
 			</div>
 		</div>`;
   }
@@ -60210,7 +60210,7 @@ let lu = class extends ni {
       return;
     this.clearPendingEntityClickAction();
     const { object: e } = this.pickObjectFromEvent(s);
-    if (this.setSelectedObject(e), e instanceof ii && e.onInteraction({
+    if (e instanceof ii && e.onInteraction({
       type: "click",
       event: s,
       hass: this.hassInstance
