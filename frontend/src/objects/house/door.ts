@@ -13,6 +13,11 @@ import {
 
 import {markObjectInternal} from "../../utils/internal-object.js";
 import {DTObject} from "../dt-object.js";
+import {
+	getHaOpeningPercentage,
+	type HaEntityState,
+	normalizeOpeningEntityId,
+} from "./ha-opening-state.js";
 
 export type DoorDimensions = {
 	width: number;
@@ -24,6 +29,7 @@ export type DoorCustomization = {
 	operationType: "hinged" | "sliding";
 	panelCount: 1 | 2;
 	openAmount: number;
+	openEntityId: string;
 	hingeSide: "left" | "right";
 	openingDirection: "inward" | "outward";
 	knobStyle: "none" | "round" | "lever" | "bar";
@@ -52,6 +58,7 @@ const DEFAULT_DOOR_CUSTOMIZATION: DoorCustomization = {
 	operationType: "hinged",
 	panelCount: 1,
 	openAmount: 0,
+	openEntityId: "",
 	hingeSide: "left",
 	openingDirection: "inward",
 	knobStyle: "round",
@@ -100,6 +107,9 @@ export class DoorObject extends DTObject {
 	 * Door opening percentage: 0 is closed and 100 is fully open.
 	 */
 	public openAmount: number;
+
+	/** Home Assistant entity that controls the door openness. */
+	public openEntityId: string;
 
 	public hingeSide: DoorCustomization["hingeSide"];
 
@@ -235,6 +245,7 @@ export class DoorObject extends DTObject {
 		this.doorMesh = markObjectInternal(
 			new Mesh(new BoxGeometry(1, 1, 1), material),
 		);
+		this.openEntityId = normalizeOpeningEntityId(customization.openEntityId);
 		this.doorMesh.name = "Door Panel";
 		this.doorMesh.userData.ownerMaterialTarget = true;
 		this.hingeGroup.add(this.doorMesh);
@@ -304,6 +315,15 @@ export class DoorObject extends DTObject {
 		this.setOpen(!this.open);
 	}
 
+	/** Apply the latest bound Home Assistant state, if one is configured. */
+	public updateFromEntityStates(states: Record<string, HaEntityState>): boolean {
+		if (!this.openEntityId) return false;
+		const amount = getHaOpeningPercentage(states[this.openEntityId]);
+		if (amount === null || amount === this.openAmount) return false;
+		this.setOpenAmount(amount);
+		return true;
+	}
+
 	public override update(_time: number): void {
 		if (this.secondaryDoorMesh.material !== this.doorMesh.material) {
 			this.secondaryDoorMesh.material = this.doorMesh.material;
@@ -322,6 +342,10 @@ export class DoorObject extends DTObject {
 			const amount = Number(value);
 			if (!Number.isFinite(amount)) return false;
 			this.setOpenAmount(amount);
+			return true;
+		}
+		if (attribute === "openEntityId") {
+			this.openEntityId = normalizeOpeningEntityId(value);
 			return true;
 		}
 
@@ -420,6 +444,7 @@ export class DoorObject extends DTObject {
 			operationType: this.operationType,
 			panelCount: this.panelCount,
 			openAmount: this.openAmount,
+			openEntityId: this.openEntityId,
 			hingeSide: this.hingeSide,
 			openingDirection: this.openingDirection,
 			knobStyle: this.knobStyle,

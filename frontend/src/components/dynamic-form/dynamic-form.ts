@@ -777,6 +777,7 @@ export class DynamicForm extends LitElement {
 						<label title=${field.tooltip ?? ""}>${field.label}</label>
 						<input
 							type="text"
+							placeholder=${field.placeholder ?? ""}
 							.value=${value == null ? "" : String(value)}
 							?disabled=${!field.editable}
 							@input=${(event: Event) =>

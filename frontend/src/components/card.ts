@@ -98,6 +98,8 @@ import {EntityLight} from "../objects/entity-light.js";
 import {EntityObject, isToggleable} from "../objects/entity-object.js";
 import {EntitySensor} from "../objects/entity-sensor.js";
 import {EntitySwitch} from "../objects/entity-switch.js";
+import {DoorObject} from "../objects/house/door.js";
+import {WindowObject} from "../objects/house/window.js";
 import {StaticLightObject} from "../objects/static-light.js";
 import {ViewportObject} from "../objects/viewport-object.js";
 import type {SpaceResponse} from "../service/space-api.js";
@@ -1452,6 +1454,9 @@ export class DT3DCard extends LitElement {
 	}
 
 	private refreshAfterObjectMutation(object: Object3D | null): void {
+		if (object) {
+			this.applyOpeningEntityStates(object);
+		}
 		this.sceneManager?.requestShadowMapUpdate();
 		if (object) {
 			this.sceneManager?.applyShadowSettingsToObject(object);
@@ -3339,6 +3344,7 @@ export class DT3DCard extends LitElement {
 		if (initialViewport) {
 			this.activateViewport(initialViewport);
 		}
+		this.updateEntityObjects();
 	}
 
 	private async changeActiveSpace(spaceId: string): Promise<void> {
@@ -4273,6 +4279,7 @@ export class DT3DCard extends LitElement {
 			if (!updatedObject) {
 				return;
 			}
+			this.applyOpeningEntityStates(updatedObject);
 			this.sceneManager.applyShadowSettingsToObject(updatedObject);
 
 			if (
@@ -4662,7 +4669,9 @@ export class DT3DCard extends LitElement {
 			return;
 		}
 
+		let openingChanged = false;
 		this.space.traverse((child) => {
+			openingChanged = this.applyOpeningEntityStates(child) || openingChanged;
 			if (child instanceof EntityObject) {
 				const entityState = this.hassInstance.states[child.entityId];
 				if (entityState) {
@@ -4670,6 +4679,20 @@ export class DT3DCard extends LitElement {
 				}
 			}
 		});
+		if (openingChanged) {
+			this.sceneManager?.requestShadowMapUpdate();
+			this.tree?.refreshSelectedObject();
+		}
+	}
+
+	private applyOpeningEntityStates(object: Object3D): boolean {
+		if (
+			!(object instanceof DoorObject) &&
+			!(object instanceof WindowObject)
+		) {
+			return false;
+		}
+		return object.updateFromEntityStates(this.hassInstance?.states ?? {});
 	}
 
 	/**

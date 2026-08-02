@@ -2,6 +2,11 @@ import {BoxGeometry, Color, Group, Mesh, MeshStandardMaterial} from "three";
 
 import {markObjectInternal} from "../../utils/internal-object.js";
 import {DTObject} from "../dt-object.js";
+import {
+	getHaOpeningPercentage,
+	type HaEntityState,
+	normalizeOpeningEntityId,
+} from "./ha-opening-state.js";
 
 export type WindowDimensions = {
 	width: number;
@@ -15,6 +20,7 @@ export type WindowCustomization = {
 	hingeSide: "left" | "right";
 	openingDirection: "inward" | "outward";
 	openAmount: number;
+	openEntityId: string;
 	borderEnabled: boolean;
 	borderThickness: number;
 	borderDepth: number;
@@ -28,13 +34,16 @@ export type WindowCustomization = {
 	blindsEnabled: boolean;
 	blindPlacement: "inside" | "outside";
 	blindPosition: number;
+	blindOpenEntityId: string;
 	blindSlatSpacing: number;
 	blindColor: string;
 	shuttersEnabled: boolean;
 	shutterPanelCount: 1 | 2;
 	shutterOpenAmount: number;
+	shutterOpenEntityId: string;
 	shutterBladeCount: number;
 	shutterBladeOpenAmount: number;
+	shutterBladeOpenEntityId: string;
 	shutterColor: string;
 };
 
@@ -50,6 +59,7 @@ const DEFAULT_WINDOW_CUSTOMIZATION: WindowCustomization = {
 	hingeSide: "left",
 	openingDirection: "inward",
 	openAmount: 0,
+	openEntityId: "",
 	borderEnabled: true,
 	borderThickness: 0.06,
 	borderDepth: 0.03,
@@ -63,13 +73,16 @@ const DEFAULT_WINDOW_CUSTOMIZATION: WindowCustomization = {
 	blindsEnabled: false,
 	blindPlacement: "inside",
 	blindPosition: 0,
+	blindOpenEntityId: "",
 	blindSlatSpacing: 0.06,
 	blindColor: "#dedbd2",
 	shuttersEnabled: false,
 	shutterPanelCount: 2,
 	shutterOpenAmount: 0,
+	shutterOpenEntityId: "",
 	shutterBladeCount: 12,
 	shutterBladeOpenAmount: 0,
+	shutterBladeOpenEntityId: "",
 	shutterColor: "#4f6b47",
 };
 
@@ -105,6 +118,9 @@ export class WindowObject extends DTObject {
 
 	public openAmount: number;
 
+	/** Home Assistant entity that controls the sash openness. */
+	public openEntityId: string;
+
 	public borderEnabled: boolean;
 
 	public borderThickness: number;
@@ -134,6 +150,9 @@ export class WindowObject extends DTObject {
 	 */
 	public blindPosition: number;
 
+	/** Home Assistant entity that controls blind openness. */
+	public blindOpenEntityId: string;
+
 	public blindSlatSpacing: number;
 
 	public blindColor: string;
@@ -144,9 +163,15 @@ export class WindowObject extends DTObject {
 
 	public shutterOpenAmount: number;
 
+	/** Home Assistant entity that controls shutter-door openness. */
+	public shutterOpenEntityId: string;
+
 	public shutterBladeCount: number;
 
 	public shutterBladeOpenAmount: number;
+
+	/** Home Assistant entity that controls shutter-blade openness. */
+	public shutterBladeOpenEntityId: string;
 
 	public shutterColor: string;
 
@@ -214,6 +239,7 @@ export class WindowObject extends DTObject {
 				customization.openAmount ?? DEFAULT_WINDOW_CUSTOMIZATION.openAmount,
 			),
 		);
+		this.openEntityId = normalizeOpeningEntityId(customization.openEntityId);
 		this.borderEnabled =
 			customization.borderEnabled ?? DEFAULT_WINDOW_CUSTOMIZATION.borderEnabled;
 		this.borderThickness =
@@ -266,6 +292,9 @@ export class WindowObject extends DTObject {
 					DEFAULT_WINDOW_CUSTOMIZATION.blindPosition,
 			),
 		);
+		this.blindOpenEntityId = normalizeOpeningEntityId(
+			customization.blindOpenEntityId,
+		);
 		this.blindSlatSpacing =
 			customization.blindSlatSpacing ??
 			DEFAULT_WINDOW_CUSTOMIZATION.blindSlatSpacing;
@@ -286,6 +315,9 @@ export class WindowObject extends DTObject {
 					DEFAULT_WINDOW_CUSTOMIZATION.shutterOpenAmount,
 			),
 		);
+		this.shutterOpenEntityId = normalizeOpeningEntityId(
+			customization.shutterOpenEntityId,
+		);
 		this.shutterBladeCount = Math.min(
 			50,
 			Math.max(
@@ -303,6 +335,9 @@ export class WindowObject extends DTObject {
 				customization.shutterBladeOpenAmount ??
 					DEFAULT_WINDOW_CUSTOMIZATION.shutterBladeOpenAmount,
 			),
+		);
+		this.shutterBladeOpenEntityId = normalizeOpeningEntityId(
+			customization.shutterBladeOpenEntityId,
 		);
 		this.shutterColor =
 			customization.shutterColor ?? DEFAULT_WINDOW_CUSTOMIZATION.shutterColor;
@@ -436,6 +471,44 @@ export class WindowObject extends DTObject {
 		this.updateShutterGeometry();
 	}
 
+	/** Apply all independently bound Home Assistant component states. */
+	public updateFromEntityStates(states: Record<string, HaEntityState>): boolean {
+		let changed = false;
+		const apply = (
+			entityId: string,
+			currentValue: number,
+			setter: (amount: number) => void,
+			invert = false,
+		): void => {
+			if (!entityId) return;
+			const openness = getHaOpeningPercentage(states[entityId]);
+			if (openness === null) return;
+			const amount = invert ? 100 - openness : openness;
+			if (amount === currentValue) return;
+			setter(amount);
+			changed = true;
+		};
+
+		apply(this.openEntityId, this.openAmount, (amount) =>
+			this.setOpenAmount(amount),
+		);
+		apply(
+			this.blindOpenEntityId,
+			this.blindPosition,
+			(amount) => this.setBlindPosition(amount),
+			true,
+		);
+		apply(this.shutterOpenEntityId, this.shutterOpenAmount, (amount) =>
+			this.setShutterOpenAmount(amount),
+		);
+		apply(
+			this.shutterBladeOpenEntityId,
+			this.shutterBladeOpenAmount,
+			(amount) => this.setShutterBladeOpenAmount(amount),
+		);
+		return changed;
+	}
+
 	public get glassColor(): string {
 		return `#${this.getWindowMaterial().color.getHexString()}`;
 	}
@@ -457,6 +530,15 @@ export class WindowObject extends DTObject {
 			const amount = Number(value);
 			if (!Number.isFinite(amount)) return false;
 			this.setOpenAmount(amount);
+			return true;
+		}
+		if (
+			attribute === "openEntityId" ||
+			attribute === "blindOpenEntityId" ||
+			attribute === "shutterOpenEntityId" ||
+			attribute === "shutterBladeOpenEntityId"
+		) {
+			(this as any)[attribute] = normalizeOpeningEntityId(value);
 			return true;
 		}
 		if (
@@ -597,6 +679,7 @@ export class WindowObject extends DTObject {
 			hingeSide: this.hingeSide,
 			openingDirection: this.openingDirection,
 			openAmount: this.openAmount,
+			openEntityId: this.openEntityId,
 			borderEnabled: this.borderEnabled,
 			borderThickness: this.borderThickness,
 			borderDepth: this.borderDepth,
@@ -610,13 +693,16 @@ export class WindowObject extends DTObject {
 			blindsEnabled: this.blindsEnabled,
 			blindPlacement: this.blindPlacement,
 			blindPosition: this.blindPosition,
+			blindOpenEntityId: this.blindOpenEntityId,
 			blindSlatSpacing: this.blindSlatSpacing,
 			blindColor: this.blindColor,
 			shuttersEnabled: this.shuttersEnabled,
 			shutterPanelCount: this.shutterPanelCount,
 			shutterOpenAmount: this.shutterOpenAmount,
+			shutterOpenEntityId: this.shutterOpenEntityId,
 			shutterBladeCount: this.shutterBladeCount,
 			shutterBladeOpenAmount: this.shutterBladeOpenAmount,
+			shutterBladeOpenEntityId: this.shutterBladeOpenEntityId,
 			shutterColor: this.shutterColor,
 		};
 	}

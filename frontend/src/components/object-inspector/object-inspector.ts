@@ -61,6 +61,7 @@ const DOOR_CONFIGURATION_ATTRIBUTES = new Set([
 	"thickness",
 	"open",
 	"openAmount",
+	"openEntityId",
 	"operationType",
 	"panelCount",
 	"hingeSide",
@@ -87,6 +88,7 @@ const WINDOW_CONFIGURATION_ATTRIBUTES = new Set([
 	"thickness",
 	"open",
 	"openAmount",
+	"openEntityId",
 	"openingType",
 	"panelCount",
 	"hingeSide",
@@ -107,13 +109,16 @@ const WINDOW_CONFIGURATION_ATTRIBUTES = new Set([
 	"blindsEnabled",
 	"blindPlacement",
 	"blindPosition",
+	"blindOpenEntityId",
 	"blindSlatSpacing",
 	"blindColor",
 	"shuttersEnabled",
 	"shutterPanelCount",
 	"shutterOpenAmount",
+	"shutterOpenEntityId",
 	"shutterBladeCount",
 	"shutterBladeOpenAmount",
+	"shutterBladeOpenEntityId",
 	"shutterColor",
 ]);
 
@@ -228,6 +233,44 @@ export class DT3DObjectInspector extends LitElement {
 				object.setConfiguration("openingType", openingType);
 				if (openingType === "hinged") {
 					object.setConfiguration("panelCount", panelCount);
+				}
+			};
+		}
+
+		if (
+			(attribute === "openEntityId" ||
+				attribute === "blindOpenEntityId" ||
+				attribute === "shutterOpenEntityId" ||
+				attribute === "shutterBladeOpenEntityId") &&
+			(object instanceof DoorObject || object instanceof WindowObject)
+		) {
+			const entityId = String(this.getNestedAttribute(object, attribute) ?? "");
+			const amount =
+				attribute === "blindOpenEntityId" && object instanceof WindowObject
+					? object.blindPosition
+					: attribute === "shutterOpenEntityId" &&
+						  object instanceof WindowObject
+						? object.shutterOpenAmount
+						: attribute === "shutterBladeOpenEntityId" &&
+							  object instanceof WindowObject
+							? object.shutterBladeOpenAmount
+							: object.openAmount;
+			return () => {
+				object.setConfiguration(attribute, entityId);
+				if (attribute === "blindOpenEntityId" && object instanceof WindowObject) {
+					object.setBlindPosition(amount);
+				} else if (
+					attribute === "shutterOpenEntityId" &&
+					object instanceof WindowObject
+				) {
+					object.setShutterOpenAmount(amount);
+				} else if (
+					attribute === "shutterBladeOpenEntityId" &&
+					object instanceof WindowObject
+				) {
+					object.setShutterBladeOpenAmount(amount);
+				} else {
+					object.setOpenAmount(amount);
 				}
 			};
 		}
@@ -704,6 +747,7 @@ export class DT3DObjectInspector extends LitElement {
 		) {
 			return [];
 		}
+		const controlledByEntity = Boolean(this.selectedObject.openEntityId);
 
 		return [
 			{
@@ -737,11 +781,20 @@ export class DT3DObjectInspector extends LitElement {
 				step: 0.01,
 			},
 			{
+				label: localManager.get("openingEntityId"),
+				attribute: "openEntityId",
+				type: "string",
+				tooltip: localManager.get("openingEntityIdTooltip"),
+				placeholder: "cover.living_room",
+				editable: !locked,
+				enabled: true,
+			},
+			{
 				label: localManager.get("open"),
 				attribute: "open",
 				type: "boolean",
 				tooltip: localManager.get("openTooltip"),
-				editable: !locked,
+				editable: !locked && !controlledByEntity,
 				enabled: true,
 			},
 			{
@@ -749,7 +802,7 @@ export class DT3DObjectInspector extends LitElement {
 				attribute: "openAmount",
 				type: "number",
 				tooltip: localManager.get("openingAmountTooltip"),
-				editable: !locked,
+				editable: !locked && !controlledByEntity,
 				enabled: true,
 				min: 0,
 				max: 100,
@@ -1084,6 +1137,15 @@ export class DT3DObjectInspector extends LitElement {
 				enabled: true,
 			},
 			{
+				label: localManager.get("windowBlindEntityId"),
+				attribute: "blindOpenEntityId",
+				type: "string",
+				tooltip: localManager.get("openingEntityIdTooltip"),
+				placeholder: "cover.living_room_blind",
+				editable: !locked && enabled,
+				enabled: true,
+			},
+			{
 				label: localManager.get("windowBlindPlacement"),
 				attribute: "blindPlacement",
 				type: "select",
@@ -1100,7 +1162,8 @@ export class DT3DObjectInspector extends LitElement {
 				attribute: "blindPosition",
 				type: "number",
 				tooltip: localManager.get("windowBlindPositionTooltip"),
-				editable: !locked && enabled,
+				editable:
+					!locked && enabled && !this.selectedObject.blindOpenEntityId,
 				enabled: true,
 				min: 0,
 				max: 100,
@@ -1140,6 +1203,15 @@ export class DT3DObjectInspector extends LitElement {
 				enabled: true,
 			},
 			{
+				label: localManager.get("windowShutterEntityId"),
+				attribute: "shutterOpenEntityId",
+				type: "string",
+				tooltip: localManager.get("openingEntityIdTooltip"),
+				placeholder: "cover.living_room_shutter",
+				editable: !locked && enabled,
+				enabled: true,
+			},
+			{
 				label: localManager.get("windowShutterPanelCount"),
 				attribute: "shutterPanelCount",
 				type: "select",
@@ -1156,7 +1228,8 @@ export class DT3DObjectInspector extends LitElement {
 				attribute: "shutterOpenAmount",
 				type: "number",
 				tooltip: localManager.get("windowShutterOpenAmountTooltip"),
-				editable: !locked && enabled,
+				editable:
+					!locked && enabled && !this.selectedObject.shutterOpenEntityId,
 				enabled: true,
 				min: 0,
 				max: 100,
@@ -1178,11 +1251,21 @@ export class DT3DObjectInspector extends LitElement {
 				attribute: "shutterBladeOpenAmount",
 				type: "number",
 				tooltip: localManager.get("windowShutterBladeOpenAmountTooltip"),
-				editable: !locked && enabled,
+				editable:
+					!locked && enabled && !this.selectedObject.shutterBladeOpenEntityId,
 				enabled: true,
 				min: 0,
 				max: 100,
 				step: 5,
+			},
+			{
+				label: localManager.get("windowShutterBladeEntityId"),
+				attribute: "shutterBladeOpenEntityId",
+				type: "string",
+				tooltip: localManager.get("openingEntityIdTooltip"),
+				placeholder: "number.living_room_shutter_blades",
+				editable: !locked && enabled,
+				enabled: true,
 			},
 			{
 				label: localManager.get("windowShutterColor"),
