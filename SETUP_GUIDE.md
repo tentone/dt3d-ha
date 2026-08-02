@@ -153,7 +153,7 @@ general:
     shadowMap:
       enabled: false
       type: pcf
-      resolution: 2048
+      quality: medium
   developmentMode:
     enabled: false
 ```

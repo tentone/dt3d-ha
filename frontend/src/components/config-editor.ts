@@ -641,19 +641,25 @@ export class DT3DConfigEditor extends LitElement {
 								<p>${localManager.get("shadowMapTypeTooltip")}</p>
 							</div>
 							<div class="field">
-								<label>${localManager.get("shadowMapResolution")}</label>
+								<label>${localManager.get("shadowMapQuality")}</label>
 								<select
-									data-key="general.rendering.shadowMap.resolution"
-									data-value-type="number"
-									.value=${String(general.rendering.shadowMap.resolution)}
+									data-key="general.rendering.shadowMap.quality"
+									.value=${general.rendering.shadowMap.quality}
 									@change=${this.onValueChanged}>
-									<option value="256">256</option>
-									<option value="512">512</option>
-									<option value="1024">1024</option>
-									<option value="2048">2048</option>
-									<option value="4096">4096</option>
+									<option value="very_high">
+										${localManager.get("shadowMapQualityVeryHigh")}
+									</option>
+									<option value="high">
+										${localManager.get("shadowMapQualityHigh")}
+									</option>
+									<option value="medium">
+										${localManager.get("shadowMapQualityMedium")}
+									</option>
+									<option value="low">
+										${localManager.get("shadowMapQualityLow")}
+									</option>
 								</select>
-								<p>${localManager.get("shadowMapResolutionTooltip")}</p>
+								<p>${localManager.get("shadowMapQualityTooltip")}</p>
 							</div>
 						</div>
 					</div>

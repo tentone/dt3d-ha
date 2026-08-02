@@ -263,7 +263,7 @@ general:
     shadowMap:
       enabled: false
       type: pcf
-      resolution: 2048
+      quality: medium
   developmentMode:
     enabled: false
 ```
@@ -273,29 +273,34 @@ spaces there. Leave `default_viewport` empty to follow the space's default.
 
 ### Card configuration reference
 
-| Option                                   | Default            | Description                                                                      |
-| ---------------------------------------- | ------------------ | -------------------------------------------------------------------------------- |
-| `address`                                | `http://localhost` | Backend scheme and hostname, without the API path or trailing port.              |
-| `port`                                   | `8080`             | Exposed backend TCP port.                                                        |
-| `service_key`                            | empty              | Must exactly match the backend `service_key`.                                    |
-| `default_space`                          | first available    | Space ID opened by this card.                                                    |
-| `default_viewport`                       | space default      | Viewport object ID opened by this card.                                          |
-| `navigation_controls`                    | `orbit`            | Camera interaction style: `orbit`, `map`, or `fly`.                              |
-| `orientation_cube`                       | `false`            | Shows the camera orientation cube.                                               |
-| `vr_mode`                                | `false`            | Shows a VR button when immersive VR is available through WebXR.                  |
-| `ar_mode`                                | `false`            | Shows an AR button when immersive AR is available through WebXR.                  |
-| `ar_location_based`                      | `false`            | Centers AR on a Home Assistant location entity.                                  |
-| `ar_location_entity`                     | empty              | Entity ID with numeric `latitude` and `longitude` attributes.                     |
-| `ar_environment_orientation`             | `0`                | Front-of-environment bearing, clockwise in degrees from geographic north.         |
-| `visualization_only`                     | `false`            | Hides all editing and space-management controls.                                 |
-| `entity_click_action`                    | `nothing`          | `open`, `toggle`, or `nothing`.                                                  |
-| `entity_double_click_action`             | `open`             | `open`, `toggle`, or `nothing`.                                                  |
-| `general.rendering.antialiasing`         | `false`            | Smooths geometry edges; changing it recreates the WebGL renderer.                |
-| `general.rendering.resolution`           | `1`                | Internal scale: `1`, `0.75`, or `0.5`.                                           |
-| `general.rendering.shadowMap.enabled`    | `false`            | Enables shadows for compatible lights and meshes.                                |
-| `general.rendering.shadowMap.type`       | `pcf`              | `basic`, `pcf`, `pcf_soft`, or `vsm`.                                            |
-| `general.rendering.shadowMap.resolution` | `2048`             | Resolution applied to every shadow map: `256`, `512`, `1024`, `2048`, or `4096`. |
-| `general.developmentMode.enabled`        | `true`             | Shows connection status and build timestamp. Disable for normal dashboards.      |
+| Option                                | Default            | Description                                                                                          |
+| ------------------------------------- | ------------------ | ---------------------------------------------------------------------------------------------------- |
+| `address`                             | `http://localhost` | Backend scheme and hostname, without the API path or trailing port.                                  |
+| `port`                                | `8080`             | Exposed backend TCP port.                                                                            |
+| `service_key`                         | empty              | Must exactly match the backend `service_key`.                                                        |
+| `default_space`                       | first available    | Space ID opened by this card.                                                                        |
+| `default_viewport`                    | space default      | Viewport object ID opened by this card.                                                              |
+| `navigation_controls`                 | `orbit`            | Camera interaction style: `orbit`, `map`, or `fly`.                                                  |
+| `orientation_cube`                    | `false`            | Shows the camera orientation cube.                                                                   |
+| `vr_mode`                             | `false`            | Shows a VR button when immersive VR is available through WebXR.                                      |
+| `ar_mode`                             | `false`            | Shows an AR button when immersive AR is available through WebXR.                                     |
+| `ar_location_based`                   | `false`            | Centers AR on a Home Assistant location entity.                                                      |
+| `ar_location_entity`                  | empty              | Entity ID with numeric `latitude` and `longitude` attributes.                                        |
+| `ar_environment_orientation`          | `0`                | Front-of-environment bearing, clockwise in degrees from geographic north.                            |
+| `visualization_only`                  | `false`            | Hides all editing and space-management controls.                                                     |
+| `entity_click_action`                 | `nothing`          | `open`, `toggle`, or `nothing`.                                                                      |
+| `entity_double_click_action`          | `open`             | `open`, `toggle`, or `nothing`.                                                                      |
+| `general.rendering.antialiasing`      | `false`            | Smooths geometry edges; changing it recreates the WebGL renderer.                                    |
+| `general.rendering.resolution`        | `1`                | Internal scale: `1`, `0.75`, or `0.5`.                                                               |
+| `general.rendering.shadowMap.enabled` | `false`            | Enables shadows for compatible lights and meshes.                                                    |
+| `general.rendering.shadowMap.type`    | `pcf`              | `basic`, `pcf`, `pcf_soft`, or `vsm`.                                                                |
+| `general.rendering.shadowMap.quality` | `medium`           | `very_high`, `high`, `medium`, or `low`; uses separate directional and point-light resolutions.      |
+| `general.developmentMode.enabled`     | `true`             | Shows connection status and build timestamp. Disable for normal dashboards.                          |
+
+Shadow-map quality maps to directional/point-light sizes as follows:
+`very_high` = 8192/1024, `high` = 4096/512, `medium` = 2048/256, and
+`low` = 1024/128. The renderer automatically falls back to a supported
+power-of-two size when the GPU texture or cubemap limit is lower.
 
 Connection, antialiasing, resolution, shadow maps, and development mode are
 per-card. Tone mapping, post-processing, and daylight are per-space.
@@ -332,6 +337,7 @@ general:
     shadowMap:
       enabled: false
       type: basic
+      quality: low
   developmentMode:
     enabled: false
 ```

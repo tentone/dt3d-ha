@@ -1307,7 +1307,8 @@ export class DT3DCard extends LitElement {
 		this.rendererManager?.setRenderingConfig(this.generalConfig.rendering);
 		this.sceneManager?.setShadowsEnabled(
 			this.generalConfig.rendering.shadowMap.enabled,
-			this.generalConfig.rendering.shadowMap.resolution,
+			this.generalConfig.rendering.shadowMap.quality,
+			this.rendererManager?.getShadowMapCapabilities(),
 		);
 		this.applyDevelopmentMode();
 	}

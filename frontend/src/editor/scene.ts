@@ -23,6 +23,8 @@ import {OrbitControls} from "three/examples/jsm/controls/OrbitControls";
 import {TransformControls} from "three/examples/jsm/controls/TransformControls";
 import {Sky} from "three/examples/jsm/objects/Sky.js";
 
+import type {ShadowMapQuality} from "./general-config.js";
+
 /**
  * Editor camera mode (2D or 3D)
  */
@@ -34,6 +36,33 @@ export type CameraMode = "perspective" | "orthographic";
 export type NavigationControlsType = "fly" | "map" | "orbit";
 
 export type NavigationControls = OrbitControls | FlyControls;
+
+export type ShadowMapCapabilities = {
+	maxTextureSize: number;
+	maxCubemapSize: number;
+};
+
+const SHADOW_MAP_RESOLUTIONS: Record<
+	ShadowMapQuality,
+	{directional: number; point: number}
+> = {
+	low: {directional: 1024, point: 128},
+	medium: {directional: 2048, point: 256},
+	high: {directional: 4096, point: 512},
+	very_high: {directional: 8192, point: 1024},
+};
+
+const capShadowMapResolution = (
+	requested: number,
+	maximum: number,
+): number => {
+	if (!Number.isFinite(maximum) || maximum <= 0) {
+		return requested;
+	}
+
+	const largestSupportedPowerOfTwo = 2 ** Math.floor(Math.log2(maximum));
+	return Math.min(requested, largestSupportedPowerOfTwo);
+};
 
 export const DEFAULT_NAVIGATION_CONTROLS: NavigationControlsType = "orbit";
 
@@ -396,9 +425,13 @@ export class SceneManager {
 	private shadowsEnabled = false;
 
 	/**
-	 * Resolution shared by every shadow map in the scene.
+	 * Named shadow-map quality and its resolved per-light sizes.
 	 */
-	private shadowMapResolution = 2048;
+	private shadowMapQuality: ShadowMapQuality = "medium";
+
+	private directionalShadowMapResolution = 2048;
+
+	private pointShadowMapResolution = 256;
 
 	/**
 	 * Whether the directional-light shadow camera needs to be refitted.
@@ -687,9 +720,16 @@ export class SceneManager {
 	/**
 	 * Enable or disable shadows for scene lights and mesh objects.
 	 */
-	public setShadowsEnabled(enabled: boolean, resolution = 2048): void {
+	public setShadowsEnabled(
+		enabled: boolean,
+		quality: ShadowMapQuality = "medium",
+		capabilities: ShadowMapCapabilities = {
+			maxTextureSize: Number.POSITIVE_INFINITY,
+			maxCubemapSize: Number.POSITIVE_INFINITY,
+		},
+	): void {
 		this.shadowsEnabled = enabled;
-		this.setShadowMapResolution(resolution);
+		this.setShadowMapQuality(quality, capabilities);
 
 		if (this.sunlight) {
 			this.sunlight.castShadow = enabled;
@@ -700,36 +740,57 @@ export class SceneManager {
 	}
 
 	/**
-	 * Apply a single resolution to the sun, point-light, and spot-light maps.
+	 * Resolve and apply separate directional and local-light shadow-map sizes.
 	 */
-	private setShadowMapResolution(resolution: number): void {
-		if (!Number.isFinite(resolution) || resolution <= 0) {
-			return;
-		}
+	private setShadowMapQuality(
+		quality: ShadowMapQuality,
+		capabilities: ShadowMapCapabilities,
+	): void {
+		const preset = SHADOW_MAP_RESOLUTIONS[quality];
+		const qualityChanged = quality !== this.shadowMapQuality;
+		this.shadowMapQuality = quality;
+		this.directionalShadowMapResolution = capShadowMapResolution(
+			preset.directional,
+			capabilities.maxTextureSize,
+		);
+		this.pointShadowMapResolution = capShadowMapResolution(
+			preset.point,
+			Math.min(capabilities.maxTextureSize, capabilities.maxCubemapSize),
+		);
 
-		this.shadowMapResolution = resolution;
 		if (this.sunlight) {
-			this.applyShadowMapResolution(this.sunlight);
+			this.applyShadowMapResolution(
+				this.sunlight,
+				this.directionalShadowMapResolution,
+				qualityChanged,
+			);
 		}
 		this.space.traverse((child) => {
 			if (child instanceof PointLight || child instanceof SpotLight) {
-				this.applyShadowMapResolution(child);
+				this.applyShadowMapResolution(
+					child,
+					this.pointShadowMapResolution,
+					qualityChanged,
+				);
 			}
 		});
 	}
 
 	private applyShadowMapResolution(
 		light: DirectionalLight | PointLight | SpotLight,
+		resolution: number,
+		forceRecreate = false,
 	): void {
 		const shadow = light.shadow;
 		if (
-			shadow.mapSize.width === this.shadowMapResolution &&
-			shadow.mapSize.height === this.shadowMapResolution
+			!forceRecreate &&
+			shadow.mapSize.width === resolution &&
+			shadow.mapSize.height === resolution
 		) {
 			return;
 		}
 
-		shadow.mapSize.set(this.shadowMapResolution, this.shadowMapResolution);
+		shadow.mapSize.set(resolution, resolution);
 		shadow.map?.dispose();
 		shadow.map = null;
 		shadow.mapPass?.dispose();
@@ -743,7 +804,10 @@ export class SceneManager {
 	public applyShadowSettingsToObject(object: Object3D): void {
 		object.traverse((child) => {
 			if (child instanceof PointLight || child instanceof SpotLight) {
-				this.applyShadowMapResolution(child);
+				this.applyShadowMapResolution(
+					child,
+					this.pointShadowMapResolution,
+				);
 			}
 
 			if (child instanceof Mesh) {
@@ -1294,7 +1358,10 @@ export class SceneManager {
 		this.sunlight = new DirectionalLight(0xeeeeee);
 		this.sunlight.position.set(200, 1000, 300);
 		this.sunlight.castShadow = this.shadowsEnabled;
-		this.applyShadowMapResolution(this.sunlight);
+		this.applyShadowMapResolution(
+			this.sunlight,
+			this.directionalShadowMapResolution,
+		);
 		this.sunlight.target.internal = true;
 		this.scene.add(this.sunlight);
 		this.scene.add(this.sunlight.target);

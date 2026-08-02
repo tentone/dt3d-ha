@@ -12,7 +12,7 @@ export type ResolutionScale = 1 | 0.75 | 0.5;
 
 export type ShadowMapMode = "basic" | "pcf" | "pcf_soft" | "vsm";
 
-export type ShadowMapResolution = 256 | 512 | 1024 | 2048 | 4096;
+export type ShadowMapQuality = "low" | "medium" | "high" | "very_high";
 
 export type BokehDepthConfig = {
 	enabled: boolean;
@@ -91,7 +91,7 @@ export type RenderingConfig = {
 	shadowMap: {
 		enabled: boolean;
 		type: ShadowMapMode;
-		resolution: ShadowMapResolution;
+		quality: ShadowMapQuality;
 	};
 	postProcessing: PostProcessingConfig;
 };
@@ -125,7 +125,7 @@ export const DEFAULT_GENERAL_CONFIG: GeneralConfig = {
 		shadowMap: {
 			enabled: false,
 			type: "pcf",
-			resolution: 2048,
+			quality: "medium",
 		},
 		postProcessing: {
 			bokehDepth: {
@@ -332,21 +332,37 @@ export const normalizeShadowMapMode = (value: unknown): ShadowMapMode => {
 	}
 };
 
-export const normalizeShadowMapResolution = (
+export const normalizeShadowMapQuality = (
 	value: unknown,
-): ShadowMapResolution => {
-	const parsed = typeof value === "string" ? Number(value) : value;
-
-	switch (parsed) {
-		case 256:
-		case 512:
-		case 1024:
-		case 2048:
-		case 4096:
-			return parsed;
-		default:
-			return DEFAULT_GENERAL_CONFIG.rendering.shadowMap.resolution;
+): ShadowMapQuality => {
+	switch (normalizeToken(value)) {
+		case "very_high":
+			return "very_high";
+		case "high":
+			return "high";
+		case "low":
+			return "low";
+		case "medium":
+			return "medium";
 	}
+
+	// Legacy values described the directional-light resolution. Preserve their
+	// intent by selecting the equivalent (or nearest available) quality preset.
+	const parsed = typeof value === "string" ? Number(value) : value;
+	if (parsed === 8192) {
+		return "very_high";
+	}
+	if (parsed === 4096) {
+		return "high";
+	}
+	if (parsed === 2048) {
+		return "medium";
+	}
+	if (parsed === 256 || parsed === 512 || parsed === 1024) {
+		return "low";
+	}
+
+	return DEFAULT_GENERAL_CONFIG.rendering.shadowMap.quality;
 };
 
 export const normalizePostProcessingConfig = (
@@ -628,7 +644,9 @@ export const normalizeGeneralConfig = (
 					DEFAULT_GENERAL_CONFIG.rendering.shadowMap.enabled,
 				),
 				type: normalizeShadowMapMode(shadowMap.type),
-				resolution: normalizeShadowMapResolution(shadowMap.resolution),
+				quality: normalizeShadowMapQuality(
+					shadowMap.quality ?? shadowMap.resolution,
+				),
 			},
 			postProcessing: normalizePostProcessingConfig(postProcessing),
 		},

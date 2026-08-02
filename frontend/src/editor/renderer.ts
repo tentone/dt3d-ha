@@ -36,7 +36,7 @@ import type {
 	ToneMappingMode,
 } from "./general-config.js";
 import {normalizeGeneralConfig} from "./general-config.js";
-import type {NavigationControls} from "./scene.js";
+import type {NavigationControls, ShadowMapCapabilities} from "./scene.js";
 
 type PostProcessingPasses = {
 	bokehDepth: BokehPass;
@@ -487,6 +487,14 @@ export class RendererManager {
 
 		this.applyRenderingConfig(this.renderer, this.composer);
 		this.applyPostProcessingPassConfig();
+	}
+
+	/** GPU limits used when allocating directional and point-light shadow maps. */
+	public getShadowMapCapabilities(): ShadowMapCapabilities {
+		return {
+			maxTextureSize: this.renderer.capabilities.maxTextureSize,
+			maxCubemapSize: this.renderer.capabilities.maxCubemapSize,
+		};
 	}
 
 	/**
