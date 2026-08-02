@@ -27,6 +27,7 @@ import {StaticLightObject} from "../../objects/static-light.js";
 import {ViewportObject} from "../../objects/viewport-object.js";
 import {resolveUserObject} from "../../utils/internal-object.js";
 import {LocalStorage} from "../../utils/local-storage.js";
+import type {DynamicFormEntityOption} from "../dynamic-form/dynamic-form.js";
 import componentStyles from "./object-tree.css?inline";
 
 type UUID = string;
@@ -145,6 +146,9 @@ export class DT3DTree extends LitElement {
 	 */
 	@property({type: Array})
 	public scene: Object3D = null;
+
+	@property({attribute: false})
+	public entityOptions: DynamicFormEntityOption[] = [];
 
 	/**
 	 * Set of expanded node IDs.
@@ -1684,6 +1688,7 @@ export class DT3DTree extends LitElement {
 				<dt3d-object-inspector
 					.selectedObject=${this.selectedObject}
 					.multiple=${this.selectedIds.size > 1}
+					.entityOptions=${this.entityOptions}
 					@object-updated=${this.handleObjectUpdated}
 				></dt3d-object-inspector>
 				${this.renderContextMenu()}

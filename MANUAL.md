@@ -151,14 +151,16 @@ doors or windows, set **Opening (%)** to `0` for closed, `100` for fully open,
 or an intermediate value for a partial opening. The **Open** toggle is a
 shortcut for fully open/closed.
 
-To drive an opening from Home Assistant, set its **Openness entity ID**. Door
-and window sashes, window blinds, shutter doors, and shutter blades each have
-an independent entity field. Numeric entity states from `0` to `100` are used
-as percentages; `on`/`open` and `off`/`closed` are treated as fully open and
-closed. Cover entities with a numeric `current_position` attribute are also
-supported. DT3D applies new HA states automatically. Clear an entity ID to use
-the manual percentage control again. Blind openness is translated to the
-inverse **% down** value, so a 100%-open entity raises the blind.
+To drive an opening from Home Assistant, search and select its **Openness
+entity ID**. Door and window sashes, window blinds, shutter doors, and shutter
+blades each have an independent entity field. The searchable list includes
+binary sensors, covers, boolean/number helpers, number entities, sensors, and
+switches. Numeric entity states from `0` to `100` are used as percentages;
+`on`/`open` and `off`/`closed` are treated as fully open and closed. Cover
+entities with a numeric `current_position` attribute are also supported. DT3D
+applies new HA states automatically. Clear an entity ID to use the manual
+percentage control again. Blind openness is translated to the inverse **%
+down** value, so a 100%-open entity raises the blind.
 
 Set **Blind location** to mount the blinds on the inside or outside face of the
 window. Set **Blind position (% down)** to `0` to raise the blinds, `100` to

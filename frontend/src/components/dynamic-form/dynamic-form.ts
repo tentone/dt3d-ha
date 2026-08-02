@@ -16,9 +16,15 @@ export type DynamicInputFieldType =
 	| "info"
 	| "file"
 	| "texture"
+	| "entity"
 	| "select";
 
 export type DynamicFieldType = DynamicInputFieldType | "sub-form";
+
+export type DynamicFormEntityOption = {
+	entityId: string;
+	name: string;
+};
 
 /**
  * The description of a single input field to be rendered in the DynamicForm component.
@@ -37,6 +43,8 @@ export type DynamicFormInputField = {
 	placeholder?: string;
 	replaceLabel?: string;
 	clearLabel?: string;
+	/** Restrict entity options by matching their ID or friendly name. */
+	entityFilter?: RegExp | string;
 	/**
 	 * Whether a Vector3 field should offer linked, proportional axis editing.
 	 * The value also controls the initial linked state.
@@ -86,6 +94,7 @@ type VectorValue = {
 };
 
 const INPUT_DEBOUNCE_MS = 300;
+let dynamicFormInstanceId = 0;
 
 @customElement("dt3d-dynamic-form")
 export class DynamicForm extends LitElement {
@@ -96,6 +105,12 @@ export class DynamicForm extends LitElement {
 
 	@property({attribute: false})
 	public data: unknown = null;
+
+	/** Home Assistant entities available to `entity` fields. */
+	@property({attribute: false})
+	public entityOptions: DynamicFormEntityOption[] = [];
+
+	private readonly entityListPrefix = `dt3d-entity-list-${++dynamicFormInstanceId}`;
 
 	private subFormOpenState = new Map<string, boolean>();
 	private vectorLinkedState = new Map<string, boolean>();
@@ -271,6 +286,60 @@ export class DynamicForm extends LitElement {
 
 		const name = (value as {name?: unknown}).name;
 		return typeof name === "string" ? name : "";
+	}
+
+	private getEntityListId(field: DynamicFormInputField): string {
+		const attribute = field.attribute.replace(/[^a-zA-Z0-9_-]/g, "-");
+		return `${this.entityListPrefix}-${attribute}`;
+	}
+
+	private getFilteredEntityOptions(
+		field: DynamicFormInputField,
+	): DynamicFormEntityOption[] {
+		if (!field.entityFilter) return this.entityOptions;
+
+		let filter: RegExp;
+		try {
+			filter =
+				field.entityFilter instanceof RegExp
+					? field.entityFilter
+					: new RegExp(field.entityFilter, "i");
+		} catch {
+			return this.entityOptions;
+		}
+
+		const matches = (value: string): boolean => {
+			filter.lastIndex = 0;
+			return filter.test(value);
+		};
+		return this.entityOptions.filter(
+			(option) => matches(option.entityId) || matches(option.name),
+		);
+	}
+
+	private handleEntityInput(
+		field: DynamicFormInputField,
+		event: Event,
+		options: DynamicFormEntityOption[],
+	): void {
+		const value = (event.target as HTMLInputElement).value;
+		if (value === "" || options.some((option) => option.entityId === value)) {
+			this.dispatchFieldChange(field.attribute, field.type, value);
+		}
+	}
+
+	private validateEntityInput(
+		event: Event,
+		value: unknown,
+		options: DynamicFormEntityOption[],
+	): void {
+		const input = event.target as HTMLInputElement;
+		if (
+			input.value !== "" &&
+			!options.some((option) => option.entityId === input.value)
+		) {
+			input.value = value == null ? "" : String(value);
+		}
 	}
 
 	private setTextureDragging(attribute: string, dragging: boolean): void {
@@ -741,6 +810,36 @@ export class DynamicForm extends LitElement {
 								`,
 							)}
 						</select>
+					</div>
+				`;
+			}
+			case "entity": {
+				const value = this.getFieldValue(field, data);
+				const listId = this.getEntityListId(field);
+				const options = this.getFilteredEntityOptions(field);
+				return html`
+					<div class="field entity-field">
+						<label title=${field.tooltip ?? ""}>${field.label}</label>
+						<input
+							type="search"
+							list=${listId}
+							placeholder=${field.placeholder ?? ""}
+							.value=${value == null ? "" : String(value)}
+							?disabled=${!field.editable}
+							@input=${(event: Event) =>
+								this.handleEntityInput(field, event, options)}
+							@change=${(event: Event) =>
+								this.validateEntityInput(event, value, options)}
+						/>
+						<datalist id=${listId}>
+							${options.map(
+								(option) => html`
+									<option value=${option.entityId} label=${option.name}>
+										${option.name}
+									</option>
+								`,
+							)}
+						</datalist>
 					</div>
 				`;
 			}

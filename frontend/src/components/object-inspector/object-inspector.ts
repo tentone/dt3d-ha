@@ -35,6 +35,7 @@ import {StaticLightObject} from "../../objects/static-light.js";
 import {ViewportObject} from "../../objects/viewport-object.js";
 import type {
 	DynamicFormChangeDetail,
+	DynamicFormEntityOption,
 	DynamicFormField,
 } from "../dynamic-form/dynamic-form.js";
 import componentStyles from "./object-inspector.css?inline";
@@ -122,6 +123,9 @@ const WINDOW_CONFIGURATION_ATTRIBUTES = new Set([
 	"shutterColor",
 ]);
 
+const OPENING_ENTITY_FILTER =
+	/^(?:binary_sensor|cover|input_boolean|input_number|number|sensor|switch)\./i;
+
 @customElement("dt3d-object-inspector")
 export class DT3DObjectInspector extends LitElement {
 	static styles = unsafeCSS(componentStyles);
@@ -131,6 +135,9 @@ export class DT3DObjectInspector extends LitElement {
 
 	@property({type: Boolean})
 	public multiple = false;
+
+	@property({attribute: false})
+	public entityOptions: DynamicFormEntityOption[] = [];
 
 	private materialTextureVersions = new Map<string, number>();
 
@@ -783,8 +790,9 @@ export class DT3DObjectInspector extends LitElement {
 			{
 				label: localManager.get("openingEntityId"),
 				attribute: "openEntityId",
-				type: "string",
+				type: "entity",
 				tooltip: localManager.get("openingEntityIdTooltip"),
+				entityFilter: OPENING_ENTITY_FILTER,
 				placeholder: "cover.living_room",
 				editable: !locked,
 				enabled: true,
@@ -1139,8 +1147,9 @@ export class DT3DObjectInspector extends LitElement {
 			{
 				label: localManager.get("windowBlindEntityId"),
 				attribute: "blindOpenEntityId",
-				type: "string",
+				type: "entity",
 				tooltip: localManager.get("openingEntityIdTooltip"),
+				entityFilter: OPENING_ENTITY_FILTER,
 				placeholder: "cover.living_room_blind",
 				editable: !locked && enabled,
 				enabled: true,
@@ -1205,8 +1214,9 @@ export class DT3DObjectInspector extends LitElement {
 			{
 				label: localManager.get("windowShutterEntityId"),
 				attribute: "shutterOpenEntityId",
-				type: "string",
+				type: "entity",
 				tooltip: localManager.get("openingEntityIdTooltip"),
+				entityFilter: OPENING_ENTITY_FILTER,
 				placeholder: "cover.living_room_shutter",
 				editable: !locked && enabled,
 				enabled: true,
@@ -1261,8 +1271,9 @@ export class DT3DObjectInspector extends LitElement {
 			{
 				label: localManager.get("windowShutterBladeEntityId"),
 				attribute: "shutterBladeOpenEntityId",
-				type: "string",
+				type: "entity",
 				tooltip: localManager.get("openingEntityIdTooltip"),
+				entityFilter: OPENING_ENTITY_FILTER,
 				placeholder: "number.living_room_shutter_blades",
 				editable: !locked && enabled,
 				enabled: true,
@@ -1693,6 +1704,7 @@ export class DT3DObjectInspector extends LitElement {
 						<dt3d-dynamic-form
 							.fields=${inspectorFields}
 							.data=${this.selectedObject}
+							.entityOptions=${this.entityOptions}
 							@field-change=${(event: CustomEvent<DynamicFormChangeDetail>) =>
 								this.handleFormFieldChange(event)}
 						></dt3d-dynamic-form>

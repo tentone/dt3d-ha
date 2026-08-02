@@ -122,7 +122,10 @@ import type {
 	DT3DConfirmationModal,
 } from "./confirmation-modal/confirmation-modal.js";
 import type {ConnectionStatus} from "./connection-status/connection-status.js";
-import type {DynamicFormField} from "./dynamic-form/dynamic-form.js";
+import type {
+	DynamicFormEntityOption,
+	DynamicFormField,
+} from "./dynamic-form/dynamic-form.js";
 import type {
 	DT3DFormModal,
 	FormModalSubmitDetail,
@@ -213,6 +216,10 @@ export class DT3DCard extends LitElement {
 	 * Home assistant instance.
 	 */
 	public hassInstance: any;
+
+	private entityOptions: DynamicFormEntityOption[] = [];
+
+	private entityOptionsSignature = "";
 
 	private container: HTMLElement = null;
 
@@ -503,10 +510,33 @@ export class DT3DCard extends LitElement {
 		this.locale = localManager;
 
 		this.hassInstance = hass;
+		this.updateEntityOptions(hass?.states);
 
 		this.updateSkyFromDateTime();
 		this.updateEntityObjects();
 		void this.refreshXrAvailability();
+	}
+
+	private updateEntityOptions(states: Record<string, any> | undefined): void {
+		const options = Object.entries(states ?? {})
+			.map(([entityId, entity]) => ({
+				entityId,
+				name:
+					typeof entity?.attributes?.friendly_name === "string"
+						? entity.attributes.friendly_name
+						: entityId,
+			}))
+			.sort((left, right) => left.entityId.localeCompare(right.entityId));
+		const signature = options
+			.map((option) => `${option.entityId}\0${option.name}`)
+			.join("\u0001");
+		if (signature === this.entityOptionsSignature) return;
+
+		this.entityOptions = options;
+		this.entityOptionsSignature = signature;
+		if (this.tree) {
+			this.tree.entityOptions = options;
+		}
 	}
 
 	/**
@@ -3655,6 +3685,7 @@ export class DT3DCard extends LitElement {
 		this.content.appendChild(this.hintBox);
 
 		this.tree = document.createElement("dt3d-tree") as DT3DTree;
+		this.tree.entityOptions = this.entityOptions;
 		this.tree.style.cssText = `
 			position: absolute;
 			top: 0;	
