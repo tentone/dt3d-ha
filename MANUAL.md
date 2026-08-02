@@ -144,10 +144,12 @@ Choose a single or double door and select **Hinged** or **Sliding** operation.
 
 Windows support glass tint, opacity, and roughness; configurable frames; split
 pane grids with custom rows, columns, bar size, and spacing; and horizontal
-blinds. A window can use one or two sliding or hinged sashes. For either doors
-or windows, set **Opening (%)** to `0` for closed, `100` for fully open, or an
-intermediate value for a partial opening. The **Open** toggle is a shortcut for
-fully open/closed.
+blinds. Hinged windows can use one or two framed sashes. Sliding windows always
+use two framed sashes on separate tracks; choose the movable left or right sash,
+which slides across the stationary sash without entering the wall. For either
+doors or windows, set **Opening (%)** to `0` for closed, `100` for fully open,
+or an intermediate value for a partial opening. The **Open** toggle is a
+shortcut for fully open/closed.
 
 Set **Blind location** to mount the blinds on the inside or outside face of the
 window. Set **Blind position (% down)** to `0` to raise the blinds, `100` to

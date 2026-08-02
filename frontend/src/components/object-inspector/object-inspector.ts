@@ -221,6 +221,17 @@ export class DT3DObjectInspector extends LitElement {
 			return () => object.setOpenAmount(amount);
 		}
 
+		if (attribute === "openingType" && object instanceof WindowObject) {
+			const openingType = object.openingType;
+			const panelCount = object.panelCount;
+			return () => {
+				object.setConfiguration("openingType", openingType);
+				if (openingType === "hinged") {
+					object.setConfiguration("panelCount", panelCount);
+				}
+			};
+		}
+
 		if (this.isHouseConfigurationAttribute(object, attribute)) {
 			const value = this.getNestedAttribute(object, attribute);
 			return () => object.setConfiguration(attribute, value);
@@ -849,7 +860,7 @@ export class DT3DObjectInspector extends LitElement {
 				attribute: "panelCount",
 				type: "select",
 				tooltip: localManager.get("windowPanelCountTooltip"),
-				editable: !locked,
+				editable: !locked && this.selectedObject.openingType === "hinged",
 				enabled: true,
 				options: [
 					{label: localManager.get("single"), value: 1},
@@ -859,15 +870,18 @@ export class DT3DObjectInspector extends LitElement {
 			{
 				label:
 					this.selectedObject.openingType === "sliding"
-						? localManager.get("slideSide")
+						? localManager.get("windowSlidingPanel")
 						: localManager.get("doorHingeSide"),
 				attribute: "hingeSide",
 				type: "select",
 				tooltip:
 					this.selectedObject.openingType === "sliding"
-						? localManager.get("slideSideTooltip")
+						? localManager.get("windowSlidingPanelTooltip")
 						: localManager.get("doorHingeSideTooltip"),
-				editable: !locked && this.selectedObject.panelCount === 1,
+				editable:
+					!locked &&
+					(this.selectedObject.openingType === "sliding" ||
+						this.selectedObject.panelCount === 1),
 				enabled: true,
 				options: [
 					{label: localManager.get("left"), value: "left"},

@@ -154,6 +154,10 @@ export class WindowObject extends DTObject {
 
 	private secondarySashGroup: Group;
 
+	private sashFrameGroup: Group;
+
+	private secondarySashFrameGroup: Group;
+
 	private frameGroup: Group;
 
 	private gridGroup: Group;
@@ -171,6 +175,8 @@ export class WindowObject extends DTObject {
 	private secondaryWindowMesh: Mesh;
 
 	private frameMaterial: MeshStandardMaterial;
+
+	private sashFrameMaterial: MeshStandardMaterial;
 
 	private gridMaterial: MeshStandardMaterial;
 
@@ -193,7 +199,7 @@ export class WindowObject extends DTObject {
 		this.openingType =
 			customization.openingType ?? DEFAULT_WINDOW_CUSTOMIZATION.openingType;
 		this.panelCount =
-			customization.panelCount === 2
+			this.openingType === "sliding" || customization.panelCount === 2
 				? 2
 				: DEFAULT_WINDOW_CUSTOMIZATION.panelCount;
 		this.hingeSide =
@@ -331,6 +337,14 @@ export class WindowObject extends DTObject {
 		this.secondaryWindowMesh.name = "Window Panel 2";
 		this.secondarySashGroup.add(this.secondaryWindowMesh);
 
+		this.sashFrameGroup = markObjectInternal(new Group());
+		this.sashFrameGroup.name = "Window Sash Frame";
+		this.sashGroup.add(this.sashFrameGroup);
+
+		this.secondarySashFrameGroup = markObjectInternal(new Group());
+		this.secondarySashFrameGroup.name = "Window Sash Frame 2";
+		this.secondarySashGroup.add(this.secondarySashFrameGroup);
+
 		this.frameGroup = markObjectInternal(new Group());
 		this.frameGroup.name = "Window Border";
 		this.add(this.frameGroup);
@@ -356,6 +370,9 @@ export class WindowObject extends DTObject {
 		this.add(this.secondaryShutterGroup);
 
 		this.frameMaterial = new MeshStandardMaterial({color: this.borderColor});
+		this.sashFrameMaterial = new MeshStandardMaterial({
+			color: this.borderColor,
+		});
 		this.gridMaterial = new MeshStandardMaterial({color: this.borderColor});
 		this.blindMaterial = new MeshStandardMaterial({
 			color: this.blindColor,
@@ -452,12 +469,16 @@ export class WindowObject extends DTObject {
 				(value === "inward" || value === "outward"))
 		) {
 			(this as any)[attribute] = value;
+			if (attribute === "openingType" && value === "sliding") {
+				this.panelCount = 2;
+			}
 			this.updateGeometry();
 			return true;
 		}
 		if (attribute === "panelCount") {
 			const count = Number(value);
 			if (count !== 1 && count !== 2) return false;
+			if (this.openingType === "sliding" && count !== 2) return false;
 			this.panelCount = count;
 			this.updateGeometry();
 			return true;
@@ -643,13 +664,24 @@ export class WindowObject extends DTObject {
 		const glassWidth = Math.max(0.02, this.width - border * 2);
 		const glassHeight = Math.max(0.02, this.height - border * 2);
 		const panelWidth = glassWidth / this.panelCount;
-		const geometry = new BoxGeometry(panelWidth, glassHeight, this.thickness);
+		const sashFrameWidth = Math.min(
+			Math.max(0.025, this.borderThickness),
+			panelWidth / 4,
+			glassHeight / 4,
+		);
+		const panelGlassWidth = Math.max(0.02, panelWidth - sashFrameWidth * 2);
+		const panelGlassHeight = Math.max(0.02, glassHeight - sashFrameWidth * 2);
+		const geometry = new BoxGeometry(
+			panelGlassWidth,
+			panelGlassHeight,
+			this.thickness,
+		);
 		this.windowMesh.geometry.dispose();
 		this.windowMesh.geometry = geometry;
 		this.secondaryWindowMesh.geometry.dispose();
 		this.secondaryWindowMesh.geometry = new BoxGeometry(
-			panelWidth,
-			glassHeight,
+			panelGlassWidth,
+			panelGlassHeight,
 			this.thickness,
 		);
 		this.secondaryWindowMesh.material = this.windowMesh.material;
@@ -657,13 +689,16 @@ export class WindowObject extends DTObject {
 		this.positionWindowPanels(glassWidth, panelWidth);
 
 		this.updateFrameGeometry(border);
-		this.updateGridGeometry(panelWidth, glassHeight);
+		this.updateSashFrameGeometry(panelWidth, glassHeight, sashFrameWidth);
+		this.updateGridGeometry(panelGlassWidth, panelGlassHeight);
 		this.updateBlindsGeometry();
 		this.updateShutterGeometry();
 		this.applyOpeningTransform();
 		for (const group of [
 			this.sashGroup,
 			this.secondarySashGroup,
+			this.sashFrameGroup,
+			this.secondarySashFrameGroup,
 			this.frameGroup,
 			this.blindsGroup,
 			this.shutterGroup,
@@ -702,14 +737,71 @@ export class WindowObject extends DTObject {
 		}
 		this.windowMesh.position.set(0, this.height / 2, 0);
 		this.secondaryWindowMesh.position.set(0, this.height / 2, 0);
-		this.sashGroup.position.set(
-			this.panelCount === 2 ? -panelWidth / 2 : 0,
-			0,
-			0,
-		);
-		this.secondarySashGroup.position.set(panelWidth / 2, 0, 0);
+		const trackOffset = this.thickness / 2 + 0.012;
+		this.sashGroup.position.set(-panelWidth / 2, 0, trackOffset);
+		this.secondarySashGroup.position.set(panelWidth / 2, 0, -trackOffset);
 		this.gridGroup.position.x = 0;
 		this.secondaryGridGroup.position.x = 0;
+	}
+
+	private updateSashFrameGeometry(
+		panelWidth: number,
+		panelHeight: number,
+		frameWidth: number,
+	): void {
+		disposeGroupGeometry(this.sashFrameGroup);
+		disposeGroupGeometry(this.secondarySashFrameGroup);
+		this.secondarySashFrameGroup.visible = this.panelCount === 2;
+		this.sashFrameMaterial.color = new Color(this.borderColor);
+
+		this.sashFrameGroup.position.set(
+			this.windowMesh.position.x,
+			this.height / 2,
+			0,
+		);
+		this.secondarySashFrameGroup.position.set(
+			this.secondaryWindowMesh.position.x,
+			this.height / 2,
+			0,
+		);
+		this.addSashFrame(
+			this.sashFrameGroup,
+			panelWidth,
+			panelHeight,
+			frameWidth,
+		);
+		if (this.panelCount === 2) {
+			this.addSashFrame(
+				this.secondarySashFrameGroup,
+				panelWidth,
+				panelHeight,
+				frameWidth,
+			);
+		}
+	}
+
+	private addSashFrame(
+		group: Group,
+		panelWidth: number,
+		panelHeight: number,
+		frameWidth: number,
+	): void {
+		const depth = this.thickness + 0.012;
+		for (const side of [-1, 1]) {
+			const vertical = new Mesh(
+				new BoxGeometry(frameWidth, panelHeight, depth),
+				this.sashFrameMaterial,
+			);
+			vertical.position.x = side * (panelWidth / 2 - frameWidth / 2);
+			group.add(vertical);
+
+			const horizontal = new Mesh(
+				new BoxGeometry(panelWidth - frameWidth * 2, frameWidth, depth),
+				this.sashFrameMaterial,
+			);
+			horizontal.position.y = side * (panelHeight / 2 - frameWidth / 2);
+			group.add(horizontal);
+		}
 	}
 
 	private updateFrameGeometry(border: number): void {
@@ -989,20 +1081,13 @@ export class WindowObject extends DTObject {
 			return;
 		}
 
-		if (this.panelCount === 2) {
-			this.sashGroup.position.set(
-				-panelWidth / 2 - panelWidth * amount,
-				0,
-				0,
-			);
-			this.secondarySashGroup.position.set(
-				panelWidth / 2 + panelWidth * amount,
-				0,
-				0,
-			);
+		const trackOffset = this.thickness / 2 + 0.012;
+		this.sashGroup.position.set(-panelWidth / 2, 0, trackOffset);
+		this.secondarySashGroup.position.set(panelWidth / 2, 0, -trackOffset);
+		if (this.hingeSide === "left") {
+			this.sashGroup.position.x += panelWidth * amount;
 		} else {
-			const direction = this.hingeSide === "left" ? -1 : 1;
-			this.sashGroup.position.set(direction * glassWidth * amount, 0, 0);
+			this.secondarySashGroup.position.x -= panelWidth * amount;
 		}
 	}
 }
