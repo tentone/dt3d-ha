@@ -10,7 +10,7 @@ export type ToneMappingMode =
 
 export type ResolutionScale = 1 | 0.75 | 0.5;
 
-export type ShadowMapMode = "basic" | "pcf" | "pcf_soft" | "vsm";
+export type ShadowMapMode = "basic" | "pcf" | "vsm";
 
 export type ShadowMapQuality = "low" | "medium" | "high" | "very_high";
 
@@ -321,9 +321,6 @@ export const normalizeShadowMapMode = (value: unknown): ShadowMapMode => {
 		case "basic":
 		case "basic_shadow_map":
 			return "basic";
-		case "pcf_soft":
-		case "pcf_soft_shadow_map":
-			return "pcf_soft";
 		case "vsm":
 		case "vsm_shadow_map":
 			return "vsm";

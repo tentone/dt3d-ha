@@ -265,9 +265,6 @@ export class RendererManager {
 			case "basic":
 				renderer.shadowMap.type = BasicShadowMap;
 				break;
-			case "pcf_soft":
-				renderer.shadowMap.type = PCFSoftShadowMap;
-				break;
 			case "vsm":
 				renderer.shadowMap.type = VSMShadowMap;
 				break;

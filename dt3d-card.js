@@ -2134,7 +2134,7 @@ let No = class extends ni {
     return Fe`
 		<div class="connection-status-container">
 			<div style="margin: 5px;" class="${this.success ? "connection-status-success" : "connection-status-error"}">
-				${this.msg}<br>${"2026-08-02T21:09:09.781Z"}
+				${this.msg}<br>${"2026-08-02T21:14:01.908Z"}
 			</div>
 		</div>`;
   }
