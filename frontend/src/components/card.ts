@@ -4524,6 +4524,8 @@ export class DT3DCard extends LitElement {
 			}
 
 			const {object} = this.pickObjectFromEvent(event);
+			const entityWasSelected =
+				object instanceof EntityObject && this.selectedObjects.includes(object);
 			if (object && !this.isVisualizationOnly()) {
 				this.attachTransform(object);
 				this.tree.selectObject(object.uuid);
@@ -4542,7 +4544,10 @@ export class DT3DCard extends LitElement {
 				});
 			}
 
-			if (object instanceof EntityObject) {
+			if (
+				object instanceof EntityObject &&
+				(this.isVisualizationOnly() || entityWasSelected)
+			) {
 				this.performEntityAction(
 					object,
 					this.resolveEntityAction(object, "doubleClick"),
