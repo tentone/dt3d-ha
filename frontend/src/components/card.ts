@@ -2141,9 +2141,7 @@ export class DT3DCard extends LitElement {
 	 */
 	private cancelMoveToPoint(): void {
 		this.moveToPointObject = null;
-		if (this.canvas) {
-			this.canvas.style.cursor = "";
-		}
+		this.updateCanvasCursor(this.hoveredObject);
 		this.updateHintMessage();
 	}
 
@@ -2398,6 +2396,7 @@ export class DT3DCard extends LitElement {
 
 		const {object} = this.pickObjectFromEvent(event);
 		const interactiveObject = object instanceof DTObject ? object : null;
+		this.updateCanvasCursor(interactiveObject);
 		if (interactiveObject === this.hoveredObject) {
 			return;
 		}
@@ -2421,6 +2420,26 @@ export class DT3DCard extends LitElement {
 				hass: this.hassInstance,
 			});
 		}
+	}
+
+	/**
+	 * Show a pointer cursor only when the hovered entity has an available action.
+	 */
+	private updateCanvasCursor(object: DTObject | null): void {
+		if (!this.canvas) {
+			return;
+		}
+
+		if (this.moveToPointObject) {
+			this.canvas.style.cursor = "crosshair";
+			return;
+		}
+
+		const clickable =
+			object instanceof EntityObject &&
+			(this.resolveEntityAction(object, "click") !== "nothing" ||
+				this.resolveEntityAction(object, "doubleClick") !== "nothing");
+		this.canvas.style.cursor = clickable ? "pointer" : "";
 	}
 
 	/**
@@ -4592,6 +4611,7 @@ export class DT3DCard extends LitElement {
 
 		this.canvas.addEventListener("mouseleave", (event: MouseEvent) => {
 			this.clearSceneLongPress();
+			this.updateCanvasCursor(null);
 
 			if (!this.hoveredObject) {
 				return;
