@@ -631,9 +631,6 @@ export class DT3DConfigEditor extends LitElement {
 									<option value="pcf">
 										${localManager.get("shadowMapPcf")}
 									</option>
-									<option value="pcf_soft">
-										${localManager.get("shadowMapPcfSoft")}
-									</option>
 									<option value="vsm">
 										${localManager.get("shadowMapVsm")}
 									</option>
