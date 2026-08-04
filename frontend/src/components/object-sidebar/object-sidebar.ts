@@ -10,7 +10,7 @@ import componentStyles from "./object-sidebar.css?inline";
 /**
  * Wall placement options.
  */
-export type WallOptions = "wall" | "door" | "window" | "none";
+export type WallOptions = "wall" | "floor" | "door" | "window" | "none";
 
 const OBJECT_SIDEBAR_COLLAPSED_STORAGE_KEY = "sidebar-collapsed";
 
@@ -210,6 +210,18 @@ export class DT3DObjectSidebar extends LitElement {
 							aria-label=${localManager.get("drawWall")}
 						>
 							<ha-icon icon="mdi:vector-line"></ha-icon>
+						</button>
+					</dt3d-tooltip>
+					<dt3d-tooltip
+						.content=${localManager.get("drawFloor")}
+						placement="right"
+					>
+						<button
+							@click=${() => this.handleWallSelect("floor")}
+							class=${this.wallTool === "floor" ? "selected" : ""}
+							aria-label=${localManager.get("drawFloor")}
+						>
+							<ha-icon icon="mdi:floor-plan"></ha-icon>
 						</button>
 					</dt3d-tooltip>
 					<dt3d-tooltip

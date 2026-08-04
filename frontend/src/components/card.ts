@@ -50,6 +50,7 @@ import type {
 } from "../editor/entity-actions.js";
 import {normalizeEntityInteractionConfig} from "../editor/entity-actions.js";
 import {createFloorplanReferenceMesh} from "../editor/floorplan-reference.js";
+import {FloorManager} from "../editor/floors.js";
 import type {
 	CardGeneralConfig,
 	GeneralConfig,
@@ -326,6 +327,9 @@ export class DT3DCard extends LitElement {
 	 */
 	private wallManager: WallManager | null = null;
 
+	/** Handles manual floor drawing and floors derived from closed wall loops. */
+	private floorManager: FloorManager | null = null;
+
 	private lastSelectedObject: Object3D | null = null;
 
 	private selectedObjects: Object3D[] = [];
@@ -403,6 +407,12 @@ export class DT3DCard extends LitElement {
 		if (event.key === "Escape" && this.moveToPointObject) {
 			event.preventDefault();
 			this.cancelMoveToPoint();
+			return;
+		}
+
+		if (event.key === "Escape" && this.floorManager?.hasDraft()) {
+			event.preventDefault();
+			this.floorManager.clearDraft();
 			return;
 		}
 
@@ -1514,6 +1524,7 @@ export class DT3DCard extends LitElement {
 
 			this.measurementManager?.setMode("none");
 			this.wallManager?.setMode("none");
+			this.floorManager?.setActive(false);
 			if (this.bottomBar) {
 				this.bottomBar.measurementTool = "none";
 			}
@@ -2119,6 +2130,7 @@ export class DT3DCard extends LitElement {
 
 		this.measurementManager?.setMode("none");
 		this.wallManager?.setMode("none");
+		this.floorManager?.setActive(false);
 		if (this.bottomBar) {
 			this.bottomBar.measurementTool = "none";
 		}
@@ -2305,7 +2317,11 @@ export class DT3DCard extends LitElement {
 		}
 
 		// In measurement mode, single clicks are consumed to prevent misclicks
-		if (this.measurementManager?.isActive() || this.wallManager?.isActive()) {
+		if (
+			this.measurementManager?.isActive() ||
+			this.wallManager?.isActive() ||
+			this.floorManager?.isActive()
+		) {
 			return;
 		}
 
@@ -2392,6 +2408,7 @@ export class DT3DCard extends LitElement {
 	private handlePointerMove(event: MouseEvent): void {
 		if (!this.isVisualizationOnly()) {
 			this.wallManager?.handlePointerMove(event);
+			this.floorManager?.handlePointerMove(event);
 		}
 
 		const {object} = this.pickObjectFromEvent(event);
@@ -2798,6 +2815,10 @@ export class DT3DCard extends LitElement {
 			this.hintBox.message = localManager.get("hintAddDoor");
 		} else if (this.wallManager?.mode === "window") {
 			this.hintBox.message = localManager.get("hintAddWindow");
+		} else if (this.floorManager?.isActive()) {
+			this.hintBox.message = this.floorManager.hasDraft()
+				? localManager.get("hintFloorContinue")
+				: localManager.get("hintFloorStart");
 		} else {
 			this.hintBox.message = "";
 		}
@@ -4045,6 +4066,20 @@ export class DT3DCard extends LitElement {
 				space: this.space,
 			}),
 		);
+		this.floorManager = new FloorManager(
+			this.sceneManager.measurements,
+			() => ({
+				canvas: this.canvas,
+				camera: this.camera,
+				space: this.space,
+				gridSnapEnabled: this.bottomBar.gridSnapEnabled,
+				gridSnapSize: this.sceneManager.getGridSnapSize(),
+			}),
+			{
+				addToScene: (object) => this.addToScene(object),
+				updateHintMessage: () => this.updateHintMessage(),
+			},
+		);
 		this.wallManager = new WallManager(
 			this.sceneManager.measurements,
 			() => ({
@@ -4067,6 +4102,10 @@ export class DT3DCard extends LitElement {
 					this.setSelectedObject(object);
 				},
 				selectObject: (object) => this.tree.selectObject(object.uuid),
+				onWallCreated: (wall) => {
+					this.floorManager?.createFloorsFromClosedWalls();
+					this.attachTransform(wall);
+				},
 			},
 		);
 
@@ -4191,6 +4230,7 @@ export class DT3DCard extends LitElement {
 
 			if (mode !== "none") {
 				this.wallManager?.setMode("none");
+				this.floorManager?.setActive(false);
 				this.objectSidebar.wallTool = "none";
 				this.cancelMoveToPoint();
 			}
@@ -4214,8 +4254,14 @@ export class DT3DCard extends LitElement {
 				return;
 			}
 
-			const mode = e.detail.mode as "wall" | "door" | "window" | "none";
-			this.wallManager?.setMode(mode);
+			const mode = e.detail.mode as
+				| "wall"
+				| "floor"
+				| "door"
+				| "window"
+				| "none";
+			this.wallManager?.setMode(mode === "floor" ? "none" : mode);
+			this.floorManager?.setActive(mode === "floor");
 			this.objectSidebar.wallTool = mode;
 			if (mode !== "none") {
 				this.measurementManager?.setMode("none");
@@ -4533,6 +4579,11 @@ export class DT3DCard extends LitElement {
 
 				// Handle measurement points on double click
 				if (this.measurementManager?.handleClick(event)) {
+					return;
+				}
+
+				// Handle floor shape points on double click
+				if (this.floorManager?.handleClick(event)) {
 					return;
 				}
 

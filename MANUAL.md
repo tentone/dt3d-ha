@@ -90,14 +90,16 @@ All entity domains can use **Open entity** to show Home Assistant's more-info di
 1. Open **Upload assets** and choose **Add floorplan reference**. Select a 2D floorplan image, click two points whose real separation is known, enter that distance in meters, and choose **Add floorplan**. DT3D creates a horizontal textured plane at the calibrated real-world size. You can also add or import a floor/plane manually.
 2. Optionally enable grid snapping and set the required snap size.
 3. Select **Draw wall**. Double-click once for the start point, then double-click each following point to draw connected wall segments continuously. End on any part of an existing wall to finish the run, or choose **Exit wall tools**.
-4. Select a wall in the canvas or object tree.
+4. When the wall centerlines form a closed loop, DT3D automatically creates a floor surface with that boundary. Duplicate floors are not created when more walls are connected to the same room.
+5. To draw a floor independently, select **Draw floor surface** and double-click each boundary point. Every point is projected onto the first point's Y height, so the surface stays planar. Double-click near the first point after adding at least three points to close and create the floor; press **Escape** to discard an unfinished outline.
+6. Select a wall or floor in the canvas or object tree.
 
 <img src="readme/5_layout_editor.png" width="500">
 
 ### Add doors and windows
 
-5. Choose **Add door** or **Add window**, then double-click the canvas. The opening is created as a child of that wall.
-6. Select the wall, door, or window to edit its dimensions, transform, material, and detailed appearance. Choose **Exit wall tools** when finished.
+7. Choose **Add door** or **Add window**, then double-click the canvas. The opening is created as a child of that wall.
+8. Select the wall, door, window, or floor to edit its transform and material. Choose **Exit wall tools** when finished.
 
 The wall inspector provides height and thickness controls plus an optional baseboard along the bottom. Doors support configurable trim, left/right hinges, inward/outward swing, multiple knob styles, and a positioned glazed opening. Choose a single or double door and select **Hinged** or **Sliding** operation.
 

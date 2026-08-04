@@ -28,6 +28,7 @@ import {EntityGeneric} from "../objects/entity-generic.js";
 import {EntityLight} from "../objects/entity-light.js";
 import {EntityObject} from "../objects/entity-object.js";
 import {DoorObject} from "../objects/house/door.js";
+import {FloorObject} from "../objects/house/floor.js";
 import {WallObject} from "../objects/house/wall.js";
 import {WindowObject} from "../objects/house/window.js";
 import {StaticLightObject} from "../objects/static-light.js";
@@ -778,6 +779,26 @@ export class SpaceSync {
 				mesh.userData[RESOURCE_PLACEHOLDER_DATA_KEY] = true;
 				object = mesh;
 				materialTarget = mesh;
+			} else if (meshType === "floor") {
+				const floorData = data.floor as
+					| {
+							points?: Array<{x?: number; z?: number}>;
+							automatic?: boolean;
+					  }
+					| undefined;
+				const points = floorData?.points
+					?.filter(
+						(point): point is {x: number; z: number} =>
+							typeof point.x === "number" && typeof point.z === "number",
+					)
+					.map((point) => ({x: point.x, z: point.z}));
+				const floor = new FloorObject(
+					points && points.length >= 3 ? points : undefined,
+					color,
+					floorData?.automatic === true,
+				);
+				object = floor;
+				materialTarget = floor.floorMesh;
 			} else if (meshType === "wall") {
 				const wallData = data.wall as
 					| {
@@ -1088,6 +1109,19 @@ export class SpaceSync {
 			if (object instanceof EntityLight) {
 				data.light = object.getLightSettings();
 			}
+		} else if (object instanceof FloorObject) {
+			type = declaredType ?? "mesh";
+			data.meshType = "floor";
+			data.floor = {
+				points: object.points.map((point) => ({...point})),
+				automatic: object.automatic,
+			};
+			const material = object.floorMesh.material as any;
+			if (material?.color?.getHexString) {
+				data.color = material.color.getHexString();
+			}
+			data.material = serializeMaterial(object.floorMesh.material);
+			storeMeshPredominantTextureColor(data, object.floorMesh);
 		} else if (object instanceof WallObject) {
 			type = declaredType ?? "mesh";
 			data.meshType = "wall";

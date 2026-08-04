@@ -25,6 +25,7 @@ type WallCallbacks = {
 	updateHintMessage: () => void;
 	setLastSelectedObject: (object: Object3D | null) => void;
 	selectObject: (object: Object3D) => void;
+	onWallCreated: (wall: WallObject) => void;
 };
 
 type WallPlacement = {
@@ -217,6 +218,7 @@ export class WallManager {
 		this.clearDraft();
 
 		this.callbacks.addToScene(wall);
+		this.callbacks.onWallCreated(wall);
 		this.callbacks.setLastSelectedObject(wall);
 		this.callbacks.updateHintMessage();
 	}

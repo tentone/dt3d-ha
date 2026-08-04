@@ -21,6 +21,7 @@ import {localManager} from "../../locale/locale.js";
 import {DTObject} from "../../objects/dt-object.js";
 import {EntityObject, isToggleable} from "../../objects/entity-object.js";
 import {DoorObject} from "../../objects/house/door.js";
+import {FloorObject} from "../../objects/house/floor.js";
 import {WallObject} from "../../objects/house/wall.js";
 import {WindowObject} from "../../objects/house/window.js";
 import {StaticLightObject} from "../../objects/static-light.js";
@@ -639,6 +640,10 @@ export class DT3DTree extends LitElement {
 
 		if (obj instanceof WallObject) {
 			return "mdi:wall";
+		}
+
+		if (obj instanceof FloorObject) {
+			return "mdi:floor-plan";
 		}
 
 		if (obj instanceof DoorObject) {
