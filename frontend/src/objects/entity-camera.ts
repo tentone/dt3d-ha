@@ -1,3 +1,5 @@
+import type {Camera} from "three";
+import {Vector3} from "three";
 import {CSS3DSprite} from "three/examples/jsm/renderers/CSS3DRenderer.js";
 
 import {resolveEntityIconPath} from "../utils/icon-utils.js";
@@ -44,6 +46,15 @@ export class EntityCamera extends EntityObject {
 	 */
 	private readonly status: HTMLDivElement;
 
+	/** Camera-space position used to keep the preview at a fixed screen size. */
+	private readonly cameraSpacePosition = new Vector3();
+
+	/** Parent scale removed from the preview's screen-space scale. */
+	private readonly parentWorldScale = new Vector3();
+
+	/** World position used to calculate the preview's camera depth. */
+	private readonly worldPosition = new Vector3();
+
 	/**
 	 * Normalized image URL without the refresh cache-busting parameter.
 	 */
@@ -85,8 +96,9 @@ export class EntityCamera extends EntityObject {
 
 		this.root = document.createElement("div");
 		this.root.style.cssText = `
-			width: 320px;
+			width: min(500px, 80vw);
 			overflow: hidden;
+			box-sizing: border-box;
 			border: 1px solid var(--divider-color);
 			border-radius: 12px;
 			background: color-mix(in srgb, var(--card-background-color) 90%, transparent);
@@ -101,8 +113,8 @@ export class EntityCamera extends EntityObject {
 		this.image.alt = entityId;
 		this.image.style.cssText = `
 			display: block;
-			width: 320px;
-			height: 200px;
+			width: 100%;
+			height: min(312.5px, 50vw);
 			object-fit: cover;
 			background: var(--secondary-background-color);
 		`;
@@ -139,6 +151,9 @@ export class EntityCamera extends EntityObject {
 		this.overlay.internal = true;
 		this.overlay.position.y = 1.2;
 		this.overlay.scale.setScalar(0.0045);
+		this.overlay.onBeforeRender = (renderer, _scene, camera) => {
+			this.updateScreenScale(renderer, camera);
+		};
 		this.overlay.visible = false;
 		this.add(this.overlay);
 
@@ -300,6 +315,54 @@ export class EntityCamera extends EntityObject {
 	}
 
 	/**
+	 * Counteract camera projection so the preview keeps a constant screen size.
+	 *
+	 * @param renderer - Active CSS renderer.
+	 * @param camera - Active scene camera.
+	 */
+	private updateScreenScale(renderer: unknown, camera: Camera): void {
+		if (!EntityCamera.hasRendererSize(renderer)) {
+			return;
+		}
+
+		const {height} = renderer.getSize();
+		const projectionScale =
+			(Math.abs(camera.projectionMatrix.elements[5]) * height) / 2;
+		if (!Number.isFinite(projectionScale) || projectionScale <= 0) {
+			return;
+		}
+
+		this.overlay.getWorldPosition(this.worldPosition);
+		this.cameraSpacePosition
+			.copy(this.worldPosition)
+			.applyMatrix4(camera.matrixWorldInverse);
+
+		const isPerspectiveCamera =
+			(camera as Camera & { isPerspectiveCamera?: boolean })
+				.isPerspectiveCamera === true;
+		const depth = isPerspectiveCamera
+			? Math.max(Math.abs(this.cameraSpacePosition.z), 0.0001)
+			: 1;
+		const worldScale = depth / projectionScale;
+
+		if (this.overlay.parent) {
+			this.overlay.parent.getWorldScale(this.parentWorldScale);
+		} else {
+			this.parentWorldScale.set(1, 1, 1);
+		}
+
+		this.overlay.scale.set(
+			worldScale /
+				Math.max(Math.abs(this.parentWorldScale.x), 0.0001),
+			worldScale /
+				Math.max(Math.abs(this.parentWorldScale.y), 0.0001),
+			worldScale /
+				Math.max(Math.abs(this.parentWorldScale.z), 0.0001),
+		);
+		this.overlay.updateMatrixWorld(true);
+	}
+
+	/**
 	 * Resolve the Home Assistant camera image URL from entity_picture.
 	 *
 	 * Root-relative Home Assistant paths are resolved against the current frontend origin.
@@ -329,5 +392,13 @@ export class EntityCamera extends EntityObject {
 		} catch {
 			return null;
 		}
+	}
+
+	private static hasRendererSize(renderer: unknown): renderer is {
+		getSize(): { height: number; width: number };
+	} {
+		return (
+			typeof (renderer as { getSize?: unknown })?.getSize === "function"
+		);
 	}
 }

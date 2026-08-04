@@ -132,9 +132,19 @@ The optional orientation cube is separate from saved viewports. Double-click a c
 
  <img src="readme/groups_editor.png" width="500">
 
-### Configure a space
+## Space Configuration
 
-Open **Space configuration** (cog icon) beside the space selector. The form also contains the space name, description, and default-space checkbox. Its appearance values are saved with the active space and therefore affect every card that displays it:
+ - Open **Space configuration** (cog icon) beside the space selector. The form also contains the space name, description, and default-space checkbox. Its appearance values are saved with the active space and therefore affect every card that displays it:
+
+
+### Lighting
+ - Skybox can be configured, colorized, or disabled.
+ - A solid or transparent background can be chosen instead, usefull to allow to view the background of the dashboard.
+ - The procedural sky can be enabled or disabled, and optionally follow Home Assistant's local date/time daylight cycle.
+
+ <img src="readme/day.png" width="200"><img src="readme/night.png" width="200">
+
+### Post-processing and appearance
 
 | Section | Options |
 | --- | --- |
