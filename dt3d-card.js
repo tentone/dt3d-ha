@@ -2133,7 +2133,7 @@ let No = class extends ni {
     return Fe`
 		<div class="connection-status-container">
 			<div style="margin: 5px;" class="${this.success ? "connection-status-success" : "connection-status-error"}">
-				${this.msg}<br>${"2026-08-04T16:55:31.476Z"}
+				${this.msg}<br>${"2026-08-04T17:03:25.368Z"}
 			</div>
 		</div>`;
   }
@@ -47096,7 +47096,7 @@ class ml extends Ei {
       2003199,
       0.64
     ), this.icon.internal = !0, this.icon.position.y = 0.32, this.add(this.icon), this.root = document.createElement("div"), this.root.style.cssText = `
-			width: min(500px, 80vw);
+			width: min(300px, 60vw);
 			overflow: hidden;
 			box-sizing: border-box;
 			border: 1px solid var(--divider-color);
@@ -47107,11 +47107,13 @@ class ml extends Ei {
 			font-family: sans-serif;
 			pointer-events: none;
 			transform-style: preserve-3d;
+			margin-bottom: 85px;
 		`, this.image = document.createElement("img"), this.image.alt = e, this.image.style.cssText = `
 			display: block;
 			width: 100%;
-			height: min(312.5px, 50vw);
+			height: min(169px, 50vw);
 			object-fit: cover;
+			pointer-events: none;
 			background: var(--secondary-background-color);
 		`, this.image.addEventListener(
       "load",

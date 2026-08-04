@@ -96,7 +96,7 @@ export class EntityCamera extends EntityObject {
 
 		this.root = document.createElement("div");
 		this.root.style.cssText = `
-			width: min(500px, 80vw);
+			width: min(300px, 60vw);
 			overflow: hidden;
 			box-sizing: border-box;
 			border: 1px solid var(--divider-color);
@@ -114,8 +114,9 @@ export class EntityCamera extends EntityObject {
 		this.image.style.cssText = `
 			display: block;
 			width: 100%;
-			height: min(312.5px, 50vw);
+			height: min(169px, 50vw);
 			object-fit: cover;
+			pointer-events: none;
 			background: var(--secondary-background-color);
 		`;
 		this.image.addEventListener("load", () =>
