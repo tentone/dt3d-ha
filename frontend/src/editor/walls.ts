@@ -2,6 +2,7 @@ import type {Camera, Group, Object3D} from "three";
 import {Raycaster, Vector2, Vector3} from "three";
 
 import {WallObject} from "../objects/house/wall.js";
+import {snapPointToClosestAxis} from "./axis-snap.js";
 
 /**
  * Wall tool modes possible in the WallManager.
@@ -138,7 +139,7 @@ export class WallManager {
 			return false;
 		}
 
-		const placement = this.pickPlacementFromEvent(event);
+		let placement = this.pickPlacementFromEvent(event);
 		if (!placement) {
 			return true;
 		}
@@ -147,6 +148,10 @@ export class WallManager {
 			this.draftStart = placement.point.clone();
 			this.createDraft(this.draftStart);
 			return true;
+		}
+
+		if (event.ctrlKey) {
+			placement = this.snapPlacementToAxis(placement, this.draftStart);
 		}
 
 		const segmentLength = Math.hypot(
@@ -187,7 +192,10 @@ export class WallManager {
 			return;
 		}
 
-		this.draft.setFromPoints(this.draftStart, placement.point);
+		const point = event.ctrlKey
+			? snapPointToClosestAxis(placement.point, this.draftStart)
+			: placement.point;
+		this.draft.setFromPoints(this.draftStart, point);
 		this.draft.updateLabel();
 	}
 
@@ -288,6 +296,48 @@ export class WallManager {
 			current = current.parent;
 		}
 		return null;
+	}
+
+	private snapPlacementToAxis(
+		placement: WallPlacement,
+		origin: Vector3,
+	): WallPlacement {
+		const point = snapPointToClosestAxis(placement.point, origin);
+		const moved =
+			Math.hypot(
+				point.x - placement.point.x,
+				point.z - placement.point.z,
+			) > 1e-6;
+		if (!moved || !placement.connectedWall) {
+			return {...placement, point};
+		}
+
+		const {space} = this.getContext();
+		if (space) {
+			const wallPoint = placement.connectedWall.worldToLocal(
+				space.localToWorld(point.clone()),
+			);
+			if (
+				Math.abs(wallPoint.z) <= 1e-5 &&
+				wallPoint.x >= -placement.connectedWall.length / 2 - 1e-5 &&
+				wallPoint.x <= placement.connectedWall.length / 2 + 1e-5
+			) {
+				const wallOffset = Math.min(
+					placement.connectedWall.length / 2,
+					Math.max(-placement.connectedWall.length / 2, wallPoint.x),
+				);
+				wallPoint.set(wallOffset, 0, 0);
+				return {
+					point: space.worldToLocal(
+						placement.connectedWall.localToWorld(wallPoint),
+					),
+					connectedWall: placement.connectedWall,
+					wallOffset,
+				};
+			}
+		}
+
+		return {point, connectedWall: null, wallOffset: null};
 	}
 
 	private snapPointToGrid(point: Vector3, snapSize: number): Vector3 {

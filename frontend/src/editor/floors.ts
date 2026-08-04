@@ -15,6 +15,7 @@ import {WallObject} from "../objects/house/wall.js";
 import {Marker} from "../objects/measurement/marker.js";
 import {getCSSVar} from "../utils/css-utils.js";
 import {markObjectInternal} from "../utils/internal-object.js";
+import {snapPointToClosestAxis} from "./axis-snap.js";
 
 type FloorContext = {
 	canvas: HTMLCanvasElement | null;
@@ -102,7 +103,7 @@ export class FloorManager {
 			return false;
 		}
 
-		const point = this.pickPointFromEvent(event);
+		let point = this.pickPointFromEvent(event);
 		if (!point) {
 			return true;
 		}
@@ -115,6 +116,9 @@ export class FloorManager {
 		}
 
 		point.y = this.points[0].y;
+		if (event.ctrlKey) {
+			point = snapPointToClosestAxis(point, this.points.at(-1)!);
+		}
 		const {gridSnapEnabled, gridSnapSize} = this.getContext();
 		const closeDistance = gridSnapEnabled
 			? Math.max(0.1, gridSnapSize * 0.25)
@@ -145,6 +149,12 @@ export class FloorManager {
 		this.hoverPoint = this.pickPointFromEvent(event);
 		if (this.hoverPoint) {
 			this.hoverPoint.y = this.points[0].y;
+			if (event.ctrlKey) {
+				this.hoverPoint = snapPointToClosestAxis(
+					this.hoverPoint,
+					this.points.at(-1)!,
+				);
+			}
 		}
 		this.updateDraftHelpers();
 	}
