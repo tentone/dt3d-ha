@@ -1,6 +1,6 @@
 {
 	"name": "dt3d-card",
-	"version": "0.1.0",
+	"version": "0.5.0",
 	"private": true,
 	"type": "module",
 	"scripts": {
@@ -15,12 +15,11 @@
 		"draco3d": "~1.5.7",
 		"fflate": "~0.8.3",
 		"lit": "~3.3.1",
-		"three": "~0.185.1",
-		"troika-three-text": "0.52.4"
+		"three": "~0.185.1"
 	},
 	"devDependencies": {
 		"@eslint/js": "~9.0.0",
-		"@types/three": "~0.182.0",
+		"@types/three": "~0.185.0",
 		"@typescript-eslint/eslint-plugin": "~8.55.0",
 		"@typescript-eslint/parser": "~8.55.0",
 		"eslint": "~9.39.2",

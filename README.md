@@ -1,4 +1,4 @@
-# Digital Twin 3D for Home Assistant (DT3D)
+# <img src="addon/icon.png" width="80"> DT3D - 3D Digital Twin for Home Assistant
 
 [![Add the DT3D add-on repository to Home Assistant](https://my.home-assistant.io/badges/supervisor_add_addon_repository.svg)](https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2Ftentone%2Fdt3d-ha) [![Add the DT3D frontend to HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=tentone&repository=dt3d-ha&category=plugin)
 
