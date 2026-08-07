@@ -92,7 +92,7 @@ All entity domains can use **Open entity** to show Home Assistant's more-info di
 3. Select **Draw wall**. Double-click once for the start point, then double-click each following point to draw connected wall segments continuously. Hold **Ctrl** while positioning an endpoint to constrain the segment to X or Z relative to its start; DT3D chooses whichever axis-aligned endpoint is closest to the pointer. End on any part of an existing wall to finish the run, or choose **Exit wall tools**.
 4. When the wall centerlines form a closed loop, DT3D automatically creates a floor surface with that boundary. Duplicate floors are not created when more walls are connected to the same room.
 5. To draw a floor independently, select **Draw floor surface** and double-click each boundary point. Every point is projected onto the first point's Y height, so the surface stays planar. Hold **Ctrl** to constrain the current edge to X or Z relative to the previous floor point; the closest axis is selected. Double-click near the first point after adding at least three points to close and create the floor; press **Escape** to discard an unfinished outline.
-6. Select a wall or floor in the canvas or object tree.
+6. Select a wall or floor in the canvas or object tree. A selected wall shows blue handles at its start and end; double-click a handle and drag the translation control to reshape the wall. Walls sharing that point move together. If the point joins the middle of another wall, DT3D splits that wall at the junction so all connected segments keep moving together.
 
 <img src="readme/5_layout_editor.png" width="500">
 

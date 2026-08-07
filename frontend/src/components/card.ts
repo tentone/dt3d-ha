@@ -89,6 +89,8 @@ import {
 	normalizeSpaceSceneConfig,
 	SceneManager,
 } from "../editor/scene.js";
+import type {WallEndpointEdit} from "../editor/wall-endpoints.js";
+import {WallEndpointManager} from "../editor/wall-endpoints.js";
 import {WallManager} from "../editor/walls.js";
 import type {Locale} from "../locale/locale.js";
 import {localManager} from "../locale/locale.js";
@@ -102,6 +104,7 @@ import {EntityObject, isToggleable} from "../objects/entity-object.js";
 import {EntitySensor} from "../objects/entity-sensor.js";
 import {EntitySwitch} from "../objects/entity-switch.js";
 import {DoorObject} from "../objects/house/door.js";
+import {WallObject} from "../objects/house/wall.js";
 import {WindowObject} from "../objects/house/window.js";
 import {StaticLightObject} from "../objects/static-light.js";
 import {ViewportObject} from "../objects/viewport-object.js";
@@ -326,6 +329,9 @@ export class DT3DCard extends LitElement {
 	 * Wall tool manager that handles wall/door/window placement.
 	 */
 	private wallManager: WallManager | null = null;
+
+	/** Displays and edits the selected wall's start and end points. */
+	private wallEndpointManager: WallEndpointManager | null = null;
 
 	/** Handles manual floor drawing and floors derived from closed wall loops. */
 	private floorManager: FloorManager | null = null;
@@ -1477,6 +1483,11 @@ export class DT3DCard extends LitElement {
 	private applyVisualizationMode(): void {
 		const visualizationOnly = this.isVisualizationOnly();
 		this.spaceSync?.setReadOnly(visualizationOnly);
+		this.wallEndpointManager?.setSelectedWall(
+			!visualizationOnly && this.lastSelectedObject instanceof WallObject
+				? this.lastSelectedObject
+				: null,
+		);
 		this.rendererManager?.setSelectedObjects(
 			visualizationOnly ? [] : this.selectedObjects,
 		);
@@ -1566,6 +1577,7 @@ export class DT3DCard extends LitElement {
 		}
 		this.tree?.updateTreeDiff(this.space);
 		this.tree?.refreshSelectedObject();
+		this.wallEndpointManager?.refreshHandles();
 		if (this.selectedObjects.length > 1 && !this.multiTransformStart) {
 			this.attachTransformToSelection();
 		}
@@ -1749,6 +1761,9 @@ export class DT3DCard extends LitElement {
 			return;
 		}
 
+		this.transform.showY = !this.wallEndpointManager?.isHandle(target);
+		this.transform.showX = true;
+		this.transform.showZ = true;
 		this.transform.attach(target);
 
 		// Restore previous enabled state (in case it was disabled)
@@ -1863,6 +1878,11 @@ export class DT3DCard extends LitElement {
 		this.selectedObjects = uniqueObjects;
 		this.lastSelectedObject =
 			uniqueObjects.length === 1 ? uniqueObjects[0] : null;
+		this.wallEndpointManager?.setSelectedWall(
+			this.lastSelectedObject instanceof WallObject
+				? this.lastSelectedObject
+				: null,
+		);
 		if (this.bottomBar) {
 			this.bottomBar.hasSelection = uniqueObjects.length > 0;
 		}
@@ -1870,6 +1890,67 @@ export class DT3DCard extends LitElement {
 			this.isVisualizationOnly() ? [] : uniqueObjects,
 		);
 		this.attachTransformToSelection();
+		this.updateHintMessage();
+	}
+
+	/** Attach translation controls to an editor-only wall endpoint handle. */
+	private attachWallEndpointTransform(object: Object3D): void {
+		this.attachTransform(object);
+		this.transform.enabled = true;
+		this.transform.getHelper().visible = true;
+		this.transform.setMode("translate");
+		if (this.bottomBar) {
+			this.bottomBar.transformTool = "translate";
+		}
+	}
+
+	/** Record and synchronize a complete endpoint/junction edit. */
+	private recordWallEndpointEdit(edit: WallEndpointEdit): void {
+		const refresh = () => {
+			for (const wall of edit.createdWalls) {
+				if (wall.parent) {
+					this.sceneManager?.applyShadowSettingsToObject(wall);
+				}
+			}
+			this.refreshAfterObjectMutation(this.lastSelectedObject);
+		};
+		const sync = async (operation: "record" | "undo" | "redo") => {
+			if (operation === "undo") {
+				await Promise.all(
+					edit.existingObjects.map((object) =>
+						this.spaceSync?.syncObjectUpdate(object),
+					),
+				);
+				for (const wall of edit.createdWalls) {
+					await this.spaceSync?.syncObjectDelete(wall);
+				}
+				return;
+			}
+
+			for (const wall of edit.createdWalls) {
+				await this.spaceSync?.syncObjectCreate(wall);
+			}
+			await Promise.all(
+				edit.existingObjects.map((object) =>
+					this.spaceSync?.syncObjectUpdate(object),
+				),
+			);
+		};
+
+		refresh();
+		this.recordAction({
+			type: "update-object",
+			label: "Wall endpoint",
+			undo: () => {
+				edit.undo();
+				refresh();
+			},
+			redo: () => {
+				edit.redo();
+				refresh();
+			},
+			sync,
+		});
 	}
 
 	/** Apply the current pivot delta to every selected top-level object. */
@@ -2819,6 +2900,11 @@ export class DT3DCard extends LitElement {
 			this.hintBox.message = this.floorManager.hasDraft()
 				? localManager.get("hintFloorContinue")
 				: localManager.get("hintFloorStart");
+		} else if (
+			this.lastSelectedObject instanceof WallObject &&
+			!this.lastSelectedObject.locked
+		) {
+			this.hintBox.message = localManager.get("hintWallEndpoints");
 		} else {
 			this.hintBox.message = "";
 		}
@@ -3854,9 +3940,17 @@ export class DT3DCard extends LitElement {
 				return;
 			}
 
+			if (
+				this.wallEndpointManager?.handleObjectChange(this.transform?.object)
+			) {
+				this.tree.refreshSelectedObject();
+				return;
+			}
+
 			this.applyMultiTransformDelta();
 			this.applyCollisionConstraint();
 			this.tree.refreshSelectedObject();
+			this.wallEndpointManager?.refreshHandles();
 		});
 		this.sceneManager.transform.addEventListener(
 			"dragging-changed",
@@ -3869,6 +3963,13 @@ export class DT3DCard extends LitElement {
 				}
 
 				if (event.value) {
+					if (this.wallEndpointManager?.beginDrag(this.transform?.object)) {
+						this.transformStart = null;
+						this.multiTransformStart = null;
+						this.endCollisionDrag();
+						return;
+					}
+
 					if (
 						this.selectedObjects.length > 1 &&
 						this.selectionPivot &&
@@ -3914,6 +4015,17 @@ export class DT3DCard extends LitElement {
 				}
 
 				this.endCollisionDrag();
+				const endpointFinish = this.wallEndpointManager?.finishDrag(
+					this.transform?.object,
+				);
+				if (endpointFinish?.handled) {
+					this.transformStart = null;
+					this.multiTransformStart = null;
+					if (endpointFinish.edit) {
+						this.recordWallEndpointEdit(endpointFinish.edit);
+					}
+					return;
+				}
 				const multiStart = this.multiTransformStart;
 				this.multiTransformStart = null;
 				if (multiStart) {
@@ -4106,6 +4218,17 @@ export class DT3DCard extends LitElement {
 					this.floorManager?.createFloorsFromClosedWalls();
 					this.attachTransform(wall);
 				},
+			},
+		);
+		this.wallEndpointManager = new WallEndpointManager(
+			this.sceneManager.measurements,
+			() => ({
+				canvas: this.canvas,
+				camera: this.camera,
+				space: this.space,
+			}),
+			{
+				attachTransform: (object) => this.attachWallEndpointTransform(object),
 			},
 		);
 
@@ -4589,6 +4712,10 @@ export class DT3DCard extends LitElement {
 
 				// Handle wall tool clicks
 				if (this.wallManager?.handleClick(event)) {
+					return;
+				}
+
+				if (this.wallEndpointManager?.handleDoubleClick(event)) {
 					return;
 				}
 			}
