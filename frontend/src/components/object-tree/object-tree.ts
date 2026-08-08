@@ -22,6 +22,7 @@ import {DTObject} from "../../objects/dt-object.js";
 import {EntityObject, isToggleable} from "../../objects/entity-object.js";
 import {DoorObject} from "../../objects/house/door.js";
 import {FloorObject} from "../../objects/house/floor.js";
+import {GateObject} from "../../objects/house/gate.js";
 import {WallObject} from "../../objects/house/wall.js";
 import {WindowObject} from "../../objects/house/window.js";
 import {StaticLightObject} from "../../objects/static-light.js";
@@ -652,6 +653,10 @@ export class DT3DTree extends LitElement {
 
 		if (obj instanceof WindowObject) {
 			return obj.open ? "mdi:window-open-variant" : "mdi:window-closed-variant";
+		}
+
+		if (obj instanceof GateObject) {
+			return obj.open ? "mdi:gate-open" : "mdi:gate";
 		}
 
 		const meshType = resolveMeshType(obj);

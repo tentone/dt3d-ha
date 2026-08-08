@@ -2,10 +2,11 @@ import type {Object3D} from "three";
 import {Vector3} from "three";
 
 import {DoorObject} from "../objects/house/door.js";
+import {GateObject} from "../objects/house/gate.js";
 import {WallObject} from "../objects/house/wall.js";
 import {WindowObject} from "../objects/house/window.js";
 
-export type WallOpeningObject = DoorObject | WindowObject;
+export type WallOpeningObject = DoorObject | WindowObject | GateObject;
 
 type WallSnapCandidate = {
 	wall: WallObject;
@@ -16,7 +17,11 @@ type WallSnapCandidate = {
 export function isWallOpeningObject(
 	object: Object3D,
 ): object is WallOpeningObject {
-	return object instanceof DoorObject || object instanceof WindowObject;
+	return (
+		object instanceof DoorObject ||
+		object instanceof WindowObject ||
+		object instanceof GateObject
+	);
 }
 
 /**
@@ -43,7 +48,9 @@ export function snapOpeningToNearestWall(
 		const maximumHeight = Math.max(0, object.height - opening.height);
 		const localPosition = new Vector3(
 			Math.min(maximumOffset, Math.max(-maximumOffset, wallPosition.x)),
-			Math.min(maximumHeight, Math.max(0, wallPosition.y)),
+			opening instanceof GateObject
+				? 0
+				: Math.min(maximumHeight, Math.max(0, wallPosition.y)),
 			0,
 		);
 		const snappedWorldPosition = object.localToWorld(localPosition.clone());

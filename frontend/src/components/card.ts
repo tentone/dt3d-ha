@@ -105,6 +105,7 @@ import {EntityObject, isToggleable} from "../objects/entity-object.js";
 import {EntitySensor} from "../objects/entity-sensor.js";
 import {EntitySwitch} from "../objects/entity-switch.js";
 import {DoorObject} from "../objects/house/door.js";
+import {GateObject} from "../objects/house/gate.js";
 import {WallObject} from "../objects/house/wall.js";
 import {WindowObject} from "../objects/house/window.js";
 import {StaticLightObject} from "../objects/static-light.js";
@@ -2948,6 +2949,8 @@ export class DT3DCard extends LitElement {
 			this.hintBox.message = localManager.get("hintAddDoor");
 		} else if (this.wallManager?.mode === "window") {
 			this.hintBox.message = localManager.get("hintAddWindow");
+		} else if (this.wallManager?.mode === "gate") {
+			this.hintBox.message = localManager.get("hintAddGate");
 		} else if (this.floorManager?.isActive()) {
 			this.hintBox.message = this.floorManager.hasDraft()
 				? localManager.get("hintFloorContinue")
@@ -4448,6 +4451,7 @@ export class DT3DCard extends LitElement {
 				| "floor"
 				| "door"
 				| "window"
+				| "gate"
 				| "none";
 			this.wallManager?.setMode(mode === "floor" ? "none" : mode);
 			this.floorManager?.setActive(mode === "floor");
@@ -5057,7 +5061,8 @@ export class DT3DCard extends LitElement {
 	private applyOpeningEntityStates(object: Object3D): boolean {
 		if (
 			!(object instanceof DoorObject) &&
-			!(object instanceof WindowObject)
+			!(object instanceof WindowObject) &&
+			!(object instanceof GateObject)
 		) {
 			return false;
 		}

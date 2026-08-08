@@ -29,6 +29,7 @@ import {DTObject} from "../../objects/dt-object.js";
 import {EntityLight} from "../../objects/entity-light.js";
 import {EntityObject, isToggleable} from "../../objects/entity-object.js";
 import {DoorObject} from "../../objects/house/door.js";
+import {GateObject} from "../../objects/house/gate.js";
 import {WallObject} from "../../objects/house/wall.js";
 import {WindowObject} from "../../objects/house/window.js";
 import {StaticLightObject} from "../../objects/static-light.js";
@@ -123,6 +124,22 @@ const WINDOW_CONFIGURATION_ATTRIBUTES = new Set([
 	"shutterColor",
 ]);
 
+const GATE_CONFIGURATION_ATTRIBUTES = new Set([
+	"width",
+	"height",
+	"thickness",
+	"open",
+	"openAmount",
+	"openEntityId",
+	"operationType",
+	"panelCount",
+	"style",
+	"hingeSide",
+	"openingDirection",
+	"barWidth",
+	"barSpacing",
+]);
+
 const OPENING_ENTITY_FILTER =
 	/^(?:binary_sensor|cover|input_boolean|input_number|number|sensor|switch)\./i;
 
@@ -181,14 +198,16 @@ export class DT3DObjectInspector extends LitElement {
 	private isHouseConfigurationAttribute(
 		object: Object3D,
 		attribute: string,
-	): object is WallObject | DoorObject | WindowObject {
+	): object is WallObject | DoorObject | WindowObject | GateObject {
 		return (
 			(object instanceof WallObject &&
 				WALL_CONFIGURATION_ATTRIBUTES.has(attribute)) ||
 			(object instanceof DoorObject &&
 				DOOR_CONFIGURATION_ATTRIBUTES.has(attribute)) ||
 			(object instanceof WindowObject &&
-				WINDOW_CONFIGURATION_ATTRIBUTES.has(attribute))
+				WINDOW_CONFIGURATION_ATTRIBUTES.has(attribute)) ||
+			(object instanceof GateObject &&
+				GATE_CONFIGURATION_ATTRIBUTES.has(attribute))
 		);
 	}
 
@@ -226,7 +245,9 @@ export class DT3DObjectInspector extends LitElement {
 
 		if (
 			attribute === "open" &&
-			(object instanceof DoorObject || object instanceof WindowObject)
+			(object instanceof DoorObject ||
+				object instanceof WindowObject ||
+				object instanceof GateObject)
 		) {
 			const amount = object.openAmount;
 			return () => object.setOpenAmount(amount);
@@ -248,7 +269,9 @@ export class DT3DObjectInspector extends LitElement {
 				attribute === "blindOpenEntityId" ||
 				attribute === "shutterOpenEntityId" ||
 				attribute === "shutterBladeOpenEntityId") &&
-			(object instanceof DoorObject || object instanceof WindowObject)
+			(object instanceof DoorObject ||
+				object instanceof WindowObject ||
+				object instanceof GateObject)
 		) {
 			const entityId = String(this.getNestedAttribute(object, attribute) ?? "");
 			const amount =
@@ -774,7 +797,8 @@ export class DT3DObjectInspector extends LitElement {
 	private getOpeningFields(locked: boolean): DynamicFormField[] {
 		if (
 			!(this.selectedObject instanceof DoorObject) &&
-			!(this.selectedObject instanceof WindowObject)
+			!(this.selectedObject instanceof WindowObject) &&
+			!(this.selectedObject instanceof GateObject)
 		) {
 			return [];
 		}
@@ -921,6 +945,102 @@ export class DT3DObjectInspector extends LitElement {
 				tooltip: localManager.get("doorKnobColorTooltip"),
 				editable: !locked && this.selectedObject.knobStyle !== "none",
 				enabled: true,
+			},
+		];
+	}
+
+	private getGateFields(locked: boolean): DynamicFormField[] {
+		if (!(this.selectedObject instanceof GateObject)) return [];
+		const verticalBars = this.selectedObject.style === "verticalBars";
+		return [
+			{
+				label: localManager.get("gateOperationType"),
+				attribute: "operationType",
+				type: "select",
+				tooltip: localManager.get("gateOperationTypeTooltip"),
+				editable: !locked,
+				enabled: true,
+				options: [
+					{label: localManager.get("gateDoorStyle"), value: "hinged"},
+					{label: localManager.get("sliding"), value: "sliding"},
+				],
+			},
+			{
+				label: localManager.get("gatePanelCount"),
+				attribute: "panelCount",
+				type: "select",
+				tooltip: localManager.get("gatePanelCountTooltip"),
+				editable: !locked,
+				enabled: true,
+				options: [
+					{label: localManager.get("single"), value: 1},
+					{label: localManager.get("double"), value: 2},
+				],
+			},
+			{
+				label:
+					this.selectedObject.operationType === "sliding"
+						? localManager.get("slideSide")
+						: localManager.get("doorHingeSide"),
+				attribute: "hingeSide",
+				type: "select",
+				tooltip:
+					this.selectedObject.operationType === "sliding"
+						? localManager.get("slideSideTooltip")
+						: localManager.get("doorHingeSideTooltip"),
+				editable: !locked && this.selectedObject.panelCount === 1,
+				enabled: true,
+				options: [
+					{label: localManager.get("left"), value: "left"},
+					{label: localManager.get("right"), value: "right"},
+				],
+			},
+			{
+				label: localManager.get("doorOpeningDirection"),
+				attribute: "openingDirection",
+				type: "select",
+				tooltip: localManager.get("gateOpeningDirectionTooltip"),
+				editable: !locked && this.selectedObject.operationType === "hinged",
+				enabled: true,
+				options: [
+					{label: localManager.get("inward"), value: "inward"},
+					{label: localManager.get("outward"), value: "outward"},
+				],
+			},
+			{
+				label: localManager.get("gateStyle"),
+				attribute: "style",
+				type: "select",
+				tooltip: localManager.get("gateStyleTooltip"),
+				editable: !locked,
+				enabled: true,
+				options: [
+					{label: localManager.get("gateSolid"), value: "solid"},
+					{
+						label: localManager.get("gateVerticalBars"),
+						value: "verticalBars",
+					},
+				],
+			},
+			{
+				label: localManager.get("gateBarWidth"),
+				attribute: "barWidth",
+				type: "number",
+				tooltip: localManager.get("gateBarWidthTooltip"),
+				editable: !locked && verticalBars,
+				enabled: true,
+				min: 0.01,
+				step: 0.01,
+			},
+			{
+				label: localManager.get("gateBarSpacing"),
+				attribute: "barSpacing",
+				type: "number",
+				tooltip: localManager.get("gateBarSpacingTooltip"),
+				editable: !locked && verticalBars,
+				enabled: true,
+				min: 0.01,
+				step: 0.01,
 			},
 		];
 	}
@@ -1632,10 +1752,18 @@ export class DT3DObjectInspector extends LitElement {
 		this.addSubFormField(
 			fields,
 			"opening",
-			this.selectedObject instanceof DoorObject
-				? localManager.get("door")
-				: localManager.get("window"),
+			this.selectedObject instanceof GateObject
+				? localManager.get("gate")
+				: this.selectedObject instanceof DoorObject
+					? localManager.get("door")
+					: localManager.get("window"),
 			this.getOpeningFields(locked),
+		);
+		this.addSubFormField(
+			fields,
+			"gate",
+			localManager.get("gateConfiguration"),
+			this.getGateFields(locked),
 		);
 		this.addSubFormField(
 			fields,

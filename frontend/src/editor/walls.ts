@@ -7,7 +7,7 @@ import {snapPointToClosestAxis} from "./axis-snap.js";
 /**
  * Wall tool modes possible in the WallManager.
  */
-export type WallMode = "none" | "wall" | "door" | "window";
+export type WallMode = "none" | "wall" | "door" | "window" | "gate";
 
 type WallContext = {
 	canvas: HTMLCanvasElement | null;
@@ -107,13 +107,17 @@ export class WallManager {
 	}
 
 	/**
-	 * Handle click events on the canvas for wall/door/window placement.
+	 * Handle click events on the canvas for wall/opening placement.
 	 *
 	 * @param event - Mouse event from the canvas.
 	 * @returns True if the event was handled, false otherwise.
 	 */
 	public handleClick(event: MouseEvent): boolean {
-		if (this._mode === "door" || this._mode === "window") {
+		if (
+			this._mode === "door" ||
+			this._mode === "window" ||
+			this._mode === "gate"
+		) {
 			const placement = this.pickPlacementFromEvent(event);
 			const clickedWall = placement?.connectedWall;
 			const selectedWall = clickedWall ?? this.resolveSelectedWall();
@@ -126,9 +130,13 @@ export class WallManager {
 				this.callbacks.selectObject(clickedWall);
 			}
 
-			const added = this._mode === "door"
-				? selectedWall.addDoor(placement?.wallOffset ?? 0)
-				: selectedWall.addWindow(placement?.wallOffset ?? 0);
+			const offset = placement?.wallOffset ?? 0;
+			const added =
+				this._mode === "door"
+					? selectedWall.addDoor(offset)
+					: this._mode === "window"
+						? selectedWall.addWindow(offset)
+						: selectedWall.addGate(offset);
 			this.callbacks.attachTransform(added);
 			this.callbacks.updateTree();
 			this.callbacks.syncCreate(added);

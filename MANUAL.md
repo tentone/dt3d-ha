@@ -96,16 +96,18 @@ All entity domains can use **Open entity** to show Home Assistant's more-info di
 
 <img src="readme/5_layout_editor.png" width="500">
 
-### Add doors and windows
+### Add doors, windows, and gates
 
-7. Choose **Add door** or **Add window**, then double-click the canvas. The opening is created as a child of that wall.
-8. Select the wall, door, window, or floor to edit its transform and material. Choose **Exit wall tools** when finished.
+7. Choose **Add door**, **Add window**, or **Add gate**, then double-click the canvas. The opening is created as a child of that wall.
+8. Select the wall, door, window, gate, or floor to edit its transform and material. Choose **Exit wall tools** when finished.
 
 The wall inspector provides height and thickness controls plus an optional baseboard along the bottom. Doors support configurable trim, left/right hinges, inward/outward swing, multiple knob styles, and a positioned glazed opening. Choose a single or double door and select **Hinged** or **Sliding** operation.
 
-Windows support glass tint, opacity, and roughness; configurable frames; split pane grids with custom rows, columns, bar size, and spacing; and horizontal blinds. Hinged windows can use one or two framed sashes. Sliding windows always use two framed sashes on separate tracks; choose the movable left or right sash, which slides across the stationary sash without entering the wall. For either doors or windows, set **Opening (%)** to `0` for closed, `100` for fully open, or an intermediate value for a partial opening. The **Open** toggle is a shortcut for fully open/closed.
+Windows support glass tint, opacity, and roughness; configurable frames; split pane grids with custom rows, columns, bar size, and spacing; and horizontal blinds. Hinged windows can use one or two framed sashes. Sliding windows always use two framed sashes on separate tracks; choose the movable left or right sash, which slides across the stationary sash without entering the wall. For doors, windows, and gates, set **Opening (%)** to `0` for closed, `100` for fully open, or an intermediate value for a partial opening. The **Open** toggle is a shortcut for fully open/closed.
 
-To drive an opening from Home Assistant, search and select its **Openness entity ID**. Door and window sashes, window blinds, shutter doors, and shutter blades each have an independent entity field. The searchable list includes binary sensors, covers, boolean/number helpers, number entities, sensors, and switches. Numeric entity states from `0` to `100` are used as percentages; `on`/`open` and `off`/`closed` are treated as fully open and closed. Cover entities with a numeric `current_position` attribute are also supported. DT3D applies new HA states automatically. Clear an entity ID to use the manual percentage control again. Blind openness is translated to the inverse **% down** value, so a 100%-open entity raises the blind.
+Gates can be single or double, with either **Door style** swinging leaves or **Sliding** panels. Choose a solid closed panel or a construction of vertical bars, with configurable bar width and clear spacing. A gate always removes the wall across its full height—there is no wall or lintel above it—even when the visible gate panel is shorter than the wall.
+
+To drive an opening from Home Assistant, search and select its **Openness entity ID**. Door, window, and gate panels, window blinds, shutter doors, and shutter blades each have an independent entity field. The searchable list includes binary sensors, covers, boolean/number helpers, number entities, sensors, and switches. Numeric entity states from `0` to `100` are used as percentages; `on`/`open` and `off`/`closed` are treated as fully open and closed. Cover entities with a numeric `current_position` attribute are also supported. DT3D applies new HA states automatically. Clear an entity ID to use the manual percentage control again. Blind openness is translated to the inverse **% down** value, so a 100%-open entity raises the blind.
 
 Set **Blind location** to mount the blinds on the inside or outside face of the window. Set **Blind position (% down)** to `0` to raise the blinds, `100` to lower them, or any intermediate value for a partial blind opening.
 

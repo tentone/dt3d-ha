@@ -14,6 +14,7 @@ import type {DTInteractionEvent} from "../dt-object.js";
 import {DTObject} from "../dt-object.js";
 import {CSSText} from "../helpers/css-text.js";
 import {DoorObject} from "./door.js";
+import {GateObject} from "./gate.js";
 import {WindowObject} from "./window.js";
 
 type WallDimensions = {
@@ -74,7 +75,7 @@ export class WallObject extends DTObject {
 	/**
 	 * Mesh to represent the wall.
 	 *
-	 * This mesh's geometry is updated when doors/windows are added/removed.
+	 * This mesh's geometry is updated when doors/windows/gates are added/removed.
 	 */
 	public wallMesh: Mesh;
 
@@ -87,6 +88,11 @@ export class WallObject extends DTObject {
 	 * Count of windows added to this wall.
 	 */
 	private windowCount = 0;
+
+	/**
+	 * Count of gates added to this wall.
+	 */
+	private gateCount = 0;
 
 	/**
 	 * Label with the length of the wall.
@@ -247,7 +253,7 @@ export class WallObject extends DTObject {
 	/**
 	 * Keep the wall cut-outs in sync when an opening is attached directly.
 	 *
-	 * Saved scenes are rebuilt by creating every object first and restoring the parent/child hierarchy afterwards. Rebuilding here ensures a reloaded wall is updated as soon as each saved door or window is reattached, without depending on a later render-frame update.
+	 * Saved scenes are rebuilt by creating every object first and restoring the parent/child hierarchy afterwards. Rebuilding here ensures a reloaded wall is updated as soon as each saved opening is reattached, without depending on a later render-frame update.
 	 */
 	public override add(...objects: Object3D[]): this {
 		super.add(...objects);
@@ -255,7 +261,9 @@ export class WallObject extends DTObject {
 			this.wallMesh &&
 			objects.some(
 				(object) =>
-					object instanceof DoorObject || object instanceof WindowObject,
+					object instanceof DoorObject ||
+					object instanceof WindowObject ||
+					object instanceof GateObject,
 			)
 		) {
 			this.updateGeometry();
@@ -269,7 +277,9 @@ export class WallObject extends DTObject {
 	public override remove(...objects: Object3D[]): this {
 		const removesOpening = objects.some(
 			(object) =>
-				object instanceof DoorObject || object instanceof WindowObject,
+				object instanceof DoorObject ||
+				object instanceof WindowObject ||
+				object instanceof GateObject,
 		);
 		super.remove(...objects);
 		if (this.wallMesh && removesOpening) {
@@ -334,6 +344,25 @@ export class WallObject extends DTObject {
 	}
 
 	/**
+	 * Add a gate to the wall. Its initial panel height matches the wall, while
+	 * its structural cut-out remains full-height if the panel is resized.
+	 *
+	 * @param wallOffset - Position along the wall's local X axis.
+	 */
+	public addGate(wallOffset = 0): GateObject {
+		this.gateCount += 1;
+		const gate = new GateObject({
+			width: Math.min(2.4, this.length),
+			height: this.height,
+		});
+		gate.name = `Gate ${this.gateCount}`;
+		gate.position.x = this.clampOpeningOffset(wallOffset, gate.width);
+		gate.position.y = 0;
+		this.add(gate);
+		return gate;
+	}
+
+	/**
 	 * Update the wall geometry if the openings configuration has changed.
 	 *
 	 * Check the signature of the current openings and compare it to the last known signature.
@@ -355,6 +384,7 @@ export class WallObject extends DTObject {
 			this.thickness = source.thickness;
 			this.doorCount = source.doorCount;
 			this.windowCount = source.windowCount;
+			this.gateCount = source.gateCount;
 			Object.assign(this, source.getCustomization());
 			this.wallMesh.material = Array.isArray(source.wallMesh.material)
 				? source.wallMesh.material.map((material) => material.clone())
@@ -402,18 +432,27 @@ export class WallObject extends DTObject {
 		}
 
 		this.baseboardMaterial.color = new Color(this.baseboardColor);
-		const doorIntervals = this.children
-			.filter((child): child is DoorObject => child instanceof DoorObject)
-			.filter((door) => door.position.y <= this.baseboardHeight)
-			.map((door) => ({
-				left: Math.max(-this.length / 2, door.position.x - door.width / 2),
-				right: Math.min(this.length / 2, door.position.x + door.width / 2),
+		const floorOpeningIntervals = this.children
+			.filter(
+				(child): child is DoorObject | GateObject =>
+					child instanceof DoorObject || child instanceof GateObject,
+			)
+			.filter((opening) => opening.position.y <= this.baseboardHeight)
+			.map((opening) => ({
+				left: Math.max(
+					-this.length / 2,
+					opening.position.x - opening.width / 2,
+				),
+				right: Math.min(
+					this.length / 2,
+					opening.position.x + opening.width / 2,
+				),
 			}))
 			.sort((a, b) => a.left - b.left);
 
 		const segments: Array<{left: number; right: number}> = [];
 		let cursor = -this.length / 2;
-		for (const interval of doorIntervals) {
+		for (const interval of floorOpeningIntervals) {
 			if (interval.left > cursor) {
 				segments.push({left: cursor, right: interval.left});
 			}
@@ -564,6 +603,16 @@ export class WallObject extends DTObject {
 					height: child.height,
 					x: child.position.x,
 					y: child.position.y + child.height / 2,
+				});
+			}
+			if (child instanceof GateObject) {
+				openings.push({
+					width: child.width,
+					// The visible gate panel may be shorter than its wall, but the
+					// structural opening always continues through the wall top.
+					height: this.height,
+					x: child.position.x,
+					y: this.height / 2,
 				});
 			}
 		}

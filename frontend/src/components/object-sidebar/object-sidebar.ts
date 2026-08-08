@@ -10,7 +10,13 @@ import componentStyles from "./object-sidebar.css?inline";
 /**
  * Wall placement options.
  */
-export type WallOptions = "wall" | "floor" | "door" | "window" | "none";
+export type WallOptions =
+	| "wall"
+	| "floor"
+	| "door"
+	| "window"
+	| "gate"
+	| "none";
 
 const OBJECT_SIDEBAR_COLLAPSED_STORAGE_KEY = "sidebar-collapsed";
 
@@ -246,6 +252,18 @@ export class DT3DObjectSidebar extends LitElement {
 							aria-label=${localManager.get("addWindow")}
 						>
 							<ha-icon icon="mdi:window-closed-variant"></ha-icon>
+						</button>
+					</dt3d-tooltip>
+					<dt3d-tooltip
+						.content=${localManager.get("addGate")}
+						placement="right"
+					>
+						<button
+							@click=${() => this.handleWallSelect("gate")}
+							class=${this.wallTool === "gate" ? "selected" : ""}
+							aria-label=${localManager.get("addGate")}
+						>
+							<ha-icon icon="mdi:gate"></ha-icon>
 						</button>
 					</dt3d-tooltip>
 					<dt3d-tooltip

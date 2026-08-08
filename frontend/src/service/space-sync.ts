@@ -29,6 +29,7 @@ import {EntityLight} from "../objects/entity-light.js";
 import {EntityObject} from "../objects/entity-object.js";
 import {DoorObject} from "../objects/house/door.js";
 import {FloorObject} from "../objects/house/floor.js";
+import {GateObject} from "../objects/house/gate.js";
 import {WallObject} from "../objects/house/wall.js";
 import {WindowObject} from "../objects/house/window.js";
 import {StaticLightObject} from "../objects/static-light.js";
@@ -827,7 +828,11 @@ export class SpaceSync {
 				);
 				object = wall;
 				materialTarget = wall.wallMesh;
-			} else if (meshType === "door" || meshType === "window") {
+			} else if (
+				meshType === "door" ||
+				meshType === "window" ||
+				meshType === "gate"
+			) {
 				const dims = data.dimensions as
 					| {width?: number; height?: number; thickness?: number}
 					| undefined;
@@ -852,7 +857,7 @@ export class SpaceSync {
 					}
 					object = door;
 					materialTarget = door.doorMesh;
-				} else {
+				} else if (meshType === "window") {
 					const customization = data.window as
 						| Partial<ReturnType<WindowObject["getCustomization"]>>
 						| undefined;
@@ -875,6 +880,26 @@ export class SpaceSync {
 					}
 					object = windowObj;
 					materialTarget = windowMesh;
+				} else {
+					const customization = data.gate as
+						| Partial<ReturnType<GateObject["getCustomization"]>>
+						| undefined;
+					const gate = new GateObject(
+						{
+							width: dims?.width,
+							height: dims?.height,
+							thickness: dims?.thickness,
+						},
+						color,
+						customization,
+					);
+					if (typeof customization?.openAmount === "number") {
+						gate.setOpenAmount(customization.openAmount);
+					} else {
+						gate.setOpen(openState);
+					}
+					object = gate;
+					materialTarget = gate.gateMesh;
 				}
 			} else {
 				const geometryParameters = data.geometryParameters as
@@ -1153,6 +1178,22 @@ export class SpaceSync {
 			}
 			data.material = serializeMaterial(object.doorMesh.material);
 			storeMeshPredominantTextureColor(data, object.doorMesh);
+		} else if (object instanceof GateObject) {
+			type = declaredType ?? "mesh";
+			data.meshType = "gate";
+			data.open = object.open;
+			data.dimensions = {
+				width: object.width,
+				height: object.height,
+				thickness: object.thickness,
+			};
+			data.gate = object.getCustomization();
+			const material = object.gateMesh.material as any;
+			if (material?.color?.getHexString) {
+				data.color = material.color.getHexString();
+			}
+			data.material = serializeMaterial(object.gateMesh.material);
+			storeMeshPredominantTextureColor(data, object.gateMesh);
 		} else if (object instanceof WindowObject) {
 			type = declaredType ?? "mesh";
 			data.meshType = "window";
