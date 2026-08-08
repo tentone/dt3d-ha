@@ -2541,6 +2541,7 @@ export class DT3DCard extends LitElement {
 		if (!this.isVisualizationOnly()) {
 			this.wallManager?.handlePointerMove(event);
 			this.floorManager?.handlePointerMove(event);
+			this.wallEndpointManager?.handlePointerMove(event);
 		}
 
 		const {object} = this.pickObjectFromEvent(event);
@@ -4860,6 +4861,7 @@ export class DT3DCard extends LitElement {
 
 		this.canvas.addEventListener("mouseleave", (event: MouseEvent) => {
 			this.clearSceneLongPress();
+			this.wallEndpointManager?.clearHover();
 			this.updateCanvasCursor(null);
 
 			if (!this.hoveredObject) {

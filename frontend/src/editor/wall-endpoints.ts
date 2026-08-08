@@ -120,6 +120,12 @@ export class WallEndpointManager {
 
 	private handles: [WallEndpointHandle, WallEndpointHandle] | null = null;
 
+	private hoveredHandle: WallEndpointHandle | null = null;
+
+	private readonly handleColor = new Color();
+
+	private readonly handleHoverColor = new Color();
+
 	private drag: EndpointDrag | null = null;
 
 	public constructor(
@@ -157,6 +163,7 @@ export class WallEndpointManager {
 			this.selectedWall.locked ||
 			!this.selectedWall.parent
 		) {
+			this.clearHoveredHandle();
 			this.handleGroup.visible = false;
 			return;
 		}
@@ -179,6 +186,29 @@ export class WallEndpointManager {
 		return (
 			object instanceof WallEndpointHandle && object.parent === this.handleGroup
 		);
+	}
+
+	/** Highlight the endpoint currently under the pointer. */
+	public handlePointerMove(event: MouseEvent): void {
+		const {canvas, camera} = this.getContext();
+		if (!canvas || !camera || !this.handleGroup.visible || !this.handles) {
+			this.clearHoveredHandle();
+			return;
+		}
+
+		const rect = canvas.getBoundingClientRect();
+		this.pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+		this.pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+		this.raycaster.setFromCamera(this.pointer, camera);
+		const hit = this.raycaster.intersectObjects(this.handles, false)[0];
+		this.setHoveredHandle(
+			hit?.object instanceof WallEndpointHandle ? hit.object : null,
+		);
+	}
+
+	/** Clear endpoint hover feedback when the pointer leaves the canvas. */
+	public clearHover(): void {
+		this.clearHoveredHandle();
 	}
 
 	/** Attach transform controls when the user double-clicks a visible endpoint. */
@@ -772,6 +802,7 @@ export class WallEndpointManager {
 	}
 
 	private rebuildHandles(): void {
+		this.hoveredHandle = null;
 		for (const child of [...this.handleGroup.children]) {
 			this.handleGroup.remove(child);
 		}
@@ -791,21 +822,55 @@ export class WallEndpointManager {
 			return;
 		}
 
-		const color = new Color(getCSSVar("--primary-color") || "#03a9f4");
+		this.handleColor.set(getCSSVar("--primary-color") || "#03a9f4");
+		this.handleHoverColor.set(
+			getCSSVar("--accent-color") || "#ffca28",
+		);
+		if (this.handleHoverColor.equals(this.handleColor)) {
+			this.handleHoverColor.copy(this.handleColor).offsetHSL(0, 0, 0.35);
+		}
 		const geometry = new CylinderGeometry(0.065, 0.065, 1, 20);
 		geometry.translate(0, 0.5, 0);
 		const material = new MeshBasicMaterial({
-			color,
+			color: this.handleColor,
 			depthTest: false,
 			transparent: true,
 			opacity: 0.95,
 		});
 		this.handles = [
 			new WallEndpointHandle(this.selectedWall, "start", geometry, material),
-			new WallEndpointHandle(this.selectedWall, "end", geometry, material),
+			new WallEndpointHandle(
+				this.selectedWall,
+				"end",
+				geometry,
+				material.clone(),
+			),
 		];
 		this.handleGroup.add(...this.handles);
 		this.refreshHandles();
+	}
+
+	private setHoveredHandle(handle: WallEndpointHandle | null): void {
+		if (handle === this.hoveredHandle) {
+			return;
+		}
+		this.clearHoveredHandle();
+		this.hoveredHandle = handle;
+		if (this.hoveredHandle) {
+			(this.hoveredHandle.material as MeshBasicMaterial).color.copy(
+				this.handleHoverColor,
+			);
+		}
+	}
+
+	private clearHoveredHandle(): void {
+		if (!this.hoveredHandle) {
+			return;
+		}
+		(this.hoveredHandle.material as MeshBasicMaterial).color.copy(
+			this.handleColor,
+		);
+		this.hoveredHandle = null;
 	}
 
 	private getWallUserChildren(wall: WallObject): Object3D[] {
