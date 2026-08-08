@@ -26,6 +26,10 @@
 	box-sizing: border-box;
 }
 
+.choice-dialog {
+	width: min(480px, 100%);
+}
+
 header {
 	margin-bottom: 8px;
 }
@@ -74,9 +78,19 @@ button {
 }
 
 .confirm-button:focus-visible,
+.secondary-button:focus-visible,
 .cancel-button:focus-visible {
 	outline: 2px solid var(--primary-color);
 	outline-offset: 2px;
+}
+
+.secondary-button {
+	background: color-mix(in srgb, var(--primary-color) 16%, transparent);
+	color: var(--primary-color);
+}
+
+.secondary-button:hover {
+	background: color-mix(in srgb, var(--primary-color) 24%, transparent);
 }
 
 .confirm-button.blue {

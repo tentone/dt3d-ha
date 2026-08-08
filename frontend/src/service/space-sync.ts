@@ -44,7 +44,11 @@ import type {
 	SpaceApi,
 	SpaceResponse,
 } from "./space-api.js";
-import {exportSpaceArchive, importSpaceArchive} from "./space-archive.js";
+import {
+	exportSpaceArchive,
+	importSpaceArchive,
+	importSpaceArchiveObjects,
+} from "./space-archive.js";
 import {SpaceDataCache} from "./space-cache.js";
 
 type SpaceSyncDependencies = {
@@ -464,6 +468,24 @@ export class SpaceSync {
 			importSpaceArchive(this.apiClient, file),
 		);
 		this.availableSpaces = [...this.availableSpaces, space];
+		return this.loadSpaceFromApi(space.id);
+	}
+
+	/**
+	 * Import objects from a portable archive into an existing space and keep that space active.
+	 */
+	public async importObjectsIntoSpace(
+		file: File,
+		spaceId: string,
+	): Promise<SpaceResponse> {
+		await this.trackProgress("Import objects", file.name, () =>
+			importSpaceArchiveObjects(this.apiClient, file, spaceId),
+		);
+		await this.cache.invalidateSpace(spaceId);
+		const space = await this.apiClient.getSpace(spaceId);
+		this.availableSpaces = this.availableSpaces.map((candidate) =>
+			candidate.id === space.id ? space : candidate,
+		);
 		return this.loadSpaceFromApi(space.id);
 	}
 

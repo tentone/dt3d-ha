@@ -959,7 +959,7 @@ export class SceneManager {
 			? this.grid.material
 			: [this.grid.material];
 		for (const material of materials) {
-			material.opacity = 0.5;
+			material.opacity = 0.8;
 			material.transparent = true;
 		}
 

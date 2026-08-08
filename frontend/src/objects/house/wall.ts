@@ -150,6 +150,11 @@ export class WallObject extends DTObject {
 		this.baseboardMaterial = new MeshStandardMaterial({
 			color: this.baseboardColor,
 		});
+		this.addEventListener("removed", () => {
+			// Removing a parent does not dispatch `removed` to CSS3D descendants,
+			// so explicitly detach the wall label from the renderer's DOM.
+			this.lengthLabel?.element.remove();
+		});
 
 		this.updateGeometry();
 	}

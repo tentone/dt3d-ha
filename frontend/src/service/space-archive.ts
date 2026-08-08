@@ -1,7 +1,6 @@
 import {strFromU8, strToU8, unzip, zip} from "fflate";
 
 import type {
-	ObjectInstancePayload,
 	ObjectInstanceResponse,
 	SpaceApi,
 	SpaceResponse,
@@ -52,6 +51,12 @@ type ParsedArchive = {
 	archive: SpaceArchive;
 	files: ArchiveFiles;
 	orderedInstances: ObjectInstanceResponse[];
+};
+
+type RestoredArchiveObjects = {
+	createdInstances: ObjectInstanceResponse[];
+	idMap: Map<string, string>;
+	geometryIdMap: Map<string, string>;
 };
 
 /**
@@ -136,20 +141,8 @@ export async function importSpaceArchive(
 	apiClient: SpaceApi,
 	file: File,
 ): Promise<SpaceResponse> {
-	if (!file.name.toLowerCase().endsWith(DT3D_ARCHIVE_EXTENSION)) {
-		throw new Error(`Select a ${DT3D_ARCHIVE_EXTENSION} file.`);
-	}
-	if (file.size === 0) {
-		throw new Error("The DT3D archive is empty.");
-	}
-	if (file.size > MAX_ARCHIVE_BYTES) {
-		throw new Error("The DT3D archive is too large.");
-	}
-
-	const parsed = await parseSpaceArchive(
-		new Uint8Array(await file.arrayBuffer()),
-	);
-	const {archive, files, orderedInstances} = parsed;
+	const parsed = await readSpaceArchive(file);
+	const {archive, files} = parsed;
 	let createdSpace: SpaceResponse | null = null;
 
 	try {
@@ -159,47 +152,12 @@ export async function importSpaceArchive(
 			null,
 		);
 
-		const idMap = new Map<string, string>();
-		const geometryIdMap = new Map<string, string>();
-		const geometryIds = collectGeometryIds({
-			config: archive.space.config,
-			object_instances: archive.space.object_instances,
-		});
-
-		for (const oldGeometryId of geometryIds) {
-			const geometry = files[geometryArchivePath(oldGeometryId)];
-			const response = await apiClient.uploadGeometry(
-				createdSpace.id,
-				geometry.slice().buffer,
-			);
-			geometryIdMap.set(oldGeometryId, response.id);
-		}
-
-		for (const instance of orderedInstances) {
-			const parentId = instance.parent_id
-				? (idMap.get(instance.parent_id) ?? null)
-				: null;
-			const restoredData = restoreEmbeddedAssets(
-				instance.data,
-				archive.assets.embedded,
-				files,
-			);
-			const data = remapExactStringReferences(restoredData, [
-				geometryIdMap,
-				idMap,
-			]) as Record<string, any>;
-			const payload: ObjectInstancePayload = {
-				name: instance.name,
-				type: instance.type,
-				data,
-				parent_id: parentId,
-			};
-			const createdInstance = await apiClient.createObject(
-				createdSpace.id,
-				payload,
-			);
-			idMap.set(instance.id, createdInstance.id);
-		}
+		const {geometryIdMap, idMap} = await restoreArchiveObjects(
+			apiClient,
+			createdSpace.id,
+			parsed,
+			archive.space.config,
+		);
 
 		const restoredConfig = restoreEmbeddedAssets(
 			archive.space.config,
@@ -224,6 +182,101 @@ export async function importSpaceArchive(
 			} catch (cleanupError) {
 				console.error(
 					"DT3D: Failed to remove an incomplete imported space",
+					cleanupError,
+				);
+			}
+		}
+		throw error;
+	}
+}
+
+/**
+ * Validate a .dt3d archive and add its objects to an existing space without changing that space's configuration or metadata.
+ */
+export async function importSpaceArchiveObjects(
+	apiClient: SpaceApi,
+	file: File,
+	targetSpaceId: string,
+): Promise<ObjectInstanceResponse[]> {
+	const parsed = await readSpaceArchive(file);
+	const restored = await restoreArchiveObjects(
+		apiClient,
+		targetSpaceId,
+		parsed,
+	);
+	return restored.createdInstances;
+}
+
+async function readSpaceArchive(file: File): Promise<ParsedArchive> {
+	if (!file.name.toLowerCase().endsWith(DT3D_ARCHIVE_EXTENSION)) {
+		throw new Error(`Select a ${DT3D_ARCHIVE_EXTENSION} file.`);
+	}
+	if (file.size === 0) {
+		throw new Error("The DT3D archive is empty.");
+	}
+	if (file.size > MAX_ARCHIVE_BYTES) {
+		throw new Error("The DT3D archive is too large.");
+	}
+
+	return parseSpaceArchive(new Uint8Array(await file.arrayBuffer()));
+}
+
+async function restoreArchiveObjects(
+	apiClient: SpaceApi,
+	targetSpaceId: string,
+	parsed: ParsedArchive,
+	additionalGeometryReferences?: unknown,
+): Promise<RestoredArchiveObjects> {
+	const {archive, files, orderedInstances} = parsed;
+	const idMap = new Map<string, string>();
+	const geometryIdMap = new Map<string, string>();
+	const createdInstances: ObjectInstanceResponse[] = [];
+	const geometryIds = collectGeometryIds({
+		additional: additionalGeometryReferences,
+		object_instances: archive.space.object_instances,
+	});
+
+	try {
+		for (const oldGeometryId of geometryIds) {
+			const geometry = files[geometryArchivePath(oldGeometryId)];
+			const response = await apiClient.uploadGeometry(
+				targetSpaceId,
+				geometry.slice().buffer,
+			);
+			geometryIdMap.set(oldGeometryId, response.id);
+		}
+
+		for (const instance of orderedInstances) {
+			const parentId = instance.parent_id
+				? (idMap.get(instance.parent_id) ?? null)
+				: null;
+			const restoredData = restoreEmbeddedAssets(
+				instance.data,
+				archive.assets.embedded,
+				files,
+			);
+			const data = remapExactStringReferences(restoredData, [
+				geometryIdMap,
+				idMap,
+			]) as Record<string, any>;
+			const createdInstance = await apiClient.createObject(targetSpaceId, {
+				name: instance.name,
+				type: instance.type,
+				data,
+				parent_id: parentId,
+			});
+			createdInstances.push(createdInstance);
+			idMap.set(instance.id, createdInstance.id);
+		}
+
+		return {createdInstances, geometryIdMap, idMap};
+	} catch (error) {
+		for (const instance of createdInstances.reverse()) {
+			try {
+				await apiClient.deleteObject(targetSpaceId, instance.id);
+			} catch (cleanupError) {
+				console.error(
+					"DT3D: Failed to remove an incomplete imported object",
 					cleanupError,
 				);
 			}

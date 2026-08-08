@@ -180,6 +180,8 @@ type ConfirmationOptions = {
 	confirmLabel: string;
 	actionType: ConfirmationActionType;
 	onConfirm: () => void;
+	secondaryLabel?: string;
+	onSecondary?: () => void;
 };
 
 type GeographicCoordinates = {
@@ -2194,6 +2196,7 @@ export class DT3DCard extends LitElement {
 		modal.heading = options.heading;
 		modal.message = options.message;
 		modal.confirmLabel = options.confirmLabel;
+		modal.secondaryLabel = options.secondaryLabel ?? "";
 		modal.actionType = options.actionType;
 
 		const closeModal = () => {
@@ -2206,6 +2209,10 @@ export class DT3DCard extends LitElement {
 		modal.addEventListener("modal-confirm", () => {
 			closeModal();
 			options.onConfirm();
+		});
+		modal.addEventListener("modal-secondary", () => {
+			closeModal();
+			options.onSecondary?.();
 		});
 		modal.addEventListener("modal-close", closeModal);
 
@@ -3448,7 +3455,35 @@ export class DT3DCard extends LitElement {
 		}
 	}
 
-	private async importSpace(file: File): Promise<void> {
+	private requestImportSpace(file: File): void {
+		if (!this.spaceSync || this.isVisualizationOnly()) {
+			return;
+		}
+
+		const currentSpaceId = this.spaceSync.activeSpaceId;
+		this.openConfirmationModal({
+			heading: localManager.get("importSpaceTitle"),
+			message: localManager.get("importSpaceChoiceDescription"),
+			confirmLabel: localManager.get("importAsNewSpace"),
+			secondaryLabel: currentSpaceId
+				? localManager.get("importIntoCurrentSpace")
+				: undefined,
+			actionType: "blue",
+			onConfirm: () => {
+				void this.importSpace(file);
+			},
+			onSecondary: currentSpaceId
+				? () => {
+					void this.importSpace(file, currentSpaceId);
+				}
+				: undefined,
+		});
+	}
+
+	private async importSpace(
+		file: File,
+		targetSpaceId?: string,
+	): Promise<void> {
 		if (!this.spaceSync || this.isVisualizationOnly()) {
 			return;
 		}
@@ -3461,7 +3496,9 @@ export class DT3DCard extends LitElement {
 			await this.actionStack.flush();
 			this.attachTransform(null);
 			this.setSelectedObject(null);
-			const space = await this.spaceSync.importSpace(file);
+			const space = targetSpaceId
+				? await this.spaceSync.importObjectsIntoSpace(file, targetSpaceId)
+				: await this.spaceSync.importSpace(file);
 			this.actionStack.clear();
 			this.applySpaceConfigFromApi(space);
 			this.applyDefaultViewportOnLoad();
@@ -4372,7 +4409,7 @@ export class DT3DCard extends LitElement {
 			"space-import-request",
 			(event: Event) => {
 				const {file} = (event as CustomEvent<{ file: File }>).detail;
-				void this.importSpace(file);
+				this.requestImportSpace(file);
 			},
 		);
 		this.spaceSelector.addEventListener(

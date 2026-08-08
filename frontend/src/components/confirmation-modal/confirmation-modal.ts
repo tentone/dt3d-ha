@@ -22,6 +22,9 @@ export class DT3DConfirmationModal extends LitElement {
 	@property({type: String})
 	public cancelLabel = localManager.get("cancel");
 
+	@property({type: String})
+	public secondaryLabel = "";
+
 	@property({type: String, attribute: "action-type"})
 	public actionType: ConfirmationActionType = "blue";
 
@@ -41,6 +44,15 @@ export class DT3DConfirmationModal extends LitElement {
 	private confirm(): void {
 		this.dispatchEvent(
 			new CustomEvent("modal-confirm", {
+				bubbles: true,
+				composed: true,
+			}),
+		);
+	}
+
+	private secondary(): void {
+		this.dispatchEvent(
+			new CustomEvent("modal-secondary", {
 				bubbles: true,
 				composed: true,
 			}),
@@ -71,7 +83,7 @@ export class DT3DConfirmationModal extends LitElement {
 		return html`
 			<div class="overlay" @click=${this.close} @keydown=${this.handleKeyDown}>
 				<form
-					class="dialog"
+					class=${this.secondaryLabel ? "dialog choice-dialog" : "dialog"}
 					role="dialog"
 					aria-modal="true"
 					aria-labelledby="confirmation-heading"
@@ -86,6 +98,17 @@ export class DT3DConfirmationModal extends LitElement {
 						<button type="button" class="cancel-button" @click=${this.close}>
 							${this.cancelLabel}
 						</button>
+						${this.secondaryLabel
+							? html`
+								<button
+									type="button"
+									class="secondary-button"
+									@click=${this.secondary}
+								>
+									${this.secondaryLabel}
+								</button>
+							`
+							: null}
 						<button type="submit" class=${this.buttonClass}>
 							${this.confirmLabel}
 						</button>
