@@ -1,12 +1,12 @@
 import type {Camera, Object3D, Quaternion} from "three";
 import {
 	Color,
+	CylinderGeometry,
 	Group,
 	Matrix4,
 	Mesh,
 	MeshBasicMaterial,
 	Raycaster,
-	SphereGeometry,
 	Vector2,
 	Vector3,
 } from "three";
@@ -90,7 +90,7 @@ class WallEndpointHandle extends Mesh {
 	public constructor(
 		wall: WallObject,
 		endpoint: WallEndpoint,
-		geometry: SphereGeometry,
+		geometry: CylinderGeometry,
 		material: MeshBasicMaterial,
 	) {
 		super(geometry, material);
@@ -169,6 +169,8 @@ export class WallEndpointManager {
 		const endpoints = this.getWallSpaceEndpoints(this.selectedWall, space);
 		this.setHandleSpacePosition(this.handles[0], endpoints.start, space);
 		this.setHandleSpacePosition(this.handles[1], endpoints.end, space);
+		this.setHandleHeight(this.handles[0], endpoints.start, space);
+		this.setHandleHeight(this.handles[1], endpoints.end, space);
 		this.handleGroup.visible = true;
 	}
 
@@ -323,6 +325,201 @@ export class WallEndpointManager {
 				redo: () => this.applySnapshot(after),
 			},
 		};
+	}
+
+	/**
+	 * Split walls wherever their center lines join so every T-junction and
+	 * crossing has a real, movable endpoint.
+	 *
+	 * When a preceding endpoint edit is supplied, the split and endpoint move
+	 * are returned as one reversible mutation.
+	 */
+	public analyzeWallJoins(
+		precedingEdit: WallEndpointEdit | null = null,
+	): WallEndpointEdit | null {
+		const {space} = this.getContext();
+		if (!space) {
+			return precedingEdit;
+		}
+
+		const plannedSplits = this.findPlannedWallSplits(space);
+		const existingWalls = [...plannedSplits.keys()];
+		if (existingWalls.length === 0) {
+			return precedingEdit;
+		}
+
+		const existingChildren = existingWalls.flatMap((wall) =>
+			this.getWallUserChildren(wall),
+		);
+		const before = this.captureSnapshot(
+			existingWalls,
+			existingChildren,
+			space,
+		);
+		const createdWalls: WallObject[] = [];
+
+		for (const wall of existingWalls) {
+			const endpoints = this.getWallSpaceEndpoints(wall, space);
+			const points = plannedSplits.get(wall)!;
+			points.sort(
+				(left, right) =>
+					this.projectPointToSegment(
+						right,
+						endpoints.start,
+						endpoints.end,
+					).t -
+					this.projectPointToSegment(
+						left,
+						endpoints.start,
+						endpoints.end,
+					).t,
+			);
+			for (const point of points) {
+				const splitWall = this.splitWall(wall, point, space);
+				createdWalls.push(splitWall);
+				const splitEndpoints = this.getWallSpaceEndpoints(splitWall, space);
+				before.walls.push({
+					wall: splitWall,
+					parent: splitWall.parent!,
+					index: splitWall.parent!.children.indexOf(splitWall),
+					present: false,
+					start: splitEndpoints.start,
+					end: splitEndpoints.end,
+				});
+			}
+		}
+
+		const allWalls = [...existingWalls, ...createdWalls];
+		const allChildren = [
+			...new Set([
+				...existingChildren,
+				...allWalls.flatMap((wall) => this.getWallUserChildren(wall)),
+			]),
+		];
+		const after = this.captureSnapshot(allWalls, allChildren, space);
+		const splitEdit: WallEndpointEdit = {
+			createdWalls,
+			existingObjects: [
+				...new Set<Object3D>([...existingWalls, ...existingChildren]),
+			],
+			undo: () => this.applySnapshot(before),
+			redo: () => this.applySnapshot(after),
+		};
+		this.refreshHandles();
+		return precedingEdit
+			? this.combineEdits(precedingEdit, splitEdit)
+			: splitEdit;
+	}
+
+	private combineEdits(
+		first: WallEndpointEdit,
+		second: WallEndpointEdit,
+	): WallEndpointEdit {
+		return {
+			createdWalls: [...new Set([...first.createdWalls, ...second.createdWalls])],
+			existingObjects: [
+				...new Set([...first.existingObjects, ...second.existingObjects]),
+			],
+			undo: () => {
+				second.undo();
+				first.undo();
+			},
+			redo: () => {
+				first.redo();
+				second.redo();
+			},
+		};
+	}
+
+	private findPlannedWallSplits(space: Group): Map<WallObject, Vector3[]> {
+		const walls: Array<{
+			wall: WallObject;
+			start: Vector3;
+			end: Vector3;
+		}> = [];
+		space.traverse((object) => {
+			if (
+				object instanceof WallObject &&
+				!object.internal &&
+				object.parent
+			) {
+				walls.push({wall: object, ...this.getWallSpaceEndpoints(object, space)});
+			}
+		});
+
+		const result = new Map<WallObject, Vector3[]>();
+		const addSplit = (
+			candidate: (typeof walls)[number],
+			point: Vector3,
+		): void => {
+			if (candidate.wall.locked) {
+				return;
+			}
+			const projection = this.projectPointToSegment(
+				point,
+				candidate.start,
+				candidate.end,
+			);
+			if (
+				projection.distance > POINT_EPSILON ||
+				projection.t <= POINT_EPSILON ||
+				projection.t >= 1 - POINT_EPSILON
+			) {
+				return;
+			}
+			const splits = result.get(candidate.wall) ?? [];
+			if (!splits.some((split) => this.distance2D(split, point) <= POINT_EPSILON)) {
+				splits.push(point.clone());
+				result.set(candidate.wall, splits);
+			}
+		};
+
+		for (let leftIndex = 0; leftIndex < walls.length; leftIndex++) {
+			for (
+				let rightIndex = leftIndex + 1;
+				rightIndex < walls.length;
+				rightIndex++
+			) {
+				const left = walls[leftIndex];
+				const right = walls[rightIndex];
+				if (Math.abs(left.start.y - right.start.y) > POINT_EPSILON) {
+					continue;
+				}
+
+				const rx = left.end.x - left.start.x;
+				const rz = left.end.z - left.start.z;
+				const sx = right.end.x - right.start.x;
+				const sz = right.end.z - right.start.z;
+				const cross = rx * sz - rz * sx;
+				const qx = right.start.x - left.start.x;
+				const qz = right.start.z - left.start.z;
+				if (Math.abs(cross) > POINT_EPSILON) {
+					const leftT = (qx * sz - qz * sx) / cross;
+					const rightT = (qx * rz - qz * rx) / cross;
+					if (
+						leftT >= -POINT_EPSILON &&
+						leftT <= 1 + POINT_EPSILON &&
+						rightT >= -POINT_EPSILON &&
+						rightT <= 1 + POINT_EPSILON
+					) {
+						const point = left.start.clone().lerp(left.end, leftT);
+						addSplit(left, point);
+						addSplit(right, point);
+					}
+					continue;
+				}
+
+				// Parallel walls can still form a T-junction or meet along the same
+				// center line. Project each endpoint to pick up those interior joins.
+				for (const point of [left.start, left.end]) {
+					addSplit(right, point);
+				}
+				for (const point of [right.start, right.end]) {
+					addSplit(left, point);
+				}
+			}
+		}
+		return result;
 	}
 
 	private initializeDrag(drag: EndpointDrag, space: Group): boolean {
@@ -595,7 +792,8 @@ export class WallEndpointManager {
 		}
 
 		const color = new Color(getCSSVar("--primary-color") || "#03a9f4");
-		const geometry = new SphereGeometry(0.075, 20, 16);
+		const geometry = new CylinderGeometry(0.065, 0.065, 1, 20);
+		geometry.translate(0, 0.5, 0);
 		const material = new MeshBasicMaterial({
 			color,
 			depthTest: false,
@@ -672,6 +870,24 @@ export class WallEndpointManager {
 		handle.position.copy(
 			this.helpers.worldToLocal(space.localToWorld(point.clone())),
 		);
+		handle.updateMatrix();
+	}
+
+	private setHandleHeight(
+		handle: WallEndpointHandle,
+		point: Vector3,
+		space: Group,
+	): void {
+		const junction = this.findJunction(point, space);
+		const walls = [
+			...junction.endpoints.map(({wall}) => wall),
+			...junction.interiorWalls,
+		];
+		const height = Math.max(
+			handle.wall.height,
+			...walls.map((wall) => wall.height),
+		);
+		handle.scale.set(1, height, 1);
 		handle.updateMatrix();
 	}
 

@@ -10,8 +10,9 @@ import {
 import {mergeGeometries} from "three/examples/jsm/utils/BufferGeometryUtils.js";
 
 import {markObjectInternal} from "../../utils/internal-object.js";
+import type {DTInteractionEvent} from "../dt-object.js";
 import {DTObject} from "../dt-object.js";
-import {TextSprite} from "../helpers/text-sprite.js";
+import {CSSText} from "../helpers/css-text.js";
 import {DoorObject} from "./door.js";
 import {WindowObject} from "./window.js";
 
@@ -90,7 +91,7 @@ export class WallObject extends DTObject {
 	/**
 	 * Label with the length of the wall.
 	 */
-	private lengthLabel: TextSprite | null = null;
+	private lengthLabel: CSSText | null = null;
 
 	/**
 	 * Signature of the last openings configuration.
@@ -283,14 +284,23 @@ export class WallObject extends DTObject {
 	public updateLabel(): void {
 		const labelText = `${this.length.toFixed(2)}m`;
 		if (!this.lengthLabel) {
-			this.lengthLabel = markObjectInternal(new TextSprite(labelText));
-			this.lengthLabel.scale.setScalar(0.25);
+			this.lengthLabel = markObjectInternal(new CSSText(labelText));
 			this.add(this.lengthLabel);
 		} else {
 			this.lengthLabel.setText(labelText);
 		}
 
 		this.lengthLabel.position.set(0, this.height + 0.2, 0);
+		this.lengthLabel.visible = true;
+	}
+
+	/** Show the current wall length only while the pointer is over the wall. */
+	public override onInteraction(event: DTInteractionEvent): void {
+		if (event.type === "pointerenter") {
+			this.updateLabel();
+		} else if (event.type === "pointerleave" && this.lengthLabel) {
+			this.lengthLabel.visible = false;
+		}
 	}
 
 	/**

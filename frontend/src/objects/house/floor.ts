@@ -5,10 +5,13 @@ import {
 	MeshStandardMaterial,
 	Shape,
 	ShapeGeometry,
+	Vector3,
 } from "three";
 
 import {markObjectInternal} from "../../utils/internal-object.js";
+import type {DTInteractionEvent} from "../dt-object.js";
 import {DTObject} from "../dt-object.js";
+import {CSSText} from "../helpers/css-text.js";
 
 export type FloorPoint = {
 	x: number;
@@ -30,6 +33,9 @@ export class FloorObject extends DTObject {
 	public automatic: boolean;
 
 	public floorMesh: Mesh;
+
+	/** Area label displayed while the floor is hovered. */
+	private areaLabel: CSSText | null = null;
 
 	public constructor(
 		points: FloorPoint[] = DEFAULT_FLOOR_POINTS,
@@ -83,7 +89,7 @@ export class FloorObject extends DTObject {
 
 		if (recursive) {
 			for (const child of source.children) {
-				if (child !== source.floorMesh) {
+				if (child !== source.floorMesh && child.internal !== true) {
 					this.add(child.clone());
 				}
 			}
@@ -97,6 +103,43 @@ export class FloorObject extends DTObject {
 			? this.floorMesh.material
 			: [this.floorMesh.material];
 		materials.forEach((material: Material) => material.dispose());
+	}
+
+	/** Show the floor's world-space area while the pointer is over it. */
+	public override onInteraction(event: DTInteractionEvent): void {
+		if (event.type === "pointerenter") {
+			this.updateAreaLabel();
+		} else if (event.type === "pointerleave" && this.areaLabel) {
+			this.areaLabel.visible = false;
+		}
+	}
+
+	private updateAreaLabel(): void {
+		this.updateWorldMatrix(true, false);
+		const worldPoints = this.points.map((point) =>
+			this.localToWorld(new Vector3(point.x, 0, point.z)),
+		);
+		const area = Math.abs(
+			worldPoints.reduce((sum, point, index) => {
+				const next = worldPoints[(index + 1) % worldPoints.length];
+				return sum + point.x * next.z - next.x * point.z;
+			}, 0) / 2,
+		);
+		const labelText = `${area.toFixed(2)}m²`;
+		if (!this.areaLabel) {
+			this.areaLabel = markObjectInternal(new CSSText(labelText));
+			this.add(this.areaLabel);
+		} else {
+			this.areaLabel.setText(labelText);
+		}
+
+		const center = this.points.reduce<Vector3>(
+			(sum, point) => sum.add(new Vector3(point.x, 0, point.z)),
+			new Vector3(),
+		).multiplyScalar(1 / this.points.length);
+		this.areaLabel.position.copy(center);
+		this.areaLabel.position.y = 0.15;
+		this.areaLabel.visible = true;
 	}
 
 	private createGeometry(): ShapeGeometry {

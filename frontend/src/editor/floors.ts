@@ -1,4 +1,4 @@
-import type {Camera} from "three";
+import type {Camera, Object3D} from "three";
 import {
 	BufferGeometry,
 	Color,
@@ -39,6 +39,21 @@ type WallSegment = {
 type GraphNode = {
 	point: Vector3;
 	neighbors: Set<number>;
+};
+
+type AutomaticFloorSnapshot = {
+	floor: FloorObject;
+	parent: Object3D;
+	index: number;
+	present: boolean;
+	points: Array<{x: number; z: number}>;
+};
+
+export type AutomaticFloorEdit = {
+	createdFloors: FloorObject[];
+	existingFloors: FloorObject[];
+	undo: () => void;
+	redo: () => void;
 };
 
 const POINT_EPSILON = 1e-5;
@@ -159,41 +174,128 @@ export class FloorManager {
 		this.updateDraftHelpers();
 	}
 
-	/** Add any bounded wall faces which do not already have a matching floor. */
-	public createFloorsFromClosedWalls(): FloorObject[] {
+	/**
+	 * Reconcile automatic floors with every bounded face in the wall network.
+	 * Manual floors are never changed and suppress an automatic floor where
+	 * they already cover the same room.
+	 */
+	public reconcileFloorsFromClosedWalls(): AutomaticFloorEdit | null {
 		const {space} = this.getContext();
 		if (!space) {
-			return [];
+			return null;
 		}
 
-		const faces = this.findClosedWallFaces(space);
-		const existing = new Set<string>();
-		const existingPolygons: Vector3[][] = [];
+		const manualPolygons: Vector3[][] = [];
+		const automaticFloors: FloorObject[] = [];
 		space.traverse((object) => {
 			if (object instanceof FloorObject && !object.internal) {
-				const points = this.floorSpacePoints(object, space);
-				existing.add(this.pointsSignature(points));
-				existingPolygons.push(points);
+				if (object.automatic) {
+					automaticFloors.push(object);
+				} else {
+					manualPolygons.push(this.floorSpacePoints(object, space));
+				}
 			}
 		});
+		const faces = this.findClosedWallFaces(space).filter(
+			(face) =>
+				!manualPolygons.some((polygon) =>
+					this.polygonCoversFace(polygon, face),
+				),
+		);
+		const beforeExisting = new Map(
+			automaticFloors.map((floor) => [
+				floor,
+				this.captureFloorSnapshot(floor),
+			]),
+		);
+		const unmatchedFloors = new Set(automaticFloors);
+		const matches = new Map<number, FloorObject>();
 
-		const created: FloorObject[] = [];
-		for (const face of faces) {
-			const signature = this.pointsSignature(face);
-			if (
-				existing.has(signature) ||
-				existingPolygons.some((polygon) => this.polygonCoversFace(polygon, face))
-			) {
+		// Preserve exact matches first, then pair changed rooms with the most
+		// closely overlapping previous automatic floor.
+		for (let index = 0; index < faces.length; index++) {
+			const signature = this.pointsSignature(faces[index]);
+			const match = [...unmatchedFloors].find(
+				(floor) =>
+					this.pointsSignature(this.floorSpacePoints(floor, space)) ===
+					signature,
+			);
+			if (match) {
+				matches.set(index, match);
+				unmatchedFloors.delete(match);
+			}
+		}
+		for (let index = 0; index < faces.length; index++) {
+			if (matches.has(index)) {
 				continue;
 			}
-
-			const floor = this.createFloorFromSpacePoints(face, true);
-			this.callbacks.addToScene(floor);
-			created.push(floor);
-			existing.add(signature);
-			existingPolygons.push(face.map((point) => point.clone()));
+			let best: FloorObject | null = null;
+			let bestScore = Number.NEGATIVE_INFINITY;
+			for (const floor of unmatchedFloors) {
+				const score = this.floorMatchScore(
+					this.floorSpacePoints(floor, space),
+					faces[index],
+				);
+				if (score > bestScore) {
+					best = floor;
+					bestScore = score;
+				}
+			}
+			if (best && Number.isFinite(bestScore)) {
+				matches.set(index, best);
+				unmatchedFloors.delete(best);
+			}
 		}
-		return created;
+
+		const created: FloorObject[] = [];
+		const updated: FloorObject[] = [];
+		for (let index = 0; index < faces.length; index++) {
+			const face = faces[index];
+			const floor = matches.get(index);
+			if (!floor) {
+				const newFloor = this.createFloorFromSpacePoints(face, true);
+				newFloor.init();
+				space.add(newFloor);
+				created.push(newFloor);
+				continue;
+			}
+			if (
+				this.pointsSignature(this.floorSpacePoints(floor, space)) !==
+				this.pointsSignature(face)
+			) {
+				this.setFloorSpacePoints(floor, face, space);
+				updated.push(floor);
+			}
+		}
+		const removed = [...unmatchedFloors];
+		for (const floor of removed) {
+			floor.removeFromParent();
+		}
+		if (created.length === 0 && updated.length === 0 && removed.length === 0) {
+			return null;
+		}
+
+		const existingFloors = [...new Set([...updated, ...removed])];
+		const before: AutomaticFloorSnapshot[] = existingFloors.map(
+			(floor) => beforeExisting.get(floor)!,
+		);
+		for (const floor of created) {
+			const state = this.captureFloorSnapshot(floor);
+			before.push({...state, present: false});
+		}
+		const after = [...existingFloors, ...created].map((floor) => {
+			if (floor.parent) {
+				return this.captureFloorSnapshot(floor);
+			}
+			return {...beforeExisting.get(floor)!, present: false};
+		});
+
+		return {
+			createdFloors: created,
+			existingFloors,
+			undo: () => this.applyFloorSnapshot(before),
+			redo: () => this.applyFloorSnapshot(after),
+		};
 	}
 
 	private finalizeFloor(): void {
@@ -437,6 +539,96 @@ export class FloorManager {
 				floor.localToWorld(new Vector3(point.x, 0, point.z)),
 			),
 		);
+	}
+
+	private setFloorSpacePoints(
+		floor: FloorObject,
+		points: Vector3[],
+		space: Group,
+	): void {
+		space.updateWorldMatrix(true, false);
+		floor.updateWorldMatrix(true, false);
+		floor.setPoints(
+			this.removeCollinearPoints(points).map((point) => {
+				const local = floor.worldToLocal(space.localToWorld(point.clone()));
+				return {x: local.x, z: local.z};
+			}),
+		);
+	}
+
+	private captureFloorSnapshot(floor: FloorObject): AutomaticFloorSnapshot {
+		const parent = floor.parent;
+		if (!parent) {
+			throw new Error("Cannot capture an automatic floor without a parent");
+		}
+		return {
+			floor,
+			parent,
+			index: parent.children.indexOf(floor),
+			present: true,
+			points: floor.points.map((point) => ({...point})),
+		};
+	}
+
+	private applyFloorSnapshot(snapshot: AutomaticFloorSnapshot[]): void {
+		for (const state of snapshot
+			.filter(({present}) => present)
+			.sort((left, right) => left.index - right.index)) {
+			if (state.floor.parent !== state.parent) {
+				state.parent.add(state.floor);
+			}
+			const currentIndex = state.parent.children.indexOf(state.floor);
+			if (currentIndex !== state.index) {
+				state.parent.children.splice(currentIndex, 1);
+				state.parent.children.splice(
+					Math.max(0, Math.min(state.index, state.parent.children.length)),
+					0,
+					state.floor,
+				);
+			}
+			state.floor.setPoints(state.points);
+		}
+		for (const state of snapshot.filter(({present}) => !present)) {
+			state.floor.removeFromParent();
+		}
+	}
+
+	private floorMatchScore(polygon: Vector3[], face: Vector3[]): number {
+		if (
+			polygon.length < 3 ||
+			face.length < 3 ||
+			Math.abs(polygon[0].y - face[0].y) > POINT_EPSILON
+		) {
+			return Number.NEGATIVE_INFINITY;
+		}
+		const polygonCenter = this.polygonCenter(polygon);
+		const faceCenter = this.polygonCenter(face);
+		const polygonContainsFaceCenter = this.pointInPolygon(faceCenter, polygon);
+		const faceContainsPolygonCenter = this.pointInPolygon(polygonCenter, face);
+		const sharedPoints = face.filter((point) =>
+			polygon.some(
+				(candidate) => this.distance2D(candidate, point) <= POINT_EPSILON,
+			),
+		).length;
+		if (
+			sharedPoints === 0 &&
+			!polygonContainsFaceCenter &&
+			!faceContainsPolygonCenter
+		) {
+			return Number.NEGATIVE_INFINITY;
+		}
+		return (
+			sharedPoints * 100 +
+			Number(polygonContainsFaceCenter) * 25 +
+			Number(faceContainsPolygonCenter) * 25 -
+			this.distance2D(polygonCenter, faceCenter)
+		);
+	}
+
+	private polygonCenter(points: Vector3[]): Vector3 {
+		return points
+			.reduce((center, point) => center.add(point), new Vector3())
+			.multiplyScalar(1 / points.length);
 	}
 
 	private pointsSignature(points: Vector3[]): string {

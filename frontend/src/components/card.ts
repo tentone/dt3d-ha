@@ -50,6 +50,7 @@ import type {
 } from "../editor/entity-actions.js";
 import {normalizeEntityInteractionConfig} from "../editor/entity-actions.js";
 import {createFloorplanReferenceMesh} from "../editor/floorplan-reference.js";
+import type {AutomaticFloorEdit} from "../editor/floors.js";
 import {FloorManager} from "../editor/floors.js";
 import type {
 	CardGeneralConfig,
@@ -1699,6 +1700,9 @@ export class DT3DCard extends LitElement {
 					? this.spaceSync?.syncObjectDelete(object)
 					: this.spaceSync?.syncObjectHierarchyCreate(object),
 		});
+		if (this.objectContainsWall(object)) {
+			this.reconcileWallNetworkAfterChange("Wall network");
+		}
 	}
 
 	/**
@@ -1904,18 +1908,34 @@ export class DT3DCard extends LitElement {
 		}
 	}
 
-	/** Record and synchronize a complete endpoint/junction edit. */
-	private recordWallEndpointEdit(edit: WallEndpointEdit): void {
+	/** Record and synchronize a complete wall-network and derived-floor edit. */
+	private recordWallNetworkEdit(
+		edit: WallEndpointEdit | null,
+		floorEdit: AutomaticFloorEdit | null,
+		label = "Wall endpoint",
+	): void {
+		if (!edit && !floorEdit) {
+			return;
+		}
+
 		const refresh = () => {
-			for (const wall of edit.createdWalls) {
+			for (const wall of edit?.createdWalls ?? []) {
 				if (wall.parent) {
 					this.sceneManager?.applyShadowSettingsToObject(wall);
+				}
+			}
+			for (const floor of [
+				...(floorEdit?.createdFloors ?? []),
+				...(floorEdit?.existingFloors ?? []),
+			]) {
+				if (floor.parent) {
+					this.sceneManager?.applyShadowSettingsToObject(floor);
 				}
 			}
 			this.refreshAfterObjectMutation(this.lastSelectedObject);
 		};
 		const sync = async (operation: "record" | "undo" | "redo") => {
-			if (operation === "undo") {
+			if (edit && operation === "undo") {
 				await Promise.all(
 					edit.existingObjects.map((object) =>
 						this.spaceSync?.syncObjectUpdate(object),
@@ -1924,15 +1944,25 @@ export class DT3DCard extends LitElement {
 				for (const wall of edit.createdWalls) {
 					await this.spaceSync?.syncObjectDelete(wall);
 				}
-				return;
+			} else if (edit) {
+				for (const wall of edit.createdWalls) {
+					await this.spaceSync?.syncObjectCreate(wall);
+				}
+				await Promise.all(
+					edit.existingObjects.map((object) =>
+						this.spaceSync?.syncObjectUpdate(object),
+					),
+				);
 			}
 
-			for (const wall of edit.createdWalls) {
-				await this.spaceSync?.syncObjectCreate(wall);
-			}
 			await Promise.all(
-				edit.existingObjects.map((object) =>
-					this.spaceSync?.syncObjectUpdate(object),
+				[
+					...(floorEdit?.createdFloors ?? []),
+					...(floorEdit?.existingFloors ?? []),
+				].map((floor) =>
+					floor.parent
+						? this.spaceSync?.syncObjectUpdate(floor)
+						: this.spaceSync?.syncObjectDelete(floor),
 				),
 			);
 		};
@@ -1940,17 +1970,34 @@ export class DT3DCard extends LitElement {
 		refresh();
 		this.recordAction({
 			type: "update-object",
-			label: "Wall endpoint",
+			label,
 			undo: () => {
-				edit.undo();
+				floorEdit?.undo();
+				edit?.undo();
 				refresh();
 			},
 			redo: () => {
-				edit.redo();
+				edit?.redo();
+				floorEdit?.redo();
 				refresh();
 			},
 			sync,
 		});
+	}
+
+	private reconcileWallNetworkAfterChange(label: string): void {
+		const wallEdit = this.wallEndpointManager?.analyzeWallJoins() ?? null;
+		const floorEdit =
+			this.floorManager?.reconcileFloorsFromClosedWalls() ?? null;
+		this.recordWallNetworkEdit(wallEdit, floorEdit, label);
+	}
+
+	private objectContainsWall(object: Object3D): boolean {
+		let containsWall = false;
+		object.traverse((child) => {
+			containsWall ||= child instanceof WallObject;
+		});
+		return containsWall;
 	}
 
 	/** Apply the current pivot delta to every selected top-level object. */
@@ -2262,6 +2309,7 @@ export class DT3DCard extends LitElement {
 		}
 
 		const index = parent.children.indexOf(target);
+		const changesWallNetwork = this.objectContainsWall(target);
 		this.removeObject(target);
 		this.recordAction({
 			type: "delete-object",
@@ -2273,6 +2321,9 @@ export class DT3DCard extends LitElement {
 					? this.spaceSync?.syncObjectHierarchyCreate(target)
 					: this.spaceSync?.syncObjectDelete(target),
 		});
+		if (changesWallNetwork) {
+			this.reconcileWallNetworkAfterChange("Wall network");
+		}
 	}
 
 	/**
@@ -4022,7 +4073,13 @@ export class DT3DCard extends LitElement {
 					this.transformStart = null;
 					this.multiTransformStart = null;
 					if (endpointFinish.edit) {
-						this.recordWallEndpointEdit(endpointFinish.edit);
+						const wallEdit =
+							this.wallEndpointManager?.analyzeWallJoins(
+								endpointFinish.edit,
+							) ?? endpointFinish.edit;
+						const floorEdit =
+							this.floorManager?.reconcileFloorsFromClosedWalls() ?? null;
+						this.recordWallNetworkEdit(wallEdit, floorEdit);
 					}
 					return;
 				}
@@ -4084,6 +4141,9 @@ export class DT3DCard extends LitElement {
 								),
 							),
 					});
+					if (end.some(({object}) => this.objectContainsWall(object))) {
+						this.reconcileWallNetworkAfterChange("Wall transform");
+					}
 					return;
 				}
 
@@ -4138,6 +4198,9 @@ export class DT3DCard extends LitElement {
 						redo: () => this.placeObjects([move], "new"),
 						sync: () => this.spaceSync?.syncObjectUpdate(object),
 					});
+					if (this.objectContainsWall(object)) {
+						this.reconcileWallNetworkAfterChange("Wall transform");
+					}
 					return;
 				}
 				const applyTransform = (
@@ -4160,6 +4223,9 @@ export class DT3DCard extends LitElement {
 					redo: () => applyTransform(end.position, end.quaternion, end.scale),
 					sync: () => this.spaceSync?.syncObjectUpdate(object),
 				});
+				if (this.objectContainsWall(object)) {
+					this.reconcileWallNetworkAfterChange("Wall transform");
+				}
 			},
 		);
 		this.applyGridVisibility();
@@ -4215,7 +4281,6 @@ export class DT3DCard extends LitElement {
 				},
 				selectObject: (object) => this.tree.selectObject(object.uuid),
 				onWallCreated: (wall) => {
-					this.floorManager?.createFloorsFromClosedWalls();
 					this.attachTransform(wall);
 				},
 			},
@@ -4657,6 +4722,9 @@ export class DT3DCard extends LitElement {
 						),
 					),
 			});
+			if (this.objectContainsWall(updatedObject)) {
+				this.reconcileWallNetworkAfterChange("Wall update");
+			}
 		});
 
 		this.tree.addEventListener("object-moved", (e: any) => {
@@ -4690,6 +4758,9 @@ export class DT3DCard extends LitElement {
 						),
 					),
 			});
+			if (syncObjects.some((object) => this.objectContainsWall(object))) {
+				this.reconcileWallNetworkAfterChange("Wall move");
+			}
 		});
 
 		this.canvas.addEventListener("dblclick", (event: MouseEvent) => {
