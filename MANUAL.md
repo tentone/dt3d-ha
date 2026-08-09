@@ -59,13 +59,14 @@ Space creation, cloning, import/export, switching, and deletion are hidden when 
 The **Add** section of the left toolbar provides:
 
 - Built-in meshes: cube, sphere, plane, capsule, circle, cone, cylinder, dodecahedron, icosahedron, octahedron, ring, tetrahedron, torus, and torus knot.
+- The dedicated **Furniture** section adds a table, chair, couch, bathtub, shelf, or cabinet directly. Each is an independent object with its own inspector controls for overall dimensions and piece-specific construction, such as table legs, chair seat height, couch arms, bathtub walls, shelf count, or cabinet doors.
 - Uploaded models: `.gltf`, `.glb`, `.obj`, `.fbx`, `.dae` (Collada), `.stl`, and `.3ds`. Models can also be dragged onto the canvas.
   - Select or drop companion material and texture files with the model, or choose the folder option in the upload menu to preserve their relative paths.
   - Prefer a self-contained `.glb` when possible for reliable results.
 - Static lights: point, spot, and rectangular area lights.
 - Groups, saved viewports, and Home Assistant entities.
 
-After adding a mesh, select it to edit constructor dimensions, transform, material properties, or apply an image texture. Keep imported geometry and texture sizes modest because they are downloaded and uploaded by each client.
+After adding a mesh or furniture object, select it to edit its dimensions, transform, material properties, or apply an image texture. Keep imported geometry and texture sizes modest because they are downloaded and uploaded by each client.
 
 <img src="readme/3_add_objects.png" width="500">
 

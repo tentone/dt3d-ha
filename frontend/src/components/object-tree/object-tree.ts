@@ -86,6 +86,12 @@ const BINARY_SENSOR_DEVICE_CLASS_ICONS: Record<string, string> = {
 
 const MESH_TYPE_ICONS: Record<string, string> = {
 	capsule: "mdi:stadium-outline",
+	"furniture-bathtub": "mdi:bathtub-outline",
+	"furniture-cabinet": "mdi:cupboard-outline",
+	"furniture-chair": "mdi:chair-rolling",
+	"furniture-couch": "mdi:sofa-outline",
+	"furniture-shelf": "mdi:bookshelf",
+	"furniture-table": "mdi:table-furniture",
 	circle: "mdi:circle-outline",
 	cone: "mdi:cone",
 	cube: "mdi:cube-outline",

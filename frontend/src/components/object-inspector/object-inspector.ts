@@ -31,6 +31,7 @@ import {localManager} from "../../locale/locale.js";
 import {DTObject} from "../../objects/dt-object.js";
 import {EntityLight} from "../../objects/entity-light.js";
 import {EntityObject, isToggleable} from "../../objects/entity-object.js";
+import {FurnitureObject} from "../../objects/furniture/furniture.js";
 import {DoorObject} from "../../objects/house/door.js";
 import {GateObject} from "../../objects/house/gate.js";
 import {WallObject} from "../../objects/house/wall.js";
@@ -215,6 +216,18 @@ export class DT3DObjectInspector extends LitElement {
 		);
 	}
 
+	private isFurnitureConfigurationAttribute(
+		object: Object3D,
+		attribute: string,
+	): object is FurnitureObject {
+		return (
+			object instanceof FurnitureObject &&
+			object.parameterDefinitions.some(
+				(definition) => definition.name === attribute,
+			)
+		);
+	}
+
 	/**
 	 * Capture only the mutable state represented by a form field. Keeping the memento field-sized avoids replacing live Three.js objects during undo.
 	 */
@@ -310,6 +323,11 @@ export class DT3DObjectInspector extends LitElement {
 
 		if (this.isHouseConfigurationAttribute(object, attribute)) {
 			const value = this.getNestedAttribute(object, attribute);
+			return () => object.setConfiguration(attribute, value);
+		}
+
+		if (this.isFurnitureConfigurationAttribute(object, attribute)) {
+			const value = object.parameters[attribute];
 			return () => object.setConfiguration(attribute, value);
 		}
 
@@ -509,6 +527,10 @@ export class DT3DObjectInspector extends LitElement {
 			}
 		} else if (
 			this.isHouseConfigurationAttribute(this.selectedObject, attribute)
+		) {
+			if (!this.selectedObject.setConfiguration(attribute, value)) return;
+		} else if (
+			this.isFurnitureConfigurationAttribute(this.selectedObject, attribute)
 		) {
 			if (!this.selectedObject.setConfiguration(attribute, value)) return;
 		} else if (attribute.startsWith("geometry.")) {
@@ -1486,6 +1508,24 @@ export class DT3DObjectInspector extends LitElement {
 		}));
 	}
 
+	private getFurnitureFields(locked: boolean): DynamicFormField[] {
+		if (!(this.selectedObject instanceof FurnitureObject)) {
+			return [];
+		}
+
+		return this.selectedObject.parameterDefinitions.map((definition) => ({
+			label: localManager.get(definition.labelKey),
+			attribute: definition.name,
+			type: definition.type === "boolean" ? "boolean" : "number",
+			tooltip: localManager.get(definition.tooltipKey),
+			editable: !locked,
+			enabled: true,
+			step: definition.step,
+			min: definition.min,
+			max: definition.max,
+		}));
+	}
+
 	private getEntityFields(locked: boolean): DynamicFormField[] {
 		if (!(this.selectedObject instanceof EntityObject)) {
 			return [];
@@ -1835,6 +1875,17 @@ export class DT3DObjectInspector extends LitElement {
 			"windowShutters",
 			localManager.get("windowShutters"),
 			this.getWindowShutterFields(locked),
+		);
+		this.addSubFormField(
+			fields,
+			"furniture",
+			this.selectedObject instanceof FurnitureObject
+				? localManager.get(this.selectedObject.editorLabelKey)
+				: localManager.get("furnitureDimensions"),
+			this.getFurnitureFields(locked),
+			this.selectedObject instanceof FurnitureObject
+				? this.selectedObject.parameters
+				: null,
 		);
 		this.addSubFormField(
 			fields,

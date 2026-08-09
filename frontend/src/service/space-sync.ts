@@ -33,6 +33,11 @@ import {DTObject} from "../objects/dt-object.js";
 import {EntityGeneric} from "../objects/entity-generic.js";
 import {EntityLight} from "../objects/entity-light.js";
 import {EntityObject} from "../objects/entity-object.js";
+import {FurnitureObject} from "../objects/furniture/furniture.js";
+import {
+	createFurnitureObject,
+	isFurnitureMeshType,
+} from "../objects/furniture/furniture-registry.js";
 import {DoorObject} from "../objects/house/door.js";
 import {FloorObject} from "../objects/house/floor.js";
 import {GateObject} from "../objects/house/gate.js";
@@ -808,6 +813,17 @@ export class SpaceSync {
 				mesh.userData[RESOURCE_PLACEHOLDER_DATA_KEY] = true;
 				object = mesh;
 				materialTarget = mesh;
+			} else if (isFurnitureMeshType(meshType)) {
+				const furnitureParameters = data.furniture as
+					| Record<string, number | boolean>
+					| undefined;
+				const furniture = createFurnitureObject(
+					meshType,
+					furnitureParameters,
+					color,
+				);
+				object = furniture;
+				materialTarget = furniture?.furnitureMesh ?? null;
 			} else if (meshType === "floor") {
 				const floorData = data.floor as
 					| {
@@ -1173,6 +1189,16 @@ export class SpaceSync {
 			if (object instanceof EntityLight) {
 				data.light = object.getLightSettings();
 			}
+		} else if (object instanceof FurnitureObject) {
+			type = declaredType ?? "mesh";
+			data.meshType = `furniture-${object.furnitureType}`;
+			data.furniture = object.getParameters();
+			const material = object.furnitureMesh.material as any;
+			if (material?.color?.getHexString) {
+				data.color = material.color.getHexString();
+			}
+			data.material = serializeMaterial(object.furnitureMesh.material);
+			storeMeshPredominantTextureColor(data, object.furnitureMesh);
 		} else if (object instanceof FloorObject) {
 			type = declaredType ?? "mesh";
 			data.meshType = "floor";

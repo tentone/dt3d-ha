@@ -105,6 +105,7 @@ import {EntityLight} from "../objects/entity-light.js";
 import {EntityObject, isToggleable} from "../objects/entity-object.js";
 import {EntitySensor} from "../objects/entity-sensor.js";
 import {EntitySwitch} from "../objects/entity-switch.js";
+import {createFurnitureObject} from "../objects/furniture/furniture-registry.js";
 import {DoorObject} from "../objects/house/door.js";
 import {GateObject} from "../objects/house/gate.js";
 import {WallObject} from "../objects/house/wall.js";
@@ -3829,7 +3830,7 @@ export class DT3DCard extends LitElement {
 			wireframe: false,
 		});
 
-		object = createMeshObject(type, material);
+		object = createFurnitureObject(type) ?? createMeshObject(type, material);
 
 		if (object) {
 			object.userData.meshType = type;

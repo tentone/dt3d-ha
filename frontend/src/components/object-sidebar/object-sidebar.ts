@@ -4,6 +4,7 @@ import {html, LitElement, unsafeCSS} from "lit";
 import {customElement} from "lit/decorators.js";
 
 import {localManager} from "../../locale/locale.js";
+import {FURNITURE_OPTIONS} from "../../objects/furniture/furniture-registry.js";
 import {LocalStorage} from "../../utils/local-storage.js";
 import componentStyles from "./object-sidebar.css?inline";
 
@@ -203,6 +204,26 @@ export class DT3DObjectSidebar extends LitElement {
 							<ha-icon icon="mdi:camera-plus-outline"></ha-icon>
 						</button>
 					</dt3d-tooltip>
+				</section>
+				<section class="object-sidebar-section">
+					<div class="object-sidebar-title">
+						${localManager.get("furniture")}
+					</div>
+					${FURNITURE_OPTIONS.map(
+		(option) => html`
+							<dt3d-tooltip
+								.content=${localManager.get(option.labelKey)}
+								placement="right"
+							>
+								<button
+									@click=${() => this.handleAddObject(option.type)}
+									aria-label=${localManager.get(option.labelKey)}
+								>
+									<ha-icon icon=${option.icon}></ha-icon>
+								</button>
+							</dt3d-tooltip>
+						`,
+	)}
 				</section>
 				<section class="object-sidebar-section">
 					<div class="object-sidebar-title">${localManager.get("walls")}</div>
