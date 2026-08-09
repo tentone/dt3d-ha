@@ -261,7 +261,7 @@ export class DT3DConfigEditor extends LitElement {
 		this.scheduleSpacesReload();
 	}
 
-	private getLocationEntities(): {entityId: string; label: string}[] {
+	private getLocationEntities(): { entityId: string; label: string }[] {
 		return Object.entries(this.hass?.states ?? {})
 			.filter(([, state]: [string, any]) => {
 				if (
@@ -389,8 +389,8 @@ export class DT3DConfigEditor extends LitElement {
 											</option>
 											${this._spaces.map(
 												(space) => html`<option value=${space.id}>
-													${space.name}
-												</option>`,
+														${space.name}
+													</option>`,
 											)}
 										</select>
 										<p>${localManager.get("defaultSpaceDescription")}</p>
@@ -406,8 +406,8 @@ export class DT3DConfigEditor extends LitElement {
 											</option>
 											${viewports.map(
 												(viewport) => html`<option value=${viewport.id}>
-													${viewport.name}
-												</option>`,
+														${viewport.name}
+													</option>`,
 											)}
 										</select>
 										<p>${localManager.get("cardViewportDescription")}</p>
@@ -657,6 +657,76 @@ export class DT3DConfigEditor extends LitElement {
 									</option>
 								</select>
 								<p>${localManager.get("shadowMapQualityTooltip")}</p>
+							</div>
+						</div>
+					</div>
+				</details>
+
+				<details>
+					<summary>${localManager.get("lowPowerDeviceSettings")}</summary>
+					<div class="section-content">
+						<p class="section-description">
+							${localManager.get("lowPowerDeviceSettingsDescription")}
+						</p>
+						<div class="checkbox-field">
+							<input
+								id="low-power-disable-shadow-maps"
+								type="checkbox"
+								data-key="general.lowPowerDeviceSettings.disableShadowMaps"
+								?checked=${general.lowPowerDeviceSettings.disableShadowMaps}
+								@change=${this.onValueChanged}
+							/>
+							<div>
+								<label for="low-power-disable-shadow-maps"
+									>${localManager.get("disableShadowMaps")}</label
+								>
+								<p>${localManager.get("disableShadowMapsTooltip")}</p>
+							</div>
+						</div>
+						<div class="checkbox-field">
+							<input
+								id="low-power-reduce-shadow-quality"
+								type="checkbox"
+								data-key="general.lowPowerDeviceSettings.reduceShadowMapQuality"
+								?checked=${general.lowPowerDeviceSettings
+									.reduceShadowMapQuality}
+								@change=${this.onValueChanged}
+							/>
+							<div>
+								<label for="low-power-reduce-shadow-quality"
+									>${localManager.get("reduceShadowMapQuality")}</label
+								>
+								<p>${localManager.get("reduceShadowMapQualityTooltip")}</p>
+							</div>
+						</div>
+						<div class="checkbox-field">
+							<input
+								id="low-power-disable-post-processing"
+								type="checkbox"
+								data-key="general.lowPowerDeviceSettings.disablePostProcessing"
+								?checked=${general.lowPowerDeviceSettings.disablePostProcessing}
+								@change=${this.onValueChanged}
+							/>
+							<div>
+								<label for="low-power-disable-post-processing"
+									>${localManager.get("disablePostProcessing")}</label
+								>
+								<p>${localManager.get("disablePostProcessingTooltip")}</p>
+							</div>
+						</div>
+						<div class="checkbox-field">
+							<input
+								id="low-power-disable-antialiasing"
+								type="checkbox"
+								data-key="general.lowPowerDeviceSettings.disableAntialiasing"
+								?checked=${general.lowPowerDeviceSettings.disableAntialiasing}
+								@change=${this.onValueChanged}
+							/>
+							<div>
+								<label for="low-power-disable-antialiasing"
+									>${localManager.get("disableAntialiasing")}</label
+								>
+								<p>${localManager.get("disableAntialiasingTooltip")}</p>
 							</div>
 						</div>
 					</div>

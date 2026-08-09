@@ -189,7 +189,11 @@ export class RendererManager {
 		}
 
 		this.cssRenderer.render(this.scene, this.camera);
-		this.composer.render();
+		if (this.renderingConfig.postProcessingEnabled) {
+			this.composer.render();
+		} else {
+			this.renderer.render(this.scene, this.camera);
+		}
 	};
 
 	constructor(

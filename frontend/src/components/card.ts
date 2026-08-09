@@ -44,6 +44,7 @@ import {
 	getObjectBounds,
 	resolveCollisionMovement,
 } from "../editor/collision.js";
+import {isMobileDevice} from "../editor/device.js";
 import type {
 	EntityAction,
 	EntityInteractionConfig,
@@ -60,6 +61,7 @@ import type {
 	SpaceGeneralConfig,
 } from "../editor/general-config.js";
 import {
+	applyLowPowerDeviceSettings,
 	hasCardGeneralConfiguration,
 	hasSceneConfiguration,
 	hasSpaceGeneralConfiguration,
@@ -1383,10 +1385,16 @@ export class DT3DCard extends LitElement {
 	}
 
 	private applyGeneralConfig(): void {
-		this.generalConfig = mergeGeneralConfig(
+		const mergedConfig = mergeGeneralConfig(
 			this.cardGeneralConfig,
 			this.spaceGeneralConfig,
 		);
+		this.generalConfig = isMobileDevice()
+			? applyLowPowerDeviceSettings(
+				mergedConfig,
+				this.cardGeneralConfig.lowPowerDeviceSettings,
+			)
+			: mergedConfig;
 		this.rendererManager?.setRenderingConfig(this.generalConfig.rendering);
 		this.sceneManager?.setShadowsEnabled(
 			this.generalConfig.rendering.shadowMap.enabled,

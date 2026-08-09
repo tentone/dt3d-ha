@@ -128,6 +128,11 @@ general:
       enabled: false
       type: pcf
       quality: medium
+  lowPowerDeviceSettings:
+    disableShadowMaps: true
+    reduceShadowMapQuality: true
+    disablePostProcessing: true
+    disableAntialiasing: true
   developmentMode:
     enabled: false
 ```

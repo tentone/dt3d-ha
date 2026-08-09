@@ -213,6 +213,11 @@ general:
       enabled: false
       type: pcf
       quality: medium
+  lowPowerDeviceSettings:
+    disableShadowMaps: true
+    reduceShadowMapQuality: true
+    disablePostProcessing: true
+    disableAntialiasing: true
   developmentMode:
     enabled: false
 ```
@@ -243,11 +248,15 @@ Configure `default_space` in visualization mode because viewers cannot switch sp
 | `general.rendering.shadowMap.enabled` | `false` | Enables shadows for compatible lights and meshes. |
 | `general.rendering.shadowMap.type` | `pcf` | `basic`, `pcf`, `pcf_soft`, or `vsm`. |
 | `general.rendering.shadowMap.quality` | `medium` | `very_high`, `high`, `medium`, or `low`; uses separate directional and point-light resolutions. |
+| `general.lowPowerDeviceSettings.disableShadowMaps` | `false` | Disables shadow maps on phones and tablets. |
+| `general.lowPowerDeviceSettings.reduceShadowMapQuality` | `false` | Uses the `low` shadow-map quality preset on phones and tablets. |
+| `general.lowPowerDeviceSettings.disablePostProcessing` | `false` | Disables every configured post-processing effect on phones and tablets. |
+| `general.lowPowerDeviceSettings.disableAntialiasing` | `false` | Disables WebGL antialiasing on phones and tablets. |
 | `general.developmentMode.enabled` | `true` | Shows connection status and build timestamp. Disable for normal dashboards. |
 
 Shadow-map quality maps to directional/point-light sizes as follows: `very_high` = 8192/1024, `high` = 4096/512, `medium` = 2048/256, and `low` = 1024/128. The renderer automatically falls back to a supported power-of-two size when the GPU texture or cubemap limit is lower.
 
-Connection, antialiasing, resolution, shadow maps, and development mode are per-card. Tone mapping, post-processing, and daylight are per-space.
+Connection, antialiasing, resolution, shadow maps, mobile low-power overrides, and development mode are per-card. Tone mapping, post-processing, and daylight are per-space. Low-power overrides are applied at runtime without changing the saved space configuration.
 
 WebXR immersive modes require a supported browser/device and HTTPS. During an AR session, the sky is hidden and the scene background is forced transparent; the saved space appearance is restored when AR ends. Location-based AR also requires device geolocation and absolute-orientation permission. It converts the device-to-entity geographic offset to meters and aligns the space using the configured bearing.
 
@@ -276,6 +285,11 @@ general:
       enabled: false
       type: basic
       quality: low
+  lowPowerDeviceSettings:
+    disableShadowMaps: true
+    reduceShadowMapQuality: true
+    disablePostProcessing: true
+    disableAntialiasing: true
   developmentMode:
     enabled: false
 ```

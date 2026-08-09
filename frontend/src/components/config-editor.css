@@ -130,11 +130,16 @@ select:focus {
 }
 
 .field p,
-.checkbox-field p {
+.checkbox-field p,
+.section-description {
 	margin: 6px 0 0;
 	color: var(--secondary-text-color);
 	font-size: 12px;
 	line-height: 1.4;
+}
+
+.section-description {
+	margin-top: 0;
 }
 
 .checkbox-field p {

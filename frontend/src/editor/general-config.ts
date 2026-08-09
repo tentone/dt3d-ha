@@ -88,6 +88,7 @@ export type RenderingConfig = {
 	antialiasing: boolean;
 	toneMapping: ToneMappingMode;
 	resolution: ResolutionScale;
+	postProcessingEnabled: boolean;
 	shadowMap: {
 		enabled: boolean;
 		type: ShadowMapMode;
@@ -103,9 +104,17 @@ export type GeneralConfig = {
 	};
 };
 
+export type LowPowerDeviceSettings = {
+	disableShadowMaps: boolean;
+	reduceShadowMapQuality: boolean;
+	disablePostProcessing: boolean;
+	disableAntialiasing: boolean;
+};
+
 export type CardGeneralConfig = {
 	rendering: Pick<RenderingConfig, "antialiasing" | "resolution" | "shadowMap">;
 	developmentMode: GeneralConfig["developmentMode"];
+	lowPowerDeviceSettings: LowPowerDeviceSettings;
 };
 
 export type SpaceGeneralConfig = {
@@ -122,6 +131,7 @@ export const DEFAULT_GENERAL_CONFIG: GeneralConfig = {
 		antialiasing: false,
 		toneMapping: "none",
 		resolution: 1,
+		postProcessingEnabled: true,
 		shadowMap: {
 			enabled: false,
 			type: "pcf",
@@ -197,6 +207,12 @@ export const DEFAULT_CARD_GENERAL_CONFIG: CardGeneralConfig = {
 		shadowMap: DEFAULT_GENERAL_CONFIG.rendering.shadowMap,
 	},
 	developmentMode: DEFAULT_GENERAL_CONFIG.developmentMode,
+	lowPowerDeviceSettings: {
+		disableShadowMaps: false,
+		reduceShadowMapQuality: false,
+		disablePostProcessing: false,
+		disableAntialiasing: false,
+	},
 };
 
 export const DEFAULT_SPACE_GENERAL_CONFIG: SpaceGeneralConfig = {
@@ -634,6 +650,10 @@ export const normalizeGeneralConfig = (
 				rendering.toneMapping ?? rendering.tone_mapping,
 			),
 			resolution: normalizeResolutionScale(rendering.resolution),
+			postProcessingEnabled: booleanOrDefault(
+				rendering.postProcessingEnabled ?? rendering.post_processing_enabled,
+				DEFAULT_GENERAL_CONFIG.rendering.postProcessingEnabled,
+			),
 			shadowMap: {
 				enabled: booleanOrDefault(
 					shadowMap.enabled,
@@ -659,6 +679,8 @@ export const normalizeCardGeneralConfig = (
 	config: Record<string, any> = {},
 ): CardGeneralConfig => {
 	const normalized = normalizeGeneralConfig(config);
+	const lowPowerDeviceSettings =
+		config.lowPowerDeviceSettings ?? config.low_power_device_settings ?? {};
 
 	return {
 		rendering: {
@@ -667,8 +689,65 @@ export const normalizeCardGeneralConfig = (
 			shadowMap: normalized.rendering.shadowMap,
 		},
 		developmentMode: normalized.developmentMode,
+		lowPowerDeviceSettings: {
+			disableShadowMaps: booleanOrDefault(
+				lowPowerDeviceSettings.disableShadowMaps ??
+					lowPowerDeviceSettings.disable_shadow_maps,
+				DEFAULT_CARD_GENERAL_CONFIG.lowPowerDeviceSettings.disableShadowMaps,
+			),
+			reduceShadowMapQuality: booleanOrDefault(
+				lowPowerDeviceSettings.reduceShadowMapQuality ??
+					lowPowerDeviceSettings.reduce_shadow_map_quality,
+				DEFAULT_CARD_GENERAL_CONFIG.lowPowerDeviceSettings
+					.reduceShadowMapQuality,
+			),
+			disablePostProcessing: booleanOrDefault(
+				lowPowerDeviceSettings.disablePostProcessing ??
+					lowPowerDeviceSettings.disable_post_processing,
+				DEFAULT_CARD_GENERAL_CONFIG.lowPowerDeviceSettings
+					.disablePostProcessing,
+			),
+			disableAntialiasing: booleanOrDefault(
+				lowPowerDeviceSettings.disableAntialiasing ??
+					lowPowerDeviceSettings.disable_antialiasing,
+				DEFAULT_CARD_GENERAL_CONFIG.lowPowerDeviceSettings.disableAntialiasing,
+			),
+		},
 	};
 };
+
+/** Apply card-level mobile performance overrides without changing the saved space configuration. */
+export const applyLowPowerDeviceSettings = (
+	config: GeneralConfig,
+	settings: LowPowerDeviceSettings,
+): GeneralConfig => ({
+	...config,
+	rendering: {
+		...config.rendering,
+		postProcessingEnabled: settings.disablePostProcessing
+			? false
+			: config.rendering.postProcessingEnabled,
+		antialiasing: settings.disableAntialiasing
+			? false
+			: config.rendering.antialiasing,
+		shadowMap: {
+			...config.rendering.shadowMap,
+			enabled: settings.disableShadowMaps
+				? false
+				: config.rendering.shadowMap.enabled,
+			quality: settings.reduceShadowMapQuality
+				? "low"
+				: config.rendering.shadowMap.quality,
+		},
+		postProcessing: settings.disablePostProcessing
+			? (Object.fromEntries(
+				Object.entries(config.rendering.postProcessing).map(
+					([key, value]) => [key, {...value, enabled: false}],
+				),
+			) as PostProcessingConfig)
+			: config.rendering.postProcessing,
+	},
+});
 
 export const normalizeSpaceGeneralConfig = (
 	config: Record<string, any> = {},
@@ -692,6 +771,8 @@ export const mergeGeneralConfig = (
 
 	return {
 		rendering: {
+			postProcessingEnabled:
+				DEFAULT_GENERAL_CONFIG.rendering.postProcessingEnabled,
 			...card.rendering,
 			...space.rendering,
 		},
@@ -752,6 +833,8 @@ export const hasCardGeneralConfiguration = (config: unknown): boolean => {
 		rendering.shadow_map,
 		general.developmentMode,
 		general.development_mode,
+		general.lowPowerDeviceSettings,
+		general.low_power_device_settings,
 	].some((entry) => entry !== undefined);
 };
 
