@@ -59,3 +59,32 @@ h4 {
 	font-size: 13px;
 	line-height: 1.4;
 }
+
+.rules-section {
+	border: 1px solid var(--divider-color);
+	border-radius: 6px;
+}
+
+.rules-section summary {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 9px 10px;
+	color: var(--primary-color);
+	font-size: 13px;
+	font-weight: 600;
+	cursor: pointer;
+}
+
+.rules-section summary span {
+	min-width: 20px;
+	padding: 1px 5px;
+	border-radius: 10px;
+	background: color-mix(in srgb, var(--primary-color) 14%, transparent);
+	text-align: center;
+	font-size: 11px;
+}
+
+.rules-section dt3d-entity-rules {
+	padding: 0 10px 10px;
+}

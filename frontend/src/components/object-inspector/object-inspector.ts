@@ -1,4 +1,5 @@
 import "../dynamic-form/dynamic-form.js";
+import "../entity-rules/entity-rules.js";
 
 import {html, LitElement, unsafeCSS} from "lit";
 import {customElement, property} from "lit/decorators.js";
@@ -6,6 +7,8 @@ import type {Object3D} from "three";
 import {Mesh} from "three";
 
 import {normalizeEntityActionOverride} from "../../editor/entity-actions.js";
+import type {EntityRule} from "../../editor/entity-rules.js";
+import {getEntityRules, setEntityRules} from "../../editor/entity-rules.js";
 import {
 	changeMaterialType,
 	findMaterialObject,
@@ -39,6 +42,7 @@ import type {
 	DynamicFormEntityOption,
 	DynamicFormField,
 } from "../dynamic-form/dynamic-form.js";
+import type {EntityRulesChangeDetail} from "../entity-rules/entity-rules.js";
 import componentStyles from "./object-inspector.css?inline";
 
 export type ObjectUpdateDetail = {
@@ -538,6 +542,25 @@ export class DT3DObjectInspector extends LitElement {
 
 		const redo = this.captureRestore(updatedObject, attribute, type);
 		this.dispatchUpdated(attribute, undo, redo);
+		this.requestUpdate();
+	}
+
+	private handleEntityRulesChange(
+		event: CustomEvent<EntityRulesChangeDetail>,
+	): void {
+		if (!this.selectedObject || this.isLocked()) return;
+
+		const object = this.selectedObject;
+		const previous = getEntityRules(object);
+		const next = event.detail.rules;
+		const apply = (rules: EntityRule[]) => setEntityRules(object, rules);
+
+		apply(next);
+		this.dispatchUpdated(
+			"entityRules",
+			() => apply(previous),
+			() => apply(next),
+		);
 		this.requestUpdate();
 	}
 
@@ -1866,6 +1889,20 @@ export class DT3DObjectInspector extends LitElement {
 							@field-change=${(event: CustomEvent<DynamicFormChangeDetail>) =>
 								this.handleFormFieldChange(event)}
 						></dt3d-dynamic-form>
+						<details class="rules-section">
+							<summary>
+								${localManager.get("entityRules")}
+								<span>${getEntityRules(this.selectedObject).length}</span>
+							</summary>
+							<dt3d-entity-rules
+								.object=${this.selectedObject}
+								.entityOptions=${this.entityOptions}
+								.disabled=${locked}
+								@entity-rules-change=${(
+									event: CustomEvent<EntityRulesChangeDetail>,
+								) => this.handleEntityRulesChange(event)}
+							></dt3d-entity-rules>
+						</details>
 						${locked
 							? html`<div class="placeholder">
 									${localManager.get("objectLocked")}

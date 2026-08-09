@@ -13,6 +13,12 @@ import {
 import type {DT3DTree} from "../components/object-tree/object-tree.js";
 import {normalizeEntityActionOverride} from "../editor/entity-actions.js";
 import {
+	ENTITY_RULES_DATA_KEY,
+	getEntityRules,
+	getRuleBaselineTransform,
+	normalizeEntityRules,
+} from "../editor/entity-rules.js";
+import {
 	applyTextureToMesh,
 	getTexturePredominantColor,
 	TEXTURE_PREDOMINANT_COLOR_DATA_KEY,
@@ -1002,6 +1008,10 @@ export class SpaceSync {
 		object.userData[OBJECT_INSTANCE_TYPE_USER_DATA_KEY] =
 			declaredType || instance.type;
 		this.applyObjectTransform(object, data);
+		const entityRules = normalizeEntityRules(data[ENTITY_RULES_DATA_KEY]);
+		if (entityRules.length > 0) {
+			object.userData[ENTITY_RULES_DATA_KEY] = entityRules;
+		}
 
 		if (
 			materialTarget &&
@@ -1118,6 +1128,9 @@ export class SpaceSync {
 		const declaredType =
 			typeof storedType === "string" ? storedType.trim() || null : null;
 		let type = declaredType ?? "group";
+		const position = getRuleBaselineTransform(object, "position");
+		const rotation = getRuleBaselineTransform(object, "rotation");
+		const scale = getRuleBaselineTransform(object, "scale");
 		const data: Record<string, any> = {
 			sortOrder: object.parent
 				? object.parent.children
@@ -1125,21 +1138,25 @@ export class SpaceSync {
 					.indexOf(object)
 				: 0,
 			position: {
-				x: object.position.x,
-				y: object.position.y,
-				z: object.position.z,
+				x: position.x,
+				y: position.y,
+				z: position.z,
 			},
 			rotation: {
-				x: object.rotation.x,
-				y: object.rotation.y,
-				z: object.rotation.z,
+				x: rotation.x,
+				y: rotation.y,
+				z: rotation.z,
 			},
 			scale: {
-				x: object.scale.x,
-				y: object.scale.y,
-				z: object.scale.z,
+				x: scale.x,
+				y: scale.y,
+				z: scale.z,
 			},
 		};
+		const entityRules = getEntityRules(object);
+		if (entityRules.length > 0) {
+			data[ENTITY_RULES_DATA_KEY] = entityRules;
+		}
 
 		if (object instanceof StaticLightObject) {
 			type = declaredType ?? "static-light";

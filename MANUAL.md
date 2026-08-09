@@ -85,6 +85,16 @@ Select **Add entity**, search by entity ID or friendly name, and choose the enti
 
 All entity domains can use **Open entity** to show Home Assistant's more-info dialog. Card-wide single- and double-click defaults can be `open`, `toggle`, or `nothing`. Each entity can inherit or override those defaults in its inspector; **Toggle** is only offered for `light` and `switch` objects.
 
+### Connect any object to entity states
+
+Select any 3D object and expand **Entity rules** in its inspector. Add as many rules as needed; each rule can use the same entity or a different one. Rules and their original values are saved with the object.
+
+- **Transform action** changes the object's position, rotation, or scale. Choose **On a specific state** to apply the configured transform only while an entity has that state, or **Interpolate from entity value** to map a numeric entity state between the object's original transform and the configured transform. Values outside the configured range are clamped. Rotation is entered in degrees.
+- **Color change** applies the configured color while the entity has the specified state and restores the object's original color otherwise.
+- **Hide** hides the object while the entity has the specified state and restores its original visibility otherwise.
+
+When multiple active rules affect the same transform, color, or visibility, the last matching rule in the list takes precedence. Disable a rule to keep its configuration without applying it, or remove it to restore the corresponding original value.
+
 ### Draw a base floor plan
 
 1. Open **Upload assets** and choose **Add floorplan reference**. Select a 2D floorplan image, click two points whose real separation is known, enter that distance in meters, and choose **Add floorplan**. DT3D creates a horizontal textured plane at the calibrated real-world size. You can also add or import a floor/plane manually.

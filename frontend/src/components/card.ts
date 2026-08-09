@@ -49,6 +49,7 @@ import type {
 	EntityInteractionConfig,
 } from "../editor/entity-actions.js";
 import {normalizeEntityInteractionConfig} from "../editor/entity-actions.js";
+import {applyEntityRules} from "../editor/entity-rules.js";
 import {createFloorplanReferenceMesh} from "../editor/floorplan-reference.js";
 import type {AutomaticFloorEdit} from "../editor/floors.js";
 import {FloorManager} from "../editor/floors.js";
@@ -1574,6 +1575,7 @@ export class DT3DCard extends LitElement {
 	private refreshAfterObjectMutation(object: Object3D | null): void {
 		if (object) {
 			this.applyOpeningEntityStates(object);
+			applyEntityRules(object, this.hassInstance?.states ?? {});
 		}
 		this.sceneManager?.requestShadowMapUpdate();
 		if (object) {
@@ -4581,6 +4583,7 @@ export class DT3DCard extends LitElement {
 				}
 				this.applySpaceConfigFromApi(space);
 				this.applyDefaultViewportOnLoad();
+				this.updateEntityObjects();
 			});
 
 		// Listen for selection events from the tree
@@ -5082,6 +5085,8 @@ export class DT3DCard extends LitElement {
 		let openingChanged = false;
 		this.space.traverse((child) => {
 			openingChanged = this.applyOpeningEntityStates(child) || openingChanged;
+			openingChanged =
+				applyEntityRules(child, this.hassInstance.states) || openingChanged;
 			if (child instanceof EntityObject) {
 				const entityState = this.hassInstance.states[child.entityId];
 				if (entityState) {
