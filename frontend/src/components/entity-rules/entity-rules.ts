@@ -54,6 +54,10 @@ export class DT3DEntityRules extends LitElement {
 				composed: true,
 			}),
 		);
+		// The selected Object3D keeps the same identity when its userData changes,
+		// so Lit will not schedule this child automatically after the parent applies
+		// the event. Refresh locally to reveal action-specific fields immediately.
+		this.requestUpdate();
 	}
 
 	private updateRule(id: string, patch: Partial<EntityRule>): void {

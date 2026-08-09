@@ -63,20 +63,34 @@ h4 {
 .rules-section {
 	border: 1px solid var(--divider-color);
 	border-radius: 6px;
+	background: color-mix(
+		in srgb,
+		var(--secondary-background-color) 70%,
+		transparent
+	);
+	overflow: hidden;
 }
 
 .rules-section summary {
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
+	gap: 8px;
 	padding: 9px 10px;
 	color: var(--primary-color);
-	font-size: 13px;
+	font-size: 14px;
 	font-weight: 600;
 	cursor: pointer;
+	user-select: none;
+	list-style: none;
+}
+
+.rules-section summary::-webkit-details-marker {
+	display: none;
 }
 
 .rules-section summary span {
+	margin-left: auto;
 	min-width: 20px;
 	padding: 1px 5px;
 	border-radius: 10px;
@@ -85,6 +99,22 @@ h4 {
 	font-size: 11px;
 }
 
+.rules-section summary::after {
+	content: "";
+	width: 8px;
+	height: 8px;
+	border-right: 2px solid currentColor;
+	border-bottom: 2px solid currentColor;
+	transform: rotate(45deg);
+	transition: transform 120ms ease;
+	flex: 0 0 auto;
+}
+
+.rules-section:not([open]) > summary::after {
+	transform: rotate(-45deg);
+}
+
 .rules-section dt3d-entity-rules {
-	padding: 0 10px 10px;
+	padding: 8px 10px 10px;
+	border-top: 1px solid var(--divider-color);
 }

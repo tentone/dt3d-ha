@@ -1,5 +1,6 @@
 :host {
 	display: block;
+	color: var(--primary-text-color);
 }
 
 .rules {
@@ -15,11 +16,7 @@
 	padding: 10px;
 	border: 1px solid var(--divider-color);
 	border-radius: 6px;
-	background: color-mix(
-		in srgb,
-		var(--card-background-color, #fff) 92%,
-		var(--primary-color)
-	);
+	background: var(--card-background-color);
 }
 
 .rule-header,
@@ -52,13 +49,12 @@ label {
 }
 
 input,
-select,
-button {
+select {
 	box-sizing: border-box;
 	border: 1px solid var(--divider-color);
 	border-radius: 4px;
 	background: var(--input-fill-color);
-	color: var(--input-ink-color, var(--primary-text-color));
+	color: var(--input-ink-color);
 }
 
 input,
@@ -66,6 +62,11 @@ select {
 	width: 100%;
 	min-width: 0;
 	padding: 6px 8px;
+}
+
+select option {
+	background-color: var(--card-background-color, #fff);
+	color: var(--primary-text-color, #212121);
 }
 
 input[type="color"] {
@@ -86,6 +87,11 @@ input[type="color"] {
 }
 
 button {
+	box-sizing: border-box;
+	border: 1px solid var(--divider-color);
+	border-radius: 4px;
+	background: var(--input-fill-color);
+	color: var(--primary-text-color);
 	padding: 6px 10px;
 	cursor: pointer;
 }

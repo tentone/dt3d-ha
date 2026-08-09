@@ -94,6 +94,11 @@ select {
 	font: inherit;
 }
 
+select option {
+	background-color: var(--card-background-color, #fff);
+	color: var(--primary-text-color, #212121);
+}
+
 input:hover,
 select:hover {
 	border-color: var(--secondary-text-color);

@@ -20,7 +20,7 @@
 	width: 100%;
 }
 
-.selector select option {
+select option {
 	background-color: var(--card-background-color, #fff);
 	color: var(--primary-text-color, #212121);
 }
