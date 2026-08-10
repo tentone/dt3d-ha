@@ -397,6 +397,8 @@
 	"addEntity": "Entity",
 	"addStaticLight": "Static lights",
 	"staticLight": "Static Light",
+	"ambientLight": "Ambient Light",
+	"directionalLight": "Directional Light",
 	"pointLight": "Point Light",
 	"spotLight": "Spot Light",
 	"rectAreaLight": "Rect Area Light",

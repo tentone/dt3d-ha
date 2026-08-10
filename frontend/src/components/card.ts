@@ -113,6 +113,7 @@ import {DoorObject} from "../objects/house/door.js";
 import {GateObject} from "../objects/house/gate.js";
 import {WallObject} from "../objects/house/wall.js";
 import {WindowObject} from "../objects/house/window.js";
+import type {LightSourceType} from "../objects/light-source.js";
 import {StaticLightObject} from "../objects/static-light.js";
 import {ViewportObject} from "../objects/viewport-object.js";
 import type {SpaceResponse} from "../service/space-api.js";
@@ -3866,17 +3867,18 @@ export class DT3DCard extends LitElement {
 		} else if (type === "entity") {
 			this.addEntityModal();
 		} else if (type === "static-light" || type.startsWith("light-")) {
-			const sourceType =
-				type === "light-spot"
-					? "spot"
-					: type === "light-rect-area"
-						? "rect-area"
-						: "point";
+			const sourceTypes: Partial<Record<string, LightSourceType>> = {
+				"light-ambient": "ambient",
+				"light-directional": "directional",
+				"light-spot": "spot",
+				"light-rect-area": "rect-area",
+			};
+			const sourceType = sourceTypes[type] ?? "point";
 			const light = new StaticLightObject({
 				type: sourceType,
 				intensity: sourceType === "rect-area" ? 5 : 1,
 			});
-			if (sourceType !== "point") {
+			if (sourceType !== "ambient" && sourceType !== "point") {
 				light.rotation.x = -Math.PI / 2;
 			}
 			let lightCount = 0;
@@ -3885,12 +3887,14 @@ export class DT3DCard extends LitElement {
 					lightCount += 1;
 				}
 			});
-			const nameKey =
-				sourceType === "spot"
-					? "spotLight"
-					: sourceType === "rect-area"
-						? "rectAreaLight"
-						: "pointLight";
+			const nameKeys: Record<LightSourceType, string> = {
+				ambient: "ambientLight",
+				directional: "directionalLight",
+				point: "pointLight",
+				spot: "spotLight",
+				"rect-area": "rectAreaLight",
+			};
+			const nameKey = nameKeys[sourceType];
 			light.name = `${localManager.get(nameKey)} ${lightCount + 1}`;
 			this.addToScene(light);
 		} else if (type === "group") {

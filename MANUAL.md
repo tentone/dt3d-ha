@@ -63,7 +63,7 @@ The **Add** section of the left toolbar provides:
 - Uploaded models: `.gltf`, `.glb`, `.obj`, `.fbx`, `.dae` (Collada), `.stl`, and `.3ds`. Models can also be dragged onto the canvas.
   - Select or drop companion material and texture files with the model, or choose the folder option in the upload menu to preserve their relative paths.
   - Prefer a self-contained `.glb` when possible for reliable results.
-- Static lights: point, spot, and rectangular area lights.
+- Static lights: ambient, directional, point, spot, and rectangular area lights.
 - Groups, saved viewports, and Home Assistant entities.
 
 After adding a mesh or furniture object, select it to edit its dimensions, transform, material properties, or apply an image texture. Keep imported geometry and texture sizes modest because they are downloaded and uploaded by each client.

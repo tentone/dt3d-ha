@@ -1619,6 +1619,8 @@ export class DT3DObjectInspector extends LitElement {
 				editable: !locked,
 				enabled: true,
 				options: [
+					{label: localManager.get("ambientLight"), value: "ambient"},
+					{label: localManager.get("directionalLight"), value: "directional"},
 					{label: localManager.get("pointLight"), value: "point"},
 					{label: localManager.get("spotLight"), value: "spot"},
 					{label: localManager.get("rectAreaLight"), value: "rect-area"},
@@ -1677,6 +1679,13 @@ export class DT3DObjectInspector extends LitElement {
 				min: 0,
 				step: 0.1,
 			});
+		}
+
+		if (
+			object.sourceType === "directional" ||
+			object.sourceType === "point" ||
+			object.sourceType === "spot"
+		) {
 			fields.push({
 				label: localManager.get("lightCastsShadows"),
 				attribute: "castsShadows",

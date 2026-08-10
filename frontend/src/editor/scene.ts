@@ -763,7 +763,13 @@ export class SceneManager {
 			);
 		}
 		this.space.traverse((child) => {
-			if (child instanceof PointLight || child instanceof SpotLight) {
+			if (child instanceof DirectionalLight) {
+				this.applyShadowMapResolution(
+					child,
+					this.directionalShadowMapResolution,
+					qualityChanged,
+				);
+			} else if (child instanceof PointLight || child instanceof SpotLight) {
 				this.applyShadowMapResolution(
 					child,
 					this.pointShadowMapResolution,
@@ -801,7 +807,12 @@ export class SceneManager {
 	 */
 	public applyShadowSettingsToObject(object: Object3D): void {
 		object.traverse((child) => {
-			if (child instanceof PointLight || child instanceof SpotLight) {
+			if (child instanceof DirectionalLight) {
+				this.applyShadowMapResolution(
+					child,
+					this.directionalShadowMapResolution,
+				);
+			} else if (child instanceof PointLight || child instanceof SpotLight) {
 				this.applyShadowMapResolution(
 					child,
 					this.pointShadowMapResolution,

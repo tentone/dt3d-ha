@@ -1,10 +1,10 @@
 import type {Color, Light} from "three";
-import {Group, MathUtils, PointLight, RectAreaLight, SpotLight} from "three";
+import {AmbientLight, DirectionalLight, Group, MathUtils, PointLight, RectAreaLight, SpotLight} from "three";
 import {RectAreaLightUniformsLib} from "three/examples/jsm/lights/RectAreaLightUniformsLib.js";
 
 RectAreaLightUniformsLib.init();
 
-export type LightSourceType = "point" | "spot" | "rect-area";
+export type LightSourceType = "ambient" | "directional" | "point" | "spot" | "rect-area";
 
 export type LightSourceSettings = {
 	type: LightSourceType;
@@ -57,7 +57,13 @@ const normalizeColor = (value: unknown, fallback: string): string => (
 );
 
 const normalizeType = (value: unknown, fallback: LightSourceType): LightSourceType => {
-	if (value === "point" || value === "spot" || value === "rect-area") {
+	if (
+		value === "ambient" ||
+		value === "directional" ||
+		value === "point" ||
+		value === "spot" ||
+		value === "rect-area"
+	) {
 		return value;
 	}
 
@@ -70,7 +76,7 @@ export class LightSource extends Group {
 
 	private settings: LightSourceSettings;
 
-	private light: PointLight | SpotLight | RectAreaLight;
+	private light: AmbientLight | DirectionalLight | PointLight | SpotLight | RectAreaLight;
 
 	public constructor(settings: Partial<LightSourceSettings> = {}) {
 		super();
@@ -243,13 +249,25 @@ export class LightSource extends Group {
 	private rebuildLight(): void {
 		if (this.light) {
 			this.remove(this.light);
-			if (this.light instanceof SpotLight) {
+			if (this.light instanceof DirectionalLight || this.light instanceof SpotLight) {
 				this.remove(this.light.target);
 			}
 			this.disposeLight(this.light);
 		}
 
 		switch (this.settings.type) {
+			case "ambient":
+				this.light = new AmbientLight();
+				break;
+			case "directional": {
+				const light = new DirectionalLight();
+				light.position.set(0, 0, 0);
+				light.target.position.set(0, 0, -1);
+				light.target.internal = true;
+				this.add(light.target);
+				this.light = light;
+				break;
+			}
 			case "spot": {
 				const light = new SpotLight();
 				light.target.position.set(0, 0, -1);
@@ -294,14 +312,22 @@ export class LightSource extends Group {
 	}
 
 	private applyShadowSettings(): void {
-		if (this.light instanceof PointLight || this.light instanceof SpotLight) {
+		if (
+			this.light instanceof DirectionalLight ||
+			this.light instanceof PointLight ||
+			this.light instanceof SpotLight
+		) {
 			this.light.castShadow = this.settings.castsShadows;
 			this.light.shadow.bias = this.settings.shadowBias;
 		}
 	}
 
 	private disposeLight(light: Light): void {
-		if (light instanceof PointLight || light instanceof SpotLight) {
+		if (
+			light instanceof DirectionalLight ||
+			light instanceof PointLight ||
+			light instanceof SpotLight
+		) {
 			light.shadow.map?.dispose();
 		}
 	}

@@ -5,6 +5,8 @@ import {localManager} from "../../locale/locale.js";
 import componentStyles from "../mesh-menu/mesh-menu.css?inline";
 
 const LIGHT_OPTIONS = [
+	{labelKey: "ambientLight", type: "light-ambient"},
+	{labelKey: "directionalLight", type: "light-directional"},
 	{labelKey: "pointLight", type: "light-point"},
 	{labelKey: "spotLight", type: "light-spot"},
 	{labelKey: "rectAreaLight", type: "light-rect-area"},
