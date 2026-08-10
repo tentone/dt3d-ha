@@ -55,6 +55,7 @@ ar_location_based: false # Anchor AR using a Home Assistant location entity
 ar_location_entity: ""
 ar_environment_orientation: 0 # Clockwise degrees from geographic north
 visualization_only: false # Set to true to disable editing and object creation
+hide_occluding_walls: true # Cut away up to two nearby walls in low-angle visualization views
 general:
   developmentMode:
     enabled: false

@@ -66,6 +66,7 @@ export class DT3DConfigEditor extends LitElement {
 			ar_environment_orientation: 0,
 			orientation_cube: false,
 			visualization_only: false,
+			hide_occluding_walls: true,
 			entity_click_action: entityInteractions.click,
 			entity_double_click_action: entityInteractions.doubleClick,
 			...config,
@@ -78,6 +79,12 @@ export class DT3DConfigEditor extends LitElement {
 		this._config.orientation_cube = booleanConfig(
 			config?.orientation_cube ?? config?.orientationCube,
 		);
+		const hideOccludingWallsValue =
+			config?.hide_occluding_walls ?? config?.hideOccludingWalls;
+		this._config.hide_occluding_walls =
+			hideOccludingWallsValue === undefined
+				? true
+				: booleanConfig(hideOccludingWallsValue);
 		this._config.vr_mode = booleanConfig(
 			config?.vr_mode ??
 				config?.vrMode ??
@@ -308,6 +315,10 @@ export class DT3DConfigEditor extends LitElement {
 			(instance) => instance.type === "viewport",
 		);
 		const visualizationOnly = booleanConfig(this._config.visualization_only);
+		const hideOccludingWalls =
+			this._config.hide_occluding_walls === undefined
+				? true
+				: booleanConfig(this._config.hide_occluding_walls);
 		const orientationCube = booleanConfig(this._config.orientation_cube);
 		const vrMode = booleanConfig(this._config.vr_mode);
 		const arMode = booleanConfig(this._config.ar_mode);
@@ -542,6 +553,21 @@ export class DT3DConfigEditor extends LitElement {
 									>${localManager.get("visualizationOnly")}</label
 								>
 								<p>${localManager.get("visualizationOnlyDescription")}</p>
+							</div>
+						</div>
+						<div class="checkbox-field">
+							<input
+								id="hide-occluding-walls"
+								type="checkbox"
+								data-key="hide_occluding_walls"
+								?checked=${hideOccludingWalls}
+								@change=${this.onValueChanged}
+							/>
+							<div>
+								<label for="hide-occluding-walls"
+									>${localManager.get("hideOccludingWalls")}</label
+								>
+								<p>${localManager.get("hideOccludingWallsDescription")}</p>
 							</div>
 						</div>
 						<div class="field">

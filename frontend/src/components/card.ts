@@ -95,6 +95,7 @@ import {
 } from "../editor/scene.js";
 import type {WallEndpointEdit} from "../editor/wall-endpoints.js";
 import {WallEndpointManager} from "../editor/wall-endpoints.js";
+import {WallOcclusionManager} from "../editor/wall-occlusion.js";
 import {WallManager} from "../editor/walls.js";
 import type {Locale} from "../locale/locale.js";
 import {localManager} from "../locale/locale.js";
@@ -337,6 +338,9 @@ export class DT3DCard extends LitElement {
 	 * Wall tool manager that handles wall/door/window placement.
 	 */
 	private wallManager: WallManager | null = null;
+
+	/** Hides camera-facing exterior walls for visualization cutaway views. */
+	private wallOcclusionManager = new WallOcclusionManager();
 
 	/** Displays and edits the selected wall's start and end points. */
 	private wallEndpointManager: WallEndpointManager | null = null;
@@ -687,6 +691,12 @@ export class DT3DCard extends LitElement {
 		const visualizationOnly = booleanConfig(
 			config.visualization_only ?? config.visualizationOnly,
 		);
+		const hideOccludingWallsValue =
+			config.hide_occluding_walls ?? config.hideOccludingWalls;
+		const hideOccludingWalls =
+			hideOccludingWallsValue === undefined
+				? true
+				: booleanConfig(hideOccludingWallsValue);
 		const orientationCube = booleanConfig(
 			config.orientation_cube ?? config.orientationCube,
 		);
@@ -738,6 +748,7 @@ export class DT3DCard extends LitElement {
 			ar_mode: arMode,
 			orientation_cube: orientationCube,
 			navigation_controls: navigationControls,
+			hide_occluding_walls: hideOccludingWalls,
 			visualization_only: visualizationOnly,
 			vr_mode: vrMode,
 			entity_click_action: this.entityInteractions.click,
@@ -754,6 +765,10 @@ export class DT3DCard extends LitElement {
 
 	private isVisualizationOnly(): boolean {
 		return this.config?.visualization_only === true;
+	}
+
+	private shouldHideOccludingWalls(): boolean {
+		return this.config?.hide_occluding_walls !== false;
 	}
 
 	private getNavigationControlsType(): NavigationControlsType {
@@ -1496,6 +1511,9 @@ export class DT3DCard extends LitElement {
 
 	private applyVisualizationMode(): void {
 		const visualizationOnly = this.isVisualizationOnly();
+		if (!visualizationOnly || !this.shouldHideOccludingWalls()) {
+			this.wallOcclusionManager.restore();
+		}
 		this.spaceSync?.setReadOnly(visualizationOnly);
 		this.wallEndpointManager?.setSelectedWall(
 			!visualizationOnly && this.lastSelectedObject instanceof WallObject
@@ -4935,6 +4953,14 @@ export class DT3DCard extends LitElement {
 					child.update(time);
 				}
 			});
+			this.wallOcclusionManager.update({
+				active:
+					this.isVisualizationOnly() &&
+					this.shouldHideOccludingWalls() &&
+					this.activeXrSession === null,
+				camera: this.camera,
+				space: this.space,
+			});
 			this.sceneManager.updateShadowMap();
 		});
 
@@ -4959,6 +4985,7 @@ export class DT3DCard extends LitElement {
 	}
 
 	public disconnectedCallback(): void {
+		this.wallOcclusionManager.restore();
 		window.removeEventListener("keydown", this.handleKeyDown);
 		this.xrAvailabilitySequence += 1;
 		this.xrSystem?.removeEventListener(
@@ -5194,6 +5221,7 @@ export class DT3DCard extends LitElement {
 			default_viewport: "",
 			orientation_cube: false,
 			navigation_controls: "orbit",
+			hide_occluding_walls: true,
 			general: normalizeCardGeneralConfig(),
 		};
 	}

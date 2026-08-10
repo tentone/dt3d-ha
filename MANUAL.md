@@ -203,6 +203,7 @@ ar_location_based: false
 ar_location_entity: ""
 ar_environment_orientation: 0
 visualization_only: true
+hide_occluding_walls: true
 entity_click_action: open
 entity_double_click_action: open
 general:
@@ -241,6 +242,7 @@ Configure `default_space` in visualization mode because viewers cannot switch sp
 | `ar_location_entity` | empty | Entity ID with numeric `latitude` and `longitude` attributes. |
 | `ar_environment_orientation` | `0` | Front-of-environment bearing, clockwise in degrees from geographic north. |
 | `visualization_only` | `false` | Hides all editing and space-management controls. |
+| `hide_occluding_walls` | `true` | In visualization mode and at low camera angles, hides the nearest camera-facing wall and at most one connected wall with a different orientation. |
 | `entity_click_action` | `nothing` | `open`, `toggle`, or `nothing`. |
 | `entity_double_click_action` | `open` | `open`, `toggle`, or `nothing`. |
 | `general.rendering.antialiasing` | `false` | Smooths geometry edges; changing it recreates the WebGL renderer. |

@@ -495,6 +495,8 @@
 	"arEnvironmentOrientationDescription": "Clockwise bearing in degrees from geographic north for the front of the 3D environment.",
 	"visualizationOnly": "Visualization only",
 	"visualizationOnlyDescription": "Hide editing controls and object tree, while allowing navigation and object interaction.",
+	"hideOccludingWalls": "Hide occluding walls",
+	"hideOccludingWallsDescription": "In visualization mode, hide up to two connected walls when a low camera angle would block the house interior.",
 	"entityClickAction": "Entity click action",
 	"entityClickActionDescription": "Default action when an entity is clicked once.",
 	"entityDoubleClickAction": "Entity double-click action",
