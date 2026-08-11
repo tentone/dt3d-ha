@@ -2268,7 +2268,7 @@ let K0 = class extends ti {
     return Ae`
 		<div class="connection-status-container">
 			<div style="margin: 5px;" class="${this.success ? "connection-status-success" : "connection-status-error"}">
-				${this.msg}<br>${"2026-08-11T14:33:30.298Z"}
+				${this.msg}<br>${"2026-08-11T15:23:44.028Z"}
 			</div>
 		</div>`;
   }
