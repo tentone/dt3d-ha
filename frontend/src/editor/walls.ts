@@ -1,5 +1,13 @@
-import type {Camera, Group, Object3D} from "three";
-import {Raycaster, Vector2, Vector3} from "three";
+import type {Camera, Object3D} from "three";
+import {
+	BufferGeometry,
+	Group,
+	Line,
+	LineBasicMaterial,
+	Raycaster,
+	Vector2,
+	Vector3,
+} from "three";
 
 import {WallObject} from "../objects/house/wall.js";
 import {snapPointToClosestAxis} from "./axis-snap.js";
@@ -35,6 +43,23 @@ type WallPlacement = {
 	wallOffset: number | null;
 };
 
+type WallReference = {
+	start: Vector3;
+	end: Vector3;
+	midpoint: Vector3;
+	direction: Vector3;
+};
+
+type SmartSnap = {
+	point: Vector3;
+	guidePoints: [Vector3, Vector3][];
+};
+
+const ALIGNMENT_SNAP_DISTANCE = 0.2;
+const PARALLEL_SNAP_ANGLE = Math.PI / 36;
+const GUIDE_HEIGHT = 0.035;
+const GUIDE_COLOR = 0x35cfff;
+
 export class WallManager {
 	private _mode: WallMode = "none";
 
@@ -44,6 +69,15 @@ export class WallManager {
 
 	private measurements: Group;
 
+	private guides = new Group();
+
+	private guideMaterial = new LineBasicMaterial({
+		color: GUIDE_COLOR,
+		depthTest: false,
+		transparent: true,
+		opacity: 0.9,
+	});
+
 	private raycaster = new Raycaster();
 
 	private pointer = new Vector2();
@@ -52,10 +86,17 @@ export class WallManager {
 
 	private callbacks: WallCallbacks;
 
-	public constructor(measurements: Group, getContext: () => WallContext, callbacks: WallCallbacks) {
+	public constructor(
+		measurements: Group,
+		getContext: () => WallContext,
+		callbacks: WallCallbacks,
+	) {
 		this.measurements = measurements;
 		this.getContext = getContext;
 		this.callbacks = callbacks;
+		this.guides.internal = true;
+		this.guides.name = "Wall Snap Guides";
+		this.measurements.add(this.guides);
 	}
 
 	/**
@@ -104,6 +145,7 @@ export class WallManager {
 		}
 		this.draft = null;
 		this.draftStart = null;
+		this.clearGuides();
 	}
 
 	/**
@@ -158,9 +200,7 @@ export class WallManager {
 			return true;
 		}
 
-		if (event.ctrlKey) {
-			placement = this.snapPlacementToAxis(placement, this.draftStart);
-		}
+		placement = this.snapPlacement(placement, event.ctrlKey);
 
 		const segmentLength = Math.hypot(
 			placement.point.x - this.draftStart.x,
@@ -197,13 +237,12 @@ export class WallManager {
 
 		const placement = this.pickPlacementFromEvent(event);
 		if (!placement) {
+			this.clearGuides();
 			return;
 		}
 
-		const point = event.ctrlKey
-			? snapPointToClosestAxis(placement.point, this.draftStart)
-			: placement.point;
-		this.draft.setFromPoints(this.draftStart, point);
+		const snappedPlacement = this.snapPlacement(placement, event.ctrlKey);
+		this.draft.setFromPoints(this.draftStart, snappedPlacement.point);
 		this.draft.updateLabel();
 	}
 
@@ -257,7 +296,8 @@ export class WallManager {
 	}
 
 	private pickPlacementFromEvent(event: MouseEvent): WallPlacement | null {
-		const {canvas, camera, space, gridSnapEnabled, gridSnapSize} = this.getContext();
+		const {canvas, camera, space, gridSnapEnabled, gridSnapSize} =
+			this.getContext();
 		if (!canvas || !camera || !space) {
 			return null;
 		}
@@ -267,12 +307,18 @@ export class WallManager {
 		this.pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
 		this.raycaster.setFromCamera(this.pointer, camera);
 
-		const intersection = this.raycaster.intersectObjects(space.children, true)[0];
+		const intersection = this.raycaster.intersectObjects(
+			space.children,
+			true,
+		)[0];
 		if (!intersection) {
 			return null;
 		}
 
-		const connectedWall = this.resolveWallFromObject(intersection.object, space);
+		const connectedWall = this.resolveWallFromObject(
+			intersection.object,
+			space,
+		);
 		let point: Vector3;
 		let wallOffset: number | null = null;
 
@@ -295,7 +341,10 @@ export class WallManager {
 		return {point, connectedWall, wallOffset};
 	}
 
-	private resolveWallFromObject(object: Object3D, space: Group): WallObject | null {
+	private resolveWallFromObject(
+		object: Object3D,
+		space: Group,
+	): WallObject | null {
 		let current: Object3D | null = object;
 		while (current && current !== space) {
 			if (current instanceof WallObject) {
@@ -312,10 +361,8 @@ export class WallManager {
 	): WallPlacement {
 		const point = snapPointToClosestAxis(placement.point, origin);
 		const moved =
-			Math.hypot(
-				point.x - placement.point.x,
-				point.z - placement.point.z,
-			) > 1e-6;
+			Math.hypot(point.x - placement.point.x, point.z - placement.point.z) >
+			1e-6;
 		if (!moved || !placement.connectedWall) {
 			return {...placement, point};
 		}
@@ -348,15 +395,253 @@ export class WallManager {
 		return {point, connectedWall: null, wallOffset: null};
 	}
 
+	private snapPlacement(
+		placement: WallPlacement,
+		axisSnapEnabled: boolean,
+	): WallPlacement {
+		this.clearGuides();
+		if (!this.draftStart) {
+			return placement;
+		}
+
+		if (axisSnapEnabled) {
+			return this.snapPlacementToAxis(placement, this.draftStart);
+		}
+
+		// A direct hit on a wall is an explicit connection and takes priority over
+		// inferred alignment with another wall.
+		if (placement.connectedWall) {
+			return placement;
+		}
+
+		const smartSnap = this.findSmartSnap(placement.point, this.draftStart);
+		if (!smartSnap) {
+			return placement;
+		}
+
+		this.showGuides(smartSnap.guidePoints);
+		return {
+			point: smartSnap.point,
+			connectedWall: null,
+			wallOffset: null,
+		};
+	}
+
+	private findSmartSnap(point: Vector3, origin: Vector3): SmartSnap | null {
+		const wallReferences = this.collectWallReferences();
+		const endpointSnap = this.findEndpointAlignment(
+			point,
+			origin,
+			wallReferences,
+		);
+		const parallelSnap = this.findParallelAlignment(
+			point,
+			origin,
+			wallReferences,
+		);
+
+		if (!endpointSnap) {
+			return parallelSnap;
+		}
+		if (!parallelSnap) {
+			return endpointSnap;
+		}
+
+		return endpointSnap.point.distanceToSquared(point) <=
+			parallelSnap.point.distanceToSquared(point)
+			? endpointSnap
+			: parallelSnap;
+	}
+
+	private findEndpointAlignment(
+		point: Vector3,
+		origin: Vector3,
+		walls: WallReference[],
+	): SmartSnap | null {
+		let best: SmartSnap | null = null;
+		let bestDistance = Number.POSITIVE_INFINITY;
+
+		for (const wall of walls) {
+			for (const endpoint of [wall.start, wall.end]) {
+				// Do not infer an alignment from the point where the active segment
+				// already begins; that would turn every connected run into axis snap.
+				if (endpoint.distanceToSquared(origin) <= 1e-8) {
+					continue;
+				}
+
+				const xDistance = Math.abs(point.x - endpoint.x);
+				const zDistance = Math.abs(point.z - endpoint.z);
+				const distance = Math.min(xDistance, zDistance);
+				if (distance > ALIGNMENT_SNAP_DISTANCE || distance >= bestDistance) {
+					continue;
+				}
+
+				const snapped = point.clone();
+				if (xDistance <= zDistance) {
+					snapped.x = endpoint.x;
+				} else {
+					snapped.z = endpoint.z;
+				}
+				best = {
+					point: snapped,
+					guidePoints: [[endpoint.clone(), snapped.clone()]],
+				};
+				bestDistance = distance;
+			}
+		}
+
+		return best;
+	}
+
+	private findParallelAlignment(
+		point: Vector3,
+		origin: Vector3,
+		walls: WallReference[],
+	): SmartSnap | null {
+		const draftVector = point.clone().sub(origin);
+		const draftLength = Math.hypot(draftVector.x, draftVector.z);
+		if (draftLength <= 1e-6) {
+			return null;
+		}
+		draftVector.multiplyScalar(1 / draftLength);
+
+		let reference: WallReference | null = null;
+		let bestCorrection = Number.POSITIVE_INFINITY;
+		let bestMidpointDistance = Number.POSITIVE_INFINITY;
+		let snappedPoint: Vector3 | null = null;
+
+		for (const wall of walls) {
+			const dot =
+				draftVector.x * wall.direction.x + draftVector.z * wall.direction.z;
+			const angle = Math.acos(Math.min(1, Math.abs(dot)));
+			if (angle > PARALLEL_SNAP_ANGLE) {
+				continue;
+			}
+
+			const direction = wall.direction.clone().multiplyScalar(dot < 0 ? -1 : 1);
+			const candidate = origin.clone().addScaledVector(direction, draftLength);
+			const correction = candidate.distanceTo(point);
+			const candidateMidpoint = origin
+				.clone()
+				.add(candidate)
+				.multiplyScalar(0.5);
+			const midpointDistance = candidateMidpoint.distanceToSquared(
+				wall.midpoint,
+			);
+			if (
+				correction > bestCorrection + 1e-6 ||
+				(Math.abs(correction - bestCorrection) <= 1e-6 &&
+					midpointDistance >= bestMidpointDistance)
+			) {
+				continue;
+			}
+
+			reference = wall;
+			snappedPoint = candidate;
+			bestCorrection = correction;
+			bestMidpointDistance = midpointDistance;
+		}
+
+		if (!reference || !snappedPoint) {
+			return null;
+		}
+
+		const draftMidpoint = origin.clone().add(snappedPoint).multiplyScalar(0.5);
+		const offset = reference.direction
+			.clone()
+			.multiplyScalar(
+				Math.min(
+					0.15,
+					draftLength * 0.12,
+					reference.start.distanceTo(reference.end) * 0.12,
+				),
+			);
+		return {
+			point: snappedPoint,
+			guidePoints: [
+				[
+					reference.midpoint.clone().add(offset),
+					draftMidpoint.clone().add(offset),
+				],
+				[
+					reference.midpoint.clone().sub(offset),
+					draftMidpoint.clone().sub(offset),
+				],
+			],
+		};
+	}
+
+	private collectWallReferences(): WallReference[] {
+		const {space} = this.getContext();
+		if (!space) {
+			return [];
+		}
+
+		const walls: WallReference[] = [];
+		space.updateWorldMatrix(true, true);
+		space.traverse((object) => {
+			if (!(object instanceof WallObject) || object.internal === true) {
+				return;
+			}
+
+			const start = space.worldToLocal(
+				object.localToWorld(new Vector3(-object.length / 2, 0, 0)),
+			);
+			const end = space.worldToLocal(
+				object.localToWorld(new Vector3(object.length / 2, 0, 0)),
+			);
+			const direction = end.clone().sub(start);
+			direction.y = 0;
+			if (direction.lengthSq() <= 1e-12) {
+				return;
+			}
+			direction.normalize();
+			walls.push({
+				start,
+				end,
+				midpoint: start.clone().add(end).multiplyScalar(0.5),
+				direction,
+			});
+		});
+		return walls;
+	}
+
+	private showGuides(segments: [Vector3, Vector3][]): void {
+		for (const [start, end] of segments) {
+			const raisedStart = start.clone();
+			const raisedEnd = end.clone();
+			raisedStart.y += GUIDE_HEIGHT;
+			raisedEnd.y += GUIDE_HEIGHT;
+			const guide = new Line(
+				new BufferGeometry().setFromPoints([raisedStart, raisedEnd]),
+				this.guideMaterial,
+			);
+			guide.internal = true;
+			guide.renderOrder = 1000;
+			this.guides.add(guide);
+		}
+	}
+
+	private clearGuides(): void {
+		for (const guide of this.guides.children) {
+			if (guide instanceof Line) {
+				guide.geometry.dispose();
+			}
+		}
+		this.guides.clear();
+	}
+
 	private snapPointToGrid(point: Vector3, snapSize: number): Vector3 {
 		if (snapSize <= 0) {
 			return point;
 		}
 
-		return point.clone().set(
-			Math.round(point.x / snapSize) * snapSize,
-			point.y,
-			Math.round(point.z / snapSize) * snapSize,
-		);
+		return point
+			.clone()
+			.set(
+				Math.round(point.x / snapSize) * snapSize,
+				point.y,
+				Math.round(point.z / snapSize) * snapSize,
+			);
 	}
 }
