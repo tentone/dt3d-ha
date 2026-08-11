@@ -429,6 +429,24 @@ export class WallManager {
 
 	private findSmartSnap(point: Vector3, origin: Vector3): SmartSnap | null {
 		const wallReferences = this.collectWallReferences();
+		const combinedSnap = this.findCombinedAlignment(
+			point,
+			origin,
+			wallReferences,
+		);
+		if (combinedSnap) {
+			return combinedSnap;
+		}
+
+		const pointSnap = this.findEndpointPointSnap(
+			point,
+			origin,
+			wallReferences,
+		);
+		if (pointSnap) {
+			return pointSnap;
+		}
+
 		const endpointSnap = this.findEndpointAlignment(
 			point,
 			origin,
@@ -451,6 +469,116 @@ export class WallManager {
 			parallelSnap.point.distanceToSquared(point)
 			? endpointSnap
 			: parallelSnap;
+	}
+
+	private findEndpointPointSnap(
+		point: Vector3,
+		origin: Vector3,
+		walls: WallReference[],
+	): SmartSnap | null {
+		let closestEndpoint: Vector3 | null = null;
+		let closestDistance = ALIGNMENT_SNAP_DISTANCE;
+
+		for (const wall of walls) {
+			for (const endpoint of [wall.start, wall.end]) {
+				if (endpoint.distanceToSquared(origin) <= 1e-8) {
+					continue;
+				}
+
+				const distance = Math.hypot(
+					point.x - endpoint.x,
+					point.z - endpoint.z,
+				);
+				if (distance <= closestDistance) {
+					closestEndpoint = endpoint;
+					closestDistance = distance;
+				}
+			}
+		}
+
+		if (!closestEndpoint) {
+			return null;
+		}
+
+		return {
+			point: closestEndpoint.clone(),
+			guidePoints: [[point.clone(), closestEndpoint.clone()]],
+		};
+	}
+
+	private findCombinedAlignment(
+		point: Vector3,
+		origin: Vector3,
+		walls: WallReference[],
+	): SmartSnap | null {
+		const draftDirection = point.clone().sub(origin);
+		draftDirection.y = 0;
+		if (draftDirection.lengthSq() <= 1e-12) {
+			return null;
+		}
+		draftDirection.normalize();
+
+		let best: SmartSnap | null = null;
+		let bestCorrection = Number.POSITIVE_INFINITY;
+		for (const parallelWall of walls) {
+			const dot = draftDirection.dot(parallelWall.direction);
+			const angle = Math.acos(Math.min(1, Math.abs(dot)));
+			if (angle > PARALLEL_SNAP_ANGLE) {
+				continue;
+			}
+
+			const direction = parallelWall.direction
+				.clone()
+				.multiplyScalar(dot < 0 ? -1 : 1);
+			for (const alignmentWall of walls) {
+				for (const endpoint of [alignmentWall.start, alignmentWall.end]) {
+					if (endpoint.distanceToSquared(origin) <= 1e-8) {
+						continue;
+					}
+
+					for (const axis of ["x", "z"] as const) {
+						if (Math.abs(direction[axis]) <= 1e-6) {
+							continue;
+						}
+
+						const distanceAlongDirection =
+							(endpoint[axis] - origin[axis]) / direction[axis];
+						if (distanceAlongDirection <= 1e-6) {
+							continue;
+						}
+
+						const candidate = origin
+							.clone()
+							.addScaledVector(direction, distanceAlongDirection);
+						const correction = Math.hypot(
+							candidate.x - point.x,
+							candidate.z - point.z,
+						);
+						if (
+							correction > ALIGNMENT_SNAP_DISTANCE ||
+							correction >= bestCorrection
+						) {
+							continue;
+						}
+
+						best = {
+							point: candidate,
+							guidePoints: [
+								...this.createParallelGuidePoints(
+									parallelWall,
+									origin,
+									candidate,
+								),
+								[endpoint.clone(), candidate.clone()],
+							],
+						};
+						bestCorrection = correction;
+					}
+				}
+			}
+		}
+
+		return best;
 	}
 
 	private findEndpointAlignment(
@@ -546,7 +674,23 @@ export class WallManager {
 			return null;
 		}
 
+		return {
+			point: snappedPoint,
+			guidePoints: this.createParallelGuidePoints(
+				reference,
+				origin,
+				snappedPoint,
+			),
+		};
+	}
+
+	private createParallelGuidePoints(
+		reference: WallReference,
+		origin: Vector3,
+		snappedPoint: Vector3,
+	): [Vector3, Vector3][] {
 		const draftMidpoint = origin.clone().add(snappedPoint).multiplyScalar(0.5);
+		const draftLength = origin.distanceTo(snappedPoint);
 		const offset = reference.direction
 			.clone()
 			.multiplyScalar(
@@ -556,19 +700,16 @@ export class WallManager {
 					reference.start.distanceTo(reference.end) * 0.12,
 				),
 			);
-		return {
-			point: snappedPoint,
-			guidePoints: [
-				[
-					reference.midpoint.clone().add(offset),
-					draftMidpoint.clone().add(offset),
-				],
-				[
-					reference.midpoint.clone().sub(offset),
-					draftMidpoint.clone().sub(offset),
-				],
+		return [
+			[
+				reference.midpoint.clone().add(offset),
+				draftMidpoint.clone().add(offset),
 			],
-		};
+			[
+				reference.midpoint.clone().sub(offset),
+				draftMidpoint.clone().sub(offset),
+			],
+		];
 	}
 
 	private collectWallReferences(): WallReference[] {
