@@ -50,15 +50,26 @@ type WallReference = {
 	direction: Vector3;
 };
 
+type GuideType = "parallel" | "point" | "alignment";
+
+type GuideSegment = {
+	points: [Vector3, Vector3];
+	type: GuideType;
+};
+
 type SmartSnap = {
 	point: Vector3;
-	guidePoints: [Vector3, Vector3][];
+	guides: GuideSegment[];
 };
 
 const ALIGNMENT_SNAP_DISTANCE = 0.2;
 const PARALLEL_SNAP_ANGLE = Math.PI / 36;
 const GUIDE_HEIGHT = 0.035;
-const GUIDE_COLOR = 0x35cfff;
+const GUIDE_COLORS: Record<GuideType, number> = {
+	parallel: 0xff3b30,
+	point: 0x34c759,
+	alignment: 0x0a84ff,
+};
 
 export class WallManager {
 	private _mode: WallMode = "none";
@@ -71,12 +82,19 @@ export class WallManager {
 
 	private guides = new Group();
 
-	private guideMaterial = new LineBasicMaterial({
-		color: GUIDE_COLOR,
-		depthTest: false,
-		transparent: true,
-		opacity: 0.9,
-	});
+	private guideMaterials = Object.fromEntries(
+		(Object.entries(GUIDE_COLORS) as [GuideType, number][]).map(
+			([type, color]) => [
+				type,
+				new LineBasicMaterial({
+					color,
+					depthTest: false,
+					transparent: true,
+					opacity: 0.9,
+				}),
+			],
+		),
+	) as Record<GuideType, LineBasicMaterial>;
 
 	private raycaster = new Raycaster();
 
@@ -419,7 +437,7 @@ export class WallManager {
 			return placement;
 		}
 
-		this.showGuides(smartSnap.guidePoints);
+		this.showGuides(smartSnap.guides);
 		return {
 			point: smartSnap.point,
 			connectedWall: null,
@@ -502,7 +520,12 @@ export class WallManager {
 
 		return {
 			point: closestEndpoint.clone(),
-			guidePoints: [[point.clone(), closestEndpoint.clone()]],
+			guides: [
+				{
+					points: [point.clone(), closestEndpoint.clone()],
+					type: "point",
+				},
+			],
 		};
 	}
 
@@ -563,13 +586,16 @@ export class WallManager {
 
 						best = {
 							point: candidate,
-							guidePoints: [
+							guides: [
 								...this.createParallelGuidePoints(
 									parallelWall,
 									origin,
 									candidate,
 								),
-								[endpoint.clone(), candidate.clone()],
+								{
+									points: [endpoint.clone(), candidate.clone()],
+									type: "alignment",
+								},
 							],
 						};
 						bestCorrection = correction;
@@ -612,7 +638,12 @@ export class WallManager {
 				}
 				best = {
 					point: snapped,
-					guidePoints: [[endpoint.clone(), snapped.clone()]],
+					guides: [
+						{
+							points: [endpoint.clone(), snapped.clone()],
+							type: "alignment",
+						},
+					],
 				};
 				bestDistance = distance;
 			}
@@ -676,7 +707,7 @@ export class WallManager {
 
 		return {
 			point: snappedPoint,
-			guidePoints: this.createParallelGuidePoints(
+			guides: this.createParallelGuidePoints(
 				reference,
 				origin,
 				snappedPoint,
@@ -688,7 +719,7 @@ export class WallManager {
 		reference: WallReference,
 		origin: Vector3,
 		snappedPoint: Vector3,
-	): [Vector3, Vector3][] {
+	): GuideSegment[] {
 		const draftMidpoint = origin.clone().add(snappedPoint).multiplyScalar(0.5);
 		const draftLength = origin.distanceTo(snappedPoint);
 		const offset = reference.direction
@@ -701,14 +732,20 @@ export class WallManager {
 				),
 			);
 		return [
-			[
-				reference.midpoint.clone().add(offset),
-				draftMidpoint.clone().add(offset),
-			],
-			[
-				reference.midpoint.clone().sub(offset),
-				draftMidpoint.clone().sub(offset),
-			],
+			{
+				points: [
+					reference.midpoint.clone().add(offset),
+					draftMidpoint.clone().add(offset),
+				],
+				type: "parallel",
+			},
+			{
+				points: [
+					reference.midpoint.clone().sub(offset),
+					draftMidpoint.clone().sub(offset),
+				],
+				type: "parallel",
+			},
 		];
 	}
 
@@ -747,15 +784,15 @@ export class WallManager {
 		return walls;
 	}
 
-	private showGuides(segments: [Vector3, Vector3][]): void {
-		for (const [start, end] of segments) {
+	private showGuides(segments: GuideSegment[]): void {
+		for (const {points: [start, end], type} of segments) {
 			const raisedStart = start.clone();
 			const raisedEnd = end.clone();
 			raisedStart.y += GUIDE_HEIGHT;
 			raisedEnd.y += GUIDE_HEIGHT;
 			const guide = new Line(
 				new BufferGeometry().setFromPoints([raisedStart, raisedEnd]),
-				this.guideMaterial,
+				this.guideMaterials[type],
 			);
 			guide.internal = true;
 			guide.renderOrder = 1000;

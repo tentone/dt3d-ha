@@ -2268,7 +2268,7 @@ let K0 = class extends ti {
     return Ae`
 		<div class="connection-status-container">
 			<div style="margin: 5px;" class="${this.success ? "connection-status-success" : "connection-status-error"}">
-				${this.msg}<br>${"2026-08-11T15:23:44.028Z"}
+				${this.msg}<br>${"2026-08-12T23:46:39.974Z"}
 			</div>
 		</div>`;
   }
@@ -49514,15 +49514,26 @@ class DG {
     return i * i + n * n;
   }
 }
-const Rp = 0.2, c5 = Math.PI / 36, h5 = 0.035, LG = 3526655;
+const Rp = 0.2, c5 = Math.PI / 36, h5 = 0.035, LG = {
+  parallel: 16726832,
+  point: 3458905,
+  alignment: 689407
+};
 class OG {
   constructor(e, t, i) {
-    this._mode = "none", this.draftStart = null, this.draft = null, this.guides = new pt(), this.guideMaterial = new Yi({
-      color: LG,
-      depthTest: !1,
-      transparent: !0,
-      opacity: 0.9
-    }), this.raycaster = new ao(), this.pointer = new oe(), this.measurements = e, this.getContext = t, this.callbacks = i, this.guides.internal = !0, this.guides.name = "Wall Snap Guides", this.measurements.add(this.guides);
+    this._mode = "none", this.draftStart = null, this.draft = null, this.guides = new pt(), this.guideMaterials = Object.fromEntries(
+      Object.entries(LG).map(
+        ([n, r]) => [
+          n,
+          new Yi({
+            color: r,
+            depthTest: !1,
+            transparent: !0,
+            opacity: 0.9
+          })
+        ]
+      )
+    ), this.raycaster = new ao(), this.pointer = new oe(), this.measurements = e, this.getContext = t, this.callbacks = i, this.guides.internal = !0, this.guides.name = "Wall Snap Guides", this.measurements.add(this.guides);
   }
   /**
    * Current wall tool mode.
@@ -49692,7 +49703,7 @@ class OG {
     if (e.connectedWall)
       return e;
     const i = this.findSmartSnap(e.point, this.draftStart);
-    return i ? (this.showGuides(i.guidePoints), {
+    return i ? (this.showGuides(i.guides), {
       point: i.point,
       connectedWall: null,
       wallOffset: null
@@ -49738,7 +49749,12 @@ class OG {
       }
     return n ? {
       point: n.clone(),
-      guidePoints: [[e.clone(), n.clone()]]
+      guides: [
+        {
+          points: [e.clone(), n.clone()],
+          type: "point"
+        }
+      ]
     } : null;
   }
   findCombinedAlignment(e, t, i) {
@@ -49767,13 +49783,16 @@ class OG {
               );
               m > Rp || m >= o || (r = {
                 point: y,
-                guidePoints: [
+                guides: [
                   ...this.createParallelGuidePoints(
                     a,
                     t,
                     y
                   ),
-                  [d.clone(), y.clone()]
+                  {
+                    points: [d.clone(), y.clone()],
+                    type: "alignment"
+                  }
                 ]
               }, o = m);
             }
@@ -49792,7 +49811,12 @@ class OG {
         const u = e.clone();
         l <= c ? u.x = a.x : u.z = a.z, n = {
           point: u,
-          guidePoints: [[a.clone(), u.clone()]]
+          guides: [
+            {
+              points: [a.clone(), u.clone()],
+              type: "alignment"
+            }
+          ]
         }, r = h;
       }
     return n;
@@ -49814,7 +49838,7 @@ class OG {
     }
     return !o || !c ? null : {
       point: c,
-      guidePoints: this.createParallelGuidePoints(
+      guides: this.createParallelGuidePoints(
         o,
         t,
         c
@@ -49830,14 +49854,20 @@ class OG {
       )
     );
     return [
-      [
-        e.midpoint.clone().add(o),
-        n.clone().add(o)
-      ],
-      [
-        e.midpoint.clone().sub(o),
-        n.clone().sub(o)
-      ]
+      {
+        points: [
+          e.midpoint.clone().add(o),
+          n.clone().add(o)
+        ],
+        type: "parallel"
+      },
+      {
+        points: [
+          e.midpoint.clone().sub(o),
+          n.clone().sub(o)
+        ],
+        type: "parallel"
+      }
     ];
   }
   collectWallReferences() {
@@ -49862,14 +49892,14 @@ class OG {
     }), t;
   }
   showGuides(e) {
-    for (const [t, i] of e) {
-      const n = t.clone(), r = i.clone();
-      n.y += h5, r.y += h5;
-      const o = new bi(
-        new ft().setFromPoints([n, r]),
-        this.guideMaterial
+    for (const { points: [t, i], type: n } of e) {
+      const r = t.clone(), o = i.clone();
+      r.y += h5, o.y += h5;
+      const a = new bi(
+        new ft().setFromPoints([r, o]),
+        this.guideMaterials[n]
       );
-      o.internal = !0, o.renderOrder = 1e3, this.guides.add(o);
+      a.internal = !0, a.renderOrder = 1e3, this.guides.add(a);
     }
   }
   clearGuides() {
