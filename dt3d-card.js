@@ -2268,7 +2268,7 @@ let K0 = class extends ti {
     return Ae`
 		<div class="connection-status-container">
 			<div style="margin: 5px;" class="${this.success ? "connection-status-success" : "connection-status-error"}">
-				${this.msg}<br>${"2026-08-12T23:46:39.974Z"}
+				${this.msg}<br>${"2026-08-14T15:19:40.922Z"}
 			</div>
 		</div>`;
   }
@@ -33486,7 +33486,7 @@ function X4(s, e = {}, t) {
       return null;
   }
 }
-const dk = ":host{position:relative;z-index:100;display:flex;flex-direction:column;width:120px;height:100%;padding:16px 0;overflow:visible;box-sizing:border-box;background:color-mix(in srgb,var(--card-background-color) 90%,transparent);color:var(--primary-text-color);transition:width .2s,padding .2s}:host([collapsed]){width:0;padding:16px 0}.collapse-btn{position:absolute;top:12px;right:-32px;z-index:10;width:32px;height:32px;padding:0;border:0;border-radius:0 10px 10px 0;background:color-mix(in srgb,var(--card-background-color) 90%,transparent);box-shadow:none;color:var(--primary-text-color);cursor:pointer;font-size:1.2em}.object-sidebar-content{flex:1;overflow-y:auto;overflow-x:hidden}.object-sidebar-section{margin-bottom:24px;padding:0 16px;transition:opacity .2s}:host([collapsed]) .object-sidebar-section{height:0;margin:0;padding:0;opacity:0;pointer-events:none}.object-sidebar-title{margin-bottom:8px;color:var(--primary-color);font-size:1.1em;font-weight:700;letter-spacing:1px}button{display:block;width:100%;margin-bottom:8px;padding:10px 0;border:none;border-radius:4px;background:var(--primary-color);box-shadow:0 2px 4px var(--shadow-color);color:var(--text-primary-color);cursor:pointer;font-size:1em;transition:background .2s,transform .2s}button:hover,button.selected{background:var(--dark-primary-color)}button:active{background:var(--darker-primary-color)}";
+const dk = ":host{position:relative;z-index:100;display:flex;flex-direction:column;width:80px;height:100%;padding:16px 0;overflow:visible;box-sizing:border-box;background:color-mix(in srgb,var(--card-background-color) 90%,transparent);color:var(--primary-text-color);transition:width .2s,padding .2s}:host([collapsed]){width:0;padding:16px 0}.collapse-btn{position:absolute;top:12px;right:-32px;z-index:10;width:32px;height:32px;padding:0;border:0;border-radius:0 10px 10px 0;background:color-mix(in srgb,var(--card-background-color) 90%,transparent);box-shadow:none;color:var(--primary-text-color);cursor:pointer;font-size:1.2em}.object-sidebar-content{flex:1;overflow-y:auto;overflow-x:hidden}.object-sidebar-section{margin-bottom:24px;padding:0 16px;transition:opacity .2s}:host([collapsed]) .object-sidebar-section{height:0;margin:0;padding:0;opacity:0;pointer-events:none}.object-sidebar-title{margin-bottom:8px;color:var(--primary-color);font-size:1.1em;font-weight:700;letter-spacing:1px}button{display:block;width:100%;margin-bottom:8px;padding:10px 0;border:none;border-radius:4px;background:var(--primary-color);box-shadow:0 2px 4px var(--shadow-color);color:var(--text-primary-color);cursor:pointer;font-size:1em;transition:background .2s,transform .2s}button:hover,button.selected{background:var(--dark-primary-color)}button:active{background:var(--darker-primary-color)}";
 var pk = Object.getOwnPropertyDescriptor, fk = (s, e, t, i) => {
   for (var n = i > 1 ? void 0 : i ? pk(e, t) : e, r = s.length - 1, o; r >= 0; r--)
     (o = s[r]) && (n = o(n) || n);
