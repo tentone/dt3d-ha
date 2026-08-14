@@ -3,7 +3,7 @@
 	z-index: 100;
 	display: flex;
 	flex-direction: column;
-	width: 80px;
+	width: 120px;
 	height: 100%;
 	padding: 16px 0;
 	overflow: visible;
@@ -89,4 +89,21 @@ button.selected {
 
 button:active {
 	background: var(--darker-primary-color);
+}
+
+button.has-submenu {
+	display: grid;
+	grid-template-columns: 1fr 18px;
+	align-items: center;
+}
+
+button.has-submenu > ha-icon:first-child {
+	justify-self: center;
+	transform: translateX(9px);
+}
+
+.submenu-indicator {
+	justify-self: end;
+	font-size: 0.8em;
+	opacity: 0.8;
 }

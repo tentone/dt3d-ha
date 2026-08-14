@@ -5,11 +5,11 @@ import {localManager} from "../../locale/locale.js";
 import componentStyles from "../mesh-menu/mesh-menu.css?inline";
 
 const LIGHT_OPTIONS = [
-	{labelKey: "ambientLight", type: "light-ambient"},
-	{labelKey: "directionalLight", type: "light-directional"},
-	{labelKey: "pointLight", type: "light-point"},
-	{labelKey: "spotLight", type: "light-spot"},
-	{labelKey: "rectAreaLight", type: "light-rect-area"},
+	{labelKey: "ambientLight", type: "light-ambient", icon: "mdi:brightness-6"},
+	{labelKey: "directionalLight", type: "light-directional", icon: "mdi:weather-sunny"},
+	{labelKey: "pointLight", type: "light-point", icon: "mdi:lightbulb-on-outline"},
+	{labelKey: "spotLight", type: "light-spot", icon: "mdi:spotlight-beam"},
+	{labelKey: "rectAreaLight", type: "light-rect-area", icon: "mdi:rectangle-outline"},
 ];
 
 @customElement("dt3d-light-menu")
@@ -37,7 +37,7 @@ export class DT3DLightMenu extends LitElement {
 			<div class="overlay" @click=${this.close}></div>
 			<div
 				class="menu"
-				style=${`left: ${this.x}px; top: ${this.y}px;`}
+				style=${`--menu-x: ${this.x}px; --menu-y: ${this.y}px;`}
 				@click=${(event: Event) => event.stopPropagation()}
 			>
 				${LIGHT_OPTIONS.map((option) => html`
@@ -45,7 +45,8 @@ export class DT3DLightMenu extends LitElement {
 						@click=${() => this.addObject(option.type)}
 						aria-label=${`${localManager.get("add")} ${localManager.get(option.labelKey)}`}
 					>
-						${localManager.get(option.labelKey)}
+						<ha-icon icon=${option.icon}></ha-icon>
+						<span>${localManager.get(option.labelKey)}</span>
 					</button>
 				`)}
 			</div>

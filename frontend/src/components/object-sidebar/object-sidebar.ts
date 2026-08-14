@@ -4,7 +4,6 @@ import {html, LitElement, unsafeCSS} from "lit";
 import {customElement} from "lit/decorators.js";
 
 import {localManager} from "../../locale/locale.js";
-import {FURNITURE_OPTIONS} from "../../objects/furniture/furniture-registry.js";
 import {LocalStorage} from "../../utils/local-storage.js";
 import componentStyles from "./object-sidebar.css?inline";
 
@@ -115,6 +114,32 @@ export class DT3DObjectSidebar extends LitElement {
 		);
 	}
 
+	private handleFurnitureMenuOpen(event: MouseEvent): void {
+		const target = event.currentTarget as HTMLElement | null;
+		const rect = target?.getBoundingClientRect();
+
+		this.dispatchEvent(
+			new CustomEvent("furniture-menu-open", {
+				detail: rect ? {left: rect.right + 8, top: rect.top} : null,
+				bubbles: true,
+				composed: true,
+			}),
+		);
+	}
+
+	private handleOpeningMenuOpen(event: MouseEvent): void {
+		const target = event.currentTarget as HTMLElement | null;
+		const rect = target?.getBoundingClientRect();
+
+		this.dispatchEvent(
+			new CustomEvent("opening-menu-open", {
+				detail: rect ? {left: rect.right + 8, top: rect.top} : null,
+				bubbles: true,
+				composed: true,
+			}),
+		);
+	}
+
 	render() {
 		return html`
 			<dt3d-tooltip
@@ -136,28 +161,18 @@ export class DT3DObjectSidebar extends LitElement {
 				</button>
 			</dt3d-tooltip>
 			<div class="object-sidebar-content">
-				<section class="object-sidebar-section">
-					<div class="object-sidebar-title">${localManager.get("add")}</div>
-					<dt3d-tooltip
-						.content=${localManager.get("addMesh")}
-						placement="right"
-					>
-						<button
-							@click=${(event: MouseEvent) => this.handleMeshMenuOpen(event)}
-							aria-label=${localManager.get("addMesh")}
-						>
-							<ha-icon icon="mdi:shape-outline"></ha-icon>
-						</button>
-					</dt3d-tooltip>
+				<section class="object-sidebar-section primary-actions">
 					<dt3d-tooltip
 						.content=${localManager.get("uploadModel")}
 						placement="right"
 					>
 						<button
+							class="has-submenu"
 							@click=${(event: MouseEvent) => this.handleUploadMenuOpen(event)}
 							aria-label=${localManager.get("uploadModel")}
 						>
 							<ha-icon icon="mdi:upload-box-outline"></ha-icon>
+							<ha-icon class="submenu-indicator" icon="mdi:chevron-right"></ha-icon>
 						</button>
 					</dt3d-tooltip>
 					<dt3d-tooltip
@@ -169,17 +184,6 @@ export class DT3DObjectSidebar extends LitElement {
 							aria-label=${localManager.get("addEntity")}
 						>
 							<ha-icon icon="mdi:state-machine"></ha-icon>
-						</button>
-					</dt3d-tooltip>
-					<dt3d-tooltip
-						.content=${localManager.get("addStaticLight")}
-						placement="right"
-					>
-						<button
-							@click=${(event: MouseEvent) => this.handleLightMenuOpen(event)}
-							aria-label=${localManager.get("addStaticLight")}
-						>
-							<ha-icon icon="mdi:lightbulb-on-outline"></ha-icon>
 						</button>
 					</dt3d-tooltip>
 					<dt3d-tooltip
@@ -204,26 +208,6 @@ export class DT3DObjectSidebar extends LitElement {
 							<ha-icon icon="mdi:camera-plus-outline"></ha-icon>
 						</button>
 					</dt3d-tooltip>
-				</section>
-				<section class="object-sidebar-section">
-					<div class="object-sidebar-title">
-						${localManager.get("furniture")}
-					</div>
-					${FURNITURE_OPTIONS.map(
-		(option) => html`
-							<dt3d-tooltip
-								.content=${localManager.get(option.labelKey)}
-								placement="right"
-							>
-								<button
-									@click=${() => this.handleAddObject(option.type)}
-									aria-label=${localManager.get(option.labelKey)}
-								>
-									<ha-icon icon=${option.icon}></ha-icon>
-								</button>
-							</dt3d-tooltip>
-						`,
-	)}
 				</section>
 				<section class="object-sidebar-section">
 					<div class="object-sidebar-title">${localManager.get("walls")}</div>
@@ -252,39 +236,16 @@ export class DT3DObjectSidebar extends LitElement {
 						</button>
 					</dt3d-tooltip>
 					<dt3d-tooltip
-						.content=${localManager.get("addDoor")}
+						.content=${localManager.get("floorplanOpenings")}
 						placement="right"
 					>
 						<button
-							@click=${() => this.handleWallSelect("door")}
-							class=${this.wallTool === "door" ? "selected" : ""}
-							aria-label=${localManager.get("addDoor")}
+							@click=${(event: MouseEvent) => this.handleOpeningMenuOpen(event)}
+							class=${`has-submenu ${["door", "window", "gate"].includes(this.wallTool) ? "selected" : ""}`}
+							aria-label=${localManager.get("floorplanOpenings")}
 						>
-							<ha-icon icon="mdi:door"></ha-icon>
-						</button>
-					</dt3d-tooltip>
-					<dt3d-tooltip
-						.content=${localManager.get("addWindow")}
-						placement="right"
-					>
-						<button
-							@click=${() => this.handleWallSelect("window")}
-							class=${this.wallTool === "window" ? "selected" : ""}
-							aria-label=${localManager.get("addWindow")}
-						>
-							<ha-icon icon="mdi:window-closed-variant"></ha-icon>
-						</button>
-					</dt3d-tooltip>
-					<dt3d-tooltip
-						.content=${localManager.get("addGate")}
-						placement="right"
-					>
-						<button
-							@click=${() => this.handleWallSelect("gate")}
-							class=${this.wallTool === "gate" ? "selected" : ""}
-							aria-label=${localManager.get("addGate")}
-						>
-							<ha-icon icon="mdi:gate"></ha-icon>
+							<ha-icon icon="mdi:door-open"></ha-icon>
+							<ha-icon class="submenu-indicator" icon="mdi:chevron-right"></ha-icon>
 						</button>
 					</dt3d-tooltip>
 					<dt3d-tooltip
@@ -297,6 +258,48 @@ export class DT3DObjectSidebar extends LitElement {
 							aria-label=${localManager.get("exitWallTools")}
 						>
 							<ha-icon icon="mdi:cancel"></ha-icon>
+						</button>
+					</dt3d-tooltip>
+				</section>
+				<section class="object-sidebar-section">
+					<div class="object-sidebar-title">${localManager.get("objects")}</div>
+					<dt3d-tooltip
+						.content=${localManager.get("addMesh")}
+						placement="right"
+					>
+						<button
+							class="has-submenu"
+							@click=${(event: MouseEvent) => this.handleMeshMenuOpen(event)}
+							aria-label=${localManager.get("addMesh")}
+						>
+							<ha-icon icon="mdi:shape-outline"></ha-icon>
+							<ha-icon class="submenu-indicator" icon="mdi:chevron-right"></ha-icon>
+						</button>
+					</dt3d-tooltip>
+					<dt3d-tooltip
+						.content=${localManager.get("addStaticLight")}
+						placement="right"
+					>
+						<button
+							class="has-submenu"
+							@click=${(event: MouseEvent) => this.handleLightMenuOpen(event)}
+							aria-label=${localManager.get("addStaticLight")}
+						>
+							<ha-icon icon="mdi:lightbulb-on-outline"></ha-icon>
+							<ha-icon class="submenu-indicator" icon="mdi:chevron-right"></ha-icon>
+						</button>
+					</dt3d-tooltip>
+					<dt3d-tooltip
+						.content=${localManager.get("furniture")}
+						placement="right"
+					>
+						<button
+							class="has-submenu"
+							@click=${(event: MouseEvent) => this.handleFurnitureMenuOpen(event)}
+							aria-label=${localManager.get("furniture")}
+						>
+							<ha-icon icon="mdi:sofa-outline"></ha-icon>
+							<ha-icon class="submenu-indicator" icon="mdi:chevron-right"></ha-icon>
 						</button>
 					</dt3d-tooltip>
 				</section>

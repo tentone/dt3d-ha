@@ -1,30 +1,24 @@
 import {html, LitElement, unsafeCSS} from "lit";
 import {customElement, property} from "lit/decorators.js";
 
-import {MESH_OPTIONS} from "../../editor/mesh-handler.js";
 import {localManager} from "../../locale/locale.js";
-import componentStyles from "./mesh-menu.css?inline";
+import {FURNITURE_OPTIONS} from "../../objects/furniture/furniture-registry.js";
+import componentStyles from "../mesh-menu/mesh-menu.css?inline";
 
-@customElement("dt3d-mesh-menu")
-export class DT3DMeshMenu extends LitElement {
+@customElement("dt3d-furniture-menu")
+export class DT3DFurnitureMenu extends LitElement {
 	static styles = unsafeCSS(componentStyles);
 
-	@property({type: Number})
-	public x = 0;
+	@property({type: Number}) public x = 0;
+	@property({type: Number}) public y = 0;
 
-	@property({type: Number})
-	public y = 0;
-
-	private close() {
+	private close(): void {
 		this.dispatchEvent(
-			new CustomEvent("modal-close", {
-				bubbles: true,
-				composed: true,
-			}),
+			new CustomEvent("modal-close", {bubbles: true, composed: true}),
 		);
 	}
 
-	private addObject(type: string) {
+	private addObject(type: string): void {
 		this.dispatchEvent(
 			new CustomEvent("add-object", {
 				detail: {type},
@@ -43,18 +37,24 @@ export class DT3DMeshMenu extends LitElement {
 				style=${`--menu-x: ${this.x}px; --menu-y: ${this.y}px;`}
 				@click=${(event: Event) => event.stopPropagation()}
 			>
-				${MESH_OPTIONS.map(
-		(option) => html`
+				${FURNITURE_OPTIONS.map(
+					(option) => html`
 						<button
 							@click=${() => this.addObject(option.type)}
-							aria-label=${`${localManager.get("add")} ${option.label}`}
+							aria-label=${`${localManager.get("add")} ${localManager.get(option.labelKey)}`}
 						>
 							<ha-icon icon=${option.icon}></ha-icon>
-							<span>${option.label}</span>
+							<span>${localManager.get(option.labelKey)}</span>
 						</button>
 					`,
-	)}
+				)}
 			</div>
 		`;
+	}
+}
+
+declare global {
+	interface HTMLElementTagNameMap {
+		"dt3d-furniture-menu": DT3DFurnitureMenu;
 	}
 }

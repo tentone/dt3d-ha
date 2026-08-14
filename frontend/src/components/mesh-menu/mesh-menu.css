@@ -1,7 +1,7 @@
 :host {
 	position: absolute;
 	inset: 0;
-	z-index: 15;
+	z-index: 500;
 	pointer-events: none;
 }
 
@@ -13,11 +13,16 @@
 
 .menu {
 	position: absolute;
+	top: var(--menu-y);
+	left: var(--menu-x);
 	display: grid;
-	grid-template-columns: repeat(2, minmax(90px, 1fr));
+	grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
 	gap: 8px;
-	max-width: calc(100% - 16px);
+	width: min(320px, calc(100% - var(--menu-x) - 8px));
+	max-height: calc(100% - var(--menu-y) - 8px);
 	padding: 10px;
+	overflow-y: auto;
+	box-sizing: border-box;
 	background: color-mix(in srgb, var(--card-background-color) 94%, transparent);
 	border: 1px solid var(--divider-color);
 	border-radius: 8px;
@@ -26,6 +31,9 @@
 }
 
 button {
+	display: flex;
+	align-items: center;
+	gap: 8px;
 	width: 100%;
 	margin: 0;
 	padding: 10px;
@@ -35,6 +43,19 @@ button {
 	border-radius: 4px;
 	cursor: pointer;
 	font-size: 0.9em;
+	text-align: left;
+}
+
+button ha-icon {
+	flex: 0 0 auto;
+	font-size: 1.25em;
+}
+
+button span {
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
 }
 
 button:hover,

@@ -9,6 +9,8 @@ export type MeshOption = {
 	type: string;
 	/** Human-readable label displayed in the mesh menu. */
 	label: string;
+	/** Material Design icon displayed beside the mesh label. */
+	icon: string;
 };
 
 /**
@@ -43,20 +45,20 @@ export type MeshGeometryParameters = Record<string, number | boolean>;
  * List of possible mesh options to present on the GUI.
  */
 export const MESH_OPTIONS: MeshOption[] = [
-	{type: "cube", label: "Cube"},
-	{type: "sphere", label: "Sphere"},
-	{type: "plane", label: "Plane"},
-	{type: "capsule", label: "Capsule"},
-	{type: "circle", label: "Circle"},
-	{type: "cone", label: "Cone"},
-	{type: "cylinder", label: "Cylinder"},
-	{type: "dodecahedron", label: "Dodecahedron"},
-	{type: "icosahedron", label: "Icosahedron"},
-	{type: "octahedron", label: "Octahedron"},
-	{type: "ring", label: "Ring"},
-	{type: "tetrahedron", label: "Tetrahedron"},
-	{type: "torus", label: "Torus"},
-	{type: "torusKnot", label: "Torus Knot"},
+	{type: "cube", label: "Cube", icon: "mdi:cube-outline"},
+	{type: "sphere", label: "Sphere", icon: "mdi:sphere"},
+	{type: "plane", label: "Plane", icon: "mdi:rectangle-outline"},
+	{type: "capsule", label: "Capsule", icon: "mdi:stadium-outline"},
+	{type: "circle", label: "Circle", icon: "mdi:circle-outline"},
+	{type: "cone", label: "Cone", icon: "mdi:cone"},
+	{type: "cylinder", label: "Cylinder", icon: "mdi:cylinder"},
+	{type: "dodecahedron", label: "Dodecahedron", icon: "mdi:octahedron"},
+	{type: "icosahedron", label: "Icosahedron", icon: "mdi:octahedron"},
+	{type: "octahedron", label: "Octahedron", icon: "mdi:octahedron"},
+	{type: "ring", label: "Ring", icon: "mdi:circle-outline"},
+	{type: "tetrahedron", label: "Tetrahedron", icon: "mdi:pyramid"},
+	{type: "torus", label: "Torus", icon: "mdi:circle-double"},
+	{type: "torusKnot", label: "Torus Knot", icon: "mdi:vector-polyline"},
 ];
 
 const TWO_PI = Math.PI * 2;

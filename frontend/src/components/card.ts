@@ -5,11 +5,13 @@ import "./confirmation-modal/confirmation-modal.js";
 import "./connection-status/connection-status.js";
 import "./floorplan-calibration-modal/floorplan-calibration-modal.js";
 import "./form-modal/form-modal.js";
+import "./furniture-menu/furniture-menu.js";
 import "./hint-box/hint-box.js";
 import "./light-menu/light-menu.js";
 import "./mesh-menu/mesh-menu.js";
 import "./object-sidebar/object-sidebar.js";
 import "./object-tree/object-tree.js";
+import "./opening-menu/opening-menu.js";
 import "./orientation-cube/orientation-cube.js";
 import "./space-config-menu/space-config-menu.js";
 import "./space-selector/space-selector.js";
@@ -150,12 +152,17 @@ import type {
 	DT3DFormModal,
 	FormModalSubmitDetail,
 } from "./form-modal/form-modal.js";
+import type {DT3DFurnitureMenu} from "./furniture-menu/furniture-menu.js";
 import type {DT3DHintBox} from "./hint-box/hint-box.js";
 import type {DT3DLightMenu} from "./light-menu/light-menu.js";
 import type {DT3DMeshMenu} from "./mesh-menu/mesh-menu.js";
 import type {ObjectUpdateDetail} from "./object-inspector/object-inspector.js";
-import type {DT3DObjectSidebar} from "./object-sidebar/object-sidebar.js";
+import type {
+	DT3DObjectSidebar,
+	WallOptions,
+} from "./object-sidebar/object-sidebar.js";
 import type {DT3DTree} from "./object-tree/object-tree.js";
+import type {DT3DOpeningMenu} from "./opening-menu/opening-menu.js";
 import type {
 	DT3DOrientationCube,
 	OrientationCubeDirection,
@@ -521,6 +528,10 @@ export class DT3DCard extends LitElement {
 	private lightMenu: DT3DLightMenu | null = null;
 
 	private uploadMenu: DT3DUploadMenu | null = null;
+
+	private furnitureMenu: DT3DFurnitureMenu | null = null;
+
+	private openingMenu: DT3DOpeningMenu | null = null;
 
 	private floorplanCalibrationModal: DT3DFloorplanCalibrationModal | null = null;
 
@@ -1550,12 +1561,7 @@ export class DT3DCard extends LitElement {
 			this.cancelMoveToPoint();
 			this.spaceConfigMenu?.remove();
 			this.spaceConfigMenu = null;
-			this.meshMenu?.remove();
-			this.meshMenu = null;
-			this.lightMenu?.remove();
-			this.lightMenu = null;
-			this.uploadMenu?.remove();
-			this.uploadMenu = null;
+			this.closeObjectMenus();
 			this.confirmationModal?.remove();
 			this.confirmationModal = null;
 			this.gridConfigModal?.remove();
@@ -3096,6 +3102,48 @@ export class DT3DCard extends LitElement {
 		this.content.appendChild(modal);
 	}
 
+	/** Close any object-creation flyout currently attached to the card. */
+	private closeObjectMenus(): void {
+		this.meshMenu?.remove();
+		this.meshMenu = null;
+		this.lightMenu?.remove();
+		this.lightMenu = null;
+		this.uploadMenu?.remove();
+		this.uploadMenu = null;
+		this.furnitureMenu?.remove();
+		this.furnitureMenu = null;
+		this.openingMenu?.remove();
+		this.openingMenu = null;
+	}
+
+	/** Convert a sidebar button's viewport bounds into a card-local flyout position. */
+	private getObjectMenuPosition(
+		anchor: {left: number; top: number} | null,
+		preferredHeight: number,
+	): {x: number; y: number} {
+		const contentRect = this.content.getBoundingClientRect();
+		const minimumMenuWidth = 140;
+		const availableHeight = Math.max(0, contentRect.height - 16);
+		const menuHeight = Math.min(preferredHeight, availableHeight);
+
+		return {
+			x: Math.max(
+				8,
+				Math.min(
+					(anchor?.left ?? contentRect.left + 8) - contentRect.left,
+					contentRect.width - minimumMenuWidth - 8,
+				),
+			),
+			y: Math.max(
+				8,
+				Math.min(
+					(anchor?.top ?? contentRect.top + 8) - contentRect.top,
+					contentRect.height - menuHeight - 8,
+				),
+			),
+		};
+	}
+
 	/**
 	 * Open the mesh add menu at the top card level.
 	 *
@@ -3106,30 +3154,8 @@ export class DT3DCard extends LitElement {
 			return;
 		}
 
-		if (this.meshMenu) {
-			this.meshMenu.remove();
-			this.meshMenu = null;
-		}
-		this.lightMenu?.remove();
-		this.lightMenu = null;
-		this.uploadMenu?.remove();
-		this.uploadMenu = null;
-
-		const contentRect = this.content.getBoundingClientRect();
-		const x = Math.max(
-			8,
-			Math.min(
-				(anchor?.left ?? contentRect.left + 8) - contentRect.left,
-				contentRect.width - 208,
-			),
-		);
-		const y = Math.max(
-			8,
-			Math.min(
-				(anchor?.top ?? contentRect.top + 8) - contentRect.top,
-				contentRect.height - 8,
-			),
-		);
+		this.closeObjectMenus();
+		const {x, y} = this.getObjectMenuPosition(anchor, 560);
 		const menu = document.createElement("dt3d-mesh-menu") as DT3DMeshMenu;
 		menu.x = x;
 		menu.y = y;
@@ -3182,27 +3208,11 @@ export class DT3DCard extends LitElement {
 	private openLightMenu(anchor: { left: number; top: number } | null): void {
 		if (!this.content || this.isVisualizationOnly()) return;
 
-		this.meshMenu?.remove();
-		this.meshMenu = null;
-		this.lightMenu?.remove();
-		this.uploadMenu?.remove();
-		this.uploadMenu = null;
-		const contentRect = this.content.getBoundingClientRect();
+		this.closeObjectMenus();
+		const {x, y} = this.getObjectMenuPosition(anchor, 240);
 		const menu = document.createElement("dt3d-light-menu") as DT3DLightMenu;
-		menu.x = Math.max(
-			8,
-			Math.min(
-				(anchor?.left ?? contentRect.left + 8) - contentRect.left,
-				contentRect.width - 208,
-			),
-		);
-		menu.y = Math.max(
-			8,
-			Math.min(
-				(anchor?.top ?? contentRect.top + 8) - contentRect.top,
-				contentRect.height - 8,
-			),
-		);
+		menu.x = x;
+		menu.y = y;
 		menu.addEventListener("add-object", (event: Event) => {
 			const {type} = (event as CustomEvent<{ type: string }>).detail;
 			this.handleAddObject(type);
@@ -3219,28 +3229,11 @@ export class DT3DCard extends LitElement {
 	private openUploadMenu(anchor: { left: number; top: number } | null): void {
 		if (!this.content || this.isVisualizationOnly()) return;
 
-		this.meshMenu?.remove();
-		this.meshMenu = null;
-		this.lightMenu?.remove();
-		this.lightMenu = null;
-		this.uploadMenu?.remove();
-
-		const contentRect = this.content.getBoundingClientRect();
+		this.closeObjectMenus();
+		const {x, y} = this.getObjectMenuPosition(anchor, 160);
 		const menu = document.createElement("dt3d-upload-menu") as DT3DUploadMenu;
-		menu.x = Math.max(
-			8,
-			Math.min(
-				(anchor?.left ?? contentRect.left + 8) - contentRect.left,
-				contentRect.width - 208,
-			),
-		);
-		menu.y = Math.max(
-			8,
-			Math.min(
-				(anchor?.top ?? contentRect.top + 8) - contentRect.top,
-				contentRect.height - 8,
-			),
-		);
+		menu.x = x;
+		menu.y = y;
 		menu.addEventListener("upload-selected", (event: Event) => {
 			const {action} = (event as CustomEvent<{ action: string }>).detail;
 			if (action === "floorplan") {
@@ -3255,6 +3248,52 @@ export class DT3DCard extends LitElement {
 		});
 
 		this.uploadMenu = menu;
+		this.content.appendChild(menu);
+	}
+
+	/** Open the furniture type menu at the top card level. */
+	private openFurnitureMenu(anchor: {left: number; top: number} | null): void {
+		if (!this.content || this.isVisualizationOnly()) return;
+
+		this.closeObjectMenus();
+		const {x, y} = this.getObjectMenuPosition(anchor, 290);
+		const menu = document.createElement(
+			"dt3d-furniture-menu",
+		) as DT3DFurnitureMenu;
+		menu.x = x;
+		menu.y = y;
+		menu.addEventListener("add-object", (event: Event) => {
+			const {type} = (event as CustomEvent<{type: string}>).detail;
+			this.handleAddObject(type);
+		});
+		menu.addEventListener("modal-close", () => {
+			menu.remove();
+			this.furnitureMenu = null;
+		});
+
+		this.furnitureMenu = menu;
+		this.content.appendChild(menu);
+	}
+
+	/** Open the door, window, and gate tool menu at the top card level. */
+	private openOpeningMenu(anchor: {left: number; top: number} | null): void {
+		if (!this.content || this.isVisualizationOnly()) return;
+
+		this.closeObjectMenus();
+		const {x, y} = this.getObjectMenuPosition(anchor, 160);
+		const menu = document.createElement("dt3d-opening-menu") as DT3DOpeningMenu;
+		menu.x = x;
+		menu.y = y;
+		menu.addEventListener("wall-tool-selected", (event: Event) => {
+			const {mode} = (event as CustomEvent<{mode: WallOptions}>).detail;
+			this.selectWallTool(mode);
+		});
+		menu.addEventListener("modal-close", () => {
+			menu.remove();
+			this.openingMenu = null;
+		});
+
+		this.openingMenu = menu;
 		this.content.appendChild(menu);
 	}
 
@@ -3839,6 +3878,24 @@ export class DT3DCard extends LitElement {
 		if (this.cameraToggle) {
 			this.cameraToggle.mode = this.sceneManager.getCameraMode();
 		}
+	}
+
+	/** Activate a floorplan editing tool and synchronize the editor controls. */
+	private selectWallTool(mode: WallOptions): void {
+		if (this.isVisualizationOnly()) {
+			return;
+		}
+
+		this.wallManager?.setMode(mode === "floor" ? "none" : mode);
+		this.floorManager?.setActive(mode === "floor");
+		this.objectSidebar.wallTool = mode;
+		if (mode !== "none") {
+			this.measurementManager?.setMode("none");
+			this.bottomBar.measurementTool = "none";
+			this.cancelMoveToPoint();
+		}
+
+		this.updateHintMessage();
 	}
 
 	/**
@@ -4512,27 +4569,7 @@ export class DT3DCard extends LitElement {
 		});
 
 		this.objectSidebar.addEventListener("wall-tool-selected", (e: any) => {
-			if (this.isVisualizationOnly()) {
-				return;
-			}
-
-			const mode = e.detail.mode as
-				| "wall"
-				| "floor"
-				| "door"
-				| "window"
-				| "gate"
-				| "none";
-			this.wallManager?.setMode(mode === "floor" ? "none" : mode);
-			this.floorManager?.setActive(mode === "floor");
-			this.objectSidebar.wallTool = mode;
-			if (mode !== "none") {
-				this.measurementManager?.setMode("none");
-				this.bottomBar.measurementTool = "none";
-				this.cancelMoveToPoint();
-			}
-
-			this.updateHintMessage();
+			this.selectWallTool(e.detail.mode as WallOptions);
 		});
 
 		this.bottomBar.addEventListener("grid-visibility-toggle", (e: any) => {
@@ -4574,6 +4611,20 @@ export class DT3DCard extends LitElement {
 			if (this.isVisualizationOnly()) return;
 			this.openUploadMenu(
 				(event as CustomEvent<{ left: number; top: number } | null>).detail,
+			);
+		});
+
+		this.objectSidebar.addEventListener("furniture-menu-open", (event: Event) => {
+			if (this.isVisualizationOnly()) return;
+			this.openFurnitureMenu(
+				(event as CustomEvent<{left: number; top: number} | null>).detail,
+			);
+		});
+
+		this.objectSidebar.addEventListener("opening-menu-open", (event: Event) => {
+			if (this.isVisualizationOnly()) return;
+			this.openOpeningMenu(
+				(event as CustomEvent<{left: number; top: number} | null>).detail,
 			);
 		});
 
@@ -5012,12 +5063,7 @@ export class DT3DCard extends LitElement {
 		this.clearSceneLongPress();
 		this.clearCanvasClickSuppression();
 		this.clearPendingEntityClickAction();
-		this.meshMenu?.remove();
-		this.meshMenu = null;
-		this.lightMenu?.remove();
-		this.lightMenu = null;
-		this.uploadMenu?.remove();
-		this.uploadMenu = null;
+		this.closeObjectMenus();
 		this.floorplanCalibrationModal?.remove();
 		this.floorplanCalibrationModal = null;
 		this.confirmationModal?.remove();

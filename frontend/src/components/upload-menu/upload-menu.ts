@@ -5,9 +5,9 @@ import {localManager} from "../../locale/locale.js";
 import componentStyles from "../mesh-menu/mesh-menu.css?inline";
 
 const UPLOAD_OPTIONS = [
-	{labelKey: "uploadModelFiles", action: "model-files"},
-	{labelKey: "uploadModelDirectory", action: "model-directory"},
-	{labelKey: "uploadFloorplan", action: "floorplan"},
+	{labelKey: "uploadModelFiles", action: "model-files", icon: "mdi:file-upload-outline"},
+	{labelKey: "uploadModelDirectory", action: "model-directory", icon: "mdi:folder-upload-outline"},
+	{labelKey: "uploadFloorplan", action: "floorplan", icon: "mdi:floor-plan"},
 ];
 
 @customElement("dt3d-upload-menu")
@@ -38,7 +38,7 @@ export class DT3DUploadMenu extends LitElement {
 			<div class="overlay" @click=${this.close}></div>
 			<div
 				class="menu"
-				style=${`left: ${this.x}px; top: ${this.y}px;`}
+				style=${`--menu-x: ${this.x}px; --menu-y: ${this.y}px;`}
 				@click=${(event: Event) => event.stopPropagation()}
 			>
 				${UPLOAD_OPTIONS.map((option) => html`
@@ -46,7 +46,8 @@ export class DT3DUploadMenu extends LitElement {
 						@click=${() => this.select(option.action)}
 						aria-label=${localManager.get(option.labelKey)}
 					>
-						${localManager.get(option.labelKey)}
+						<ha-icon icon=${option.icon}></ha-icon>
+						<span>${localManager.get(option.labelKey)}</span>
 					</button>
 				`)}
 			</div>

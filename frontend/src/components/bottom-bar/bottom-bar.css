@@ -29,7 +29,7 @@
 }
 
 .settings-toolbar {
-	left: 100px;
+	left: 140px;
 	gap: 2px;
 	padding: 4px;
 	transition: left 0.2s ease;
