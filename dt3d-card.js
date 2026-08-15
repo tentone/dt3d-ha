@@ -2270,7 +2270,7 @@ let K0 = class extends Jt {
     return Ae`
 		<div class="connection-status-container">
 			<div style="margin: 5px;" class="${this.success ? "connection-status-success" : "connection-status-error"}">
-				${this.msg}<br>${"2026-08-14T18:18:15.532Z"}
+				${this.msg}<br>${"2026-08-15T23:37:34.836Z"}
 			</div>
 		</div>`;
   }
@@ -40061,7 +40061,7 @@ const j3 = (s, e, t) => {
 ];
 class ql extends Yt {
   constructor(e = xp, t = FU, i = !1) {
-    super(), this.areaLabel = null, this.points = this.normalizePoints(e), this.automatic = i, this.name = "Floor", this.userData.meshType = "floor";
+    super(), this.areaLabel = null, this.points = this.normalizePoints(e), this.automatic = i, this.name = "Floor", this.userData.meshType = "floor", this.castShadow = !1;
     const n = new oi({
       color: t,
       roughness: 0.9,

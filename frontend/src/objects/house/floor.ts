@@ -34,7 +34,9 @@ export class FloorObject extends DTObject {
 
 	public floorMesh: Mesh;
 
-	/** Area label displayed while the floor is hovered. */
+	/**
+	 * Area label displayed while the floor is hovered.
+	 */
 	private areaLabel: CSSText | null = null;
 
 	public constructor(
@@ -48,6 +50,7 @@ export class FloorObject extends DTObject {
 		this.automatic = automatic;
 		this.name = "Floor";
 		this.userData.meshType = "floor";
+		this.castShadow = false;
 
 		const material = new MeshStandardMaterial({
 			color,
