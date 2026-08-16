@@ -4,6 +4,7 @@ import {
 	Group,
 	Line,
 	LineBasicMaterial,
+	MeshStandardMaterial,
 	Raycaster,
 	Vector2,
 	Vector3,
@@ -11,6 +12,7 @@ import {
 
 import {WallObject} from "../objects/house/wall.js";
 import {snapPointToClosestAxis} from "./axis-snap.js";
+import type {FloorplanConfig} from "./general-config.js";
 
 /**
  * Wall tool modes possible in the WallManager.
@@ -24,6 +26,7 @@ type WallContext = {
 	lastSelectedObject: Object3D | null;
 	gridSnapEnabled: boolean;
 	gridSnapSize: number;
+	floorplanConfig: FloorplanConfig;
 };
 
 type WallCallbacks = {
@@ -265,7 +268,17 @@ export class WallManager {
 	}
 
 	private createDraft(start: Vector3): void {
-		this.draft = new WallObject();
+		const {wall} = this.getContext().floorplanConfig;
+		this.draft = new WallObject(
+			{height: wall.height},
+			wall.color,
+			{
+				baseboardEnabled: wall.decoration.enabled,
+				baseboardHeight: wall.decoration.height,
+				baseboardDepth: wall.decoration.depth,
+				baseboardColor: wall.decoration.color,
+			},
+		);
 		this.draft.internal = true;
 		this.draft.name = "Wall Draft";
 		this.draft.setFromPoints(start, start.clone().add(new Vector3(1, 0, 0)));
@@ -279,11 +292,18 @@ export class WallManager {
 			return;
 		}
 
-		const wall = new WallObject({
-			length: this.draft.length,
-			height: this.draft.height,
-			thickness: this.draft.thickness,
-		});
+		const material = Array.isArray(this.draft.wallMesh.material)
+			? this.draft.wallMesh.material[0]
+			: this.draft.wallMesh.material;
+		const wall = new WallObject(
+			{
+				length: this.draft.length,
+				height: this.draft.height,
+				thickness: this.draft.thickness,
+			},
+			material instanceof MeshStandardMaterial ? material.color : undefined,
+			this.draft.getCustomization(),
+		);
 		wall.position.copy(this.draft.position);
 		wall.rotation.copy(this.draft.rotation);
 

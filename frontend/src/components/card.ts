@@ -58,6 +58,7 @@ import type {AutomaticFloorEdit} from "../editor/floors.js";
 import {FloorManager} from "../editor/floors.js";
 import type {
 	CardGeneralConfig,
+	FloorplanConfig,
 	GeneralConfig,
 	SpaceConfiguration,
 	SpaceGeneralConfig,
@@ -65,10 +66,12 @@ import type {
 import {
 	applyLowPowerDeviceSettings,
 	hasCardGeneralConfiguration,
+	hasFloorplanConfiguration,
 	hasSceneConfiguration,
 	hasSpaceGeneralConfiguration,
 	mergeGeneralConfig,
 	normalizeCardGeneralConfig,
+	normalizeFloorplanConfig,
 	normalizeGeneralConfig,
 	normalizeSpaceConfiguration,
 	normalizeSpaceGeneralConfig,
@@ -95,6 +98,7 @@ import {
 	normalizeSpaceSceneConfig,
 	SceneManager,
 } from "../editor/scene.js";
+import {WallConnectionManager} from "../editor/wall-connections.js";
 import type {WallEndpointEdit} from "../editor/wall-endpoints.js";
 import {WallEndpointManager} from "../editor/wall-endpoints.js";
 import {WallOcclusionManager} from "../editor/wall-occlusion.js";
@@ -350,6 +354,9 @@ export class DT3DCard extends LitElement {
 	/** Hides camera-facing exterior walls for visualization cutaway views. */
 	private wallOcclusionManager = new WallOcclusionManager();
 
+	/** Builds separate wall-junction meshes at shared centerline endpoints. */
+	private wallConnectionManager = new WallConnectionManager();
+
 	/** Displays and edits the selected wall's start and end points. */
 	private wallEndpointManager: WallEndpointManager | null = null;
 
@@ -514,6 +521,8 @@ export class DT3DCard extends LitElement {
 	 * Current space-level scene configuration.
 	 */
 	private spaceSceneConfig: SpaceSceneConfig = normalizeSpaceSceneConfig();
+
+	private floorplanConfig: FloorplanConfig = normalizeFloorplanConfig();
 
 	/**
 	 * Active space configuration menu, if open.
@@ -1435,6 +1444,7 @@ export class DT3DCard extends LitElement {
 		return normalizeSpaceConfiguration({
 			general: this.spaceGeneralConfig,
 			scene: this.spaceSceneConfig,
+			floorplan: this.floorplanConfig,
 		});
 	}
 
@@ -1444,6 +1454,7 @@ export class DT3DCard extends LitElement {
 		const normalized = normalizeSpaceConfiguration({
 			general: config.general ?? this.spaceGeneralConfig,
 			scene: config.scene ?? this.spaceSceneConfig,
+			floorplan: config.floorplan ?? this.floorplanConfig,
 		});
 
 		this.spaceGeneralConfig = normalized.general;
@@ -1452,6 +1463,8 @@ export class DT3DCard extends LitElement {
 			? this.sceneManager.setSpaceSceneConfig(normalized.scene)
 			: normalizeSpaceSceneConfig(normalized.scene);
 		LocalStorage.write(SPACE_SCENE_CONFIG_STORAGE_KEY, this.spaceSceneConfig);
+		this.floorplanConfig = normalized.floorplan;
+		this.wallConnectionManager.invalidate();
 
 		return this.getSpaceConfiguration();
 	}
@@ -1461,6 +1474,7 @@ export class DT3DCard extends LitElement {
 		const hasCardGeneral = hasCardGeneralConfiguration(apiConfig);
 		const hasGeneral = hasSpaceGeneralConfiguration(apiConfig);
 		const hasScene = hasSceneConfiguration(apiConfig);
+		const hasFloorplan = hasFloorplanConfiguration(apiConfig);
 		const nextConfig = normalizeSpaceConfiguration({
 			general: hasGeneral
 				? (apiConfig.general ?? apiConfig)
@@ -1468,11 +1482,17 @@ export class DT3DCard extends LitElement {
 			scene: hasScene
 				? (apiConfig.scene ?? apiConfig.spaceScene)
 				: this.spaceSceneConfig,
+			floorplan: hasFloorplan
+				? apiConfig.floorplan
+				: normalizeFloorplanConfig(),
 		});
 
 		this.applySpaceConfiguration(nextConfig);
 
-		if (space && (!hasGeneral || !hasScene || hasCardGeneral)) {
+		if (
+			space &&
+			(!hasGeneral || !hasScene || !hasFloorplan || hasCardGeneral)
+		) {
 			void this.persistSpaceConfiguration();
 		}
 	}
@@ -2029,6 +2049,27 @@ export class DT3DCard extends LitElement {
 		const floorEdit =
 			this.floorManager?.reconcileFloorsFromClosedWalls() ?? null;
 		this.recordWallNetworkEdit(wallEdit, floorEdit, label);
+	}
+
+	private applyAutomaticFloorSetting(): void {
+		const edit = this.floorManager?.reconcileFloorsFromClosedWalls() ?? null;
+		if (!edit) {
+			return;
+		}
+		const floors = [...edit.createdFloors, ...edit.existingFloors];
+		for (const floor of floors) {
+			if (floor.parent) {
+				this.sceneManager?.applyShadowSettingsToObject(floor);
+			}
+		}
+		this.refreshAfterObjectMutation(this.lastSelectedObject);
+		void Promise.all(
+			floors.map((floor) =>
+				floor.parent
+					? this.spaceSync?.syncObjectUpdate(floor)
+					: this.spaceSync?.syncObjectDelete(floor),
+			),
+		);
 	}
 
 	private objectContainsWall(object: Object3D): boolean {
@@ -3032,7 +3073,11 @@ export class DT3DCard extends LitElement {
 			const {config, ...metadata} = (
 				event as CustomEvent<SpaceConfigUpdateDetail>
 			).detail;
+			const automaticFloors = this.floorplanConfig.automaticFloors;
 			menu.config = this.applySpaceConfiguration(config);
+			if (automaticFloors !== this.floorplanConfig.automaticFloors) {
+				this.applyAutomaticFloorSetting();
+			}
 			this.schedulePersistSpaceConfiguration(metadata);
 		});
 
@@ -4383,6 +4428,7 @@ export class DT3DCard extends LitElement {
 				space: this.space,
 				gridSnapEnabled: this.bottomBar.gridSnapEnabled,
 				gridSnapSize: this.sceneManager.getGridSnapSize(),
+				automaticFloors: this.floorplanConfig.automaticFloors,
 			}),
 			{
 				addToScene: (object) => this.addToScene(object),
@@ -4398,6 +4444,7 @@ export class DT3DCard extends LitElement {
 				lastSelectedObject: this.lastSelectedObject,
 				gridSnapEnabled: this.bottomBar.gridSnapEnabled,
 				gridSnapSize: this.sceneManager.getGridSnapSize(),
+				floorplanConfig: this.floorplanConfig,
 			}),
 			{
 				addToScene: (object) => this.addToScene(object),
@@ -5003,6 +5050,10 @@ export class DT3DCard extends LitElement {
 		});
 
 		this.rendererManager.start((time: number) => {
+			this.wallConnectionManager.update(
+				this.space,
+				this.floorplanConfig.connection.shape,
+			);
 			this.space.traverse((child) => {
 				if (child instanceof DTObject) {
 					child.update(time);

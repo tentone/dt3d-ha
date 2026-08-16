@@ -155,11 +155,13 @@ While a wall is previewed without **Ctrl**, DT3D automatically looks for useful 
 
 Point and endpoint-alignment snaps activate within `0.20 m`; parallel alignment activates within `5°`. The lines are temporary editor guides and are not saved or rendered in visualization cards. A direct pointer hit on an existing wall takes priority so it can form a real connection. Holding **Ctrl** uses the manual X/Z constraint instead of these smart guides.
 
-When wall centerlines form a closed loop, DT3D automatically creates a floor surface for that boundary. Moving a wall endpoint updates the matching automatic floor; opening the loop removes it. Adding more walls to the same closed room does not create duplicate floors.
+When wall centerlines form a closed loop, DT3D automatically creates a floor surface for that boundary. Moving a wall endpoint updates the matching automatic floor; opening the loop removes it. Adding more walls to the same closed room does not create duplicate floors. You can disable this behavior for the active space under **Space configuration > Wall creation > Create floors automatically**.
+
+Shared wall endpoints use a separate connection mesh. Each connected wall body stops half its own thickness before the center of the junction, and the connection fills the corner. Under **Space configuration > Wall creation**, choose a rectangular or circular connection and set the height, color, and optional baseboard decoration applied by default to newly drawn walls. These defaults do not overwrite walls that already exist.
 
 #### Edit walls and floors
 
-- Select a wall to change its height, thickness, material, and optional baseboard height, depth, and color in the inspector.
+- Select a wall to change its height, thickness, material, and optional baseboard height, depth, and color in the inspector. This edits that wall independently of the creation defaults.
 - A selected wall displays blue handles across the full height of its start and end points. Double-click a handle, then drag the translation control to reshape the wall. Every wall sharing that junction moves with it. A shared handle uses the tallest connected wall and changes color when hovered.
 - Select **Draw floor surface** to create a floor independently of the wall network. Double-click each boundary point. Every point is projected onto the first point's Y height so the surface stays planar. Hold **Ctrl** to constrain the current edge to X or Z. After adding at least three points, double-click near the first point to close the outline; press **Escape** to discard an unfinished floor.
 - Hover a wall to see its length or a floor to see its area. The distance and angle tools in **Measure** provide additional checks.

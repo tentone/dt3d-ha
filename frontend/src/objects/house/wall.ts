@@ -1,8 +1,9 @@
-import type {Object3D, Vector3} from "three";
+import type {ColorRepresentation, Object3D, Vector3} from "three";
 import {
 	BoxGeometry,
 	BufferGeometry,
 	Color,
+	CylinderGeometry,
 	Group,
 	Mesh,
 	MeshStandardMaterial,
@@ -29,6 +30,8 @@ export type WallCustomization = {
 	baseboardDepth: number;
 	baseboardColor: string;
 };
+
+export type WallConnectionShape = "rectangle" | "circle";
 
 const DEFAULT_WALL_DIMENSIONS: WallDimensions = {
 	length: 2,
@@ -110,9 +113,15 @@ export class WallObject extends DTObject {
 
 	private baseboardMaterial: MeshStandardMaterial;
 
+	private connectionGroup: Group;
+
+	private startConnectionInset = 0;
+
+	private endConnectionInset = 0;
+
 	constructor(
 		dimensions: Partial<WallDimensions> = {},
-		color = DEFAULT_WALL_COLOR,
+		color: ColorRepresentation = DEFAULT_WALL_COLOR,
 		customization: Partial<WallCustomization> = {},
 	) {
 		super();
@@ -150,6 +159,10 @@ export class WallObject extends DTObject {
 		this.baseboardMaterial = new MeshStandardMaterial({
 			color: this.baseboardColor,
 		});
+		this.connectionGroup = markObjectInternal(new Group());
+		this.connectionGroup.name = "Wall Connections";
+		this.connectionGroup.userData.wallPart = "connection";
+		this.add(this.connectionGroup);
 		this.addEventListener("removed", () => {
 			// Removing a parent does not dispatch `removed` to CSS3D descendants,
 			// so explicitly detach the wall label from the renderer's DOM.
@@ -309,6 +322,88 @@ export class WallObject extends DTObject {
 		this.lengthLabel.visible = true;
 	}
 
+	/** Shorten the rectangular wall body by half its thickness at shared endpoints. */
+	public setConnectedEndpoints(startConnected: boolean, endConnected: boolean): void {
+		const startInset = startConnected ? this.thickness / 2 : 0;
+		const endInset = endConnected ? this.thickness / 2 : 0;
+		if (
+			Math.abs(this.startConnectionInset - startInset) <= 1e-9 &&
+			Math.abs(this.endConnectionInset - endInset) <= 1e-9
+		) {
+			return;
+		}
+		this.startConnectionInset = startInset;
+		this.endConnectionInset = endInset;
+		this.updateGeometry();
+	}
+
+	/** Remove all derived junction meshes owned by this wall. */
+	public clearJunctionConnections(): void {
+		for (const child of [...this.connectionGroup.children]) {
+			if (child instanceof Mesh) {
+				child.geometry.dispose();
+			}
+			this.connectionGroup.remove(child);
+		}
+	}
+
+	/** Add one separately rendered junction at a logical wall endpoint. */
+	public addJunctionConnection(
+		endpoint: "start" | "end",
+		shape: WallConnectionShape,
+		size: number,
+		height: number,
+	): void {
+		if (size <= 0 || height <= 0) {
+			return;
+		}
+		const geometry =
+			shape === "circle"
+				? new CylinderGeometry(size / 2, size / 2, height, 32)
+				: new BoxGeometry(size, height, size);
+		const mesh = markObjectInternal(new Mesh(geometry, this.wallMesh.material));
+		mesh.name = `${shape === "circle" ? "Circular" : "Rectangular"} Wall Connection`;
+		mesh.userData.wallPart = "connection";
+		mesh.castShadow = this.wallMesh.castShadow;
+		mesh.receiveShadow = this.wallMesh.receiveShadow;
+		mesh.position.set(
+			endpoint === "start" ? -this.length / 2 : this.length / 2,
+			height / 2,
+			0,
+		);
+		this.connectionGroup.add(mesh);
+
+		if (this.baseboardEnabled && this.baseboardHeight > 0) {
+			const decorationSize = size + this.baseboardDepth * 2;
+			const decorationGeometry =
+				shape === "circle"
+					? new CylinderGeometry(
+						decorationSize / 2,
+						decorationSize / 2,
+						this.baseboardHeight,
+						32,
+					)
+					: new BoxGeometry(
+						decorationSize,
+						this.baseboardHeight,
+						decorationSize,
+					);
+			const decoration = markObjectInternal(
+				new Mesh(decorationGeometry, this.baseboardMaterial),
+			);
+			decoration.name = "Wall Connection Baseboard";
+			decoration.userData.wallPart = "baseboard";
+			decoration.castShadow = this.wallMesh.castShadow;
+			decoration.receiveShadow = this.wallMesh.receiveShadow;
+			decoration.position.set(
+				endpoint === "start" ? -this.length / 2 : this.length / 2,
+				this.baseboardHeight / 2,
+				0,
+			);
+			this.connectionGroup.add(decoration);
+		}
+	}
+
 	/** Show the current wall length only while the pointer is over the wall. */
 	public override onInteraction(event: DTInteractionEvent): void {
 		if (event.type === "pointerenter") {
@@ -401,6 +496,7 @@ export class WallObject extends DTObject {
 				if (
 					child === source.wallMesh ||
 					child === source.baseboardGroup ||
+					child === source.connectionGroup ||
 					child.internal === true
 				) {
 					continue;
@@ -437,6 +533,7 @@ export class WallObject extends DTObject {
 		}
 
 		this.baseboardMaterial.color = new Color(this.baseboardColor);
+		const bodyBounds = this.getBodyBounds();
 		const floorOpeningIntervals = this.children
 			.filter(
 				(child): child is DoorObject | GateObject =>
@@ -445,26 +542,26 @@ export class WallObject extends DTObject {
 			.filter((opening) => opening.position.y <= this.baseboardHeight)
 			.map((opening) => ({
 				left: Math.max(
-					-this.length / 2,
+					bodyBounds.left,
 					opening.position.x - opening.width / 2,
 				),
 				right: Math.min(
-					this.length / 2,
+					bodyBounds.right,
 					opening.position.x + opening.width / 2,
 				),
 			}))
 			.sort((a, b) => a.left - b.left);
 
 		const segments: Array<{left: number; right: number}> = [];
-		let cursor = -this.length / 2;
+		let cursor = bodyBounds.left;
 		for (const interval of floorOpeningIntervals) {
 			if (interval.left > cursor) {
 				segments.push({left: cursor, right: interval.left});
 			}
 			cursor = Math.max(cursor, interval.right);
 		}
-		if (cursor < this.length / 2) {
-			segments.push({left: cursor, right: this.length / 2});
+		if (cursor < bodyBounds.right) {
+			segments.push({left: cursor, right: bodyBounds.right});
 		}
 
 		const depth = this.thickness + this.baseboardDepth * 2;
@@ -493,11 +590,11 @@ export class WallObject extends DTObject {
 	 */
 	private createWallGeometry(): BufferGeometry {
 		const epsilon = 1e-6;
-		const halfLength = this.length / 2;
+		const {left: bodyLeft, right: bodyRight} = this.getBodyBounds();
 		const openings = this.getOpenings()
 			.map(({width, height, x, y}) => ({
-				left: Math.max(-halfLength, x - width / 2),
-				right: Math.min(halfLength, x + width / 2),
+				left: Math.max(bodyLeft, x - width / 2),
+				right: Math.min(bodyRight, x + width / 2),
 				bottom: Math.max(0, y - height / 2),
 				top: Math.min(this.height, y + height / 2),
 			}))
@@ -506,8 +603,8 @@ export class WallObject extends DTObject {
 					right - left > epsilon && top - bottom > epsilon,
 			);
 		const xBoundaries = [
-			-halfLength,
-			halfLength,
+			bodyLeft,
+			bodyRight,
 			...openings.flatMap(({left, right}) => [left, right]),
 		]
 			.sort((left, right) => left - right)
@@ -576,6 +673,23 @@ export class WallObject extends DTObject {
 		return geometry;
 	}
 
+	private getBodyBounds(): {left: number; right: number} {
+		const halfLength = this.length / 2;
+		const totalInset = this.startConnectionInset + this.endConnectionInset;
+		if (totalInset < this.length - 1e-6) {
+			return {
+				left: -halfLength + this.startConnectionInset,
+				right: halfLength - this.endConnectionInset,
+			};
+		}
+		const midpointOffset =
+			(this.startConnectionInset - this.endConnectionInset) / 2;
+		return {
+			left: midpointOffset - 5e-7,
+			right: midpointOffset + 5e-7,
+		};
+	}
+
 	private clampOpeningOffset(offset: number, width: number): number {
 		const maximumOffset = Math.max(0, (this.length - width) / 2);
 		return Math.min(maximumOffset, Math.max(-maximumOffset, offset));
@@ -635,6 +749,6 @@ export class WallObject extends DTObject {
 		const parts = this.getOpenings().map((opening) =>
 			[opening.width, opening.height, opening.x, opening.y].join(","),
 		);
-		return `${this.length}|${this.height}|${this.thickness}|${this.baseboardEnabled}|${this.baseboardHeight}|${this.baseboardDepth}|${parts.join(";")}`;
+		return `${this.length}|${this.height}|${this.thickness}|${this.startConnectionInset}|${this.endConnectionInset}|${this.baseboardEnabled}|${this.baseboardHeight}|${this.baseboardDepth}|${parts.join(";")}`;
 	}
 }

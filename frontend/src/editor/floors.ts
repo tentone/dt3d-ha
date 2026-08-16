@@ -23,6 +23,7 @@ type FloorContext = {
 	space: Group | null;
 	gridSnapEnabled: boolean;
 	gridSnapSize: number;
+	automaticFloors: boolean;
 };
 
 type FloorCallbacks = {
@@ -180,7 +181,7 @@ export class FloorManager {
 	 * they already cover the same room.
 	 */
 	public reconcileFloorsFromClosedWalls(): AutomaticFloorEdit | null {
-		const {space} = this.getContext();
+		const {space, automaticFloors: automaticFloorsEnabled} = this.getContext();
 		if (!space) {
 			return null;
 		}
@@ -196,12 +197,14 @@ export class FloorManager {
 				}
 			}
 		});
-		const faces = this.findClosedWallFaces(space).filter(
-			(face) =>
-				!manualPolygons.some((polygon) =>
-					this.polygonCoversFace(polygon, face),
-				),
-		);
+		const faces = automaticFloorsEnabled
+			? this.findClosedWallFaces(space).filter(
+				(face) =>
+					!manualPolygons.some((polygon) =>
+						this.polygonCoversFace(polygon, face),
+					),
+			)
+			: [];
 		const beforeExisting = new Map(
 			automaticFloors.map((floor) => [
 				floor,

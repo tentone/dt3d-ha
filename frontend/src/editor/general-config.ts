@@ -121,9 +121,29 @@ export type SpaceGeneralConfig = {
 	rendering: Pick<RenderingConfig, "toneMapping" | "postProcessing">;
 };
 
+export type WallConnectionShape = "rectangle" | "circle";
+
+export type FloorplanConfig = {
+	automaticFloors: boolean;
+	connection: {
+		shape: WallConnectionShape;
+	};
+	wall: {
+		height: number;
+		color: string;
+		decoration: {
+			enabled: boolean;
+			height: number;
+			depth: number;
+			color: string;
+		};
+	};
+};
+
 export type SpaceConfiguration = {
 	general: SpaceGeneralConfig;
 	scene: SpaceSceneConfig;
+	floorplan: FloorplanConfig;
 };
 
 export const DEFAULT_GENERAL_CONFIG: GeneralConfig = {
@@ -222,9 +242,27 @@ export const DEFAULT_SPACE_GENERAL_CONFIG: SpaceGeneralConfig = {
 	},
 };
 
+export const DEFAULT_FLOORPLAN_CONFIG: FloorplanConfig = {
+	automaticFloors: true,
+	connection: {
+		shape: "rectangle",
+	},
+	wall: {
+		height: 2.4,
+		color: "#c9c7c2",
+		decoration: {
+			enabled: false,
+			height: 0.12,
+			depth: 0.018,
+			color: "#f2f0e9",
+		},
+	},
+};
+
 export const DEFAULT_SPACE_CONFIGURATION: SpaceConfiguration = {
 	general: DEFAULT_SPACE_GENERAL_CONFIG,
 	scene: normalizeSpaceSceneConfig(),
+	floorplan: DEFAULT_FLOORPLAN_CONFIG,
 };
 
 const booleanOrDefault = (value: unknown, fallback: boolean): boolean => {
@@ -762,6 +800,66 @@ export const normalizeSpaceGeneralConfig = (
 	};
 };
 
+const colorOrDefault = (value: unknown, fallback: string): string =>
+	typeof value === "string" && /^#[0-9a-fA-F]{6}$/.test(value)
+		? value
+		: fallback;
+
+export const normalizeFloorplanConfig = (
+	config: Record<string, any> = {},
+): FloorplanConfig => {
+	const connection = config.connection ?? {};
+	const wall = config.wall ?? {};
+	const decoration = wall.decoration ?? {};
+
+	return {
+		automaticFloors: booleanOrDefault(
+			config.automaticFloors,
+			DEFAULT_FLOORPLAN_CONFIG.automaticFloors,
+		),
+		connection: {
+			shape:
+				connection.shape === "circle" || connection.shape === "circular"
+					? "circle"
+					: "rectangle",
+		},
+		wall: {
+			height: numberOrDefault(
+				wall.height,
+				DEFAULT_FLOORPLAN_CONFIG.wall.height,
+				0.1,
+				100,
+			),
+			color: colorOrDefault(
+				wall.color,
+				DEFAULT_FLOORPLAN_CONFIG.wall.color,
+			),
+			decoration: {
+				enabled: booleanOrDefault(
+					decoration.enabled,
+					DEFAULT_FLOORPLAN_CONFIG.wall.decoration.enabled,
+				),
+				height: numberOrDefault(
+					decoration.height,
+					DEFAULT_FLOORPLAN_CONFIG.wall.decoration.height,
+					0,
+					10,
+				),
+				depth: numberOrDefault(
+					decoration.depth,
+					DEFAULT_FLOORPLAN_CONFIG.wall.decoration.depth,
+					0,
+					10,
+				),
+				color: colorOrDefault(
+					decoration.color,
+					DEFAULT_FLOORPLAN_CONFIG.wall.decoration.color,
+				),
+			},
+		},
+	};
+};
+
 export const mergeGeneralConfig = (
 	cardConfig: Record<string, any> = {},
 	spaceConfig: Record<string, any> = {},
@@ -785,7 +883,16 @@ export const normalizeSpaceConfiguration = (
 ): SpaceConfiguration => ({
 	general: normalizeSpaceGeneralConfig(config.general ?? {}),
 	scene: normalizeSpaceSceneConfig(config.scene ?? config.spaceScene ?? {}),
+	floorplan: normalizeFloorplanConfig(config.floorplan ?? {}),
 });
+
+export const hasFloorplanConfiguration = (config: unknown): boolean =>
+	Boolean(
+		config &&
+			typeof config === "object" &&
+			(config as Record<string, unknown>).floorplan &&
+			typeof (config as Record<string, unknown>).floorplan === "object",
+	);
 
 export const hasSpaceGeneralConfiguration = (config: unknown): boolean => {
 	if (!config || typeof config !== "object") {
