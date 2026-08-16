@@ -2284,7 +2284,7 @@ let q0 = class extends Xt {
     return Ae`
 		<div class="connection-status-container">
 			<div style="margin: 5px;" class="${this.success ? "connection-status-success" : "connection-status-error"}">
-				${this.msg}<br>${"2026-08-16T17:01:10.246Z"}
+				${this.msg}<br>${"2026-08-16T18:50:48.142Z"}
 			</div>
 		</div>`;
   }
