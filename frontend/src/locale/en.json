@@ -163,6 +163,7 @@
 	"baseboardColor": "Baseboard color",
 	"baseboardColorTooltip": "Color of the wall's bottom trim.",
 	"wallCreationDefaults": "Wall creation",
+	"wallCreationDefaultsDescription": "Configure how new walls, shared corners, and automatic floors are created in this space.",
 	"automaticFloors": "Create floors automatically",
 	"automaticFloorsTooltip": "Create and maintain floor surfaces for closed wall loops.",
 	"wallConnectionShape": "Corner connection shape",

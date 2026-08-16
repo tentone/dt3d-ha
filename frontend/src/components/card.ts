@@ -548,6 +548,8 @@ export class DT3DCard extends LitElement {
 
 	private gridConfigModal: DT3DFormModal | null = null;
 
+	private wallSettingsModal: DT3DFormModal | null = null;
+
 	private spaceFormModal: DT3DFormModal | null = null;
 
 	private persistSpaceConfigTimer: number | null = null;
@@ -1586,6 +1588,8 @@ export class DT3DCard extends LitElement {
 			this.confirmationModal = null;
 			this.gridConfigModal?.remove();
 			this.gridConfigModal = null;
+			this.wallSettingsModal?.remove();
+			this.wallSettingsModal = null;
 			this.spaceFormModal?.remove();
 			this.spaceFormModal = null;
 			this.content
@@ -2965,6 +2969,7 @@ export class DT3DCard extends LitElement {
 		return Boolean(
 			this.confirmationModal ||
 			this.gridConfigModal ||
+			this.wallSettingsModal ||
 			this.spaceFormModal ||
 			this.floorplanCalibrationModal ||
 			this.spaceConfigMenu ||
@@ -3073,11 +3078,7 @@ export class DT3DCard extends LitElement {
 			const {config, ...metadata} = (
 				event as CustomEvent<SpaceConfigUpdateDetail>
 			).detail;
-			const automaticFloors = this.floorplanConfig.automaticFloors;
 			menu.config = this.applySpaceConfiguration(config);
-			if (automaticFloors !== this.floorplanConfig.automaticFloors) {
-				this.applyAutomaticFloorSetting();
-			}
 			this.schedulePersistSpaceConfiguration(metadata);
 		});
 
@@ -3144,6 +3145,125 @@ export class DT3DCard extends LitElement {
 		modal.addEventListener("modal-close", closeModal);
 
 		this.gridConfigModal = modal;
+		this.content.appendChild(modal);
+	}
+
+	/** Open the floorplan defaults form from the object sidebar. */
+	private openWallSettingsModal(): void {
+		if (!this.content || this.wallSettingsModal || this.isVisualizationOnly()) {
+			return;
+		}
+
+		const fields: DynamicFormField[] = [
+			{
+				label: localManager.get("automaticFloors"),
+				attribute: "automaticFloors",
+				type: "boolean",
+				tooltip: localManager.get("automaticFloorsTooltip"),
+				editable: true,
+				enabled: true,
+			},
+			{
+				label: localManager.get("wallConnectionShape"),
+				attribute: "connection.shape",
+				type: "select",
+				tooltip: localManager.get("wallConnectionShapeTooltip"),
+				editable: true,
+				enabled: true,
+				options: [
+					{label: localManager.get("rectangular"), value: "rectangle"},
+					{label: localManager.get("circular"), value: "circle"},
+				],
+			},
+			{
+				label: localManager.get("defaultWallHeight"),
+				attribute: "wall.height",
+				type: "number",
+				tooltip: localManager.get("defaultWallHeightTooltip"),
+				editable: true,
+				enabled: true,
+				step: 0.05,
+				min: 0.1,
+				max: 100,
+			},
+			{
+				label: localManager.get("defaultWallColor"),
+				attribute: "wall.color",
+				type: "color",
+				tooltip: localManager.get("defaultWallColorTooltip"),
+				editable: true,
+				enabled: true,
+			},
+			{
+				label: localManager.get("defaultWallDecoration"),
+				attribute: "wall.decoration.enabled",
+				type: "boolean",
+				tooltip: localManager.get("defaultWallDecorationTooltip"),
+				editable: true,
+				enabled: true,
+			},
+			{
+				label: localManager.get("baseboardHeight"),
+				attribute: "wall.decoration.height",
+				type: "number",
+				tooltip: localManager.get("baseboardHeightTooltip"),
+				editable: true,
+				enabled: true,
+				step: 0.01,
+				min: 0,
+				max: 10,
+			},
+			{
+				label: localManager.get("baseboardDepth"),
+				attribute: "wall.decoration.depth",
+				type: "number",
+				tooltip: localManager.get("baseboardDepthTooltip"),
+				editable: true,
+				enabled: true,
+				step: 0.001,
+				min: 0,
+				max: 10,
+			},
+			{
+				label: localManager.get("baseboardColor"),
+				attribute: "wall.decoration.color",
+				type: "color",
+				tooltip: localManager.get("baseboardColorTooltip"),
+				editable: true,
+				enabled: true,
+			},
+		];
+		const modal = document.createElement("dt3d-form-modal") as DT3DFormModal;
+		modal.heading = localManager.get("wallCreationDefaults");
+		modal.description = localManager.get("wallCreationDefaultsDescription");
+		modal.confirmLabel = localManager.get("save");
+		modal.fields = fields;
+		modal.data = this.floorplanConfig;
+
+		const closeModal = () => {
+			modal.remove();
+			if (this.wallSettingsModal === modal) {
+				this.wallSettingsModal = null;
+			}
+		};
+
+		modal.addEventListener("form-submit", (event: Event) => {
+			const {values} = (event as CustomEvent<FormModalSubmitDetail>).detail;
+			const automaticFloors = this.floorplanConfig.automaticFloors;
+			const floorplan = normalizeFloorplanConfig(values);
+			this.applySpaceConfiguration({
+				...this.getSpaceConfiguration(),
+				floorplan,
+			});
+			if (automaticFloors !== floorplan.automaticFloors) {
+				this.applyAutomaticFloorSetting();
+			}
+			this.schedulePersistSpaceConfiguration();
+			closeModal();
+		});
+		modal.addEventListener("modal-close", closeModal);
+
+		this.wallSettingsModal = modal;
 		this.content.appendChild(modal);
 	}
 
@@ -4654,6 +4774,10 @@ export class DT3DCard extends LitElement {
 			);
 		});
 
+		this.objectSidebar.addEventListener("wall-settings-open", () => {
+			this.openWallSettingsModal();
+		});
+
 		this.objectSidebar.addEventListener("upload-menu-open", (event: Event) => {
 			if (this.isVisualizationOnly()) return;
 			this.openUploadMenu(
@@ -5121,6 +5245,8 @@ export class DT3DCard extends LitElement {
 		this.confirmationModal = null;
 		this.gridConfigModal?.remove();
 		this.gridConfigModal = null;
+		this.wallSettingsModal?.remove();
+		this.wallSettingsModal = null;
 		this.spaceFormModal?.remove();
 		this.spaceFormModal = null;
 	}

@@ -70,6 +70,15 @@ export class DT3DObjectSidebar extends LitElement {
 		);
 	}
 
+	private handleWallSettingsOpen(): void {
+		this.dispatchEvent(
+			new CustomEvent("wall-settings-open", {
+				bubbles: true,
+				composed: true,
+			}),
+		);
+	}
+
 	private handleMeshMenuOpen(event: MouseEvent): void {
 		const target = event.currentTarget as HTMLElement | null;
 		const rect = target?.getBoundingClientRect();
@@ -233,6 +242,17 @@ export class DT3DObjectSidebar extends LitElement {
 							aria-label=${localManager.get("drawFloor")}
 						>
 							<ha-icon icon="mdi:floor-plan"></ha-icon>
+						</button>
+					</dt3d-tooltip>
+					<dt3d-tooltip
+						.content=${localManager.get("wallCreationDefaults")}
+						placement="right"
+					>
+						<button
+							@click=${() => this.handleWallSettingsOpen()}
+							aria-label=${localManager.get("wallCreationDefaults")}
+						>
+							<ha-icon icon="mdi:tune-variant"></ha-icon>
 						</button>
 					</dt3d-tooltip>
 					<dt3d-tooltip
