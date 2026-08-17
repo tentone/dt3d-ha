@@ -153,7 +153,7 @@ While a wall is previewed without **Ctrl**, DT3D automatically looks for useful 
 | Red                   | **Parallel alignment** — the new segment is nearly parallel to an existing wall and snaps to the same direction. |
 | Red and blue together | The new wall is parallel to one wall while its endpoint is aligned with another endpoint.                        |
 
-Point and endpoint-alignment snaps activate within `0.20 m`; parallel alignment activates within `5°`. The lines are temporary editor guides and are not saved or rendered in visualization cards. A direct pointer hit on an existing wall takes priority so it can form a real connection. Holding **Ctrl** uses the manual X/Z constraint instead of these smart guides.
+Point snaps to existing wall joints activate within `0.40 m`; endpoint-alignment snaps activate within `0.20 m`; parallel alignment activates within `5°`. Before the first point is placed, a translucent rectangular or circular joint follows the pointer and the point/alignment guidelines show the position that will be used. The lines and preview joint are temporary editor guides and are not saved or rendered in visualization cards. A direct pointer hit on an existing wall takes priority so it can form a real connection. Holding **Ctrl** uses the manual X/Z constraint instead of these smart guides.
 
 When wall centerlines form a closed loop, DT3D automatically creates a floor surface for that boundary. Moving a wall endpoint updates the matching automatic floor; opening the loop removes it. Adding more walls to the same closed room does not create duplicate floors. You can disable this behavior for the active space from **Floorplan > Wall creation > Create floors automatically** in the object sidebar.
 

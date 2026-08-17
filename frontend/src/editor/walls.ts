@@ -1,4 +1,4 @@
-import type {Camera, Object3D} from "three";
+import type {Camera, Mesh, Object3D} from "three";
 import {
 	BufferGeometry,
 	Group,
@@ -67,6 +67,7 @@ type SmartSnap = {
 };
 
 const ALIGNMENT_SNAP_DISTANCE = 0.2;
+const JOINT_SNAP_DISTANCE = 0.4;
 const PARALLEL_SNAP_ANGLE = Math.PI / 36;
 const GUIDE_HEIGHT = 0.035;
 const GRID_HELPER_PLANE = new Plane(new Vector3(0, 1, 0), 0);
@@ -86,6 +87,10 @@ export class WallManager {
 	private measurements: Group;
 
 	private guides = new Group();
+
+	private startJointPreview: WallObject | null = null;
+
+	private startJointPreviewSignature = "";
 
 	private guideMaterials = Object.fromEntries(
 		(Object.entries(GUIDE_COLORS) as [GuideType, number][]).map(
@@ -168,6 +173,7 @@ export class WallManager {
 		}
 		this.draft = null;
 		this.draftStart = null;
+		this.clearStartJointPreview();
 		this.clearGuides();
 	}
 
@@ -218,6 +224,7 @@ export class WallManager {
 		}
 
 		if (!this.draftStart) {
+			placement = this.snapStartingPlacement(placement);
 			this.draftStart = placement.point.clone();
 			this.createDraft(this.draftStart);
 			return true;
@@ -254,13 +261,16 @@ export class WallManager {
 			return;
 		}
 
-		if (!this.draftStart || !this.draft) {
+		const placement = this.pickPlacementFromEvent(event);
+		if (!placement) {
+			this.clearStartJointPreview();
+			this.clearGuides();
 			return;
 		}
 
-		const placement = this.pickPlacementFromEvent(event);
-		if (!placement) {
-			this.clearGuides();
+		if (!this.draftStart || !this.draft) {
+			const snappedPlacement = this.snapStartingPlacement(placement);
+			this.showStartJointPreview(snappedPlacement.point);
 			return;
 		}
 
@@ -270,6 +280,8 @@ export class WallManager {
 	}
 
 	private createDraft(start: Vector3): void {
+		this.clearStartJointPreview();
+		this.clearGuides();
 		const {wall} = this.getContext().floorplanConfig;
 		this.draft = new WallObject(
 			{height: wall.height},
@@ -475,6 +487,33 @@ export class WallManager {
 		};
 	}
 
+	private snapStartingPlacement(placement: WallPlacement): WallPlacement {
+		this.clearGuides();
+		if (placement.connectedWall) {
+			return placement;
+		}
+
+		const wallReferences = this.collectWallReferences();
+		const pointSnap = this.findEndpointPointSnap(
+			placement.point,
+			null,
+			wallReferences,
+		);
+		const smartSnap =
+			pointSnap ??
+			this.findEndpointAlignment(placement.point, null, wallReferences);
+		if (!smartSnap) {
+			return placement;
+		}
+
+		this.showGuides(smartSnap.guides);
+		return {
+			point: smartSnap.point,
+			connectedWall: null,
+			wallOffset: null,
+		};
+	}
+
 	private findSmartSnap(point: Vector3, origin: Vector3): SmartSnap | null {
 		const wallReferences = this.collectWallReferences();
 		const combinedSnap = this.findCombinedAlignment(
@@ -521,15 +560,15 @@ export class WallManager {
 
 	private findEndpointPointSnap(
 		point: Vector3,
-		origin: Vector3,
+		origin: Vector3 | null,
 		walls: WallReference[],
 	): SmartSnap | null {
 		let closestEndpoint: Vector3 | null = null;
-		let closestDistance = ALIGNMENT_SNAP_DISTANCE;
+		let closestDistance = JOINT_SNAP_DISTANCE;
 
 		for (const wall of walls) {
 			for (const endpoint of [wall.start, wall.end]) {
-				if (endpoint.distanceToSquared(origin) <= 1e-8) {
+				if (origin && endpoint.distanceToSquared(origin) <= 1e-8) {
 					continue;
 				}
 
@@ -639,7 +678,7 @@ export class WallManager {
 
 	private findEndpointAlignment(
 		point: Vector3,
-		origin: Vector3,
+		origin: Vector3 | null,
 		walls: WallReference[],
 	): SmartSnap | null {
 		let best: SmartSnap | null = null;
@@ -649,7 +688,7 @@ export class WallManager {
 			for (const endpoint of [wall.start, wall.end]) {
 				// Do not infer an alignment from the point where the active segment
 				// already begins; that would turn every connected run into axis snap.
-				if (endpoint.distanceToSquared(origin) <= 1e-8) {
+				if (origin && endpoint.distanceToSquared(origin) <= 1e-8) {
 					continue;
 				}
 
@@ -828,6 +867,105 @@ export class WallManager {
 			guide.renderOrder = 1000;
 			this.guides.add(guide);
 		}
+	}
+
+	private showStartJointPreview(point: Vector3): void {
+		const {connection, wall} = this.getContext().floorplanConfig;
+		const signature = [
+			connection.shape,
+			wall.height,
+			wall.color,
+			wall.decoration.enabled,
+			wall.decoration.height,
+			wall.decoration.depth,
+			wall.decoration.color,
+		].join("|");
+		if (!this.startJointPreview || signature !== this.startJointPreviewSignature) {
+			this.clearStartJointPreview();
+			this.startJointPreview = new WallObject(
+				{height: wall.height},
+				wall.color,
+				{
+					baseboardEnabled: wall.decoration.enabled,
+					baseboardHeight: wall.decoration.height,
+					baseboardDepth: wall.decoration.depth,
+					baseboardColor: wall.decoration.color,
+				},
+			);
+			this.startJointPreview.internal = true;
+			this.startJointPreview.name = "Wall Start Joint Preview";
+			this.startJointPreview.wallMesh.visible = false;
+			const baseboard = this.startJointPreview.getObjectByName("Wall Baseboard");
+			if (baseboard) {
+				baseboard.visible = false;
+			}
+			this.startJointPreview.addJunctionConnection(
+				"start",
+				connection.shape,
+				this.startJointPreview.thickness,
+				this.startJointPreview.height,
+			);
+			const connectionGroup = this.startJointPreview.getObjectByName(
+				"Wall Connections",
+			);
+			for (const child of connectionGroup?.children ?? []) {
+				child.position.x = 0;
+			}
+			connectionGroup?.traverse((object) => {
+				const mesh = object as Mesh;
+				if (!mesh.isMesh) {
+					return;
+				}
+				const materials = Array.isArray(mesh.material)
+					? mesh.material
+					: [mesh.material];
+				for (const material of materials) {
+					material.depthTest = false;
+					material.depthWrite = false;
+					material.opacity = 0.75;
+					material.transparent = true;
+				}
+				mesh.renderOrder = 1000;
+			});
+
+			this.measurements.add(this.startJointPreview);
+			this.startJointPreviewSignature = signature;
+		}
+
+		this.startJointPreview.position.copy(point);
+	}
+
+	private clearStartJointPreview(): void {
+		if (!this.startJointPreview) {
+			return;
+		}
+
+		this.measurements.remove(this.startJointPreview);
+		const geometries = new Set<BufferGeometry>();
+		const materials = new Set<MeshStandardMaterial>();
+		this.startJointPreview.traverse((object) => {
+			const mesh = object as Mesh;
+			if (!mesh.isMesh) {
+				return;
+			}
+			geometries.add(mesh.geometry);
+			const meshMaterials = Array.isArray(mesh.material)
+				? mesh.material
+				: [mesh.material];
+			for (const material of meshMaterials) {
+				if (material instanceof MeshStandardMaterial) {
+					materials.add(material);
+				}
+			}
+		});
+		for (const geometry of geometries) {
+			geometry.dispose();
+		}
+		for (const material of materials) {
+			material.dispose();
+		}
+		this.startJointPreview = null;
+		this.startJointPreviewSignature = "";
 	}
 
 	private clearGuides(): void {
