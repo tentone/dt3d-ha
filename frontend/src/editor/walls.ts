@@ -5,6 +5,7 @@ import {
 	Line,
 	LineBasicMaterial,
 	MeshStandardMaterial,
+	Plane,
 	Raycaster,
 	Vector2,
 	Vector3,
@@ -68,6 +69,7 @@ type SmartSnap = {
 const ALIGNMENT_SNAP_DISTANCE = 0.2;
 const PARALLEL_SNAP_ANGLE = Math.PI / 36;
 const GUIDE_HEIGHT = 0.035;
+const GRID_HELPER_PLANE = new Plane(new Vector3(0, 1, 0), 0);
 const GUIDE_COLORS: Record<GuideType, number> = {
 	parallel: 0xff3b30,
 	point: 0x34c759,
@@ -345,24 +347,30 @@ export class WallManager {
 		this.pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
 		this.raycaster.setFromCamera(this.pointer, camera);
 
-		const intersection = this.raycaster.intersectObjects(
+		// Scene objects take priority over the grid so walls can still connect to
+		// an existing wall or use the exact surface point of another object.
+		const objectIntersection = this.raycaster.intersectObjects(
 			space.children,
 			true,
 		)[0];
-		if (!intersection) {
+		const gridPoint = objectIntersection
+			? null
+			: this.raycaster.ray.intersectPlane(GRID_HELPER_PLANE, new Vector3());
+		if (!objectIntersection && !gridPoint) {
 			return null;
 		}
 
-		const connectedWall = this.resolveWallFromObject(
-			intersection.object,
-			space,
-		);
+		const connectedWall = objectIntersection
+			? this.resolveWallFromObject(objectIntersection.object, space)
+			: null;
 		let point: Vector3;
 		let wallOffset: number | null = null;
 
-		if (connectedWall) {
+		if (connectedWall && objectIntersection) {
 			// Join the new segment to the existing wall's center line, whether the user clicked its face, one of its ends, or anywhere in the middle.
-			const wallPoint = connectedWall.worldToLocal(intersection.point.clone());
+			const wallPoint = connectedWall.worldToLocal(
+				objectIntersection.point.clone(),
+			);
 			wallOffset = Math.min(
 				connectedWall.length / 2,
 				Math.max(-connectedWall.length / 2, wallPoint.x),
@@ -370,7 +378,9 @@ export class WallManager {
 			wallPoint.set(wallOffset, 0, 0);
 			point = space.worldToLocal(connectedWall.localToWorld(wallPoint));
 		} else {
-			point = space.worldToLocal(intersection.point.clone());
+			point = space.worldToLocal(
+				(objectIntersection?.point ?? gridPoint).clone(),
+			);
 			if (gridSnapEnabled) {
 				point = this.snapPointToGrid(point, gridSnapSize);
 			}

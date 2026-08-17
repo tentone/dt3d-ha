@@ -133,7 +133,7 @@ Add as many rules as needed. Each rule can use the same entity or a different on
 
 1. Open **Upload assets** and choose **Floorplan reference**.
 2. Select a 2D floorplan image. In the calibration dialog, click two points whose real separation is known, enter that distance in meters, and choose **Add floorplan**.
-3. DT3D creates a horizontal textured plane at the calibrated real-world size. Switch to an orthographic top view if that makes the image easier to trace. You can instead add or import a plane manually, but wall points must be double-clicked on a visible scene surface; empty scene space cannot receive a point.
+3. DT3D creates a horizontal textured plane at the calibrated real-world size. Switch to an orthographic top view if that makes the image easier to trace. You can instead add or import a plane manually. When a wall point does not hit a visible scene object, it is placed on the ground grid plane instead.
 4. Optionally enable grid snapping and set a suitable snap size. Grid snapping and the smart wall guides below are separate features.
 
 #### Draw walls
@@ -385,7 +385,7 @@ Then optimize in this order:
 ## Troubleshooting
 
 - **An object cannot be moved or reordered:** select it and disable its locked state in the inspector.
-- **A wall point cannot be placed:** double-click a visible surface such as a calibrated floorplan reference or plane. Empty scene space cannot receive a wall point.
+- **A wall point cannot be placed:** double-click a visible surface or an empty area over the ground grid plane. A camera ray parallel to the ground plane cannot produce a fallback point.
 - **Colored lines appear while drawing walls:** these are temporary [smart snap guidelines](#draw-walls), not scene objects. Green means endpoint snap, blue means endpoint alignment, and red means parallel alignment.
 - **A wall will not stay on a plan axis:** hold **Ctrl** while moving the preview and keep it held while double-clicking the endpoint.
 - **A door or window is added to the wrong wall:** double-click directly on the intended wall, or move the opening near that wall so it reattaches to the nearest segment.
