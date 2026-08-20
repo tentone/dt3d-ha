@@ -61,6 +61,7 @@ h4 {
 }
 
 .rules-section {
+	flex: 0 0 auto;
 	border: 1px solid var(--divider-color);
 	border-radius: 6px;
 	background: color-mix(
