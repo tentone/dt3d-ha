@@ -836,6 +836,7 @@ export class DT3DObjectInspector extends LitElement {
 			enabled: true,
 			fields: subFields,
 			data,
+			collapsed: attribute !== "configuration",
 		});
 	}
 
@@ -1883,6 +1884,12 @@ export class DT3DObjectInspector extends LitElement {
 
 	private getInspectorFields(locked: boolean): DynamicFormField[] {
 		const fields: DynamicFormField[] = [];
+		const isFloorplannerObject =
+			this.selectedObject instanceof WallObject ||
+			this.selectedObject instanceof DoorObject ||
+			this.selectedObject instanceof WindowObject ||
+			this.selectedObject instanceof GateObject ||
+			this.selectedObject instanceof FurnitureObject;
 		const geometryData =
 			this.selectedObject instanceof Mesh ? this.selectedObject.userData : null;
 		const materialObject = findMaterialObject(this.selectedObject);
@@ -1903,19 +1910,24 @@ export class DT3DObjectInspector extends LitElement {
 			localManager.get("transform"),
 			this.getTransformFields(locked),
 		);
-		this.addSubFormField(
-			fields,
-			"shadows",
-			localManager.get("shadows"),
-			this.getShadowFields(locked),
-		);
-		this.addSubFormField(
-			fields,
-			"material",
-			localManager.get("material"),
-			this.getMaterialFields(locked),
-			materialData,
-		);
+		const addAppearanceFields = () => {
+			this.addSubFormField(
+				fields,
+				"shadows",
+				localManager.get("shadows"),
+				this.getShadowFields(locked),
+			);
+			this.addSubFormField(
+				fields,
+				"material",
+				localManager.get("material"),
+				this.getMaterialFields(locked),
+				materialData,
+			);
+		};
+		if (!isFloorplannerObject) {
+			addAppearanceFields();
+		}
 		this.addSubFormField(
 			fields,
 			"wall",
@@ -1997,6 +2009,9 @@ export class DT3DObjectInspector extends LitElement {
 				? this.selectedObject.parameters
 				: null,
 		);
+		if (isFloorplannerObject) {
+			addAppearanceFields();
+		}
 		this.addSubFormField(
 			fields,
 			"geometry",
@@ -2088,7 +2103,6 @@ export class DT3DObjectInspector extends LitElement {
 			(field) => field.attribute === "material.color",
 		);
 
-		this.addSubFormField(fields, "material", localManager.get("material"), colorFields, materialData);
 		this.addSubFormField(fields, "wall", localManager.get("wall"), this.getWallFields(locked));
 		this.addSubFormField(
 			fields,
@@ -2109,6 +2123,7 @@ export class DT3DObjectInspector extends LitElement {
 		this.addSubFormField(fields, "windowGrid", localManager.get("windowGrid"), this.getWindowGridFields(locked));
 		this.addSubFormField(fields, "windowBlinds", localManager.get("windowBlinds"), this.getWindowBlindFields(locked));
 		this.addSubFormField(fields, "windowShutters", localManager.get("windowShutters"), this.getWindowShutterFields(locked));
+		this.addSubFormField(fields, "material", localManager.get("material"), colorFields, materialData);
 
 		return this.markMixedFields(fields, objects);
 	}
