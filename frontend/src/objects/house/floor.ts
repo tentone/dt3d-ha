@@ -1,6 +1,7 @@
 import type {Material} from "three";
 import {
 	DoubleSide,
+	Float32BufferAttribute,
 	Mesh,
 	MeshStandardMaterial,
 	Shape,
@@ -8,6 +9,7 @@ import {
 	Vector3,
 } from "three";
 
+import {initializeMeshShadowSettings} from "../../editor/mesh-shadows.js";
 import {markObjectInternal} from "../../utils/internal-object.js";
 import type {DTInteractionEvent} from "../dt-object.js";
 import {DTObject} from "../dt-object.js";
@@ -65,6 +67,10 @@ export class FloorObject extends DTObject {
 		);
 		this.floorMesh.name = "Floor Surface";
 		this.floorMesh.userData.ownerMaterialTarget = true;
+		initializeMeshShadowSettings(this.floorMesh, {
+			castShadow: false,
+			receiveShadow: true,
+		});
 		this.add(this.floorMesh);
 	}
 
@@ -157,7 +163,37 @@ export class FloorObject extends DTObject {
 		const geometry = new ShapeGeometry(shape);
 		geometry.rotateX(-Math.PI / 2);
 		geometry.computeVertexNormals();
+		this.createPlanarUv(geometry);
 		return geometry;
+	}
+
+	/** Map the complete floor polygon into normalized texture space. */
+	private createPlanarUv(geometry: ShapeGeometry): void {
+		const positions = geometry.getAttribute("position");
+		let minX = Number.POSITIVE_INFINITY;
+		let maxX = Number.NEGATIVE_INFINITY;
+		let minZ = Number.POSITIVE_INFINITY;
+		let maxZ = Number.NEGATIVE_INFINITY;
+
+		for (let index = 0; index < positions.count; index++) {
+			const x = positions.getX(index);
+			const z = positions.getZ(index);
+			minX = Math.min(minX, x);
+			maxX = Math.max(maxX, x);
+			minZ = Math.min(minZ, z);
+			maxZ = Math.max(maxZ, z);
+		}
+
+		const width = maxX - minX || 1;
+		const depth = maxZ - minZ || 1;
+		const uvs: number[] = [];
+		for (let index = 0; index < positions.count; index++) {
+			uvs.push(
+				(positions.getX(index) - minX) / width,
+				(positions.getZ(index) - minZ) / depth,
+			);
+		}
+		geometry.setAttribute("uv", new Float32BufferAttribute(uvs, 2));
 	}
 
 	private normalizePoints(points: FloorPoint[]): FloorPoint[] {
