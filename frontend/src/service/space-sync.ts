@@ -850,6 +850,7 @@ export class SpaceSync {
 							length?: number;
 							height?: number;
 							thickness?: number;
+							connectionShape?: "rectangle" | "circle";
 							baseboardEnabled?: boolean;
 							baseboardHeight?: number;
 							baseboardDepth?: number;
@@ -864,6 +865,12 @@ export class SpaceSync {
 					},
 					color,
 					{
+						connectionShape:
+							wallData?.connectionShape ??
+							(this.activeSpace?.config?.floorplan?.connection?.shape ===
+							"circle"
+								? "circle"
+								: "rectangle"),
 						baseboardEnabled: wallData?.baseboardEnabled,
 						baseboardHeight: wallData?.baseboardHeight,
 						baseboardDepth: wallData?.baseboardDepth,

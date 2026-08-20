@@ -48,12 +48,14 @@ import componentStyles from "./object-inspector.css?inline";
 
 export type ObjectUpdateDetail = {
 	object: Object3D;
+	objects?: Object3D[];
 	attribute: string;
 	undo: () => void;
 	redo: () => void;
 };
 
 const WALL_CONFIGURATION_ATTRIBUTES = new Set([
+	"connectionShape",
 	"height",
 	"thickness",
 	"baseboardEnabled",
@@ -155,6 +157,9 @@ export class DT3DObjectInspector extends LitElement {
 	@property({attribute: false})
 	public selectedObject: Object3D | null = null;
 
+	@property({attribute: false})
+	public selectedObjects: Object3D[] = [];
+
 	@property({type: Boolean})
 	public multiple = false;
 
@@ -176,11 +181,13 @@ export class DT3DObjectInspector extends LitElement {
 		attribute: string,
 		undo: () => void,
 		redo: () => void,
+		objects: Object3D[] = this.selectedObject ? [this.selectedObject] : [],
 	) {
 		this.dispatchEvent(
 			new CustomEvent<ObjectUpdateDetail>("object-updated", {
 				detail: {
 					object: this.selectedObject!,
+					objects,
 					attribute,
 					undo,
 					redo,
@@ -189,6 +196,79 @@ export class DT3DObjectInspector extends LitElement {
 				composed: true,
 			}),
 		);
+	}
+
+	private getCommonHouseSelection(): Array<
+		WallObject | DoorObject | WindowObject | GateObject
+		> {
+		const objects = this.selectedObjects.length
+			? this.selectedObjects
+			: this.selectedObject
+				? [this.selectedObject]
+				: [];
+		const first = objects[0];
+		if (
+			!(first instanceof WallObject) &&
+			!(first instanceof DoorObject) &&
+			!(first instanceof WindowObject) &&
+			!(first instanceof GateObject)
+		) {
+			return [];
+		}
+		const constructor = first.constructor;
+		return objects.every(
+			(object) => object.constructor === constructor && object instanceof DTObject,
+		)
+			? (objects as Array<WallObject | DoorObject | WindowObject | GateObject>)
+			: [];
+	}
+
+	private handleMultipleFormFieldChange(
+		event: CustomEvent<DynamicFormChangeDetail>,
+	): void {
+		const objects = this.getCommonHouseSelection();
+		if (objects.length < 2 || objects.some((object) => object.locked)) return;
+
+		const {attribute, type, value} = event.detail;
+		const supported = objects.every(
+			(object) =>
+				this.isHouseConfigurationAttribute(object, attribute) ||
+				attribute === "material.color",
+		);
+		if (!supported) return;
+
+		const undoRestores = objects.map((object) =>
+			this.captureRestore(object, attribute, type),
+		);
+		for (let index = 0; index < objects.length; index += 1) {
+			const object = objects[index];
+			const changed = this.isHouseConfigurationAttribute(object, attribute)
+				? object.setConfiguration(attribute, value)
+				: (() => {
+					const materialObject = findMaterialObject(object);
+					return Boolean(
+						materialObject &&
+								setMaterialProperty(materialObject, "color", value),
+					);
+				})();
+			if (!changed) {
+				for (let undoIndex = index; undoIndex >= 0; undoIndex -= 1) {
+					undoRestores[undoIndex]();
+				}
+				return;
+			}
+		}
+
+		const redoRestores = objects.map((object) =>
+			this.captureRestore(object, attribute, type),
+		);
+		this.dispatchUpdated(
+			attribute,
+			() => undoRestores.forEach((restore) => restore()),
+			() => redoRestores.forEach((restore) => restore()),
+			objects,
+		);
+		this.requestUpdate();
 	}
 
 	private getNestedAttribute(target: any, attribute: string): unknown {
@@ -318,6 +398,15 @@ export class DT3DObjectInspector extends LitElement {
 				} else {
 					object.setOpenAmount(amount);
 				}
+			};
+		}
+
+		if (attribute === "connectionShape" && object instanceof WallObject) {
+			const connectionShape = object.connectionShape;
+			const connectionShapeRevision = object.connectionShapeRevision;
+			return () => {
+				object.connectionShape = connectionShape;
+				object.connectionShapeRevision = connectionShapeRevision;
 			};
 		}
 
@@ -784,6 +873,18 @@ export class DT3DObjectInspector extends LitElement {
 		}
 
 		return [
+			{
+				label: localManager.get("wallConnectionShape"),
+				attribute: "connectionShape",
+				type: "select",
+				tooltip: localManager.get("wallConnectionShapeTooltip"),
+				editable: !locked,
+				enabled: true,
+				options: [
+					{label: localManager.get("rectangular"), value: "rectangle"},
+					{label: localManager.get("circular"), value: "circle"},
+				],
+			},
 			{
 				label: localManager.get("wallHeight"),
 				attribute: "height",
@@ -1926,8 +2027,108 @@ export class DT3DObjectInspector extends LitElement {
 		return fields;
 	}
 
+	private getComparableFieldValue(
+		object: WallObject | DoorObject | WindowObject | GateObject,
+		attribute: string,
+	): unknown {
+		const materialObject = findMaterialObject(object);
+		const value = attribute.startsWith("material.")
+			? this.getNestedAttribute(
+				materialObject ? getPrimaryMaterial(materialObject) : null,
+				attribute.slice("material.".length),
+			)
+			: this.getNestedAttribute(object, attribute);
+		if (
+			value &&
+			typeof value === "object" &&
+			"getHexString" in value &&
+			typeof (value as {getHexString?: unknown}).getHexString === "function"
+		) {
+			return `#${(value as {getHexString: () => string}).getHexString()}`;
+		}
+		return value;
+	}
+
+	private markMixedFields(
+		fields: DynamicFormField[],
+		objects: Array<WallObject | DoorObject | WindowObject | GateObject>,
+	): DynamicFormField[] {
+		return fields.map((field) => {
+			if (field.type === "sub-form") {
+				return {...field, fields: this.markMixedFields(field.fields, objects)};
+			}
+			const firstValue = this.getComparableFieldValue(
+				objects[0],
+				field.attribute,
+			);
+			return {
+				...field,
+				mixed: objects
+					.slice(1)
+					.some(
+						(object) =>
+							this.getComparableFieldValue(object, field.attribute) !==
+							firstValue,
+					),
+			};
+		});
+	}
+
+	/** Only object-type configuration is exposed for a homogeneous selection. */
+	private getMultipleInspectorFields(
+		objects: Array<WallObject | DoorObject | WindowObject | GateObject>,
+	): DynamicFormField[] {
+		const fields: DynamicFormField[] = [];
+		const locked = objects.some((object) => object.locked);
+		const materialObject = findMaterialObject(this.selectedObject);
+		const materialData = materialObject
+			? {material: getPrimaryMaterial(materialObject)}
+			: null;
+		const colorFields = this.getMaterialFields(locked).filter(
+			(field) => field.attribute === "material.color",
+		);
+
+		this.addSubFormField(fields, "material", localManager.get("material"), colorFields, materialData);
+		this.addSubFormField(fields, "wall", localManager.get("wall"), this.getWallFields(locked));
+		this.addSubFormField(
+			fields,
+			"opening",
+			this.selectedObject instanceof GateObject
+				? localManager.get("gate")
+				: this.selectedObject instanceof DoorObject
+					? localManager.get("door")
+					: localManager.get("window"),
+			this.getOpeningFields(locked),
+		);
+		this.addSubFormField(fields, "gate", localManager.get("gateConfiguration"), this.getGateFields(locked));
+		this.addSubFormField(fields, "doorHardware", localManager.get("doorHardware"), this.getDoorHardwareFields(locked));
+		this.addSubFormField(fields, "border", localManager.get("border"), this.getBorderFields(locked));
+		this.addSubFormField(fields, "doorWindow", localManager.get("doorWindow"), this.getDoorWindowFields(locked));
+		this.addSubFormField(fields, "windowGlass", localManager.get("windowGlass"), this.getWindowGlassFields(locked));
+		this.addSubFormField(fields, "windowOperation", localManager.get("windowOperation"), this.getWindowOperationFields(locked));
+		this.addSubFormField(fields, "windowGrid", localManager.get("windowGrid"), this.getWindowGridFields(locked));
+		this.addSubFormField(fields, "windowBlinds", localManager.get("windowBlinds"), this.getWindowBlindFields(locked));
+		this.addSubFormField(fields, "windowShutters", localManager.get("windowShutters"), this.getWindowShutterFields(locked));
+
+		return this.markMixedFields(fields, objects);
+	}
+
 	public render() {
 		if (this.multiple) {
+			const objects = this.getCommonHouseSelection();
+			if (objects.length > 1 && this.selectedObject) {
+				return html`
+					<h4>${localManager.get("multipleObjectsSelected")}</h4>
+					<dt3d-dynamic-form
+						.fields=${this.getMultipleInspectorFields(objects)}
+						.data=${this.selectedObject}
+						.entityOptions=${this.entityOptions}
+						@field-change=${(
+							event: CustomEvent<DynamicFormChangeDetail>,
+						) => this.handleMultipleFormFieldChange(event)}
+					></dt3d-dynamic-form>
+				`;
+			}
 			return html`
 				<div class="placeholder">
 					${localManager.get("multipleObjectsSelected")}

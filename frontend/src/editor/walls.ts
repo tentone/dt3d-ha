@@ -282,11 +282,12 @@ export class WallManager {
 	private createDraft(start: Vector3): void {
 		this.clearStartJointPreview();
 		this.clearGuides();
-		const {wall} = this.getContext().floorplanConfig;
+		const {connection, wall} = this.getContext().floorplanConfig;
 		this.draft = new WallObject(
 			{height: wall.height},
 			wall.color,
 			{
+				connectionShape: connection.shape,
 				baseboardEnabled: wall.decoration.enabled,
 				baseboardHeight: wall.decoration.height,
 				baseboardDepth: wall.decoration.depth,
@@ -886,6 +887,7 @@ export class WallManager {
 				{height: wall.height},
 				wall.color,
 				{
+					connectionShape: connection.shape,
 					baseboardEnabled: wall.decoration.enabled,
 					baseboardHeight: wall.decoration.height,
 					baseboardDepth: wall.decoration.depth,

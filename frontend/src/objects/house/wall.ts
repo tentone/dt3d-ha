@@ -25,6 +25,7 @@ type WallDimensions = {
 };
 
 export type WallCustomization = {
+	connectionShape: WallConnectionShape;
 	baseboardEnabled: boolean;
 	baseboardHeight: number;
 	baseboardDepth: number;
@@ -42,6 +43,7 @@ const DEFAULT_WALL_DIMENSIONS: WallDimensions = {
 const DEFAULT_WALL_COLOR = 0xc9c7c2;
 
 const DEFAULT_WALL_CUSTOMIZATION: WallCustomization = {
+	connectionShape: "rectangle",
 	baseboardEnabled: false,
 	baseboardHeight: 0.12,
 	baseboardDepth: 0.018,
@@ -49,6 +51,8 @@ const DEFAULT_WALL_CUSTOMIZATION: WallCustomization = {
 };
 
 export class WallObject extends DTObject {
+	private static connectionShapeRevisionCounter = 0;
+
 	/**
 	 * Length of the wall in meters.
 	 */
@@ -63,6 +67,12 @@ export class WallObject extends DTObject {
 	 * Thickness of the wall in meters.
 	 */
 	public thickness: number;
+
+	/** Shape used by junctions connected to this wall. */
+	public connectionShape: WallConnectionShape;
+
+	/** Lets the most recently created or edited wall define a shared junction. */
+	public connectionShapeRevision: number;
 
 	/**
 	 * Whether decorative trim is rendered along the bottom of the wall.
@@ -129,6 +139,9 @@ export class WallObject extends DTObject {
 		this.length = dimensions.length ?? DEFAULT_WALL_DIMENSIONS.length;
 		this.height = dimensions.height ?? DEFAULT_WALL_DIMENSIONS.height;
 		this.thickness = dimensions.thickness ?? DEFAULT_WALL_DIMENSIONS.thickness;
+		this.connectionShape =
+			customization.connectionShape === "circle" ? "circle" : "rectangle";
+		this.connectionShapeRevision = ++WallObject.connectionShapeRevisionCounter;
 		this.baseboardEnabled =
 			customization.baseboardEnabled ??
 			DEFAULT_WALL_CUSTOMIZATION.baseboardEnabled;
@@ -226,6 +239,12 @@ export class WallObject extends DTObject {
 	}
 
 	public setConfiguration(attribute: string, value: unknown): boolean {
+		if (attribute === "connectionShape") {
+			if (value !== "rectangle" && value !== "circle") return false;
+			this.connectionShape = value;
+			this.connectionShapeRevision = ++WallObject.connectionShapeRevisionCounter;
+			return true;
+		}
 		if (attribute === "height" || attribute === "thickness") {
 			const number = Number(value);
 			if (!Number.isFinite(number) || number <= 0) return false;
@@ -261,6 +280,7 @@ export class WallObject extends DTObject {
 
 	public getCustomization(): WallCustomization {
 		return {
+			connectionShape: this.connectionShape,
 			baseboardEnabled: this.baseboardEnabled,
 			baseboardHeight: this.baseboardHeight,
 			baseboardDepth: this.baseboardDepth,

@@ -901,10 +901,9 @@ export class DT3DTree extends LitElement {
 		if (!this.selectedId || !selectedIds.has(this.selectedId)) {
 			this.selectedId = [...selectedIds].at(-1) ?? null;
 		}
-		this.selectedObject =
-			selectedIds.size === 1 && this.selectedId
-				? this.scene.getObjectByProperty("uuid", this.selectedId)
-				: null;
+		this.selectedObject = this.selectedId
+			? this.scene.getObjectByProperty("uuid", this.selectedId)
+			: null;
 	}
 
 	/**
@@ -1014,10 +1013,9 @@ export class DT3DTree extends LitElement {
 		this.selectedId = selectedIds.has(node.id)
 			? node.id
 			: ([...selectedIds].at(-1) ?? null);
-		this.selectedObject =
-			selectedIds.size === 1 && this.selectedId
-				? this.scene?.getObjectByProperty("uuid", this.selectedId) ?? null
-				: null;
+		this.selectedObject = this.selectedId
+			? this.scene?.getObjectByProperty("uuid", this.selectedId) ?? null
+			: null;
 		if (this.selectedId) {
 			this.revealNode(this.selectedId);
 		}
@@ -1034,6 +1032,13 @@ export class DT3DTree extends LitElement {
 				composed: true,
 			}),
 		);
+	}
+
+	private getSelectedObjects(): Object3D[] {
+		if (!this.scene) return [];
+		return [...this.selectedIds]
+			.map((id) => this.scene?.getObjectByProperty("uuid", id))
+			.filter((object): object is Object3D => Boolean(object));
 	}
 
 	/**
@@ -1695,6 +1700,7 @@ export class DT3DTree extends LitElement {
 				></div>
 				<dt3d-object-inspector
 					.selectedObject=${this.selectedObject}
+					.selectedObjects=${this.getSelectedObjects()}
 					.multiple=${this.selectedIds.size > 1}
 					.entityOptions=${this.entityOptions}
 					@object-updated=${this.handleObjectUpdated}

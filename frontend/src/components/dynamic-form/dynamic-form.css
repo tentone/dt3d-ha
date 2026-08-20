@@ -16,6 +16,12 @@
 	color: var(--secondary-text-color);
 }
 
+.field.mixed > label::after {
+	content: " (mixed)";
+	font-style: italic;
+	opacity: 0.75;
+}
+
 .field input,
 .field select {
 	background: var(--input-fill-color);

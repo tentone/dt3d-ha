@@ -41,6 +41,8 @@ export type DynamicFormInputField = {
 	max?: number;
 	accept?: string;
 	placeholder?: string;
+	/** Values differ across a multi-object selection. */
+	mixed?: boolean;
 	replaceLabel?: string;
 	clearLabel?: string;
 	/** Restrict entity options by matching their ID or friendly name. */
@@ -658,7 +660,7 @@ export class DynamicForm extends LitElement {
 				const linked = this.isVectorLinked(field);
 
 				return html`
-					<div class="field">
+					<div class=${field.mixed ? "field mixed" : "field"}>
 						<label title=${field.tooltip ?? ""}>${field.label}</label>
 						<div class="vector-row">
 							<div class="group-row">
@@ -713,11 +715,12 @@ export class DynamicForm extends LitElement {
 			case "boolean": {
 				const value = Boolean(this.getFieldValue(field, data));
 				return html`
-					<div class="field">
+					<div class=${field.mixed ? "field mixed" : "field"}>
 						<label title=${field.tooltip ?? ""}>
 							<input
 								type="checkbox"
 								.checked=${value}
+								.indeterminate=${field.mixed === true}
 								?disabled=${!field.editable}
 								@change=${(event: Event) =>
 									this.dispatchFieldChange(
@@ -734,7 +737,7 @@ export class DynamicForm extends LitElement {
 			case "color": {
 				const value = this.getColorValue(field, data);
 				return html`
-					<div class="field">
+					<div class=${field.mixed ? "field mixed" : "field"}>
 						<label title=${field.tooltip ?? ""}>${field.label}</label>
 						<input
 							type="color"
@@ -790,11 +793,15 @@ export class DynamicForm extends LitElement {
 			case "select": {
 				const value = this.getFieldValue(field, data);
 				return html`
-					<div class="field">
+					<div class=${field.mixed ? "field mixed" : "field"}>
 						<label title=${field.tooltip ?? ""}>${field.label}</label>
 						<select
 							?disabled=${!field.editable}
-							.value=${value == null ? "" : String(value)}
+							.value=${field.mixed
+								? ""
+								: value == null
+									? ""
+									: String(value)}
 							@change=${(event: Event) =>
 								this.dispatchFieldChange(
 									field.attribute,
@@ -802,6 +809,9 @@ export class DynamicForm extends LitElement {
 									(event.target as HTMLSelectElement).value,
 								)}
 						>
+							${field.mixed
+								? html`<option value="" disabled>Mixed values</option>`
+								: null}
 							${(field.options ?? []).map(
 								(option) => html`
 									<option value=${String(option.value)}>${option.label}</option>
@@ -816,13 +826,19 @@ export class DynamicForm extends LitElement {
 				const listId = this.getEntityListId(field);
 				const options = this.getFilteredEntityOptions(field);
 				return html`
-					<div class="field entity-field">
+					<div class=${field.mixed
+						? "field entity-field mixed"
+						: "field entity-field"}>
 						<label title=${field.tooltip ?? ""}>${field.label}</label>
 						<input
 							type="search"
 							list=${listId}
 							placeholder=${field.placeholder ?? ""}
-							.value=${value == null ? "" : String(value)}
+							.value=${field.mixed
+								? ""
+								: value == null
+									? ""
+									: String(value)}
 							?disabled=${!field.editable}
 							@input=${(event: Event) =>
 								this.handleEntityInput(field, event, options)}
@@ -847,14 +863,15 @@ export class DynamicForm extends LitElement {
 				const decimals =
 					step >= 1 ? 0 : Math.min(6, Math.ceil(-Math.log10(step)));
 				return html`
-					<div class="field">
+					<div class=${field.mixed ? "field mixed" : "field"}>
 						<label title=${field.tooltip ?? ""}>${field.label}</label>
 						<input
 							type="number"
 							step=${String(step)}
 							min=${field.min == null ? undefined : String(field.min)}
 							max=${field.max == null ? undefined : String(field.max)}
-							.value=${this.formatNumber(value, decimals)}
+							.value=${field.mixed ? "" : this.formatNumber(value, decimals)}
+							placeholder=${field.mixed ? "Mixed values" : ""}
 							?disabled=${!field.editable}
 							@change=${(event: Event) => {
 								const rawValue = parseFloat(
@@ -870,12 +887,18 @@ export class DynamicForm extends LitElement {
 			case "string": {
 				const value = this.getFieldValue(field, data);
 				return html`
-					<div class="field">
+					<div class=${field.mixed ? "field mixed" : "field"}>
 						<label title=${field.tooltip ?? ""}>${field.label}</label>
 						<input
 							type="text"
-							placeholder=${field.placeholder ?? ""}
-							.value=${value == null ? "" : String(value)}
+							placeholder=${field.mixed
+								? "Mixed values"
+								: (field.placeholder ?? "")}
+							.value=${field.mixed
+								? ""
+								: value == null
+									? ""
+									: String(value)}
 							?disabled=${!field.editable}
 							@input=${(event: Event) =>
 								this.debounceFieldChange(

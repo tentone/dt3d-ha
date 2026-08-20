@@ -59,10 +59,15 @@ export class WallConnectionManager {
 		}
 
 		for (const junction of junctions.filter((items) => items.length > 1)) {
-			const owner = junction[0];
+			const owner = junction.reduce((latest, endpoint) =>
+				endpoint.wall.connectionShapeRevision >
+				latest.wall.connectionShapeRevision
+					? endpoint
+					: latest,
+			);
 			owner.wall.addJunctionConnection(
 				owner.endpoint,
-				shape,
+				owner.wall.connectionShape ?? shape,
 				Math.max(...junction.map(({wall}) => wall.thickness)),
 				Math.max(...junction.map(({wall}) => wall.height)),
 			);
@@ -116,7 +121,7 @@ export class WallConnectionManager {
 			const customization = wall.getCustomization();
 			wallParts.set(
 				wall.uuid,
-				`${wallParts.get(wall.uuid) ?? `${wall.uuid}:${wall.height}:${wall.thickness}:${customization.baseboardEnabled}:${customization.baseboardHeight}:${customization.baseboardDepth}:${customization.baseboardColor}:${materials.map(({uuid}) => uuid).join(",")}`}|${part}`,
+				`${wallParts.get(wall.uuid) ?? `${wall.uuid}:${wall.height}:${wall.thickness}:${wall.connectionShape}:${wall.connectionShapeRevision}:${customization.baseboardEnabled}:${customization.baseboardHeight}:${customization.baseboardDepth}:${customization.baseboardColor}:${materials.map(({uuid}) => uuid).join(",")}`}|${part}`,
 			);
 		}
 		return `${shape}|${[...wallParts.values()].sort().join(";")}`;

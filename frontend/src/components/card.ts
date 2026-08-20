@@ -4921,10 +4921,16 @@ export class DT3DCard extends LitElement {
 			if (!updatedObject) {
 				return;
 			}
-			this.applyOpeningEntityStates(updatedObject);
-			this.sceneManager.applyShadowSettingsToObject(updatedObject);
+			const updatedObjects = detail.objects?.length
+				? [...new Set(detail.objects)]
+				: [updatedObject];
+			for (const object of updatedObjects) {
+				this.applyOpeningEntityStates(object);
+				this.sceneManager.applyShadowSettingsToObject(object);
+			}
 
 			if (
+				updatedObjects.length === 1 &&
 				detail.attribute === "position" &&
 				this.space &&
 				isWallOpeningObject(updatedObject)
@@ -4998,29 +5004,36 @@ export class DT3DCard extends LitElement {
 			const redoUpdate = detail.redo;
 			this.recordAction({
 				type: "update-object",
-				label: `${updatedObject.name || "Object"}: ${detail.attribute}`,
+				label:
+					updatedObjects.length === 1
+						? `${updatedObject.name || "Object"}: ${detail.attribute}`
+						: `${updatedObjects.length} objects: ${detail.attribute}`,
 				undo: () => {
 					undoUpdate();
 					for (const viewport of changedDefaultViewports) {
 						viewport.defaultViewport = true;
 					}
-					this.refreshAfterObjectMutation(updatedObject);
+					for (const object of updatedObjects) {
+						this.refreshAfterObjectMutation(object);
+					}
 				},
 				redo: () => {
 					redoUpdate();
 					for (const viewport of changedDefaultViewports) {
 						viewport.defaultViewport = false;
 					}
-					this.refreshAfterObjectMutation(updatedObject);
+					for (const object of updatedObjects) {
+						this.refreshAfterObjectMutation(object);
+					}
 				},
 				sync: () =>
 					Promise.all(
-						[updatedObject, ...changedDefaultViewports].map((object) =>
+						[...updatedObjects, ...changedDefaultViewports].map((object) =>
 							this.spaceSync?.syncObjectUpdate(object),
 						),
 					),
 			});
-			if (this.objectContainsWall(updatedObject)) {
+			if (updatedObjects.some((object) => this.objectContainsWall(object))) {
 				this.reconcileWallNetworkAfterChange("Wall update");
 			}
 		});
