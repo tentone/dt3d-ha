@@ -42,6 +42,9 @@ const DEFAULT_WALL_DIMENSIONS: WallDimensions = {
 
 const DEFAULT_WALL_COLOR = 0xc9c7c2;
 
+/** Keep decorative opening borders clear of coplanar wall geometry. */
+const BORDERED_OPENING_CLEARANCE = 0.001;
+
 const DEFAULT_WALL_CUSTOMIZATION: WallCustomization = {
 	connectionShape: "rectangle",
 	baseboardEnabled: false,
@@ -729,17 +732,27 @@ export class WallObject extends DTObject {
 		}> = [];
 		for (const child of this.children) {
 			if (child instanceof DoorObject) {
+				const borderWidth = child.borderEnabled ? child.borderWidth : 0;
+				const clearance = child.borderEnabled
+					? BORDERED_OPENING_CLEARANCE
+					: 0;
+				const bottom = child.position.y - borderWidth / 2 - clearance;
+				const top =
+					child.position.y + child.height + borderWidth + clearance;
 				openings.push({
-					width: child.width,
-					height: child.height,
+					width: child.width + (borderWidth + clearance) * 2,
+					height: top - bottom,
 					x: child.position.x,
-					y: child.position.y + child.height / 2,
+					y: (bottom + top) / 2,
 				});
 			}
 			if (child instanceof WindowObject) {
+				const clearance = child.borderEnabled
+					? BORDERED_OPENING_CLEARANCE
+					: 0;
 				openings.push({
-					width: child.width,
-					height: child.height,
+					width: child.width + clearance * 2,
+					height: child.height + clearance * 2,
 					x: child.position.x,
 					y: child.position.y + child.height / 2,
 				});
