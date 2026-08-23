@@ -203,7 +203,7 @@ The selectors include `binary_sensor`, `cover`, `input_boolean`, `input_number`,
 
 Selecting an entity makes the corresponding manual percentage field read-only. When the entity supplies a supported value, that value drives the opening automatically. Clear the entity ID to restore manual control. Blind openness is the inverse of **Blind position (% down)**, so a `100%`-open entity raises the blind to `0%` down.
 
-For blinds, choose an inside or outside mounting location, slat spacing, and color. For shutters, choose one or two doors, the door-opening percentage, blade count, independent blade-opening percentage, and color. The opening configuration and all entity associations are saved with the space.
+For blinds, choose an inside or outside mounting location, slat spacing, and color. Shutters cover the full window and frame; choose an inside or outside mounting location (outside by default), one or two doors, the door-opening percentage, blade count, independent blade-opening percentage, and color. The opening configuration and all entity associations are saved with the space.
 
 <img src="readme/windows_door.png" width="500">
 

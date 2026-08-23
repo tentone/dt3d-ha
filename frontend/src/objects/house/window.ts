@@ -38,6 +38,7 @@ export type WindowCustomization = {
 	blindSlatSpacing: number;
 	blindColor: string;
 	shuttersEnabled: boolean;
+	shutterPlacement: "inside" | "outside";
 	shutterPanelCount: 1 | 2;
 	shutterOpenAmount: number;
 	shutterOpenEntityId: string;
@@ -77,6 +78,7 @@ const DEFAULT_WINDOW_CUSTOMIZATION: WindowCustomization = {
 	blindSlatSpacing: 0.06,
 	blindColor: "#dedbd2",
 	shuttersEnabled: false,
+	shutterPlacement: "outside",
 	shutterPanelCount: 2,
 	shutterOpenAmount: 0,
 	shutterOpenEntityId: "",
@@ -158,6 +160,8 @@ export class WindowObject extends DTObject {
 	public blindColor: string;
 
 	public shuttersEnabled: boolean;
+
+	public shutterPlacement: WindowCustomization["shutterPlacement"];
 
 	public shutterPanelCount: WindowCustomization["shutterPanelCount"];
 
@@ -303,6 +307,10 @@ export class WindowObject extends DTObject {
 		this.shuttersEnabled =
 			customization.shuttersEnabled ??
 			DEFAULT_WINDOW_CUSTOMIZATION.shuttersEnabled;
+		this.shutterPlacement =
+			customization.shutterPlacement === "inside"
+				? "inside"
+				: DEFAULT_WINDOW_CUSTOMIZATION.shutterPlacement;
 		this.shutterPanelCount =
 			customization.shutterPanelCount === 1
 				? 1
@@ -547,6 +555,8 @@ export class WindowObject extends DTObject {
 			(attribute === "hingeSide" && (value === "left" || value === "right")) ||
 			(attribute === "blindPlacement" &&
 				(value === "inside" || value === "outside")) ||
+			(attribute === "shutterPlacement" &&
+				(value === "inside" || value === "outside")) ||
 			(attribute === "openingDirection" &&
 				(value === "inward" || value === "outward"))
 		) {
@@ -697,6 +707,7 @@ export class WindowObject extends DTObject {
 			blindSlatSpacing: this.blindSlatSpacing,
 			blindColor: this.blindColor,
 			shuttersEnabled: this.shuttersEnabled,
+			shutterPlacement: this.shutterPlacement,
 			shutterPanelCount: this.shutterPanelCount,
 			shutterOpenAmount: this.shutterOpenAmount,
 			shutterOpenEntityId: this.shutterOpenEntityId,
@@ -1023,43 +1034,50 @@ export class WindowObject extends DTObject {
 		if (!this.shuttersEnabled) return;
 
 		this.shutterMaterial.color = new Color(this.shutterColor);
-		const border = this.borderEnabled
-			? Math.min(this.borderThickness, this.width / 3, this.height / 3)
-			: 0;
-		const innerWidth = Math.max(0.02, this.width - border * 2);
-		const innerHeight = Math.max(0.02, this.height - border * 2);
+		// Closed shutters cover the complete opening, including its outer frame.
+		const shutterWidth = Math.max(0.02, this.width);
+		const shutterHeight = Math.max(0.02, this.height);
 		const centerY = this.height / 2;
-		const panelWidth = innerWidth / this.shutterPanelCount;
-		const outsideZ = -(
+		const panelWidth = shutterWidth / this.shutterPanelCount;
+		const placementSide = this.shutterPlacement === "inside" ? 1 : -1;
+		const placementZ = placementSide * (
 			this.thickness / 2 +
 			(this.borderEnabled ? this.borderDepth : 0) +
 			0.035
 		);
 
 		if (this.shutterPanelCount === 2) {
-			this.shutterGroup.position.set(-innerWidth / 2, 0, outsideZ);
-			this.secondaryShutterGroup.position.set(innerWidth / 2, 0, outsideZ);
+			this.shutterGroup.position.set(-shutterWidth / 2, 0, placementZ);
+			this.secondaryShutterGroup.position.set(
+				shutterWidth / 2,
+				0,
+				placementZ,
+			);
 			this.addShutterPanel(
 				this.shutterGroup,
 				panelWidth,
-				innerHeight,
+				shutterHeight,
 				panelWidth / 2,
 				centerY,
 			);
 			this.addShutterPanel(
 				this.secondaryShutterGroup,
 				panelWidth,
-				innerHeight,
+				shutterHeight,
 				-panelWidth / 2,
 				centerY,
 			);
 		} else {
 			const side = this.hingeSide === "left" ? -1 : 1;
-			this.shutterGroup.position.set((side * innerWidth) / 2, 0, outsideZ);
+			this.shutterGroup.position.set(
+				(side * shutterWidth) / 2,
+				0,
+				placementZ,
+			);
 			this.addShutterPanel(
 				this.shutterGroup,
 				panelWidth,
-				innerHeight,
+				shutterHeight,
 				(-side * panelWidth) / 2,
 				centerY,
 			);
@@ -1129,12 +1147,13 @@ export class WindowObject extends DTObject {
 		if (!this.shuttersEnabled) return;
 
 		const angle = (this.shutterOpenAmount / 100) * Math.PI;
+		const placementSide = this.shutterPlacement === "inside" ? 1 : -1;
 		if (this.shutterPanelCount === 2) {
-			this.shutterGroup.rotation.y = angle;
-			this.secondaryShutterGroup.rotation.y = -angle;
+			this.shutterGroup.rotation.y = -placementSide * angle;
+			this.secondaryShutterGroup.rotation.y = placementSide * angle;
 		} else {
 			this.shutterGroup.rotation.y =
-				(this.hingeSide === "left" ? 1 : -1) * angle;
+				(this.hingeSide === "left" ? -1 : 1) * placementSide * angle;
 		}
 	}
 

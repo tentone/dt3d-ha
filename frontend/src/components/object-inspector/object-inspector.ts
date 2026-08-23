@@ -125,6 +125,7 @@ const WINDOW_CONFIGURATION_ATTRIBUTES = new Set([
 	"shutterPanelCount",
 	"shutterOpenAmount",
 	"shutterOpenEntityId",
+	"shutterPlacement",
 	"shutterBladeCount",
 	"shutterBladeOpenAmount",
 	"shutterBladeOpenEntityId",
@@ -1522,6 +1523,18 @@ export class DT3DObjectInspector extends LitElement {
 				options: [
 					{label: localManager.get("single"), value: 1},
 					{label: localManager.get("double"), value: 2},
+				],
+			},
+			{
+				label: localManager.get("windowShutterPlacement"),
+				attribute: "shutterPlacement",
+				type: "select",
+				tooltip: localManager.get("windowShutterPlacementTooltip"),
+				editable: !locked && enabled,
+				enabled: true,
+				options: [
+					{label: localManager.get("outside"), value: "outside"},
+					{label: localManager.get("inside"), value: "inside"},
 				],
 			},
 			{
