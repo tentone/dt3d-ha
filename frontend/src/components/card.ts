@@ -5106,9 +5106,20 @@ export class DT3DCard extends LitElement {
 			const entityWasSelected =
 				object instanceof EntityObject && this.selectedObjects.includes(object);
 			if (object && !this.isVisualizationOnly()) {
-				this.attachTransform(object);
-				this.tree.selectObject(object.uuid);
-				this.setSelectedObject(object);
+				const toggleSelection = event.ctrlKey || event.metaKey;
+				const selectedObjects = toggleSelection
+					? this.selectedObjects.includes(object)
+						? this.selectedObjects.filter((selected) => selected !== object)
+						: [...this.selectedObjects, object]
+					: [object];
+				const primaryObject = selectedObjects.includes(object)
+					? object
+					: (selectedObjects.at(-1) ?? null);
+				this.tree.selectObjects(
+					selectedObjects.map((selected) => selected.uuid),
+					primaryObject?.uuid ?? null,
+				);
+				this.setSelectedObjects(selectedObjects);
 			}
 
 			if (object instanceof ViewportObject) {
@@ -5125,7 +5136,8 @@ export class DT3DCard extends LitElement {
 
 			if (
 				object instanceof EntityObject &&
-				(this.isVisualizationOnly() || entityWasSelected)
+				(this.isVisualizationOnly() ||
+					(entityWasSelected && !event.ctrlKey && !event.metaKey))
 			) {
 				this.performEntityAction(
 					object,

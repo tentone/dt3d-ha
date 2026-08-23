@@ -2284,7 +2284,7 @@ let $a = class extends Zt {
     return Te`
 		<div class="connection-status-container">
 			<div style="margin: 5px;" class="${this.success ? "connection-status-success" : "connection-status-error"}">
-				${this.msg}<br>${"2026-08-22T22:16:09.177Z"}
+				${this.msg}<br>${"2026-08-23T16:36:43.308Z"}
 			</div>
 		</div>`;
   }
@@ -40800,8 +40800,21 @@ let Nn = class extends Zt {
    * @param event - If select event shoudl be dispatched.
    */
   selectObject(s, e = !1) {
-    const t = this.scene?.getObjectByProperty("uuid", s) ?? null, i = t === this.scene ? t : G1(t, this.scene);
-    i && (this.selectedId = i.uuid, this.selectedIds = /* @__PURE__ */ new Set([i.uuid]), this.selectedObject = i, this.revealNode(i.uuid), e && this.dispatchSelection());
+    this.selectObjects([s], s, e);
+  }
+  /**
+   * Select several objects by ID while keeping the primary tree node in sync.
+   *
+   * @param ids - Complete set of object IDs to select.
+   * @param primaryId - Preferred primary object, or the last valid ID by default.
+   * @param event - Whether to dispatch the selection event.
+   */
+  selectObjects(s, e = null, t = !1) {
+    const i = s.map((o) => {
+      const a = this.scene?.getObjectByProperty("uuid", o) ?? null;
+      return a === this.scene ? a : G1(a, this.scene);
+    }).filter((o) => !!o), n = new Set(i.map((o) => o.uuid)), r = e ? i.find((o) => o.uuid === e)?.uuid : null;
+    this.selectedIds = n, this.selectedId = r ?? [...n].at(-1) ?? null, this.selectedObject = this.selectedId ? i.find((o) => o.uuid === this.selectedId) ?? null : null, this.selectedId && this.revealNode(this.selectedId), t && this.dispatchSelection();
   }
   /**
    * Apply standard tree multi-selection behavior. Ctrl/Cmd toggles individual nodes while Shift selects the visual range from the primary node.
@@ -65178,11 +65191,18 @@ let Pu = class extends Zt {
       if (this.clearPendingEntityClickAction(), !this.isVisualizationOnly() && (this.handleMoveToPointDoubleClick(c) || this.measurementManager?.handleClick(c) || this.floorManager?.handleClick(c) || this.wallManager?.handleClick(c) || this.wallEndpointManager?.handleDoubleClick(c)))
         return;
       const { object: h } = this.pickObjectFromEvent(c), u = h instanceof Oi && this.selectedObjects.includes(h);
-      h && !this.isVisualizationOnly() && (this.attachTransform(h), this.tree.selectObject(h.uuid), this.setSelectedObject(h)), h instanceof Qi && this.activateViewport(h), h instanceof Yt && h.onInteraction({
+      if (h && !this.isVisualizationOnly()) {
+        const p = c.ctrlKey || c.metaKey ? this.selectedObjects.includes(h) ? this.selectedObjects.filter((y) => y !== h) : [...this.selectedObjects, h] : [h], m = p.includes(h) ? h : p.at(-1) ?? null;
+        this.tree.selectObjects(
+          p.map((y) => y.uuid),
+          m?.uuid ?? null
+        ), this.setSelectedObjects(p);
+      }
+      h instanceof Qi && this.activateViewport(h), h instanceof Yt && h.onInteraction({
         type: "dblclick",
         event: c,
         hass: this.hassInstance
-      }), h instanceof Oi && (this.isVisualizationOnly() || u) && this.performEntityAction(
+      }), h instanceof Oi && (this.isVisualizationOnly() || u && !c.ctrlKey && !c.metaKey) && this.performEntityAction(
         h,
         this.resolveEntityAction(h, "doubleClick")
       );

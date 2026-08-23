@@ -18,7 +18,7 @@ Keep one editing card for maintaining the digital twin and create separate read-
 
 - Orbit, pan, and zoom with the usual mouse or touch gestures. Use the camera button to switch between perspective and orthographic projection.
 - Select an object with one click in the object tree or by double-clicking it in the scene. Use **Move**, **Rotate**, **Scale**, **Disable transform controls**, or **Focus selected objects** on the bottom toolbar. The inspector can edit the object's name, lock state, transform, geometry, material, shadows, and type-specific properties.
-- In the object tree, hold **Ctrl** (**Cmd** on macOS) to add or remove individual objects from the selection. Hold **Shift** to select a visible range. A shared transform control moves, rotates, or scales the selection together.
+- In the object tree or while double-clicking objects in the scene, hold **Ctrl** (**Cmd** on macOS) to add or remove individual objects from the selection. In the tree, hold **Shift** to select a visible range. A shared transform control moves, rotates, or scales the selection together.
 - Drag tree entries to reorder them or make them children of a group. Grouping is useful for floors, rooms, furniture, and entity-controlled layers. Moving or hiding a group also affects its children.
 - Right-click an object in the tree or scene to move it to a point, clone it, or delete it. On a touch device, long-press the object. **Move to point** places the object at the next scene double-click; press **Escape** to cancel. The **Delete** key also deletes the selected object after confirmation.
 - Use **Ctrl/Cmd+Z** to undo and **Ctrl/Cmd+Y** or **Ctrl/Cmd+Shift+Z** to redo editor changes.

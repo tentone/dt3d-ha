@@ -942,19 +942,43 @@ export class DT3DTree extends LitElement {
 	 * @param event - If select event shoudl be dispatched.
 	 */
 	public selectObject(id: UUID, event: boolean = false) {
-		const requestedObject = this.scene?.getObjectByProperty("uuid", id) ?? null;
-		const object =
-			requestedObject === this.scene
-				? requestedObject
-				: resolveUserObject(requestedObject, this.scene);
-		if (!object) {
-			return;
-		}
+		this.selectObjects([id], id, event);
+	}
 
-		this.selectedId = object.uuid;
-		this.selectedIds = new Set([object.uuid]);
-		this.selectedObject = object;
-		this.revealNode(object.uuid);
+	/**
+	 * Select several objects by ID while keeping the primary tree node in sync.
+	 *
+	 * @param ids - Complete set of object IDs to select.
+	 * @param primaryId - Preferred primary object, or the last valid ID by default.
+	 * @param event - Whether to dispatch the selection event.
+	 */
+	public selectObjects(
+		ids: UUID[],
+		primaryId: UUID | null = null,
+		event: boolean = false,
+	) {
+		const objects = ids
+			.map((id) => {
+				const requestedObject =
+					this.scene?.getObjectByProperty("uuid", id) ?? null;
+				return requestedObject === this.scene
+					? requestedObject
+					: resolveUserObject(requestedObject, this.scene);
+			})
+			.filter((object): object is Object3D => Boolean(object));
+		const selectedIds = new Set(objects.map((object) => object.uuid));
+		const requestedPrimary = primaryId
+			? objects.find((object) => object.uuid === primaryId)?.uuid
+			: null;
+
+		this.selectedIds = selectedIds;
+		this.selectedId = requestedPrimary ?? [...selectedIds].at(-1) ?? null;
+		this.selectedObject = this.selectedId
+			? objects.find((object) => object.uuid === this.selectedId) ?? null
+			: null;
+		if (this.selectedId) {
+			this.revealNode(this.selectedId);
+		}
 
 		if (event) {
 			this.dispatchSelection();
