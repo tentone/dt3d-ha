@@ -176,6 +176,33 @@ export class FloorManager {
 	}
 
 	/**
+	 * Build manual floors for the bounded faces formed by the supplied walls.
+	 * Faces already covered by any existing floor are omitted.
+	 */
+	public createFloorsFromWalls(walls: readonly WallObject[]): FloorObject[] {
+		const {space} = this.getContext();
+		if (!space || walls.length === 0) {
+			return [];
+		}
+
+		const existingPolygons: Vector3[][] = [];
+		space.traverse((object) => {
+			if (object instanceof FloorObject && !object.internal) {
+				existingPolygons.push(this.floorSpacePoints(object, space));
+			}
+		});
+
+		return this.findClosedWallFaces(space, walls)
+			.filter(
+				(face) =>
+					!existingPolygons.some((polygon) =>
+						this.polygonCoversFace(polygon, face),
+					),
+			)
+			.map((face) => this.createFloorFromSpacePoints(face, false));
+	}
+
+	/**
 	 * Reconcile automatic floors with every bounded face in the wall network.
 	 * Manual floors are never changed and suppress an automatic floor where
 	 * they already cover the same room.
@@ -386,10 +413,18 @@ export class FloorManager {
 		}
 	}
 
-	private findClosedWallFaces(space: Group): Vector3[][] {
+	private findClosedWallFaces(
+		space: Group,
+		walls?: readonly WallObject[],
+	): Vector3[][] {
 		const segments: WallSegment[] = [];
+		const includedWalls = walls ? new Set(walls) : null;
 		space.traverse((object) => {
-			if (!(object instanceof WallObject) || object.internal) {
+			if (
+				!(object instanceof WallObject) ||
+				object.internal ||
+				(includedWalls && !includedWalls.has(object))
+			) {
 				return;
 			}
 

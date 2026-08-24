@@ -5,6 +5,7 @@
 	"delete": "Delete",
 	"clone": "Clone",
 	"moveToPoint": "Move to point",
+	"generateFloorFromWalls": "Generate floor from selected walls",
 	"edit": "Edit",
 	"viewEntity": "View Entity",
 	"openEntity": "Open entity",

@@ -1801,6 +1801,59 @@ export class DT3DCard extends LitElement {
 		this.recordAddedObject(object);
 	}
 
+	/** Create one manual floor for each uncovered face bounded by selected walls. */
+	private generateFloorsFromWalls(ids: string[]): void {
+		if (this.isVisualizationOnly() || !this.floorManager) {
+			return;
+		}
+
+		const walls = ids
+			.map((id) => this.space.getObjectByProperty("uuid", id))
+			.filter((object): object is WallObject => object instanceof WallObject);
+		if (walls.length !== ids.length) {
+			return;
+		}
+
+		const floors = this.floorManager.createFloorsFromWalls(walls);
+		if (floors.length === 0) {
+			return;
+		}
+
+		const addFloors = () => {
+			for (const floor of floors) {
+				if (!floor.parent) {
+					floor.init();
+					this.space.add(floor);
+				}
+				this.sceneManager?.applyShadowSettingsToObject(floor);
+			}
+			this.refreshAfterObjectMutation(null);
+		};
+		const removeFloors = () => {
+			for (const floor of floors) {
+				floor.removeFromParent();
+			}
+			this.refreshAfterObjectMutation(null);
+		};
+
+		addFloors();
+		this.recordAction({
+			type: "add-object",
+			label: localManager.get("generateFloorFromWalls"),
+			undo: removeFloors,
+			redo: addFloors,
+			sync: async (operation) => {
+				for (const floor of floors) {
+					if (operation === "undo") {
+						await this.spaceSync?.syncObjectDelete(floor);
+					} else {
+						await this.spaceSync?.syncObjectHierarchyCreate(floor);
+					}
+				}
+			},
+		});
+	}
+
 	/**
 	 * Attach transform controls to the target object if it is editable.
 	 *
@@ -2868,9 +2921,14 @@ export class DT3DCard extends LitElement {
 			return false;
 		}
 
-		this.attachTransform(target);
-		this.tree.selectObject(target.uuid);
-		this.setSelectedObject(target);
+		const targetIsSelected = this.selectedObjects.some(
+			(object) => object.uuid === target.uuid,
+		);
+		if (!targetIsSelected) {
+			this.attachTransform(target);
+			this.tree.selectObject(target.uuid);
+			this.setSelectedObject(target);
+		}
 		this.tree.openContextMenu(target.uuid, event.clientX, event.clientY);
 
 		return true;
@@ -4871,6 +4929,10 @@ export class DT3DCard extends LitElement {
 		this.tree.addEventListener("object-move-to-point", (e: any) => {
 			const id = e.detail.id as string;
 			this.beginMoveToPoint(id);
+		});
+
+		this.tree.addEventListener("walls-generate-floor", (e: any) => {
+			this.generateFloorsFromWalls(e.detail.ids as string[]);
 		});
 
 		this.tree.addEventListener("entity-open", (e: any) => {

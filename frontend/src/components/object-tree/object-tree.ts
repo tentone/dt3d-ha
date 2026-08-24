@@ -1142,6 +1142,18 @@ export class DT3DTree extends LitElement {
 		this.closeContextMenu();
 	}
 
+	/** Dispatch floor generation for the selected wall set. */
+	private dispatchGenerateFloor(ids: UUID[]) {
+		this.dispatchEvent(
+			new CustomEvent("walls-generate-floor", {
+				detail: {ids},
+				bubbles: true,
+				composed: true,
+			}),
+		);
+		this.closeContextMenu();
+	}
+
 	/**
 	 * Dispatch open-entity event for the given entity ID.
 	 *
@@ -1512,6 +1524,16 @@ export class DT3DTree extends LitElement {
 
 		const {id, x, y} = this.contextMenu;
 		const node = this.findNodeById(this.tree, id);
+		const contextObjects = this.selectedIds.has(id)
+			? this.getSelectedObjects()
+			: [this.scene?.getObjectByProperty("uuid", id)].filter(
+				(object): object is Object3D => Boolean(object),
+			);
+		const selectedWalls = contextObjects.every(
+			(object) => object instanceof WallObject,
+		)
+			? (contextObjects as WallObject[])
+			: [];
 
 		return html`
 			<div
@@ -1519,6 +1541,20 @@ export class DT3DTree extends LitElement {
 				@click=${() => this.closeContextMenu()}
 			></div>
 			<div class="context-menu" style="top:${y}px; left:${x}px;">
+				${selectedWalls.length > 0
+					? html`
+						<button
+							@click=${(event: MouseEvent) => {
+								event.stopPropagation();
+								this.dispatchGenerateFloor(
+									selectedWalls.map((wall) => wall.uuid),
+								);
+							}}
+						>
+							${localManager.get("generateFloorFromWalls")}
+						</button>
+					`
+					: null}
 				<button
 					?disabled=${node?.locked ?? false}
 					@click=${(event: MouseEvent) => {
