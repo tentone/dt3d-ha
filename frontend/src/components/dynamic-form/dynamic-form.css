@@ -123,6 +123,12 @@ input[type="color"]::-webkit-color-swatch {
 	opacity: 0.7;
 }
 
+.texture-field {
+	padding: 8px;
+	border: 1px dotted var(--divider-color);
+	border-radius: 6px;
+}
+
 .texture-control {
 	display: flex;
 	align-items: stretch;
@@ -249,6 +255,30 @@ input[type="color"]::-webkit-color-swatch {
 
 .texture-clear-button ha-icon {
 	--mdc-icon-size: 20px;
+}
+
+.texture-properties {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: 6px;
+}
+
+.texture-property {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	min-width: 0;
+}
+
+.texture-property.wide {
+	grid-column: 1 / -1;
+}
+
+.texture-property input,
+.texture-property select {
+	width: 100%;
+	min-width: 0;
+	box-sizing: border-box;
 }
 
 .sub-form {

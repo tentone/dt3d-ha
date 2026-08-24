@@ -1,6 +1,17 @@
 import type {TemplateResult} from "lit";
 import {html, LitElement, unsafeCSS} from "lit";
 import {customElement, property} from "lit/decorators.js";
+import {
+	ClampToEdgeWrapping,
+	CubeReflectionMapping,
+	CubeRefractionMapping,
+	CubeUVReflectionMapping,
+	EquirectangularReflectionMapping,
+	EquirectangularRefractionMapping,
+	MirroredRepeatWrapping,
+	RepeatWrapping,
+	UVMapping,
+} from "three";
 
 import componentStyles from "./dynamic-form.css?inline";
 
@@ -95,6 +106,19 @@ type VectorValue = {
 };
 
 const INPUT_DEBOUNCE_MS = 300;
+const TEXTURE_MAPPING_OPTIONS = [
+	{label: "UV", value: UVMapping},
+	{label: "Cube reflection", value: CubeReflectionMapping},
+	{label: "Cube refraction", value: CubeRefractionMapping},
+	{label: "Equirectangular reflection", value: EquirectangularReflectionMapping},
+	{label: "Equirectangular refraction", value: EquirectangularRefractionMapping},
+	{label: "Cube UV reflection", value: CubeUVReflectionMapping},
+];
+const TEXTURE_WRAPPING_OPTIONS = [
+	{label: "Repeat", value: RepeatWrapping},
+	{label: "Clamp to edge", value: ClampToEdgeWrapping},
+	{label: "Mirrored repeat", value: MirroredRepeatWrapping},
+];
 let dynamicFormInstanceId = 0;
 
 @customElement("dt3d-dynamic-form")
@@ -289,6 +313,81 @@ export class DynamicForm extends LitElement {
 		return typeof name === "string" ? name : "";
 	}
 
+	private renderTextureProperty(
+		field: DynamicFormInputField,
+		propertyName: "mapping" | "wrapS" | "wrapT",
+		label: string,
+		value: unknown,
+		options: Array<{label: string; value: number}>,
+	): TemplateResult {
+		return html`
+			<label
+				class=${propertyName === "mapping"
+					? "texture-property wide"
+					: "texture-property"}
+			>
+				<span>${label}</span>
+				<select
+					?disabled=${!field.editable}
+					.value=${String(value)}
+					@change=${(event: Event) =>
+						this.dispatchFieldChange(
+							`${field.attribute}.${propertyName}`,
+							"select",
+							Number((event.target as HTMLSelectElement).value),
+						)}
+				>
+					${options.map(
+						(option) => html`
+							<option value=${String(option.value)}>${option.label}</option>
+						`,
+					)}
+				</select>
+			</label>
+		`;
+	}
+
+	private renderTextureNumberProperty(
+		field: DynamicFormInputField,
+		propertyName:
+			| "offset.x"
+			| "offset.y"
+			| "repeat.x"
+			| "repeat.y"
+			| "rotation",
+		label: string,
+		value: unknown,
+	): TemplateResult {
+		return html`
+			<label
+				class=${propertyName === "rotation"
+					? "texture-property wide"
+					: "texture-property"}
+			>
+				<span>${label}</span>
+				<input
+					type="number"
+					step="0.01"
+					.value=${typeof value === "number"
+						? this.formatNumber(value)
+						: ""}
+					?disabled=${!field.editable}
+					@change=${(event: Event) => {
+						const numericValue = parseFloat(
+							(event.target as HTMLInputElement).value,
+						);
+						if (!Number.isFinite(numericValue)) return;
+						this.dispatchFieldChange(
+							`${field.attribute}.${propertyName}`,
+							"number",
+							numericValue,
+						);
+					}}
+				/>
+			</label>
+		`;
+	}
+
 	private getEntityListId(field: DynamicFormInputField): string {
 		const attribute = field.attribute.replace(/[^a-zA-Z0-9_-]/g, "-");
 		return `${this.entityListPrefix}-${attribute}`;
@@ -378,6 +477,16 @@ export class DynamicForm extends LitElement {
 		const textureName = this.getTextureName(value);
 		const dragging = this.textureDragState.has(field.attribute);
 		const hasTexture = value != null;
+		const texture = value as
+			| {
+					mapping?: unknown;
+					offset?: {x?: unknown; y?: unknown};
+					repeat?: {x?: unknown; y?: unknown};
+					rotation?: unknown;
+					wrapS?: unknown;
+					wrapT?: unknown;
+			  }
+			| null;
 
 		return html`
 			<div class="field texture-field">
@@ -476,6 +585,63 @@ export class DynamicForm extends LitElement {
 							`
 						: null}
 				</div>
+				${texture
+					? html`
+							<div class="texture-properties">
+								${this.renderTextureProperty(
+									field,
+									"mapping",
+									"Mapping",
+									texture.mapping,
+									TEXTURE_MAPPING_OPTIONS,
+								)}
+								${this.renderTextureProperty(
+									field,
+									"wrapS",
+									"Wrap S",
+									texture.wrapS,
+									TEXTURE_WRAPPING_OPTIONS,
+								)}
+								${this.renderTextureProperty(
+									field,
+									"wrapT",
+									"Wrap T",
+									texture.wrapT,
+									TEXTURE_WRAPPING_OPTIONS,
+								)}
+								${this.renderTextureNumberProperty(
+									field,
+									"offset.x",
+									"Offset X",
+									texture.offset?.x,
+								)}
+								${this.renderTextureNumberProperty(
+									field,
+									"offset.y",
+									"Offset Y",
+									texture.offset?.y,
+								)}
+								${this.renderTextureNumberProperty(
+									field,
+									"repeat.x",
+									"Repeat X",
+									texture.repeat?.x,
+								)}
+								${this.renderTextureNumberProperty(
+									field,
+									"repeat.y",
+									"Repeat Y",
+									texture.repeat?.y,
+								)}
+								${this.renderTextureNumberProperty(
+									field,
+									"rotation",
+									"Rotation (radians)",
+									texture.rotation,
+								)}
+							</div>
+						`
+					: null}
 			</div>
 		`;
 	}

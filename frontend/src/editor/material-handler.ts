@@ -736,10 +736,21 @@ export function setMaterialProperty(
 ): boolean {
 	let changed = false;
 	for (const material of getMaterials(object)) {
-		const data = material as unknown as Record<string, any>;
-		if (!(property in data)) continue;
+		const path = property.split(".");
+		let data = material as unknown as Record<string, any>;
+		let texture: Record<string, any> | null = null;
+		for (const segment of path.slice(0, -1)) {
+			if (data == null || typeof data !== "object" || !(segment in data)) {
+				data = null;
+				break;
+			}
+			data = data[segment];
+			if (data?.isTexture) texture = data;
+		}
+		const propertyName = path[path.length - 1];
+		if (data == null || !(propertyName in data)) continue;
 
-		const current = data[property];
+		const current = data[propertyName];
 		if (current?.isColor) {
 			if (typeof value !== "string" || !/^#[0-9a-fA-F]{6}$/.test(value))
 				continue;
@@ -747,13 +758,18 @@ export function setMaterialProperty(
 		} else if (typeof current === "number") {
 			const numericValue = Number(value);
 			if (!Number.isFinite(numericValue)) continue;
-			data[property] = numericValue;
+			data[propertyName] = numericValue;
 		} else if (typeof current === "boolean") {
-			data[property] = Boolean(value);
+			data[propertyName] = Boolean(value);
 		} else if (typeof current === "string") {
-			data[property] = String(value);
+			data[propertyName] = String(value);
 		} else {
 			continue;
+		}
+		if (data.isTexture) texture = data;
+		if (texture) {
+			if (typeof texture.updateMatrix === "function") texture.updateMatrix();
+			texture.needsUpdate = true;
 		}
 		material.needsUpdate = true;
 		changed = true;
