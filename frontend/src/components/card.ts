@@ -4650,6 +4650,13 @@ export class DT3DCard extends LitElement {
 			}),
 			{
 				attachTransform: (object) => this.attachWallEndpointTransform(object),
+				snapPoint: (point, origin, excludedWalls) =>
+					this.wallManager?.snapExistingEndpoint(
+						point,
+						origin,
+						excludedWalls,
+					) ?? point,
+				clearSnapGuides: () => this.wallManager?.clearSnapGuides(),
 			},
 		);
 

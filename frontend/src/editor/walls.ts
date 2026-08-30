@@ -178,6 +178,34 @@ export class WallManager {
 	}
 
 	/**
+	 * Snap a moved endpoint against the remaining wall network and display the
+	 * same visual guides used while drawing a new wall.
+	 */
+	public snapExistingEndpoint(
+		point: Vector3,
+		origin: Vector3,
+		excludedWalls: ReadonlySet<WallObject>,
+	): Vector3 {
+		this.clearGuides();
+		const smartSnap = this.findSmartSnap(
+			point,
+			origin,
+			this.collectWallReferences(excludedWalls),
+		);
+		if (!smartSnap) {
+			return point;
+		}
+
+		this.showGuides(smartSnap.guides);
+		return smartSnap.point;
+	}
+
+	/** Remove smart-snap guides left by an endpoint drag. */
+	public clearSnapGuides(): void {
+		this.clearGuides();
+	}
+
+	/**
 	 * Handle click events on the canvas for wall/opening placement.
 	 *
 	 * @param event - Mouse event from the canvas.
@@ -515,8 +543,11 @@ export class WallManager {
 		};
 	}
 
-	private findSmartSnap(point: Vector3, origin: Vector3): SmartSnap | null {
-		const wallReferences = this.collectWallReferences();
+	private findSmartSnap(
+		point: Vector3,
+		origin: Vector3,
+		wallReferences = this.collectWallReferences(),
+	): SmartSnap | null {
 		const combinedSnap = this.findCombinedAlignment(
 			point,
 			origin,
@@ -819,7 +850,9 @@ export class WallManager {
 		];
 	}
 
-	private collectWallReferences(): WallReference[] {
+	private collectWallReferences(
+		excludedWalls: ReadonlySet<WallObject> = new Set(),
+	): WallReference[] {
 		const {space} = this.getContext();
 		if (!space) {
 			return [];
@@ -828,7 +861,11 @@ export class WallManager {
 		const walls: WallReference[] = [];
 		space.updateWorldMatrix(true, true);
 		space.traverse((object) => {
-			if (!(object instanceof WallObject) || object.internal === true) {
+			if (
+				!(object instanceof WallObject) ||
+				object.internal === true ||
+				excludedWalls.has(object)
+			) {
 				return;
 			}
 

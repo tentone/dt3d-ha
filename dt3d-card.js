@@ -2287,7 +2287,7 @@ let e0 = class extends Zt {
     return Se`
 		<div class="connection-status-container">
 			<div style="margin: 5px;" class="${this.success ? "connection-status-success" : "connection-status-error"}">
-				${this.msg}<br>${"2026-08-24T09:21:40.396Z"}
+				${this.msg}<br>${"2026-08-30T11:22:29.475Z"}
 			</div>
 		</div>`;
   }
@@ -49624,7 +49624,7 @@ class cV {
     if (this.drag) {
       if (e)
         return;
-      this.drag = null;
+      this.drag = null, this.callbacks.clearSnapGuides();
     }
     this.selectedWall = e && !e.locked ? e : null, this.rebuildHandles();
   }
@@ -49682,7 +49682,7 @@ class cV {
     if (!t)
       return !0;
     const i = this.getWallSpaceEndpoints(e.wall, t);
-    return this.drag = {
+    return this.callbacks.clearSnapGuides(), this.drag = {
       handle: e,
       origin: i[e.endpoint].clone(),
       references: [],
@@ -49700,19 +49700,23 @@ class cV {
     const { space: t } = this.getContext(), i = this.drag;
     if (!t || !i || i.handle !== e)
       return !0;
-    const n = t.worldToLocal(e.getWorldPosition(new O()));
-    if (n.y = i.origin.y, this.setHandleSpacePosition(e, n, t), i.blocked)
-      return this.setHandleSpacePosition(e, i.origin, t), !0;
+    let n = t.worldToLocal(e.getWorldPosition(new O()));
+    if (n.y = i.origin.y, i.blocked)
+      return this.callbacks.clearSnapGuides(), this.setHandleSpacePosition(e, i.origin, t), !0;
     if (!i.before) {
       if (this.distance2D(n, i.origin) <= Ci)
-        return !0;
+        return this.callbacks.clearSnapGuides(), !0;
       if (!this.initializeDrag(i, t))
         return i.blocked = !0, this.setHandleSpacePosition(e, i.origin, t), !0;
     }
-    if (i.references.some(
+    if (n = this.callbacks.snapPoint(
+      n,
+      i.origin,
+      new Set(i.references.map(({ wall: r }) => r))
+    ), n.y = i.origin.y, this.setHandleSpacePosition(e, n, t), i.references.some(
       (r) => this.distance2D(n, r.fixedPoint) < lV
     ))
-      return this.refreshHandles(), !0;
+      return this.callbacks.clearSnapGuides(), this.refreshHandles(), !0;
     for (const r of i.references) {
       const o = r.endpoint === "start" ? n : r.fixedPoint, a = r.endpoint === "end" ? n : r.fixedPoint;
       this.setWallSpacePoints(r.wall, o, a, t);
@@ -49723,6 +49727,7 @@ class cV {
   finishDrag(e) {
     if (!(e instanceof Ur) || !this.isHandle(e))
       return { handled: !1, edit: null };
+    this.callbacks.clearSnapGuides();
     const t = this.drag;
     if (this.drag = null, !t?.before || t.blocked)
       return this.refreshHandles(), { handled: !0, edit: null };
@@ -50276,6 +50281,23 @@ class vV {
     this.draft && this.measurements.remove(this.draft), this.draft = null, this.draftStart = null, this.clearStartJointPreview(), this.clearGuides();
   }
   /**
+   * Snap a moved endpoint against the remaining wall network and display the
+   * same visual guides used while drawing a new wall.
+   */
+  snapExistingEndpoint(e, t, i) {
+    this.clearGuides();
+    const n = this.findSmartSnap(
+      e,
+      t,
+      this.collectWallReferences(i)
+    );
+    return n ? (this.showGuides(n.guides), n.point) : e;
+  }
+  /** Remove smart-snap guides left by an endpoint drag. */
+  clearSnapGuides() {
+    this.clearGuides();
+  }
+  /**
    * Handle click events on the canvas for wall/opening placement.
    *
    * @param event - Mouse event from the canvas.
@@ -50449,8 +50471,8 @@ class vV {
       wallOffset: null
     }) : e;
   }
-  findSmartSnap(e, t) {
-    const i = this.collectWallReferences(), n = this.findCombinedAlignment(
+  findSmartSnap(e, t, i = this.collectWallReferences()) {
+    const n = this.findCombinedAlignment(
       e,
       t,
       i
@@ -50610,26 +50632,26 @@ class vV {
       }
     ];
   }
-  collectWallReferences() {
-    const { space: e } = this.getContext();
-    if (!e)
+  collectWallReferences(e = /* @__PURE__ */ new Set()) {
+    const { space: t } = this.getContext();
+    if (!t)
       return [];
-    const t = [];
-    return e.updateWorldMatrix(!0, !0), e.traverse((i) => {
-      if (!(i instanceof qt) || i.internal === !0)
+    const i = [];
+    return t.updateWorldMatrix(!0, !0), t.traverse((n) => {
+      if (!(n instanceof qt) || n.internal === !0 || e.has(n))
         return;
-      const n = e.worldToLocal(
-        i.localToWorld(new O(-i.length / 2, 0, 0))
-      ), r = e.worldToLocal(
-        i.localToWorld(new O(i.length / 2, 0, 0))
-      ), o = r.clone().sub(n);
-      o.y = 0, !(o.lengthSq() <= 1e-12) && (o.normalize(), t.push({
-        start: n,
-        end: r,
-        midpoint: n.clone().add(r).multiplyScalar(0.5),
-        direction: o
+      const r = t.worldToLocal(
+        n.localToWorld(new O(-n.length / 2, 0, 0))
+      ), o = t.worldToLocal(
+        n.localToWorld(new O(n.length / 2, 0, 0))
+      ), a = o.clone().sub(r);
+      a.y = 0, !(a.lengthSq() <= 1e-12) && (a.normalize(), i.push({
+        start: r,
+        end: o,
+        midpoint: r.clone().add(o).multiplyScalar(0.5),
+        direction: a
       }));
-    }), t;
+    }), i;
   }
   showGuides(e) {
     for (const { points: [t, i], type: n } of e) {
@@ -65175,7 +65197,13 @@ let Pu = class extends Zt {
         space: this.space
       }),
       {
-        attachTransform: (c) => this.attachWallEndpointTransform(c)
+        attachTransform: (c) => this.attachWallEndpointTransform(c),
+        snapPoint: (c, h, u) => this.wallManager?.snapExistingEndpoint(
+          c,
+          h,
+          u
+        ) ?? c,
+        clearSnapGuides: () => this.wallManager?.clearSnapGuides()
       }
     ), this.rendererManager = new oV(
       this.camera,

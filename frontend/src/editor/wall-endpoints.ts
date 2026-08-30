@@ -25,6 +25,12 @@ type WallEndpointContext = {
 
 type WallEndpointCallbacks = {
 	attachTransform: (object: Object3D) => void;
+	snapPoint: (
+		point: Vector3,
+		origin: Vector3,
+		excludedWalls: ReadonlySet<WallObject>,
+	) => Vector3;
+	clearSnapGuides: () => void;
 };
 
 type EndpointReference = {
@@ -148,6 +154,7 @@ export class WallEndpointManager {
 				return;
 			}
 			this.drag = null;
+			this.callbacks.clearSnapGuides();
 		}
 
 		this.selectedWall = wall && !wall.locked ? wall : null;
@@ -243,6 +250,7 @@ export class WallEndpointManager {
 		}
 
 		const endpoints = this.getWallSpaceEndpoints(object.wall, space);
+		this.callbacks.clearSnapGuides();
 		this.drag = {
 			handle: object,
 			origin: endpoints[object.endpoint].clone(),
@@ -268,17 +276,18 @@ export class WallEndpointManager {
 			return true;
 		}
 
-		const point = space.worldToLocal(object.getWorldPosition(new Vector3()));
+		let point = space.worldToLocal(object.getWorldPosition(new Vector3()));
 		point.y = drag.origin.y;
-		this.setHandleSpacePosition(object, point, space);
 
 		if (drag.blocked) {
+			this.callbacks.clearSnapGuides();
 			this.setHandleSpacePosition(object, drag.origin, space);
 			return true;
 		}
 
 		if (!drag.before) {
 			if (this.distance2D(point, drag.origin) <= POINT_EPSILON) {
+				this.callbacks.clearSnapGuides();
 				return true;
 			}
 			if (!this.initializeDrag(drag, space)) {
@@ -288,12 +297,21 @@ export class WallEndpointManager {
 			}
 		}
 
+		point = this.callbacks.snapPoint(
+			point,
+			drag.origin,
+			new Set(drag.references.map(({wall}) => wall)),
+		);
+		point.y = drag.origin.y;
+		this.setHandleSpacePosition(object, point, space);
+
 		if (
 			drag.references.some(
 				(reference) =>
 					this.distance2D(point, reference.fixedPoint) < MINIMUM_WALL_LENGTH,
 			)
 		) {
+			this.callbacks.clearSnapGuides();
 			this.refreshHandles();
 			return true;
 		}
@@ -314,6 +332,7 @@ export class WallEndpointManager {
 			return {handled: false, edit: null};
 		}
 
+		this.callbacks.clearSnapGuides();
 		const drag = this.drag;
 		this.drag = null;
 		if (!drag?.before || drag.blocked) {
