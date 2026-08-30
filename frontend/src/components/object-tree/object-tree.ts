@@ -3,7 +3,7 @@ import "../object-inspector/object-inspector.js";
 import {html, LitElement, unsafeCSS} from "lit";
 import {customElement, property, state} from "lit/decorators.js";
 import {repeat} from "lit/directives/repeat.js";
-import type {Object3D} from "three";
+import type {Material, Object3D} from "three";
 import {
 	Camera,
 	Group,
@@ -186,6 +186,9 @@ export class DT3DTree extends LitElement {
 	 */
 	@state()
 	private selectedObject: Object3D | null = null;
+
+	@state()
+	private selectedMaterial: Material | null = null;
 
 	/**
 	 * Current object tree search text.
@@ -957,6 +960,7 @@ export class DT3DTree extends LitElement {
 		primaryId: UUID | null = null,
 		event: boolean = false,
 	) {
+		this.selectedMaterial = null;
 		const objects = ids
 			.map((id) => {
 				const requestedObject =
@@ -985,10 +989,26 @@ export class DT3DTree extends LitElement {
 		}
 	}
 
+	/** Display a library material in the existing object inspector. */
+	public selectMaterial(material: Material | null): void {
+		this.selectedMaterial = material;
+		if (material) {
+			if (this.collapsed) {
+				this.collapsed = false;
+				this.setExpandedWidth();
+				LocalStorage.write(TREE_COLLAPSED_STORAGE_KEY, false);
+			}
+			this.selectedId = null;
+			this.selectedIds = new Set();
+			this.selectedObject = null;
+		}
+	}
+
 	/**
 	 * Apply standard tree multi-selection behavior. Ctrl/Cmd toggles individual nodes while Shift selects the visual range from the primary node.
 	 */
 	private handleNodeSelection(event: MouseEvent, node: TreeNode): void {
+		this.selectedMaterial = null;
 		const additive = event.ctrlKey || event.metaKey;
 		const range = event.shiftKey;
 
@@ -1761,6 +1781,7 @@ export class DT3DTree extends LitElement {
 				<dt3d-object-inspector
 					.selectedObject=${this.selectedObject}
 					.selectedObjects=${this.getSelectedObjects()}
+					.selectedMaterial=${this.selectedMaterial}
 					.multiple=${this.selectedIds.size > 1}
 					.entityOptions=${this.entityOptions}
 					@object-updated=${this.handleObjectUpdated}

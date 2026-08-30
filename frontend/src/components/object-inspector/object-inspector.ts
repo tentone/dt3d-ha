@@ -3,17 +3,19 @@ import "../entity-rules/entity-rules.js";
 
 import {html, LitElement, unsafeCSS} from "lit";
 import {customElement, property} from "lit/decorators.js";
-import type {Object3D} from "three";
+import type {Material, Object3D} from "three";
 import {Mesh} from "three";
 
 import {normalizeEntityActionOverride} from "../../editor/entity-actions.js";
 import type {EntityRule} from "../../editor/entity-rules.js";
 import {getEntityRules, setEntityRules} from "../../editor/entity-rules.js";
+import type {MaterialObject} from "../../editor/material-handler.js";
 import {
 	changeMaterialType,
 	findMaterialObject,
 	getCompatibleMaterialTypes,
 	getMaterialPropertyDefinitions,
+	getMaterials,
 	getPrimaryMaterial,
 	setMaterialProperty,
 } from "../../editor/material-handler.js";
@@ -49,6 +51,13 @@ import componentStyles from "./object-inspector.css?inline";
 export type ObjectUpdateDetail = {
 	object: Object3D;
 	objects?: Object3D[];
+	attribute: string;
+	undo: () => void;
+	redo: () => void;
+};
+
+export type MaterialUpdateDetail = {
+	material: Material;
 	attribute: string;
 	undo: () => void;
 	redo: () => void;
@@ -161,6 +170,9 @@ export class DT3DObjectInspector extends LitElement {
 	@property({attribute: false})
 	public selectedObjects: Object3D[] = [];
 
+	@property({attribute: false})
+	public selectedMaterial: Material | null = null;
+
 	@property({type: Boolean})
 	public multiple = false;
 
@@ -168,6 +180,91 @@ export class DT3DObjectInspector extends LitElement {
 	public entityOptions: DynamicFormEntityOption[] = [];
 
 	private materialTextureVersions = new Map<string, number>();
+
+	private getStandaloneMaterialTarget(
+		material: Material = this.selectedMaterial,
+	): MaterialObject | null {
+		return material
+			? ({material} as unknown as MaterialObject)
+			: null;
+	}
+
+	private captureMaterialRestore(material: Material): () => void {
+		const snapshot = material.clone();
+		return () => {
+			material.copy(snapshot);
+			material.needsUpdate = true;
+		};
+	}
+
+	private dispatchMaterialUpdated(
+		material: Material,
+		attribute: string,
+		undo: () => void,
+		redo: () => void,
+	): void {
+		this.dispatchEvent(
+			new CustomEvent<MaterialUpdateDetail>("material-updated", {
+				detail: {material, attribute, undo, redo},
+				bubbles: true,
+				composed: true,
+			}),
+		);
+	}
+
+	private handleMaterialFieldChange(
+		event: CustomEvent<DynamicFormChangeDetail>,
+	): void {
+		const material = this.selectedMaterial;
+		if (!material) return;
+
+		const {attribute, type, value} = event.detail;
+		if (!attribute.startsWith("material.") || attribute === "material.type") {
+			return;
+		}
+
+		const target = this.getStandaloneMaterialTarget(material);
+		if (!target) return;
+		const property = attribute.slice("material.".length);
+		const undo = this.captureMaterialRestore(material);
+
+		if (type === "texture") {
+			const textureKey = `${material.uuid}:${property}`;
+			const textureVersion =
+				(this.materialTextureVersions.get(textureKey) ?? 0) + 1;
+			this.materialTextureVersions.set(textureKey, textureVersion);
+			if (value === null) {
+				if (!clearMaterialTexture(target, property)) return;
+			} else if (value instanceof File) {
+				void applyImageTextureToMaterial(
+					target,
+					property,
+					value,
+					() =>
+						this.materialTextureVersions.get(textureKey) === textureVersion &&
+						this.selectedMaterial === material,
+				)
+					.then((changed) => {
+						if (!changed) return;
+						const redo = this.captureMaterialRestore(material);
+						this.dispatchMaterialUpdated(material, attribute, undo, redo);
+						this.requestUpdate();
+					})
+					.catch((error) => {
+						console.error("Failed to apply material texture", error);
+					});
+				return;
+			} else {
+				return;
+			}
+		} else if (!setMaterialProperty(target, property, value)) {
+			return;
+		}
+
+		const redo = this.captureMaterialRestore(material);
+		this.dispatchMaterialUpdated(material, attribute, undo, redo);
+		this.requestUpdate();
+	}
 
 	private isLocked(
 		object: Object3D | null = this.selectedObject,
@@ -320,13 +417,23 @@ export class DT3DObjectInspector extends LitElement {
 		if (attribute.startsWith("material.")) {
 			const materialObject = findMaterialObject(object);
 			if (materialObject) {
-				const snapshot = Array.isArray(materialObject.material)
-					? materialObject.material.map((material) => material.clone())
-					: materialObject.material.clone();
+				if (attribute === "material.type") {
+					const snapshot = Array.isArray(materialObject.material)
+						? materialObject.material.map((material) => material.clone())
+						: materialObject.material.clone();
+					return () => {
+						materialObject.material = Array.isArray(snapshot)
+							? snapshot.map((material) => material.clone())
+							: snapshot.clone();
+					};
+				}
+				const originalMaterials = getMaterials(materialObject);
+				const snapshots = originalMaterials.map((material) => material.clone());
 				return () => {
-					materialObject.material = Array.isArray(snapshot)
-						? snapshot.map((material) => material.clone())
-						: snapshot.clone();
+					for (let index = 0; index < originalMaterials.length; index += 1) {
+						originalMaterials[index].copy(snapshots[index]);
+						originalMaterials[index].needsUpdate = true;
+					}
 				};
 			}
 		}
@@ -771,12 +878,16 @@ export class DT3DObjectInspector extends LitElement {
 	}
 
 	private getMaterialFields(locked: boolean): DynamicFormField[] {
-		const materialObject = findMaterialObject(this.selectedObject);
+		const materialObject = this.selectedMaterial
+			? this.getStandaloneMaterialTarget()
+			: findMaterialObject(this.selectedObject);
 		if (!materialObject) return [];
 		const material = getPrimaryMaterial(materialObject);
 		if (!material) return [];
 
-		const materialTypes = getCompatibleMaterialTypes(materialObject);
+		const materialTypes = this.selectedMaterial
+			? [material.type]
+			: getCompatibleMaterialTypes(materialObject);
 		const fields: DynamicFormField[] = [
 			{
 				label: localManager.get("materialType"),
@@ -2142,6 +2253,20 @@ export class DT3DObjectInspector extends LitElement {
 	}
 
 	public render() {
+		if (this.selectedMaterial) {
+			return html`
+				<h4>${localManager.get("selectedMaterial")}</h4>
+				<dt3d-dynamic-form
+					.fields=${this.getMaterialFields(false)}
+					.data=${{material: this.selectedMaterial}}
+					.entityOptions=${this.entityOptions}
+					@field-change=${(
+						event: CustomEvent<DynamicFormChangeDetail>,
+					) => this.handleMaterialFieldChange(event)}
+				></dt3d-dynamic-form>
+			`;
+		}
+
 		if (this.multiple) {
 			const objects = this.getCommonHouseSelection();
 			if (objects.length > 1 && this.selectedObject) {

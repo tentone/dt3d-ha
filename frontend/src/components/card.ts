@@ -8,6 +8,7 @@ import "./form-modal/form-modal.js";
 import "./furniture-menu/furniture-menu.js";
 import "./hint-box/hint-box.js";
 import "./light-menu/light-menu.js";
+import "./material-manager/material-manager.js";
 import "./mesh-menu/mesh-menu.js";
 import "./object-sidebar/object-sidebar.js";
 import "./object-tree/object-tree.js";
@@ -21,7 +22,14 @@ import "./xr-controls/xr-controls.js";
 
 import {LitElement} from "lit";
 import {customElement} from "lit/decorators.js";
-import type {Camera, Intersection, Object3D, Quaternion, Scene} from "three";
+import type {
+	Camera,
+	Intersection,
+	Material,
+	Object3D,
+	Quaternion,
+	Scene,
+} from "three";
 import {
 	Box3,
 	BoxGeometry,
@@ -76,6 +84,20 @@ import {
 	normalizeSpaceConfiguration,
 	normalizeSpaceGeneralConfig,
 } from "../editor/general-config.js";
+import {
+	findMaterialObject,
+	getPrimaryMaterial,
+} from "../editor/material-handler.js";
+import {
+	createStandardMaterial,
+	getMaterialUsages,
+	getUniqueMaterials,
+	MATERIAL_DRAG_MIME,
+	parseMaterialLibrary,
+	reconcileSceneMaterials,
+	serializeMaterialLibrary,
+	STANDARD_MATERIAL_DATA_KEY,
+} from "../editor/material-library.js";
 import {applyImageTextureToMesh} from "../editor/material-texture.js";
 import {MeasurementManager} from "../editor/measurements.js";
 import {createMeshObject, resolveMeshType} from "../editor/mesh-handler.js";
@@ -159,8 +181,12 @@ import type {
 import type {DT3DFurnitureMenu} from "./furniture-menu/furniture-menu.js";
 import type {DT3DHintBox} from "./hint-box/hint-box.js";
 import type {DT3DLightMenu} from "./light-menu/light-menu.js";
+import type {DT3DMaterialManager} from "./material-manager/material-manager.js";
 import type {DT3DMeshMenu} from "./mesh-menu/mesh-menu.js";
-import type {ObjectUpdateDetail} from "./object-inspector/object-inspector.js";
+import type {
+	MaterialUpdateDetail,
+	ObjectUpdateDetail,
+} from "./object-inspector/object-inspector.js";
 import type {
 	DT3DObjectSidebar,
 	WallOptions,
@@ -187,6 +213,8 @@ const MASONRY_CARD_UNIT_HEIGHT = 50;
 const ENTITY_CLICK_DELAY = 300;
 const VIEWER_CONTROL_MARGIN = 16;
 const VIEWER_CONTROL_GAP = 8;
+const MATERIAL_MANAGER_MAX_HEIGHT = 260;
+const MATERIAL_MANAGER_MIN_HEIGHT = 140;
 
 const booleanConfig = (value: unknown): boolean =>
 	value === true || value === "true" || value === "1";
@@ -300,6 +328,21 @@ export class DT3DCard extends LitElement {
 	 * Bottom editor toolbar for transforms, measurements, and scene settings.
 	 */
 	public bottomBar: DT3DBottomBar;
+
+	/** Bottom material library and preview explorer. */
+	private materialManager: DT3DMaterialManager | null = null;
+
+	private materialLibrary: Material[] = [];
+
+	private materialLibraryLoadSequence = 0;
+
+	private selectedMaterial: Material | null = null;
+
+	private standardMaterial: Material | null = null;
+
+	private materialManagerOpen = false;
+
+	private cssRendererContainer: HTMLElement | null = null;
 
 	/**
 	 * Hint box element that shows contextual instructions to the user.
@@ -1447,6 +1490,7 @@ export class DT3DCard extends LitElement {
 			general: this.spaceGeneralConfig,
 			scene: this.spaceSceneConfig,
 			floorplan: this.floorplanConfig,
+			materials: serializeMaterialLibrary(this.materialLibrary),
 		});
 	}
 
@@ -1457,6 +1501,7 @@ export class DT3DCard extends LitElement {
 			general: config.general ?? this.spaceGeneralConfig,
 			scene: config.scene ?? this.spaceSceneConfig,
 			floorplan: config.floorplan ?? this.floorplanConfig,
+			materials: config.materials ?? serializeMaterialLibrary(this.materialLibrary),
 		});
 
 		this.spaceGeneralConfig = normalized.general;
@@ -1487,9 +1532,11 @@ export class DT3DCard extends LitElement {
 			floorplan: hasFloorplan
 				? apiConfig.floorplan
 				: normalizeFloorplanConfig(),
+			materials: apiConfig.materials,
 		});
 
 		this.applySpaceConfiguration(nextConfig);
+		void this.loadMaterialLibrary(nextConfig.materials, space?.id ?? null);
 
 		if (
 			space &&
@@ -1497,6 +1544,317 @@ export class DT3DCard extends LitElement {
 		) {
 			void this.persistSpaceConfiguration();
 		}
+	}
+
+	private resetMaterialLibrary(): void {
+		this.materialLibraryLoadSequence += 1;
+		this.materialLibrary = [];
+		this.standardMaterial = null;
+		this.setSelectedMaterial(null);
+		this.updateMaterialManager();
+	}
+
+	private async loadMaterialLibrary(
+		serializedMaterials: unknown,
+		spaceId: string | null,
+	): Promise<void> {
+		const sequence = ++this.materialLibraryLoadSequence;
+		const materials = await parseMaterialLibrary(serializedMaterials);
+		if (
+			sequence !== this.materialLibraryLoadSequence ||
+			(spaceId && this.spaceSync?.activeSpaceId !== spaceId)
+		) {
+			return;
+		}
+
+		this.materialLibrary = materials;
+		this.refreshMaterialLibraryFromScene();
+	}
+
+	private refreshMaterialLibraryFromScene(): void {
+		if (!this.space) return;
+
+		const configured = new Map(
+			this.materialLibrary.map((material) => [material.uuid, material]),
+		);
+		for (const material of getUniqueMaterials(this.space)) {
+			if (!configured.has(material.uuid)) configured.set(material.uuid, material);
+		}
+		this.materialLibrary = reconcileSceneMaterials(this.space, [
+			...configured.values(),
+		]);
+
+		this.standardMaterial =
+			this.materialLibrary.find(
+				(material) => material.userData[STANDARD_MATERIAL_DATA_KEY] === true,
+			) ?? null;
+		if (!this.standardMaterial) {
+			this.standardMaterial = createStandardMaterial();
+			this.materialLibrary = [...this.materialLibrary, this.standardMaterial];
+		}
+
+		if (
+			this.selectedMaterial &&
+			!this.materialLibrary.some(
+				(material) => material.uuid === this.selectedMaterial?.uuid,
+			)
+		) {
+			this.setSelectedMaterial(null);
+		}
+		this.updateMaterialManager();
+		if (this.selectedMaterial) this.highlightMaterialUsages(this.selectedMaterial);
+	}
+
+	private updateMaterialManager(): void {
+		if (!this.materialManager) return;
+
+		const usageCounts: Record<string, number> = {};
+		for (const material of this.materialLibrary) {
+			usageCounts[material.uuid] = new Set(
+				getMaterialUsages(this.space, material).map(({owner}) => owner.uuid),
+			).size;
+		}
+		this.materialManager.materials = [...this.materialLibrary];
+		this.materialManager.usageCounts = usageCounts;
+		this.materialManager.protectedMaterialId = this.standardMaterial?.uuid ?? "";
+		this.materialManager.selectedMaterialId =
+			this.selectedMaterial?.uuid ?? "";
+		this.materialManager.refreshPreviews();
+	}
+
+	private setSelectedMaterial(material: Material | null): void {
+		this.selectedMaterial = material;
+		if (this.materialManager) {
+			this.materialManager.selectedMaterialId = material?.uuid ?? "";
+		}
+		this.tree?.selectMaterial(material);
+	}
+
+	private highlightMaterialUsages(material: Material): void {
+		const owners = [
+			...new Map(
+				getMaterialUsages(this.space, material).map(({owner}) => [
+					owner.uuid,
+					owner,
+				]),
+			).values(),
+		];
+		this.rendererManager?.setSelectedObjects(
+			this.isVisualizationOnly() ? [] : owners,
+		);
+	}
+
+	private selectLibraryMaterial(materialId: string): void {
+		const material = this.materialLibrary.find(
+			(candidate) => candidate.uuid === materialId,
+		);
+		if (!material || this.isVisualizationOnly()) return;
+
+		this.setSelectedObjects([]);
+		this.setSelectedMaterial(material);
+		this.highlightMaterialUsages(material);
+	}
+
+	private getNextMaterialName(): string {
+		const names = new Set(this.materialLibrary.map(({name}) => name));
+		let index = 1;
+		while (names.has(`Material ${index}`)) index += 1;
+		return `Material ${index}`;
+	}
+
+	private createLibraryMaterial(): void {
+		if (this.isVisualizationOnly()) return;
+		const material = createStandardMaterial(this.getNextMaterialName());
+		delete material.userData[STANDARD_MATERIAL_DATA_KEY];
+		const add = () => {
+			if (!this.materialLibrary.includes(material)) {
+				this.materialLibrary = [...this.materialLibrary, material];
+			}
+			this.updateMaterialManager();
+			this.selectLibraryMaterial(material.uuid);
+		};
+		const remove = () => {
+			this.materialLibrary = this.materialLibrary.filter(
+				(candidate) => candidate !== material,
+			);
+			this.setSelectedMaterial(this.standardMaterial);
+			this.updateMaterialManager();
+			if (this.standardMaterial) {
+				this.highlightMaterialUsages(this.standardMaterial);
+			}
+		};
+
+		add();
+		this.recordAction({
+			type: "update-object",
+			label: material.name,
+			undo: remove,
+			redo: add,
+			sync: () => this.persistSpaceConfiguration(),
+		});
+	}
+
+	private requestDeleteMaterial(materialId: string): void {
+		const material = this.materialLibrary.find(
+			(candidate) => candidate.uuid === materialId,
+		);
+		if (
+			!material ||
+			material === this.standardMaterial ||
+			this.isVisualizationOnly()
+		) {
+			return;
+		}
+
+		const usageCount = new Set(
+			getMaterialUsages(this.space, material).map(({owner}) => owner.uuid),
+		).size;
+		this.openConfirmationModal({
+			heading: localManager.get("deleteMaterialTitle"),
+			message:
+				usageCount > 0
+					? localManager
+						.get("deleteUsedMaterial")
+						.replace("{count}", String(usageCount))
+					: localManager.get("deleteUnusedMaterial"),
+			confirmLabel: localManager.get("delete"),
+			actionType: "red",
+			onConfirm: () => this.deleteLibraryMaterial(material),
+		});
+	}
+
+	private deleteLibraryMaterial(material: Material): void {
+		const replacement = this.standardMaterial;
+		if (!replacement || replacement === material) return;
+
+		const usages = getMaterialUsages(this.space, material);
+		const targetSnapshots = [
+			...new Map(usages.map(({target}) => [target.uuid, target])).values(),
+		].map((target) => ({
+			target,
+			material: Array.isArray(target.material)
+				? [...target.material]
+				: target.material,
+		}));
+		const owners = [
+			...new Map(usages.map(({owner}) => [owner.uuid, owner])).values(),
+		];
+
+		const remove = () => {
+			for (const {target} of targetSnapshots) {
+				target.material = Array.isArray(target.material)
+					? target.material.map((item) =>
+						item.uuid === material.uuid ? replacement : item,
+					)
+					: target.material.uuid === material.uuid
+						? replacement
+						: target.material;
+			}
+			this.materialLibrary = this.materialLibrary.filter(
+				(candidate) => candidate !== material,
+			);
+			this.setSelectedMaterial(replacement);
+			this.refreshAfterMaterialMutation(replacement);
+		};
+		const restore = () => {
+			for (const snapshot of targetSnapshots) {
+				snapshot.target.material = Array.isArray(snapshot.material)
+					? [...snapshot.material]
+					: snapshot.material;
+			}
+			if (!this.materialLibrary.includes(material)) {
+				this.materialLibrary = [...this.materialLibrary, material];
+			}
+			this.setSelectedMaterial(material);
+			this.refreshAfterMaterialMutation(material);
+		};
+		const sync = () =>
+			Promise.all([
+				...owners.map((owner) => this.spaceSync?.syncObjectUpdate(owner)),
+				this.persistSpaceConfiguration(),
+			]);
+
+		remove();
+		this.recordAction({
+			type: "update-object",
+			label: `${localManager.get("deleteMaterial")}: ${material.name || material.type}`,
+			undo: restore,
+			redo: remove,
+			sync,
+		});
+	}
+
+	private refreshAfterMaterialMutation(material: Material | null): void {
+		this.sceneManager?.requestShadowMapUpdate();
+		this.tree?.refreshSelectedObject();
+		this.updateMaterialManager();
+		if (material) this.highlightMaterialUsages(material);
+	}
+
+	private handleMaterialUpdated(detail: MaterialUpdateDetail): void {
+		const refresh = () => this.refreshAfterMaterialMutation(detail.material);
+		const owners = [
+			...new Map(
+				getMaterialUsages(this.space, detail.material).map(({owner}) => [
+					owner.uuid,
+					owner,
+				]),
+			).values(),
+		];
+
+		refresh();
+		this.recordAction({
+			type: "update-object",
+			label: `${detail.material.name || detail.material.type}: ${detail.attribute}`,
+			undo: () => {
+				detail.undo();
+				refresh();
+			},
+			redo: () => {
+				detail.redo();
+				refresh();
+			},
+			sync: () =>
+				Promise.all([
+					...owners.map((owner) => this.spaceSync?.syncObjectUpdate(owner)),
+					this.persistSpaceConfiguration(),
+				]),
+		});
+	}
+
+	private setMaterialManagerOpen(open: boolean): void {
+		this.materialManagerOpen = open && !this.isVisualizationOnly();
+		if (this.materialManager) this.materialManager.open = this.materialManagerOpen;
+		this.updateEditorLayout();
+		if (this.materialManagerOpen) this.materialManager?.refreshPreviews();
+	}
+
+	private updateEditorLayout(width?: number, height?: number): void {
+		if (!this.container || !this.content) return;
+		const bounds = this.container.getBoundingClientRect();
+		const containerWidth = width ?? bounds.width;
+		const containerHeight = height ?? bounds.height;
+		const panelHeight = this.materialManagerOpen
+			? Math.min(
+				MATERIAL_MANAGER_MAX_HEIGHT,
+				Math.max(MATERIAL_MANAGER_MIN_HEIGHT, containerHeight * 0.42),
+			)
+			: 0;
+		const editorHeight = Math.max(1, containerHeight - panelHeight);
+
+		this.content.style.width = `${containerWidth}px`;
+		this.content.style.height = `${editorHeight}px`;
+		this.canvas.style.width = `${containerWidth}px`;
+		this.canvas.style.height = `${editorHeight}px`;
+		if (this.cssRendererContainer) {
+			this.cssRendererContainer.style.width = `${containerWidth}px`;
+			this.cssRendererContainer.style.height = `${editorHeight}px`;
+		}
+		if (this.materialManager) {
+			this.materialManager.style.height = `${panelHeight}px`;
+		}
+		this.sceneManager?.updateSize(containerWidth, editorHeight);
+		this.rendererManager?.resize(containerWidth, editorHeight);
 	}
 
 	private schedulePersistSpaceConfiguration(
@@ -1568,6 +1926,11 @@ export class DT3DCard extends LitElement {
 
 		if (this.bottomBar) {
 			this.bottomBar.style.display = visualizationOnly ? "none" : "";
+		}
+
+		if (this.materialManager) {
+			this.materialManager.style.display = visualizationOnly ? "none" : "";
+			if (visualizationOnly) this.setMaterialManagerOpen(false);
 		}
 
 		if (this.tree) {
@@ -1645,6 +2008,7 @@ export class DT3DCard extends LitElement {
 		if (this.selectedObjects.length > 1 && !this.multiTransformStart) {
 			this.attachTransformToSelection();
 		}
+		this.refreshMaterialLibraryFromScene();
 	}
 
 	private insertObject(
@@ -1985,6 +2349,7 @@ export class DT3DCard extends LitElement {
 
 	/** Store and display a complete object selection. */
 	private setSelectedObjects(objects: Object3D[]): void {
+		if (this.selectedMaterial) this.setSelectedMaterial(null);
 		const uniqueObjects = [
 			...new Set(
 				objects
@@ -2318,7 +2683,7 @@ export class DT3DCard extends LitElement {
 	}
 
 	private openConfirmationModal(options: ConfirmationOptions): void {
-		if (!this.content) {
+		if (!this.container) {
 			return;
 		}
 
@@ -2351,7 +2716,7 @@ export class DT3DCard extends LitElement {
 		modal.addEventListener("modal-close", closeModal);
 
 		this.confirmationModal = modal;
-		this.content.appendChild(modal);
+		this.container.appendChild(modal);
 	}
 
 	private requestDeleteObject(objectId: string): void {
@@ -2515,6 +2880,11 @@ export class DT3DCard extends LitElement {
 		if (this.isVisualizationOnly()) {
 			return;
 		}
+		const materialId = event.dataTransfer?.getData(MATERIAL_DRAG_MIME) ?? "";
+		if (materialId) {
+			this.assignMaterialFromDrop(event, materialId);
+			return;
+		}
 
 		const files = event.dataTransfer
 			? await collectDroppedFiles(event.dataTransfer)
@@ -2528,6 +2898,53 @@ export class DT3DCard extends LitElement {
 		}
 
 		await this.handleTextureDrop(event, findImageFile(files));
+	}
+
+	private assignMaterialFromDrop(event: DragEvent, materialId: string): void {
+		const material = this.materialLibrary.find(
+			(candidate) => candidate.uuid === materialId,
+		);
+		if (!material) return;
+
+		const {object} = this.pickObjectFromEvent(event as MouseEvent);
+		if (!object || (object instanceof DTObject && object.locked)) return;
+		const target = findMaterialObject(object);
+		if (!target) return;
+
+		const before = Array.isArray(target.material)
+			? [...target.material]
+			: target.material;
+		if (
+			(Array.isArray(before) && before.every((item) => item === material)) ||
+			before === material
+		) {
+			return;
+		}
+		const after = Array.isArray(target.material)
+			? target.material.map(() => material)
+			: material;
+		const apply = (next: Material | Material[]) => {
+			target.material = Array.isArray(next) ? [...next] : next;
+			this.sceneManager?.requestShadowMapUpdate();
+			this.tree?.refreshSelectedObject();
+			this.refreshMaterialLibraryFromScene();
+			if (this.selectedMaterial) {
+				this.highlightMaterialUsages(this.selectedMaterial);
+			}
+		};
+
+		apply(after);
+		this.recordAction({
+			type: "update-object",
+			label: `${object.name || "Object"}: ${localManager.get("material")}`,
+			undo: () => apply(before),
+			redo: () => apply(after),
+			sync: () =>
+				Promise.all([
+					this.spaceSync?.syncObjectUpdate(object),
+					this.persistSpaceConfiguration(),
+				]),
+		});
 	}
 
 	private async handleTextureDrop(
@@ -3597,6 +4014,7 @@ export class DT3DCard extends LitElement {
 			await this.actionStack.flush();
 			this.attachTransform(null);
 			this.setSelectedObject(null);
+			this.resetMaterialLibrary();
 			const space = await this.spaceSync.createSpace(name, description);
 			this.actionStack.clear();
 			this.applySpaceConfigFromApi(space);
@@ -3692,6 +4110,7 @@ export class DT3DCard extends LitElement {
 			await this.actionStack.flush();
 			this.attachTransform(null);
 			this.setSelectedObject(null);
+			this.resetMaterialLibrary();
 			const space = await this.spaceSync.cloneSpace(spaceId, name);
 			this.actionStack.clear();
 			this.applySpaceConfigFromApi(space);
@@ -3788,6 +4207,7 @@ export class DT3DCard extends LitElement {
 			await this.actionStack.flush();
 			this.attachTransform(null);
 			this.setSelectedObject(null);
+			this.resetMaterialLibrary();
 			const space = targetSpaceId
 				? await this.spaceSync.importObjectsIntoSpace(file, targetSpaceId)
 				: await this.spaceSync.importSpace(file);
@@ -3836,6 +4256,7 @@ export class DT3DCard extends LitElement {
 			await this.actionStack.flush();
 			this.attachTransform(null);
 			this.setSelectedObject(null);
+			this.resetMaterialLibrary();
 			const space = await this.spaceSync.deleteSpace(spaceId);
 			this.actionStack.clear();
 			this.applySpaceConfigFromApi(space);
@@ -3971,6 +4392,7 @@ export class DT3DCard extends LitElement {
 			await this.actionStack.flush();
 			this.attachTransform(null);
 			this.setSelectedObject(null);
+			this.resetMaterialLibrary();
 			const space = await this.spaceSync.loadSpaceFromApi(spaceId);
 			this.actionStack.clear();
 			this.applySpaceConfigFromApi(space);
@@ -4242,6 +4664,8 @@ export class DT3DCard extends LitElement {
 			top: 0;
 			left: 0;
 			height: 100%;
+			overflow: hidden;
+			transition: height 180ms ease;
 		`;
 		this.container.appendChild(this.content);
 
@@ -4271,6 +4695,32 @@ export class DT3DCard extends LitElement {
 		this.bottomBar = document.createElement("dt3d-bottom-bar") as DT3DBottomBar;
 		this.bottomBar.objectSidebarCollapsed = this.objectSidebar.collapsed;
 		this.content.appendChild(this.bottomBar);
+
+		this.materialManager = document.createElement(
+			"dt3d-material-manager",
+		) as DT3DMaterialManager;
+		this.materialManager.addEventListener("material-manager-toggle", () => {
+			this.setMaterialManagerOpen(!this.materialManagerOpen);
+		});
+		this.materialManager.addEventListener("material-create", () => {
+			this.createLibraryMaterial();
+		});
+		this.materialManager.addEventListener("material-selected", (event: Event) => {
+			const {materialId} = (
+				event as CustomEvent<{materialId: string}>
+			).detail;
+			this.selectLibraryMaterial(materialId);
+		});
+		this.materialManager.addEventListener(
+			"material-delete-request",
+			(event: Event) => {
+				const {materialId} = (
+					event as CustomEvent<{materialId: string}>
+				).detail;
+				this.requestDeleteMaterial(materialId);
+			},
+		);
+		this.container.appendChild(this.materialManager);
 
 		this.hintBox = document.createElement("dt3d-hint-box") as DT3DHintBox;
 		this.content.appendChild(this.hintBox);
@@ -4313,6 +4763,7 @@ export class DT3DCard extends LitElement {
 		this.content.appendChild(this.syncProgressComponent);
 
 		const cssElem = document.createElement("div");
+		this.cssRendererContainer = cssElem;
 		cssElem.style.cssText = `
 			position: absolute;
 			top: 0;
@@ -4888,6 +5339,7 @@ export class DT3DCard extends LitElement {
 			if (this.syncProgressComponent) {
 				this.syncProgressComponent.progress = progress;
 			}
+			if (!progress.active) this.refreshMaterialLibraryFromScene();
 		});
 
 		void this.spaceSync
@@ -4997,6 +5449,24 @@ export class DT3DCard extends LitElement {
 				this.applyOpeningEntityStates(object);
 				this.sceneManager.applyShadowSettingsToObject(object);
 			}
+			const updatedMaterial = detail.attribute.startsWith("material.")
+				? getPrimaryMaterial(findMaterialObject(updatedObject))
+				: null;
+			const materialOwners = updatedMaterial
+				? getMaterialUsages(this.space, updatedMaterial).map(({owner}) => owner)
+				: [];
+			const syncObjects = [
+				...new Map(
+					[...updatedObjects, ...materialOwners].map((object) => [
+						object.uuid,
+						object,
+					]),
+				).values(),
+			];
+			if (updatedMaterial) {
+				this.sceneManager.requestShadowMapUpdate();
+				this.refreshMaterialLibraryFromScene();
+			}
 
 			if (
 				updatedObjects.length === 1 &&
@@ -5096,15 +5566,23 @@ export class DT3DCard extends LitElement {
 					}
 				},
 				sync: () =>
-					Promise.all(
-						[...updatedObjects, ...changedDefaultViewports].map((object) =>
+					Promise.all([
+						...[...syncObjects, ...changedDefaultViewports].map((object) =>
 							this.spaceSync?.syncObjectUpdate(object),
 						),
-					),
+						...(updatedMaterial ? [this.persistSpaceConfiguration()] : []),
+					]),
 			});
 			if (updatedObjects.some((object) => this.objectContainsWall(object))) {
 				this.reconcileWallNetworkAfterChange("Wall update");
 			}
+		});
+
+		this.tree.addEventListener("material-updated", (event: Event) => {
+			if (this.isVisualizationOnly()) return;
+			this.handleMaterialUpdated(
+				(event as CustomEvent<MaterialUpdateDetail>).detail,
+			);
 		});
 
 		this.tree.addEventListener("object-moved", (e: any) => {
@@ -5244,6 +5722,9 @@ export class DT3DCard extends LitElement {
 
 		this.canvas.addEventListener("dragover", (event: DragEvent) => {
 			event.preventDefault();
+			if (event.dataTransfer?.types.includes(MATERIAL_DRAG_MIME)) {
+				event.dataTransfer.dropEffect = "copy";
+			}
 		});
 
 		this.canvas.addEventListener("drop", (event: DragEvent) => {
@@ -5291,18 +5772,7 @@ export class DT3DCard extends LitElement {
 		const resizeDetector = new ResizeObserver((event) => {
 			const width = event[0].contentRect.width;
 			const height = event[0].contentRect.height;
-
-			this.content.style.width = `${width}px`;
-			this.content.style.height = `${height}px`;
-
-			this.canvas.style.width = `${width}px`;
-			this.canvas.style.height = `${height}px`;
-
-			cssElem.style.width = `${width}px`;
-			cssElem.style.height = `${height}px`;
-
-			this.sceneManager.updateSize(width, height);
-			this.rendererManager.resize(width, height);
+			this.updateEditorLayout(width, height);
 		});
 
 		resizeDetector.observe(this.container, {box: "border-box"});

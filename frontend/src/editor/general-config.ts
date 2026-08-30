@@ -156,6 +156,7 @@ export type SpaceConfiguration = {
 	general: SpaceGeneralConfig;
 	scene: SpaceSceneConfig;
 	floorplan: FloorplanConfig;
+	materials: Record<string, any>[];
 };
 
 export const DEFAULT_GENERAL_CONFIG: GeneralConfig = {
@@ -285,6 +286,7 @@ export const DEFAULT_SPACE_CONFIGURATION: SpaceConfiguration = {
 	general: DEFAULT_SPACE_GENERAL_CONFIG,
 	scene: normalizeSpaceSceneConfig(),
 	floorplan: DEFAULT_FLOORPLAN_CONFIG,
+	materials: [],
 };
 
 const booleanOrDefault = (value: unknown, fallback: boolean): boolean => {
@@ -948,6 +950,7 @@ export const normalizeSpaceConfiguration = (
 	general: normalizeSpaceGeneralConfig(config.general ?? {}),
 	scene: normalizeSpaceSceneConfig(config.scene ?? config.spaceScene ?? {}),
 	floorplan: normalizeFloorplanConfig(config.floorplan ?? {}),
+	materials: Array.isArray(config.materials) ? config.materials : [],
 });
 
 export const hasFloorplanConfiguration = (config: unknown): boolean =>
