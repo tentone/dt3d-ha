@@ -70,8 +70,71 @@ export class DT3DSpaceConfigMenu extends LitElement {
 		};
 	}
 
+	private postProcessingBoolean(
+		label: string,
+		attribute: string,
+		tooltip?: string,
+	): DynamicFormField {
+		return {
+			label: localManager.get(label),
+			attribute: `general.rendering.postProcessing.${attribute}`,
+			type: "boolean",
+			tooltip: tooltip ? localManager.get(tooltip) : undefined,
+			editable: true,
+			enabled: true,
+		};
+	}
+
 	private createPostProcessingFields(): DynamicFormField[] {
 		return [
+			{
+				label: localManager.get("ssr"),
+				attribute: "post-processing-ssr",
+				type: "sub-form",
+				enabled: true,
+				collapsed: true,
+				fields: [
+					this.postProcessingEnabled("ssr", "ssrTooltip"),
+					this.postProcessingNumber("opacity", "ssr.opacity", 0.01, 0, 1),
+					this.postProcessingNumber(
+						"maximumDistance",
+						"ssr.maxDistance",
+						0.1,
+						0.1,
+						1000,
+					),
+					this.postProcessingNumber(
+						"thickness",
+						"ssr.thickness",
+						0.001,
+						0.001,
+						10,
+					),
+					this.postProcessingNumber(
+						"effectResolutionScale",
+						"ssr.resolutionScale",
+						0.05,
+						0.25,
+						1,
+						"effectResolutionScaleTooltip",
+					),
+					this.postProcessingBoolean(
+						"blur",
+						"ssr.blur",
+						"ssrBlurTooltip",
+					),
+					this.postProcessingBoolean(
+						"distanceAttenuation",
+						"ssr.distanceAttenuation",
+						"distanceAttenuationTooltip",
+					),
+					this.postProcessingBoolean(
+						"fresnel",
+						"ssr.fresnel",
+						"fresnelTooltip",
+					),
+				],
+			},
 			{
 				label: localManager.get("bokehDepth"),
 				attribute: "post-processing-bokeh",

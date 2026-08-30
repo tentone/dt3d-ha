@@ -28,6 +28,17 @@ export type BloomConfig = {
 	threshold: number;
 };
 
+export type SsrConfig = {
+	enabled: boolean;
+	opacity: number;
+	maxDistance: number;
+	thickness: number;
+	blur: boolean;
+	distanceAttenuation: boolean;
+	fresnel: boolean;
+	resolutionScale: number;
+};
+
 export type GtaoConfig = {
 	enabled: boolean;
 	radius: number;
@@ -76,6 +87,7 @@ export type FilmGrainConfig = {
 };
 
 export type PostProcessingConfig = {
+	ssr: SsrConfig;
 	bokehDepth: BokehDepthConfig;
 	bloom: BloomConfig;
 	gtao: GtaoConfig;
@@ -158,6 +170,16 @@ export const DEFAULT_GENERAL_CONFIG: GeneralConfig = {
 			quality: "medium",
 		},
 		postProcessing: {
+			ssr: {
+				enabled: false,
+				opacity: 0.5,
+				maxDistance: 20,
+				thickness: 0.1,
+				blur: true,
+				distanceAttenuation: true,
+				fresnel: true,
+				resolutionScale: 0.5,
+			},
 			bokehDepth: {
 				enabled: false,
 				focus: 3,
@@ -419,6 +441,14 @@ export const normalizePostProcessingConfig = (
 	config: Record<string, any> = {},
 ): PostProcessingConfig => {
 	const defaults = DEFAULT_GENERAL_CONFIG.rendering.postProcessing;
+	const ssr = passConfig(
+		config.ssr ??
+			config.screenSpaceReflection ??
+			config.screen_space_reflection ??
+			config.screenSpaceReflections ??
+			config.screen_space_reflections,
+		defaults.ssr.enabled,
+	);
 	const bokehDepth = passConfig(
 		config.bokehDepth ?? config.bokeh_depth ?? config.bokeh,
 		defaults.bokehDepth.enabled,
@@ -452,6 +482,40 @@ export const normalizePostProcessingConfig = (
 	);
 
 	return {
+		ssr: {
+			enabled: ssr.enabled,
+			opacity: numberOrDefault(
+				ssr.values.opacity,
+				defaults.ssr.opacity,
+				0,
+				1,
+			),
+			maxDistance: numberOrDefault(
+				ssr.values.maxDistance ?? ssr.values.max_distance,
+				defaults.ssr.maxDistance,
+				0.1,
+				1000,
+			),
+			thickness: numberOrDefault(
+				ssr.values.thickness,
+				defaults.ssr.thickness,
+				0.001,
+				10,
+			),
+			blur: booleanOrDefault(ssr.values.blur, defaults.ssr.blur),
+			distanceAttenuation: booleanOrDefault(
+				ssr.values.distanceAttenuation ??
+					ssr.values.distance_attenuation,
+				defaults.ssr.distanceAttenuation,
+			),
+			fresnel: booleanOrDefault(ssr.values.fresnel, defaults.ssr.fresnel),
+			resolutionScale: numberOrDefault(
+				ssr.values.resolutionScale ?? ssr.values.resolution_scale,
+				defaults.ssr.resolutionScale,
+				0.25,
+				1,
+			),
+		},
 		bokehDepth: {
 			enabled: bokehDepth.enabled,
 			focus: numberOrDefault(

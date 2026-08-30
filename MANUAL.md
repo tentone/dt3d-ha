@@ -244,11 +244,11 @@ Open **Space configuration** (cog icon) beside the space selector. The form cont
 | Section         | Options                                                                                                  |
 | --------------- | -------------------------------------------------------------------------------------------------------- |
 | Tone mapping    | None, Linear, Reinhard, Cineon, ACES Filmic                                                              |
-| Post-processing | Bokeh depth of field, Bloom, GTAO, SSAO, Halftone, Film grain                                            |
+| Post-processing | SSR, Bokeh depth of field, Bloom, GTAO, SSAO, Halftone, Film grain                                      |
 | Appearance      | Procedural sky, Home Assistant date/time following, and a solid-color or transparent fallback background |
 | Daylight        | Ambient color/intensity, sunlight color/intensity, sun elevation/azimuth                                 |
 
-GTAO and SSAO are mutually exclusive. Post-processing can improve depth and style but is usually the largest GPU cost after high resolution and shadows. Grid visibility, grid size, and snap size are local editor aids rather than space appearance settings.
+SSR adds view-dependent reflections using information currently on screen, so reflected details can disappear at view edges. GTAO and SSAO are mutually exclusive. Post-processing can improve depth and style but is usually the largest GPU cost after high resolution and shadows. Grid visibility, grid size, and snap size are local editor aids rather than space appearance settings.
 
 <img src="readme/4_create_space.png" width="500">
 
@@ -379,7 +379,7 @@ Then optimize in this order:
 
 1. Lower `resolution` from `1` to `0.75`, then `0.5`. This usually gives the largest improvement with the smallest visual change.
 2. Disable shadow maps. If shadows are required, use `basic` first, limit the number of shadow-casting lights, and disable **Cast shadows** on lights and meshes that do not need them. Select a mesh and expand **Shadows** in the object inspector: **Cast shadows** controls whether the mesh projects a shadow, while **Receive shadows** controls whether shadows are drawn on its surface.
-3. Disable post-processing in **Space configuration**. Avoid stacking several effects; GTAO and SSAO cannot be enabled together.
+3. Disable post-processing in **Space configuration**. SSR is demanding; lower its effect resolution scale before enabling it on constrained hardware. Avoid stacking several effects; GTAO and SSAO cannot be enabled together.
 4. Keep antialiasing off on high-DPI displays. Test it only after resolution and shadows are acceptable.
 5. Prefer optimized `.glb` models, fewer polygons/materials, compressed textures, and fewer camera entities. Camera objects load and refresh their still images only while their pointer-hover preview is visible.
 6. Split very large homes into separate spaces or dashboard views so clients do not render everything at once.

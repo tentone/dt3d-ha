@@ -11,7 +11,6 @@ import {
 	LinearToneMapping,
 	NoToneMapping,
 	PCFShadowMap,
-	PCFSoftShadowMap,
 	ReinhardToneMapping,
 	Vector2,
 	VSMShadowMap,
@@ -27,6 +26,7 @@ import {OutputPass} from "three/examples/jsm/postprocessing/OutputPass.js";
 import type {Pass} from "three/examples/jsm/postprocessing/Pass.js";
 import {RenderPass} from "three/examples/jsm/postprocessing/RenderPass.js";
 import {SSAOPass} from "three/examples/jsm/postprocessing/SSAOPass.js";
+import {SSRPass} from "three/examples/jsm/postprocessing/SSRPass.js";
 import {UnrealBloomPass} from "three/examples/jsm/postprocessing/UnrealBloomPass.js";
 import {CSS3DRenderer} from "three/examples/jsm/renderers/CSS3DRenderer.js";
 
@@ -35,6 +35,7 @@ import {normalizeGeneralConfig} from "./general-config.js";
 import type {NavigationControls, ShadowMapCapabilities} from "./scene.js";
 
 type PostProcessingPasses = {
+	ssr: SSRPass;
 	bokehDepth: BokehPass;
 	bloom: UnrealBloomPass;
 	gtao: GTAOPass;
@@ -225,6 +226,7 @@ export class RendererManager {
 		this.renderPass = pipeline.renderPass;
 		this.postProcessingPasses = pipeline.passes;
 		this.selectionOutline = pipeline.selectionOutline;
+		this.setCamera(camera);
 	}
 
 	private createRenderer(): WebGLRenderer {
@@ -287,6 +289,15 @@ export class RendererManager {
 		const config = this.renderingConfig.postProcessing;
 		const renderPass = new RenderPass(this.scene, this.camera);
 		const passes: PostProcessingPasses = {
+			ssr: new SSRPass({
+				renderer: this.renderer,
+				scene: this.scene,
+				camera: this.camera,
+				width: this.width,
+				height: this.height,
+				selects: null,
+				groundReflector: null,
+			}),
 			bokehDepth: new BokehPass(this.scene, this.camera, {
 				focus: config.bokehDepth.focus,
 				aperture: config.bokehDepth.aperture,
@@ -332,6 +343,7 @@ export class RendererManager {
 
 		// Effect order is significant and mirrors the space configuration UI.
 		composer.addPass(renderPass);
+		composer.addPass(passes.ssr);
 		composer.addPass(passes.bokehDepth);
 		composer.addPass(passes.bloom);
 		composer.addPass(passes.gtao);
@@ -357,6 +369,16 @@ export class RendererManager {
 		passes = this.postProcessingPasses,
 	): void {
 		const config = this.renderingConfig.postProcessing;
+		passes.ssr.opacity = config.ssr.opacity;
+		passes.ssr.maxDistance = config.ssr.maxDistance;
+		passes.ssr.thickness = config.ssr.thickness;
+		passes.ssr.blur = config.ssr.blur;
+		passes.ssr.distanceAttenuation = config.ssr.distanceAttenuation;
+		passes.ssr.fresnel = config.ssr.fresnel;
+		if (passes.ssr.resolutionScale !== config.ssr.resolutionScale) {
+			passes.ssr.resolutionScale = config.ssr.resolutionScale;
+		}
+
 		const bokehUniforms = passes.bokehDepth.uniforms as Record<
 			string,
 			{ value: unknown }
@@ -402,6 +424,7 @@ export class RendererManager {
 		filmUniforms.intensity.value = config.filmGrain.intensity;
 		filmUniforms.grayscale.value = config.filmGrain.grayscale;
 
+		passes.ssr.enabled = config.ssr.enabled;
 		passes.bokehDepth.enabled = config.bokehDepth.enabled;
 		passes.bloom.enabled = config.bloom.enabled;
 		passes.gtao.enabled = config.gtao.enabled;
@@ -422,6 +445,10 @@ export class RendererManager {
 				postProcessing: {
 					...this.renderingConfig.postProcessing,
 					...(config.postProcessing ?? {}),
+					ssr: {
+						...this.renderingConfig.postProcessing.ssr,
+						...(config.postProcessing?.ssr ?? {}),
+					},
 					bokehDepth: {
 						...this.renderingConfig.postProcessing.bokehDepth,
 						...(config.postProcessing?.bokehDepth ?? {}),
@@ -469,6 +496,7 @@ export class RendererManager {
 			this.renderPass = pipeline.renderPass;
 			this.postProcessingPasses = pipeline.passes;
 			this.selectionOutline = pipeline.selectionOutline;
+			this.setCamera(this.camera);
 			this.setSelectedObjects(this.selectedObjects);
 			if (this.running) {
 				this.renderer.setAnimationLoop(this.animate);
@@ -549,18 +577,34 @@ export class RendererManager {
 
 	public setCamera(camera: Camera): void {
 		this.camera = camera;
-		this.renderPass.camera = camera;
-		this.selectionOutline.renderCamera = camera;
-		this.postProcessingPasses.bokehDepth.camera = camera;
-		this.postProcessingPasses.gtao.camera = camera;
-		this.postProcessingPasses.ssao.camera = camera;
-
 		const perspectiveCamera = Number(
 			Boolean(
 				(camera as Camera & { isPerspectiveCamera?: boolean })
 					.isPerspectiveCamera,
 			),
 		);
+		this.renderPass.camera = camera;
+		this.selectionOutline.renderCamera = camera;
+		this.postProcessingPasses.ssr.camera = camera;
+		this.postProcessingPasses.ssr.ssrMaterial.uniforms.cameraNear.value = (
+			camera as Camera & { near: number }
+		).near;
+		this.postProcessingPasses.ssr.ssrMaterial.uniforms.cameraFar.value = (
+			camera as Camera & { far: number }
+		).far;
+		this.postProcessingPasses.ssr.ssrMaterial.uniforms.cameraProjectionMatrix.value.copy(
+			camera.projectionMatrix,
+		);
+		this.postProcessingPasses.ssr.ssrMaterial.uniforms.cameraInverseProjectionMatrix.value.copy(
+			camera.projectionMatrixInverse,
+		);
+		this.postProcessingPasses.ssr.ssrMaterial.defines.PERSPECTIVE_CAMERA =
+			perspectiveCamera;
+		this.postProcessingPasses.ssr.ssrMaterial.needsUpdate = true;
+		this.postProcessingPasses.bokehDepth.camera = camera;
+		this.postProcessingPasses.gtao.camera = camera;
+		this.postProcessingPasses.ssao.camera = camera;
+
 		this.postProcessingPasses.bokehDepth.materialBokeh.defines = {
 			...this.postProcessingPasses.bokehDepth.materialBokeh.defines,
 			PERSPECTIVE_CAMERA: perspectiveCamera,
