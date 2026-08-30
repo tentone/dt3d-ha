@@ -3,6 +3,7 @@ import {
 	AmbientLight,
 	Box3,
 	BoxGeometry,
+	CanvasTexture,
 	Color,
 	DirectionalLight,
 	GridHelper,
@@ -15,12 +16,17 @@ import {
 	PointLight,
 	Scene,
 	SpotLight,
+	SRGBColorSpace,
 	Vector3,
 } from "three";
 import {FlyControls} from "three/examples/jsm/controls/FlyControls.js";
 import {MapControls} from "three/examples/jsm/controls/MapControls.js";
 import {OrbitControls} from "three/examples/jsm/controls/OrbitControls";
 import {TransformControls} from "three/examples/jsm/controls/TransformControls";
+import {
+	Lensflare,
+	LensflareElement,
+} from "three/examples/jsm/objects/Lensflare.js";
 import {Sky} from "three/examples/jsm/objects/Sky.js";
 
 import type {ShadowMapQuality} from "./general-config.js";
@@ -129,6 +135,7 @@ export type DaylightConfig = {
 export type SkyConfig = {
 	enabled: boolean;
 	followDateTime: boolean;
+	lensFlare: boolean;
 };
 
 export type SunPosition = {
@@ -172,6 +179,7 @@ export const DEFAULT_DAYLIGHT_CONFIG: DaylightConfig = {
 export const DEFAULT_SKY_CONFIG: SkyConfig = {
 	enabled: true,
 	followDateTime: false,
+	lensFlare: true,
 };
 
 export const DEFAULT_BACKGROUND_CONFIG: BackgroundConfig = {
@@ -295,6 +303,10 @@ export const normalizeSpaceSceneConfig = (
 			followDateTime: booleanOrDefault(
 				sky.followDateTime,
 				DEFAULT_SKY_CONFIG.followDateTime,
+			),
+			lensFlare: booleanOrDefault(
+				sky.lensFlare,
+				DEFAULT_SKY_CONFIG.lensFlare,
 			),
 		},
 	};
@@ -456,6 +468,13 @@ export class SceneManager {
 	 * Sky dome used by daylight configuration.
 	 */
 	private sky: Sky | null = null;
+
+	/**
+	 * Camera-relative lens flare representing the procedural sky's sun.
+	 */
+	private lensFlare: Lensflare | null = null;
+
+	private lensFlareElements: LensflareElement[] = [];
 
 	/**
 	 * Active immersive presentation mode. AR temporarily suppresses all scene background imagery so the device camera can show through the XR layer.
@@ -837,6 +856,8 @@ export class SceneManager {
 	 * Fit the directional-light shadow camera to all scene objects.
 	 */
 	public updateShadowMap(): void {
+		this.updateLensFlarePosition();
+
 		if (!this.sunlightShadowCameraDirty || !this.sunlight) {
 			return;
 		}
@@ -1376,8 +1397,96 @@ export class SceneManager {
 		this.sky.scale.setScalar(1e4);
 
 		this.scene.add(this.sky);
+		this.addLensFlare();
 		this.applyDaylightConfig(this.spaceSceneConfig.daylight);
 		this.applyAppearanceConfig();
+	}
+
+	/**
+	 * Create a texture-backed sun flare without relying on external assets.
+	 */
+	private createLensFlareTexture(
+		innerColor: string,
+		middleColor: string,
+	): CanvasTexture {
+		const canvas = document.createElement("canvas");
+		canvas.width = 256;
+		canvas.height = 256;
+		const context = canvas.getContext("2d");
+		if (!context) {
+			throw new Error("Unable to create the lens flare texture");
+		}
+
+		const center = canvas.width / 2;
+		const gradient = context.createRadialGradient(
+			center,
+			center,
+			0,
+			center,
+			center,
+			center,
+		);
+		gradient.addColorStop(0, innerColor);
+		gradient.addColorStop(0.12, innerColor);
+		gradient.addColorStop(0.35, middleColor);
+		gradient.addColorStop(1, "rgba(255, 180, 80, 0)");
+		context.fillStyle = gradient;
+		context.fillRect(0, 0, canvas.width, canvas.height);
+
+		const texture = new CanvasTexture(canvas);
+		texture.colorSpace = SRGBColorSpace;
+		return texture;
+	}
+
+	/**
+	 * Add a flare that follows the exact solar direction used by the sky and directional light.
+	 */
+	private addLensFlare(): void {
+		const sunTexture = this.createLensFlareTexture(
+			"rgba(255, 255, 255, 1)",
+			"rgba(255, 210, 120, 0.35)",
+		);
+		const artifactTexture = this.createLensFlareTexture(
+			"rgba(255, 245, 220, 0.55)",
+			"rgba(120, 180, 255, 0.12)",
+		);
+		const color = new Color(this.spaceSceneConfig.daylight.sunlightColor);
+		this.lensFlareElements = [
+			new LensflareElement(sunTexture, 420, 0, color.clone()),
+			new LensflareElement(artifactTexture, 75, 0.35, color.clone()),
+			new LensflareElement(artifactTexture, 110, 0.62, color.clone()),
+			new LensflareElement(artifactTexture, 55, 0.9, color.clone()),
+		];
+
+		this.lensFlare = new Lensflare();
+		for (const element of this.lensFlareElements) {
+			this.lensFlare.addElement(element);
+		}
+
+		// Normal/depth post-processing passes temporarily replace scene materials. The flare is a color overlay and must not render into those buffers.
+		const renderLensFlare = this.lensFlare.onBeforeRender.bind(this.lensFlare);
+		this.lensFlare.onBeforeRender = (...args) => {
+			if (args[1].overrideMaterial) {
+				return;
+			}
+			renderLensFlare(...args);
+		};
+
+		this.lensFlare.internal = true;
+		this.scene.add(this.lensFlare);
+		this.updateLensFlarePosition();
+	}
+
+	/**
+	 * Keep the flare at a fixed apparent distance from the active camera so translations do not change the sun's direction.
+	 */
+	private updateLensFlarePosition(): void {
+		if (!this.lensFlare) {
+			return;
+		}
+
+		this.camera.getWorldPosition(this.lensFlare.position);
+		this.lensFlare.position.addScaledVector(this.sunlightDirection, 1000);
 	}
 
 	/**
@@ -1385,9 +1494,16 @@ export class SceneManager {
 	 */
 	private applyAppearanceConfig(): void {
 		const augmentedReality = this.immersiveMode === "ar";
+		const skyVisible =
+			!augmentedReality && this.spaceSceneConfig.sky.enabled;
 
 		if (this.sky) {
-			this.sky.visible = !augmentedReality && this.spaceSceneConfig.sky.enabled;
+			this.sky.visible = skyVisible;
+		}
+
+		if (this.lensFlare) {
+			this.lensFlare.visible =
+				skyVisible && this.spaceSceneConfig.sky.lensFlare;
 		}
 
 		this.scene.background =
@@ -1428,5 +1544,10 @@ export class SceneManager {
 		if (this.sky) {
 			this.sky.material.uniforms.sunPosition.value.copy(sunPosition);
 		}
+
+		for (const element of this.lensFlareElements) {
+			element.color.set(config.sunlightColor);
+		}
+		this.updateLensFlarePosition();
 	}
 }

@@ -233,7 +233,7 @@ Open **Space configuration** (cog icon) beside the space selector. The form cont
 
 ### Appearance and daylight
 
-- Enable the procedural sky for a daylight sky dome, or disable it and use a solid-color or transparent background. A transparent background allows the dashboard background to show through the card.
+- Enable the procedural sky for a daylight sky dome, or disable it and use a solid-color or transparent background. A transparent background allows the dashboard background to show through the card. The optional sun lens flare follows the same manual or Home Assistant-derived solar direction as the sky and is hidden whenever the sky is hidden.
 - **Follow Home Assistant date and time** updates the sun position from Home Assistant's configured location and time. The manual elevation and azimuth remain the fallback when sun data is unavailable.
 - Ambient color/intensity and sunlight color/intensity control the scene-wide base light and directional sunlight.
 
@@ -245,7 +245,7 @@ Open **Space configuration** (cog icon) beside the space selector. The form cont
 | --------------- | -------------------------------------------------------------------------------------------------------- |
 | Tone mapping    | None, Linear, Reinhard, Cineon, ACES Filmic                                                              |
 | Post-processing | SSR, Bokeh depth of field, Bloom, GTAO, SSAO, Halftone, Film grain                                      |
-| Appearance      | Procedural sky, Home Assistant date/time following, and a solid-color or transparent fallback background |
+| Appearance      | Procedural sky, sun lens flare, Home Assistant date/time following, and a solid-color or transparent fallback background |
 | Daylight        | Ambient color/intensity, sunlight color/intensity, sun elevation/azimuth                                 |
 
 SSR adds view-dependent reflections using information currently on screen, so reflected details can disappear at view edges. GTAO and SSAO are mutually exclusive. Post-processing can improve depth and style but is usually the largest GPU cost after high resolution and shadows. Grid visibility, grid size, and snap size are local editor aids rather than space appearance settings.

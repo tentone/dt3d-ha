@@ -495,6 +495,14 @@ export class DT3DSpaceConfigMenu extends LitElement {
 					enabled: true,
 				},
 				{
+					label: localManager.get("skyLensFlare"),
+					attribute: "scene.sky.lensFlare",
+					type: "boolean",
+					tooltip: localManager.get("skyLensFlareTooltip"),
+					editable: true,
+					enabled: true,
+				},
+				{
 					label: localManager.get("skyFollowDateTime"),
 					attribute: "scene.sky.followDateTime",
 					type: "boolean",
