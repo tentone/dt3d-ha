@@ -46,8 +46,13 @@ export class DT3DMaterialManager extends LitElement {
 	private previewUrls = new Map<string, string>();
 
 	private previewFrame: number | null = null;
+	private previewGeneration = 0;
 
 	protected updated(changed: Map<string, unknown>): void {
+		if (changed.has("open") && !this.open) {
+			this.cancelPreviewGeneration();
+			return;
+		}
 		if (
 			(changed.has("materials") && this.open) ||
 			(changed.has("open") && this.open)
@@ -58,26 +63,46 @@ export class DT3DMaterialManager extends LitElement {
 
 	public disconnectedCallback(): void {
 		super.disconnectedCallback();
-		if (this.previewFrame !== null) cancelAnimationFrame(this.previewFrame);
-		this.previewFrame = null;
+		this.cancelPreviewGeneration();
 	}
 
 	public refreshPreviews(): void {
 		if (!this.open) return;
-		if (this.previewFrame !== null) cancelAnimationFrame(this.previewFrame);
+		this.cancelPreviewGeneration();
+		const generation = this.previewGeneration;
 		this.previewFrame = requestAnimationFrame(() => {
 			this.previewFrame = null;
-			this.renderMaterialPreviews();
+			void this.renderMaterialPreviews(generation);
 		});
 	}
 
-	private renderMaterialPreviews(): void {
+	private cancelPreviewGeneration(): void {
+		this.previewGeneration += 1;
+		if (this.previewFrame !== null) cancelAnimationFrame(this.previewFrame);
+		this.previewFrame = null;
+	}
+
+	private async yieldForPreview(generation: number): Promise<boolean> {
+		await new Promise<void>((resolve) => {
+			const scheduleIdle = window.requestIdleCallback?.bind(window);
+			if (scheduleIdle) {
+				scheduleIdle(() => resolve(), {timeout: 180});
+			} else {
+				setTimeout(resolve, 0);
+			}
+		});
+		return generation === this.previewGeneration && this.open;
+	}
+
+	private async renderMaterialPreviews(generation: number): Promise<void> {
 		if (this.materials.length === 0) {
 			this.previewUrls = new Map();
 			return;
 		}
+		if (!(await this.yieldForPreview(generation))) return;
 
 		let renderer: WebGLRenderer | null = null;
+		let geometry: SphereGeometry | null = null;
 		try {
 			renderer = new WebGLRenderer({
 				alpha: true,
@@ -96,7 +121,7 @@ export class DT3DMaterialManager extends LitElement {
 			const camera = new PerspectiveCamera(32, 4 / 3, 0.1, 20);
 			camera.position.set(0, 0.1, 3.8);
 			camera.lookAt(0, 0, 0);
-			const geometry = new SphereGeometry(0.82, 48, 32);
+			geometry = new SphereGeometry(0.82, 48, 32);
 			const sphere = new Mesh(geometry, this.materials[0]);
 			scene.add(sphere);
 			scene.add(new AmbientLight(0xffffff, 1.35));
@@ -109,16 +134,18 @@ export class DT3DMaterialManager extends LitElement {
 
 			const previews = new Map<string, string>();
 			for (const material of this.materials) {
+				if (!(await this.yieldForPreview(generation))) return;
 				sphere.material = material;
 				renderer.render(scene, camera);
 				previews.set(material.uuid, renderer.domElement.toDataURL("image/png"));
+				this.previewUrls = new Map(previews);
 			}
-			geometry.dispose();
-			this.previewUrls = previews;
 		} catch (error) {
+			if (generation !== this.previewGeneration) return;
 			console.warn("DT3D: Unable to render material previews", error);
 			this.previewUrls = new Map();
 		} finally {
+			geometry?.dispose();
 			renderer?.dispose();
 		}
 	}
@@ -195,6 +222,15 @@ export class DT3DMaterialManager extends LitElement {
 						placeholder=${localManager.get("searchMaterials")}
 						aria-label=${localManager.get("searchMaterials")}
 					/>
+					<dt3d-tooltip .content=${localManager.get("mergeMaterials")} placement="top">
+						<button
+							class="merge-button"
+							@click=${() => this.dispatch("material-merge")}
+							aria-label=${localManager.get("mergeMaterials")}
+						>
+							<ha-icon icon="mdi:merge"></ha-icon>
+						</button>
+					</dt3d-tooltip>
 					<dt3d-tooltip .content=${localManager.get("newMaterial")} placement="top">
 						<button
 							class="create-button"

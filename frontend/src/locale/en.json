@@ -25,6 +25,7 @@
 	"closeMaterials": "Close material manager",
 	"searchMaterials": "Search materials...",
 	"newMaterial": "New material",
+	"mergeMaterials": "Merge identical materials",
 	"deleteMaterial": "Delete material",
 	"selectedMaterial": "Selected Material",
 	"noMatchingMaterials": "No matching materials",

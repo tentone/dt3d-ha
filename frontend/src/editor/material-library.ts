@@ -141,6 +141,62 @@ export function serializeMaterialLibrary(
 	});
 }
 
+function collectSerializedUuids(
+	value: unknown,
+	aliases: Map<string, string>,
+): void {
+	if (Array.isArray(value)) {
+		for (const item of value) collectSerializedUuids(item, aliases);
+		return;
+	}
+	if (!value || typeof value !== "object") return;
+
+	for (const [key, item] of Object.entries(value)) {
+		if (
+			key.toLocaleLowerCase() === "uuid" &&
+			typeof item === "string" &&
+			!aliases.has(item)
+		) {
+			aliases.set(item, `@uuid:${aliases.size}`);
+		}
+		collectSerializedUuids(item, aliases);
+	}
+}
+
+function normalizeSerializedMaterial(
+	value: unknown,
+	uuidAliases: Map<string, string>,
+): unknown {
+	if (typeof value === "string") return uuidAliases.get(value) ?? value;
+	if (Array.isArray(value)) {
+		return value.map((item) => normalizeSerializedMaterial(item, uuidAliases));
+	}
+	if (!value || typeof value !== "object") return value;
+
+	return Object.fromEntries(
+		Object.entries(value)
+			.filter(([key]) => key.toLocaleLowerCase() !== "uuid")
+			.sort(([left], [right]) => left.localeCompare(right))
+			.map(([key, item]) => [
+				key,
+				normalizeSerializedMaterial(item, uuidAliases),
+			]),
+	);
+}
+
+/** Stable comparison key for every serialized material property except UUIDs. */
+export function getMaterialEqualityKey(material: Material): string | null {
+	try {
+		const serialized = material.toJSON() as SerializedMaterial;
+		const uuidAliases = new Map<string, string>();
+		collectSerializedUuids(serialized, uuidAliases);
+		return JSON.stringify(normalizeSerializedMaterial(serialized, uuidAliases));
+	} catch (error) {
+		console.warn("DT3D: Failed to compare library material", error);
+		return null;
+	}
+}
+
 export async function parseSerializedLibraryMaterial(
 	data: unknown,
 ): Promise<Material | null> {

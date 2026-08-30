@@ -90,6 +90,7 @@ import {
 } from "../editor/material-handler.js";
 import {
 	createStandardMaterial,
+	getMaterialEqualityKey,
 	getMaterialUsages,
 	getUniqueMaterials,
 	MATERIAL_DRAG_MIME,
@@ -1619,7 +1620,6 @@ export class DT3DCard extends LitElement {
 		this.materialManager.protectedMaterialId = this.standardMaterial?.uuid ?? "";
 		this.materialManager.selectedMaterialId =
 			this.selectedMaterial?.uuid ?? "";
-		this.materialManager.refreshPreviews();
 	}
 
 	private setSelectedMaterial(material: Material | null): void {
@@ -1691,6 +1691,93 @@ export class DT3DCard extends LitElement {
 			undo: remove,
 			redo: add,
 			sync: () => this.persistSpaceConfiguration(),
+		});
+	}
+
+	private mergeIdenticalMaterials(): void {
+		if (this.isVisualizationOnly() || this.materialLibrary.length < 2) return;
+
+		const canonicalByKey = new Map<string, Material>();
+		const replacementsByUuid = new Map<string, Material>();
+		for (const material of this.materialLibrary) {
+			const key = getMaterialEqualityKey(material);
+			if (key === null) continue;
+			const canonical = canonicalByKey.get(key);
+			if (!canonical) {
+				canonicalByKey.set(key, material);
+				continue;
+			}
+
+			if (material === this.standardMaterial) {
+				canonicalByKey.set(key, material);
+				replacementsByUuid.set(canonical.uuid, material);
+				for (const [uuid, replacement] of replacementsByUuid) {
+					if (replacement === canonical) replacementsByUuid.set(uuid, material);
+				}
+			} else {
+				replacementsByUuid.set(material.uuid, canonical);
+			}
+		}
+		if (replacementsByUuid.size === 0) return;
+
+		const beforeLibrary = [...this.materialLibrary];
+		const afterLibrary = beforeLibrary.filter(
+			(material) => !replacementsByUuid.has(material.uuid),
+		);
+		const usages = [...replacementsByUuid.keys()].flatMap((uuid) =>
+			getMaterialUsages(this.space, uuid),
+		);
+		const targetSnapshots = [
+			...new Map(usages.map(({target}) => [target.uuid, target])).values(),
+		].map((target) => ({
+			target,
+			material: Array.isArray(target.material)
+				? [...target.material]
+				: target.material,
+		}));
+		const owners = [
+			...new Map(usages.map(({owner}) => [owner.uuid, owner])).values(),
+		];
+		const beforeSelection = this.selectedMaterial;
+		const afterSelection = beforeSelection
+			? (replacementsByUuid.get(beforeSelection.uuid) ?? beforeSelection)
+			: null;
+
+		const merge = () => {
+			for (const {target} of targetSnapshots) {
+				target.material = Array.isArray(target.material)
+					? target.material.map(
+						(item) => replacementsByUuid.get(item.uuid) ?? item,
+					)
+					: (replacementsByUuid.get(target.material.uuid) ?? target.material);
+			}
+			this.materialLibrary = [...afterLibrary];
+			this.setSelectedMaterial(afterSelection);
+			this.refreshAfterMaterialMutation(afterSelection);
+		};
+		const restore = () => {
+			for (const snapshot of targetSnapshots) {
+				snapshot.target.material = Array.isArray(snapshot.material)
+					? [...snapshot.material]
+					: snapshot.material;
+			}
+			this.materialLibrary = [...beforeLibrary];
+			this.setSelectedMaterial(beforeSelection);
+			this.refreshAfterMaterialMutation(beforeSelection);
+		};
+		const sync = () =>
+			Promise.all([
+				...owners.map((owner) => this.spaceSync?.syncObjectUpdate(owner)),
+				this.persistSpaceConfiguration(),
+			]);
+
+		merge();
+		this.recordAction({
+			type: "update-object",
+			label: `${localManager.get("mergeMaterials")}: ${replacementsByUuid.size}`,
+			undo: restore,
+			redo: merge,
+			sync,
 		});
 	}
 
@@ -1826,7 +1913,6 @@ export class DT3DCard extends LitElement {
 		this.materialManagerOpen = open && !this.isVisualizationOnly();
 		if (this.materialManager) this.materialManager.open = this.materialManagerOpen;
 		this.updateEditorLayout();
-		if (this.materialManagerOpen) this.materialManager?.refreshPreviews();
 	}
 
 	private updateEditorLayout(width?: number, height?: number): void {
@@ -4704,6 +4790,9 @@ export class DT3DCard extends LitElement {
 		});
 		this.materialManager.addEventListener("material-create", () => {
 			this.createLibraryMaterial();
+		});
+		this.materialManager.addEventListener("material-merge", () => {
+			this.mergeIdenticalMaterials();
 		});
 		this.materialManager.addEventListener("material-selected", (event: Event) => {
 			const {materialId} = (

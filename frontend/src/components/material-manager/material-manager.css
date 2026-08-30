@@ -152,8 +152,24 @@ button:focus-visible,
 	outline-offset: 1px;
 }
 
-.create-button {
+.merge-button {
 	margin-left: auto;
+	width: 36px;
+	padding: 0;
+	border: 1px solid var(--divider-color);
+	background: var(--secondary-background-color);
+}
+
+.merge-button:hover {
+	border-color: var(--primary-color);
+	background: color-mix(in srgb, var(--primary-color) 12%, transparent);
+}
+
+.merge-button:active {
+	background: color-mix(in srgb, var(--primary-color) 24%, transparent);
+}
+
+.create-button {
 	width: 36px;
 	padding: 0;
 	background: var(--primary-color);
@@ -161,6 +177,7 @@ button:focus-visible,
 	box-shadow: 0 2px 4px var(--shadow-color);
 }
 
+.merge-button ha-icon,
 .create-button ha-icon {
 	--mdc-icon-size: 19px;
 }
