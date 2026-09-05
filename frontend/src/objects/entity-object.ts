@@ -28,7 +28,7 @@ export abstract class EntityObject extends DTObject {
 	/**
 	 * ID of the HA entity associated.
 	 */
-	public readonly entityId: string;
+	private _entityId: string;
 
 	/** Warning marker displayed in place of the normal entity visuals. */
 	public readonly missingIndicator: EntityMissingIndicator;
@@ -56,7 +56,7 @@ export abstract class EntityObject extends DTObject {
 	protected constructor(entityId: string, entity?: any) {
 		super();
 
-		this.entityId = entityId;
+		this._entityId = entityId;
 		this.name = entityId;
 		this.missingIndicator = new EntityMissingIndicator();
 		this.missingIndicator.visible = false;
@@ -69,6 +69,27 @@ export abstract class EntityObject extends DTObject {
 
 	public friendlyName(entity: any): string {
 		return entity?.attributes?.friendly_name ?? this.name;
+	}
+
+	/** ID of the Home Assistant entity currently assigned to this object. */
+	public get entityId(): string {
+		return this._entityId;
+	}
+
+	/**
+	 * Assign another entity to this object.
+	 *
+	 * The caller supplies fresh entity state separately through setEntity().
+	 */
+	public setEntityId(entityId: string): void {
+		const nextEntityId = entityId.trim();
+		if (!nextEntityId || nextEntityId === this._entityId) {
+			return;
+		}
+
+		this._entityId = nextEntityId;
+		this.userData.entityId = nextEntityId;
+		this.setEntity(undefined);
 	}
 
 	/**

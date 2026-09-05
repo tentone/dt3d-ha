@@ -2084,6 +2084,9 @@ export class DT3DCard extends LitElement {
 
 	private refreshAfterObjectMutation(object: Object3D | null): void {
 		if (object) {
+			if (object instanceof EntityObject) {
+				object.setEntity(this.hassInstance?.states?.[object.entityId]);
+			}
 			this.applyOpeningEntityStates(object);
 			applyEntityRules(object, this.hassInstance?.states ?? {});
 		}
@@ -5554,6 +5557,9 @@ export class DT3DCard extends LitElement {
 				? [...new Set(detail.objects)]
 				: [updatedObject];
 			for (const object of updatedObjects) {
+				if (detail.attribute === "entityId" && object instanceof EntityObject) {
+					object.setEntity(this.hassInstance?.states?.[object.entityId]);
+				}
 				this.applyOpeningEntityStates(object);
 				this.sceneManager.applyShadowSettingsToObject(object);
 			}

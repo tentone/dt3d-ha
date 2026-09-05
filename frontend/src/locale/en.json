@@ -331,6 +331,7 @@
 	"windowShutterColor": "Shutter color",
 	"windowShutterColorTooltip": "Color of the shutter frames and blades.",
 	"entityId": "Entity ID",
+	"entityIdDescription": "Choose another Home Assistant entity of the same type.",
 	"entityName": "Entity Name",
 	"entityState": "State",
 	"wall": "Wall",

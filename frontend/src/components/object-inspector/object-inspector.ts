@@ -431,6 +431,11 @@ export class DT3DObjectInspector extends LitElement {
 		attribute: string,
 		type: string,
 	): () => void {
+		if (attribute === "entityId" && object instanceof EntityObject) {
+			const entityId = object.entityId;
+			return () => object.setEntityId(entityId);
+		}
+
 		if (attribute.startsWith("material.")) {
 			const materialObject = findMaterialObject(object);
 			if (materialObject) {
@@ -661,6 +666,21 @@ export class DT3DObjectInspector extends LitElement {
 			if (this.selectedObject instanceof DTObject) {
 				this.selectedObject.locked = Boolean(value);
 			}
+		} else if (attribute === "entityId") {
+			if (!(this.selectedObject instanceof EntityObject)) {
+				return;
+			}
+
+			const entityId = String(value).trim();
+			const domain = this.selectedObject.entityId.split(".", 1)[0];
+			if (
+				entityId === this.selectedObject.entityId ||
+				!entityId.startsWith(`${domain}.`) ||
+				!this.entityOptions.some((option) => option.entityId === entityId)
+			) {
+				return;
+			}
+			this.selectedObject.setEntityId(entityId);
 		} else if (attribute === "defaultViewport") {
 			if (!(this.selectedObject instanceof ViewportObject)) {
 				return;
@@ -1781,6 +1801,7 @@ export class DT3DObjectInspector extends LitElement {
 			return [];
 		}
 		const attributeFields = this.getEntityAttributeFields();
+		const domain = this.selectedObject.entityId.split(".", 1)[0];
 		const actionOptions = [
 			{label: localManager.get("cardDefaultAction"), value: "default"},
 			{label: localManager.get("openEntity"), value: "open"},
@@ -1794,9 +1815,11 @@ export class DT3DObjectInspector extends LitElement {
 			{
 				label: localManager.get("entityId"),
 				attribute: "entityId",
-				type: "info",
-				editable: false,
+				type: "entity",
+				tooltip: localManager.get("entityIdDescription"),
+				editable: !locked,
 				enabled: true,
+				entityFilter: `^${domain}\\.`,
 			},
 			{
 				label: localManager.get("entityName"),
