@@ -2314,7 +2314,7 @@ let u0 = class extends Zt {
     return Me`
 		<div class="connection-status-container">
 			<div style="margin: 5px;" class="${this.success ? "connection-status-success" : "connection-status-error"}">
-				${this.msg}<br>${"2026-09-05T15:09:34.755Z"}
+				${this.msg}<br>${"2026-09-05T15:54:48.513Z"}
 			</div>
 		</div>`;
   }
@@ -52574,7 +52574,6 @@ class Ql extends fi {
 			box-shadow: 0 8px 24px var(--shadow-color);
 			color: var(--primary-text-color);
 			font-family: sans-serif;
-			pointer-events: none;
 			transform-style: preserve-3d;
 		`, this.image = document.createElement("img"), this.image.alt = e, this.image.style.cssText = `
 			display: block;
@@ -52602,7 +52601,7 @@ class Ql extends fi {
 			color: var(--secondary-text-color);
 			font-size: 11px;
 			line-height: 1.3;
-		`, this.root.appendChild(this.status), this.overlay = new d8(this.root), this.overlay.internal = !0, this.overlay.position.y = 1.2, this.overlay.scale.setScalar(45e-4), this.overlay.onBeforeRender = (i, n, r) => {
+		`, this.root.appendChild(this.status), this.overlay = new d8(this.root), this.root.style.pointerEvents = "none", this.overlay.internal = !0, this.overlay.position.y = 1.2, this.overlay.scale.setScalar(45e-4), this.overlay.onBeforeRender = (i, n, r) => {
       this.updateScreenScale(i, r);
     }, this.overlay.visible = !1, this.add(this.overlay), this.setEntity(t);
   }

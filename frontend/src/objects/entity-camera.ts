@@ -105,7 +105,6 @@ export class EntityCamera extends EntityObject {
 			box-shadow: 0 8px 24px var(--shadow-color);
 			color: var(--primary-text-color);
 			font-family: sans-serif;
-			pointer-events: none;
 			transform-style: preserve-3d;
 		`;
 
@@ -149,6 +148,10 @@ export class EntityCamera extends EntityObject {
 		this.root.appendChild(this.status);
 
 		this.overlay = new CSS3DSprite(this.root);
+		// CSS3DSprite enables pointer events on its element during construction.
+		// Restore click-through behavior so the canvas keeps receiving hover events
+		// when the preview appears beneath the pointer.
+		this.root.style.pointerEvents = "none";
 		this.overlay.internal = true;
 		this.overlay.position.y = 1.2;
 		this.overlay.scale.setScalar(0.0045);
