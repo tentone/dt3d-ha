@@ -75,6 +75,14 @@ export class EntitySensor extends EntityObject {
 		this.pendingEntity = null;
 	}
 
+	protected override onEntityMissing(): void {
+		if (this.refreshTimer !== null) {
+			window.clearTimeout(this.refreshTimer);
+			this.refreshTimer = null;
+		}
+		this.pendingEntity = null;
+	}
+
 	private refreshVisuals(): void {
 		const entity = this.pendingEntity;
 		if (!entity) {

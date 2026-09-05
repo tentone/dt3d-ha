@@ -47,6 +47,9 @@ export class EntitySwitch extends EntityObject {
 	 * @param hass - HA data
 	 */
 	public async toggle(hass: any): Promise<void> {
+		if (this.entityMissing) {
+			return;
+		}
 		if (!hass?.callService) {
 			console.warn("DT3D: Unable to toggle switch; hass instance not available",);
 			return;

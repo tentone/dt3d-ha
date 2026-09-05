@@ -29,7 +29,7 @@ export class EntityBinary extends EntityObject {
 		this.add(this.icon);
 
 		const friendlyName = this.friendlyName(entity);
-		this.label = new CSSText(`${friendlyName}\n${entity.state ?? "unknown"}`);
+		this.label = new CSSText(`${friendlyName}\n${entity?.state ?? "unknown"}`);
 		this.label.internal = true;
 		this.label.position.y = 0.72;
 		this.setHoverLabel(this.label);

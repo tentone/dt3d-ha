@@ -117,19 +117,19 @@ export class EntityLight extends EntityObject {
 	 * @returns Color object.
 	 */
 	public static getLightColor(entity: any): Color {
-		const rgbColor = entity.attributes?.rgb_color;
+		const rgbColor = entity?.attributes?.rgb_color;
 		if (Array.isArray(rgbColor) && rgbColor.length === 3) {
 			return new Color(rgbColor[0] / 255, rgbColor[1] / 255, rgbColor[2] / 255);
 		}
 
-		const hsColor = entity.attributes?.hs_color;
+		const hsColor = entity?.attributes?.hs_color;
 		if (Array.isArray(hsColor) && hsColor.length === 2) {
 			const color = new Color();
 			color.setHSL(hsColor[0] / 360, hsColor[1] / 100, 0.5);
 			return color;
 		}
 
-		return new Color(entity.state === "on" ? 0xffffaa : 0x555555);
+		return new Color(entity?.state === "on" ? 0xffffaa : 0x555555);
 	}
 
 	private static getIconPath(entity: any): string {
@@ -142,6 +142,9 @@ export class EntityLight extends EntityObject {
 	 * @param hass - HA data
 	 */
 	public async toggle(hass: any): Promise<void> {
+		if (this.entityMissing) {
+			return;
+		}
 		if (!hass?.callService) {
 			console.warn("DT3D: Unable to toggle light; hass instance not available",);
 			return;

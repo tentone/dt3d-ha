@@ -3180,6 +3180,10 @@ export class DT3DCard extends LitElement {
 		object: EntityObject,
 		interaction: "click" | "doubleClick",
 	): EntityAction {
+		if (object.entityMissing) {
+			return "nothing";
+		}
+
 		const override =
 			interaction === "click" ? object.clickAction : object.doubleClickAction;
 		const action =
@@ -5502,7 +5506,11 @@ export class DT3DCard extends LitElement {
 		this.tree.addEventListener("entity-toggle", (e: any) => {
 			const id = e.detail.id as string;
 			const object = this.space?.getObjectByProperty("uuid", id);
-			if (object && isToggleable(object)) {
+			if (
+				object instanceof EntityObject &&
+				!object.entityMissing &&
+				isToggleable(object)
+			) {
 				void object.toggle(this.hassInstance);
 			}
 		});
@@ -5975,7 +5983,6 @@ export class DT3DCard extends LitElement {
 		const entity = this.hassInstance?.states?.[id];
 		if (!entity) {
 			console.warn("DT3D: Entity not found:", id);
-			return null;
 		}
 
 		const domain = id.split(".")[0];
@@ -6016,9 +6023,7 @@ export class DT3DCard extends LitElement {
 				applyEntityRules(child, this.hassInstance.states) || openingChanged;
 			if (child instanceof EntityObject) {
 				const entityState = this.hassInstance.states[child.entityId];
-				if (entityState) {
-					child.setEntity(entityState);
-				}
+				child.setEntity(entityState);
 			}
 		});
 		if (openingChanged) {

@@ -1015,12 +1015,7 @@ export class SpaceSync {
 			}
 
 			object = this.createEntityObject(entityId);
-			object ??= new EntityGeneric(entityId, {
-				state: "unavailable",
-				attributes: {
-					friendly_name: instance.name || entityId,
-				},
-			});
+			object ??= new EntityGeneric(entityId, undefined);
 			if (object) {
 				object.userData.entityId = entityId;
 				if (object instanceof EntityObject) {

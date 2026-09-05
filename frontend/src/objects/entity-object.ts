@@ -3,6 +3,7 @@ import type {Object3D} from "three";
 import type {EntityActionOverride} from "../editor/entity-actions.js";
 import type {DTInteractionEvent} from "./dt-object.js";
 import {DTObject} from "./dt-object.js";
+import {EntityMissingIndicator} from "./entity-missing-indicator.js";
 
 /**
  * Interface for entities that support toggling their state.
@@ -29,6 +30,9 @@ export abstract class EntityObject extends DTObject {
 	 */
 	public readonly entityId: string;
 
+	/** Warning marker displayed in place of the normal entity visuals. */
+	public readonly missingIndicator: EntityMissingIndicator;
+
 	/** Per-entity action overrides; "default" inherits the card setting. */
 	public clickAction: EntityActionOverride = "default";
 
@@ -38,6 +42,11 @@ export abstract class EntityObject extends DTObject {
 	 * Entity data.
 	 */
 	private entityData: any;
+
+	private missing = false;
+
+	/** Visibility of normal direct children before the missing marker replaced them. */
+	private readonly visibilityBeforeMissing = new Map<Object3D, boolean>();
 
 	/**
 	 * Entity label that is only visible while the entity is hovered.
@@ -49,6 +58,9 @@ export abstract class EntityObject extends DTObject {
 
 		this.entityId = entityId;
 		this.name = entityId;
+		this.missingIndicator = new EntityMissingIndicator();
+		this.missingIndicator.visible = false;
+		this.add(this.missingIndicator);
 
 		if (entity) {
 			this.setEntity(entity);
@@ -64,7 +76,16 @@ export abstract class EntityObject extends DTObject {
 	 */
 	public setEntity(entity: any): void {
 		this.entityData = entity;
+		this.setMissing(entity == null);
+		if (this.missing) {
+			return;
+		}
 		this.updateFromEntity(entity);
+	}
+
+	/** Whether the configured entity is absent from Home Assistant state. */
+	public get entityMissing(): boolean {
+		return this.missing;
 	}
 
 	/**
@@ -75,6 +96,9 @@ export abstract class EntityObject extends DTObject {
 	}
 
 	public override onInteraction(event: DTInteractionEvent): void {
+		if (this.missing) {
+			return;
+		}
 		this.updateHoverLabel(event);
 	}
 
@@ -119,6 +143,38 @@ export abstract class EntityObject extends DTObject {
 	protected setHoverLabel(label: Object3D): void {
 		this.hoverLabel = label;
 		this.hoverLabel.visible = false;
+	}
+
+	/** Allow entity implementations to stop state-specific work when missing. */
+	protected onEntityMissing(): void {}
+
+	private setMissing(missing: boolean): void {
+		if (missing === this.missing) {
+			return;
+		}
+
+		this.missing = missing;
+		this.missingIndicator.visible = missing;
+
+		if (missing) {
+			this.visibilityBeforeMissing.clear();
+			for (const child of this.children) {
+				if (child === this.missingIndicator) {
+					continue;
+				}
+				this.visibilityBeforeMissing.set(child, child.visible);
+				child.visible = false;
+			}
+			this.onEntityMissing();
+			return;
+		}
+
+		for (const [child, visible] of this.visibilityBeforeMissing) {
+			if (child.parent === this) {
+				child.visible = visible;
+			}
+		}
+		this.visibilityBeforeMissing.clear();
 	}
 
 	private updateHoverLabel(event: DTInteractionEvent): void {

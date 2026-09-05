@@ -173,6 +173,9 @@ export class EntityCamera extends EntityObject {
 
 	public override onInteraction(event: DTInteractionEvent): void {
 		super.onInteraction(event);
+		if (this.entityMissing) {
+			return;
+		}
 
 		if (event.type === "pointerenter") {
 			this.isHovered = true;
@@ -197,6 +200,7 @@ export class EntityCamera extends EntityObject {
 		this.icon.setIcon(
 			resolveEntityIconPath(this.entityId, entity?.attributes?.icon),
 		);
+		this.updatePreviewVisibility();
 
 		const nextUrl = EntityCamera.resolveImageUrl(entity);
 		if (!nextUrl) {
@@ -216,6 +220,11 @@ export class EntityCamera extends EntityObject {
 		if (this.isHovered && (changed || !this.image.getAttribute("src"))) {
 			this.scheduleNextRefresh();
 		}
+	}
+
+	protected override onEntityMissing(): void {
+		this.isHovered = false;
+		this.stopRefreshTimer();
 	}
 
 	protected createEntityClone(): this {
