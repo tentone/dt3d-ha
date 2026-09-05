@@ -19,6 +19,13 @@ import {
 	normalizeEntityRules,
 } from "../editor/entity-rules.js";
 import {
+	getMaterialEqualityKey,
+	isGeneratedMaterial,
+	isUserManagedMaterial,
+	markMaterialGenerated,
+	markMaterialUserManaged,
+} from "../editor/material-library.js";
+import {
 	applyTextureToMesh,
 	getTexturePredominantColor,
 	TEXTURE_PREDOMINANT_COLOR_DATA_KEY,
@@ -161,6 +168,29 @@ function createPlaceholderMaterial(color: number): MeshStandardMaterial {
 	});
 	material.name = "Loading material";
 	return material;
+}
+
+function getMaterialList(material: Material | Material[]): Material[] {
+	return Array.isArray(material) ? material : [material];
+}
+
+function classifyLoadedProceduralMaterials(
+	material: Material | Material[],
+	generatedDefaults: Material[],
+): void {
+	const loadedMaterials = getMaterialList(material);
+	for (let index = 0; index < loadedMaterials.length; index += 1) {
+		const item = loadedMaterials[index];
+		if (isUserManagedMaterial(item) || isGeneratedMaterial(item)) continue;
+		const generatedDefault = generatedDefaults[index];
+		const matchesGeneratedDefault =
+			loadedMaterials.length === generatedDefaults.length &&
+			Boolean(generatedDefault) &&
+			getMaterialEqualityKey(item) ===
+				getMaterialEqualityKey(generatedDefault);
+		if (matchesGeneratedDefault) markMaterialGenerated(item);
+		else markMaterialUserManaged(item);
+	}
 }
 
 function getStoredBoundingBox(data: unknown): StoredBoundingBox | null {
@@ -735,6 +765,7 @@ export class SpaceSync {
 		}
 		let object: Object3D | null = null;
 		let materialTarget: Mesh | null = null;
+		let generatedMaterialDefaults: Material[] = [];
 		let needsLegacyGeometryBoundingBox = false;
 
 		if (instanceType === "mesh") {
@@ -972,6 +1003,11 @@ export class SpaceSync {
 			if (object && meshType) {
 				object.userData.meshType = meshType;
 			}
+			if (materialTarget && meshType) {
+				const materials = getMaterialList(materialTarget.material);
+				for (const material of materials) markMaterialGenerated(material);
+				generatedMaterialDefaults = materials.map((material) => material.clone());
+			}
 		} else if (instanceType === "entity") {
 			const entityId = data.entityId as string | undefined;
 			if (!entityId) {
@@ -1087,6 +1123,12 @@ export class SpaceSync {
 							material = await parseSerializedMaterial(data.material);
 						}
 						if (material) {
+							if (generatedMaterialDefaults.length > 0) {
+								classifyLoadedProceduralMaterials(
+									material,
+									generatedMaterialDefaults,
+								);
+							}
 							if (
 								!this.isResourceTargetCurrent(target, resourceLoadGeneration)
 							) {
@@ -1117,6 +1159,11 @@ export class SpaceSync {
 							() =>
 								this.isResourceTargetCurrent(target, resourceLoadGeneration),
 						);
+						if (textureApplied) {
+							for (const material of getMaterialList(target.material)) {
+								markMaterialUserManaged(material);
+							}
+						}
 						materialReady &&= textureApplied;
 					}
 

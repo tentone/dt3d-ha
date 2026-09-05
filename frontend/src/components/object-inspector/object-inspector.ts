@@ -19,6 +19,7 @@ import {
 	getPrimaryMaterial,
 	setMaterialProperty,
 } from "../../editor/material-handler.js";
+import {markMaterialUserManaged} from "../../editor/material-library.js";
 import {
 	applyImageTextureToMaterial,
 	clearMaterialTexture,
@@ -197,6 +198,12 @@ export class DT3DObjectInspector extends LitElement {
 		};
 	}
 
+	private markMaterialTargetUserManaged(target: MaterialObject): void {
+		for (const material of getMaterials(target)) {
+			markMaterialUserManaged(material);
+		}
+	}
+
 	private dispatchMaterialUpdated(
 		material: Material,
 		attribute: string,
@@ -246,6 +253,7 @@ export class DT3DObjectInspector extends LitElement {
 				)
 					.then((changed) => {
 						if (!changed) return;
+						this.markMaterialTargetUserManaged(target);
 						const redo = this.captureMaterialRestore(material);
 						this.dispatchMaterialUpdated(material, attribute, undo, redo);
 						this.requestUpdate();
@@ -261,6 +269,7 @@ export class DT3DObjectInspector extends LitElement {
 			return;
 		}
 
+		this.markMaterialTargetUserManaged(target);
 		const redo = this.captureMaterialRestore(material);
 		this.dispatchMaterialUpdated(material, attribute, undo, redo);
 		this.requestUpdate();
@@ -354,6 +363,14 @@ export class DT3DObjectInspector extends LitElement {
 					undoRestores[undoIndex]();
 				}
 				return;
+			}
+		}
+		if (attribute.startsWith("material.")) {
+			for (const object of objects) {
+				const materialObject = findMaterialObject(object);
+				if (materialObject) {
+					this.markMaterialTargetUserManaged(materialObject);
+				}
 			}
 		}
 
@@ -702,6 +719,7 @@ export class DT3DObjectInspector extends LitElement {
 				)
 					.then((changed) => {
 						if (!changed) return;
+						this.markMaterialTargetUserManaged(materialObject);
 						const redo = this.captureRestore(updatedObject, attribute, type);
 						this.dispatchUpdated(attribute, undo, redo);
 						this.requestUpdate();
@@ -759,6 +777,12 @@ export class DT3DObjectInspector extends LitElement {
 			this.setNestedAttribute(this.selectedObject, attribute, value);
 		}
 
+		if (attribute.startsWith("material.")) {
+			const materialObject = findMaterialObject(updatedObject);
+			if (materialObject) {
+				this.markMaterialTargetUserManaged(materialObject);
+			}
+		}
 		const redo = this.captureRestore(updatedObject, attribute, type);
 		this.dispatchUpdated(attribute, undo, redo);
 		this.requestUpdate();

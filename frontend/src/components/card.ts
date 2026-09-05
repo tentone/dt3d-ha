@@ -86,6 +86,7 @@ import {
 } from "../editor/general-config.js";
 import {
 	findMaterialObject,
+	getMaterials,
 	getPrimaryMaterial,
 } from "../editor/material-handler.js";
 import {
@@ -93,6 +94,7 @@ import {
 	getMaterialEqualityKey,
 	getMaterialUsages,
 	getUniqueMaterials,
+	markMaterialUserManaged,
 	MATERIAL_DRAG_MIME,
 	parseMaterialLibrary,
 	reconcileSceneMaterials,
@@ -1650,6 +1652,7 @@ export class DT3DCard extends LitElement {
 		);
 		if (!material || this.isVisualizationOnly()) return;
 
+		markMaterialUserManaged(material);
 		this.setSelectedObjects([]);
 		this.setSelectedMaterial(material);
 		this.highlightMaterialUsages(material);
@@ -2991,6 +2994,7 @@ export class DT3DCard extends LitElement {
 			(candidate) => candidate.uuid === materialId,
 		);
 		if (!material) return;
+		markMaterialUserManaged(material);
 
 		const {object} = this.pickObjectFromEvent(event as MouseEvent);
 		if (!object || (object instanceof DTObject && object.locked)) return;
@@ -3056,6 +3060,9 @@ export class DT3DCard extends LitElement {
 			? mesh.material.map((material) => material.clone())
 			: mesh.material.clone();
 		await applyImageTextureToMesh(mesh, file);
+		for (const material of getMaterials(mesh)) {
+			markMaterialUserManaged(material);
+		}
 		const afterMaterial = Array.isArray(mesh.material)
 			? mesh.material.map((material) => material.clone())
 			: mesh.material.clone();
@@ -3071,7 +3078,11 @@ export class DT3DCard extends LitElement {
 			label: `${mesh.name || "Object"}: material`,
 			undo: () => applyMaterial(beforeMaterial),
 			redo: () => applyMaterial(afterMaterial),
-			sync: () => this.spaceSync?.syncObjectUpdate(mesh),
+			sync: () =>
+				Promise.all([
+					this.spaceSync?.syncObjectUpdate(mesh),
+					this.persistSpaceConfiguration(),
+				]),
 		});
 	}
 

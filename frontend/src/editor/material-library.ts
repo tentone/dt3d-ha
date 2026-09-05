@@ -11,6 +11,8 @@ import {getMaterials} from "./material-handler.js";
 
 export const MATERIAL_DRAG_MIME = "application/x-dt3d-material";
 export const STANDARD_MATERIAL_DATA_KEY = "dt3dStandardMaterial";
+export const GENERATED_MATERIAL_DATA_KEY = "dt3dGeneratedMaterial";
+export const USER_MANAGED_MATERIAL_DATA_KEY = "dt3dUserManagedMaterial";
 
 export type SerializedMaterial = Record<string, any>;
 
@@ -19,6 +21,30 @@ export type MaterialUsage = {
 	owner: Object3D;
 	target: MaterialObject;
 };
+
+export function isUserManagedMaterial(material: Material): boolean {
+	return (
+		material.userData[USER_MANAGED_MATERIAL_DATA_KEY] === true ||
+		material.userData[STANDARD_MATERIAL_DATA_KEY] === true
+	);
+}
+
+export function isGeneratedMaterial(material: Material): boolean {
+	return (
+		material.userData[GENERATED_MATERIAL_DATA_KEY] === true &&
+		!isUserManagedMaterial(material)
+	);
+}
+
+export function markMaterialGenerated(material: Material): void {
+	if (isUserManagedMaterial(material)) return;
+	material.userData[GENERATED_MATERIAL_DATA_KEY] = true;
+}
+
+export function markMaterialUserManaged(material: Material): void {
+	material.userData[USER_MANAGED_MATERIAL_DATA_KEY] = true;
+	delete material.userData[GENERATED_MATERIAL_DATA_KEY];
+}
 
 function isMaterialTarget(object: Object3D): object is MaterialObject {
 	if (!(object instanceof Mesh)) return false;
@@ -89,6 +115,13 @@ export function getUniqueMaterials(root: Object3D | null): Material[] {
 	const materials = new Map<string, Material>();
 	for (const usage of getMaterialUsages(root)) {
 		if (usage.material.name === "Loading material") continue;
+		if (
+			typeof usage.owner.userData.meshType === "string" &&
+			!isUserManagedMaterial(usage.material)
+		) {
+			markMaterialGenerated(usage.material);
+		}
+		if (isGeneratedMaterial(usage.material)) continue;
 		materials.set(usage.material.uuid, usage.material);
 	}
 	return [...materials.values()];
@@ -105,8 +138,18 @@ export function reconcileSceneMaterials(
 	for (const target of getMaterialTargets(root)) {
 		const next = getMaterials(target).map((material) => {
 			const existing = canonical.get(material.uuid);
-			if (existing) return existing;
-			if (material.name !== "Loading material") {
+			if (existing) {
+				if (isUserManagedMaterial(material)) {
+					markMaterialUserManaged(existing);
+				} else if (isGeneratedMaterial(material)) {
+					markMaterialGenerated(existing);
+				}
+				return existing;
+			}
+			if (
+				material.name !== "Loading material" &&
+				!isGeneratedMaterial(material)
+			) {
 				canonical.set(material.uuid, material);
 			}
 			return material;
@@ -114,7 +157,9 @@ export function reconcileSceneMaterials(
 		target.material = Array.isArray(target.material) ? next : next[0];
 	}
 
-	return [...canonical.values()];
+	return [...canonical.values()].filter(
+		(material) => !isGeneratedMaterial(material),
+	);
 }
 
 export function createStandardMaterial(name = "Standard"): MeshStandardMaterial {
@@ -125,6 +170,7 @@ export function createStandardMaterial(name = "Standard"): MeshStandardMaterial 
 	});
 	material.name = name;
 	material.userData[STANDARD_MATERIAL_DATA_KEY] = true;
+	markMaterialUserManaged(material);
 	return material;
 }
 
@@ -173,18 +219,33 @@ function normalizeSerializedMaterial(
 	}
 	if (!value || typeof value !== "object") return value;
 
-	return Object.fromEntries(
+	const normalized = Object.fromEntries(
 		Object.entries(value)
-			.filter(([key]) => key.toLocaleLowerCase() !== "uuid")
+			.filter(
+				([key]) =>
+					key.toLocaleLowerCase() !== "uuid" &&
+					key !== GENERATED_MATERIAL_DATA_KEY &&
+					key !== USER_MANAGED_MATERIAL_DATA_KEY,
+			)
 			.sort(([left], [right]) => left.localeCompare(right))
 			.map(([key, item]) => [
 				key,
 				normalizeSerializedMaterial(item, uuidAliases),
 			]),
 	);
+	const userData = normalized.userData;
+	if (
+		userData &&
+		typeof userData === "object" &&
+		!Array.isArray(userData) &&
+		Object.keys(userData).length === 0
+	) {
+		delete normalized.userData;
+	}
+	return normalized;
 }
 
-/** Stable comparison key for every serialized material property except UUIDs. */
+/** Stable material definition key, excluding UUIDs and DT3D ownership metadata. */
 export function getMaterialEqualityKey(material: Material): string | null {
 	try {
 		const serialized = material.toJSON() as SerializedMaterial;
