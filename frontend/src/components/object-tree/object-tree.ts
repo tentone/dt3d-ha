@@ -1162,6 +1162,13 @@ export class DT3DTree extends LitElement {
 		this.closeContextMenu();
 	}
 
+	private dispatchCenterOrigin(id: UUID) {
+		this.dispatchEvent(new CustomEvent("object-center-origin", {
+			detail: {id}, bubbles: true, composed: true,
+		}));
+		this.closeContextMenu();
+	}
+
 	/** Dispatch floor generation for the selected wall set. */
 	private dispatchGenerateFloor(ids: UUID[]) {
 		this.dispatchEvent(
@@ -1583,6 +1590,15 @@ export class DT3DTree extends LitElement {
 					}}
 				>
 					${localManager.get("moveToPoint")}
+				</button>
+				<button
+					?disabled=${node?.locked ?? false}
+					@click=${(event: MouseEvent) => {
+						event.stopPropagation();
+						this.dispatchCenterOrigin(id);
+					}}
+				>
+					${localManager.get("centerOrigin")}
 				</button>
 				<button
 					@click=${(event: MouseEvent) => {

@@ -47,6 +47,7 @@ import type {TransformControls} from "three/examples/jsm/controls/TransformContr
 
 import type {EditorAction} from "../editor/action-stack.js";
 import {ActionStack} from "../editor/action-stack.js";
+import {centerOrigins} from "../editor/center-origin.js";
 import type {CollisionObstacle} from "../editor/collision.js";
 import {
 	collectCollisionObstacles,
@@ -5495,6 +5496,31 @@ export class DT3DCard extends LitElement {
 		this.tree.addEventListener("object-move-to-point", (e: any) => {
 			const id = e.detail.id as string;
 			this.beginMoveToPoint(id);
+		});
+
+		this.tree.addEventListener("object-center-origin", (event: Event) => {
+			if (this.isVisualizationOnly() || !this.space) return;
+			const {id} = (event as CustomEvent<{id: string}>).detail;
+			const object = this.space.getObjectByProperty("uuid", id);
+			if (!object) return;
+			const edit = centerOrigins(object);
+			if (!edit.objects.length) return;
+			this.refreshAfterObjectMutation(object);
+			this.recordAction({
+				type: "update-object",
+				label: localManager.get("centerOrigin"),
+				undo: () => {
+					edit.undo();
+					this.refreshAfterObjectMutation(object);
+				},
+				redo: () => {
+					edit.redo();
+					this.refreshAfterObjectMutation(object);
+				},
+				sync: async () => {
+					for (const changed of edit.objects) await this.spaceSync?.syncObjectUpdate(changed);
+				},
+			});
 		});
 
 		this.tree.addEventListener("walls-generate-floor", (e: any) => {
