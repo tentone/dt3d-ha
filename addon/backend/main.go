@@ -174,12 +174,29 @@ func main() {
 }
 
 func initializeDatabase(path string) (*gorm.DB, error) {
-	db, err := gorm.Open(sqlite.Open(path), &gorm.Config{})
+	// Apply the timeout to every connection, including replacements. Immediate
+	// transactions avoid read-to-write lock upgrades that can bypass the timeout.
+	separator := "?"
+	if strings.Contains(path, "?") {
+		separator = "&"
+	}
+	dsn := path + separator + "_pragma=busy_timeout(30000)&_txlock=immediate"
+	db, err := gorm.Open(sqlite.Open(dsn), &gorm.Config{})
 	if err != nil {
 		return nil, fmt.Errorf("connect to database %q: %w", path, err)
 	}
 
+	sqlDB, err := db.DB()
+	if err != nil {
+		return nil, fmt.Errorf("get database connection: %w", err)
+	}
+	// SQLite has one writer. Queue concurrent API operations in the pool rather
+	// than letting them contend for the same database lock.
+	sqlDB.SetMaxOpenConns(1)
+	sqlDB.SetMaxIdleConns(1)
+
 	if err := db.AutoMigrate(&models.Space{}, &models.ObjectInstance{}); err != nil {
+		sqlDB.Close()
 		return nil, fmt.Errorf("migrate database %q: %w", path, err)
 	}
 
