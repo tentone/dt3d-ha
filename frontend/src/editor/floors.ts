@@ -1,3 +1,5 @@
+import type {MultiPolygon} from "polygon-clipping";
+import polygonClipping from "polygon-clipping";
 import type {Camera, Object3D} from "three";
 import {
 	BufferGeometry,
@@ -48,7 +50,7 @@ type AutomaticFloorSnapshot = {
 	parent: Object3D;
 	index: number;
 	present: boolean;
-	points: Array<{x: number; z: number}>;
+	points: Array<{ x: number; z: number }>;
 };
 
 export type AutomaticFloorEdit = {
@@ -195,18 +197,18 @@ export class FloorManager {
 			return [];
 		}
 
-		const existingPolygons: Vector3[][] = [];
+		const existingFloors: FloorObject[] = [];
 		space.traverse((object) => {
 			if (object instanceof FloorObject && !object.internal) {
-				existingPolygons.push(this.floorSpacePoints(object, space));
+				existingFloors.push(object);
 			}
 		});
 
 		return this.findClosedWallFaces(space, walls)
 			.filter(
 				(face) =>
-					!existingPolygons.some((polygon) =>
-						this.polygonCoversFace(polygon, face),
+					!existingFloors.some((floor) =>
+						this.floorCoversFace(floor, face, space),
 					),
 			)
 			.map((face) => this.createFloorFromSpacePoints(face, false));
@@ -220,7 +222,8 @@ export class FloorManager {
 	public reconcileFloorsFromClosedWalls(
 		allowCreation = true,
 	): AutomaticFloorEdit | null {
-		const {space, automaticFloors: automaticFloorsEnabled} = this.getContext();
+		const {space, automaticFloors: automaticFloorsEnabled} =
+			this.getContext();
 		if (!space) {
 			return null;
 		}
@@ -240,7 +243,7 @@ export class FloorManager {
 			(face) => !currentSignatures.has(this.pointsSignature(face)),
 		);
 
-		const manualPolygons: Vector3[][] = [];
+		const manualFloors: FloorObject[] = [];
 		const automaticFloors: FloorObject[] = [];
 		space.traverse((object) => {
 			if (object instanceof FloorObject && !object.internal) {
@@ -254,10 +257,10 @@ export class FloorManager {
 					) {
 						automaticFloors.push(object);
 					} else {
-						manualPolygons.push(this.floorSpacePoints(object, space));
+						manualFloors.push(object);
 					}
 				} else {
-					manualPolygons.push(this.floorSpacePoints(object, space));
+					manualFloors.push(object);
 				}
 			}
 		});
@@ -265,8 +268,8 @@ export class FloorManager {
 			.filter((face) => !previousSignatures.has(this.pointsSignature(face)))
 			.filter(
 				(face) =>
-					!manualPolygons.some((polygon) =>
-						this.polygonCoversFace(polygon, face),
+					!manualFloors.some((floor) =>
+						this.floorCoversFace(floor, face, space),
 					),
 			);
 		const beforeExisting = new Map(
@@ -748,7 +751,44 @@ export class FloorManager {
 		return variants.sort()[0];
 	}
 
-	private polygonCoversFace(polygon: Vector3[], face: Vector3[]): boolean {
+	private floorCoversFace(
+		floor: FloorObject,
+		face: Vector3[],
+		space: Group,
+	): boolean {
+		if (floor.polygons.length > 1 || floor.polygons[0].holes.length > 0) {
+			let coplanar = true;
+			const polygons: MultiPolygon = floor.polygons.map(({points, holes}) =>
+				[points, ...holes].map((ring) =>
+					ring.map((point): [number, number] => {
+						const local = space.worldToLocal(
+							floor.localToWorld(new Vector3(point.x, 0, point.z)),
+						);
+						if (Math.abs(local.y - face[0].y) > POINT_EPSILON) coplanar = false;
+						return [local.x, local.z];
+					}),
+				),
+			);
+			if (!coplanar) return false;
+			const uncovered = polygonClipping.difference(
+				[face.map((point): [number, number] => [point.x, point.z])],
+				polygons,
+			);
+			return (
+				uncovered.reduce(
+					(sum, polygon) =>
+						sum +
+						polygon.reduce((area, ring, index) => {
+							const ringArea = Math.abs(
+								this.signedArea(ring.map(([x, z]) => new Vector3(x, 0, z))),
+							);
+							return area + (index === 0 ? ringArea : -ringArea);
+						}, 0),
+					0,
+				) <= FLOOR_MINIMUM_AREA
+			);
+		}
+		const polygon = this.floorSpacePoints(floor, space);
 		if (
 			polygon.length < 3 ||
 			face.length < 3 ||

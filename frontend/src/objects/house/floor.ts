@@ -4,6 +4,7 @@ import {
 	Float32BufferAttribute,
 	Mesh,
 	MeshStandardMaterial,
+	Path,
 	Shape,
 	ShapeGeometry,
 	Vector3,
@@ -20,6 +21,11 @@ export type FloorPoint = {
 	z: number;
 };
 
+export type FloorPolygon = {
+	points: FloorPoint[];
+	holes: FloorPoint[][];
+};
+
 const DEFAULT_FLOOR_COLOR = 0xb8b5aa;
 
 const DEFAULT_FLOOR_POINTS: FloorPoint[] = [
@@ -30,7 +36,12 @@ const DEFAULT_FLOOR_POINTS: FloorPoint[] = [
 
 /** A horizontal polygon surface whose local Y coordinate is always zero. */
 export class FloorObject extends DTObject {
-	public points: FloorPoint[];
+	public polygons: FloorPolygon[];
+
+	/** The outline of a simple floor, retained for wall-generated floor edits. */
+	public get points(): FloorPoint[] {
+		return this.polygons[0].points;
+	}
 
 	public automatic: boolean;
 
@@ -48,7 +59,7 @@ export class FloorObject extends DTObject {
 	) {
 		super();
 
-		this.points = this.normalizePoints(points);
+		this.polygons = [{points: this.normalizePoints(points), holes: []}];
 		this.automatic = automatic;
 		this.name = "Floor";
 		this.userData.meshType = "floor";
@@ -75,12 +86,16 @@ export class FloorObject extends DTObject {
 	}
 
 	public setPoints(points: FloorPoint[]): void {
-		const normalized = this.normalizePoints(points);
-		if (normalized.length < 3) {
-			return;
-		}
+		this.setPolygons([{points, holes: []}]);
+	}
 
-		this.points = normalized;
+	/** Multiple sections and openings share one surface material and UV space. */
+	public setPolygons(polygons: FloorPolygon[]): void {
+		if (!polygons.length) return;
+		this.polygons = polygons.map(({points, holes}) => ({
+			points: this.normalizePoints(points),
+			holes: holes.map((hole) => this.normalizePoints(hole)),
+		}));
 		const geometry = this.createGeometry();
 		this.floorMesh.geometry.dispose();
 		this.floorMesh.geometry = geometry;
@@ -88,7 +103,7 @@ export class FloorObject extends DTObject {
 
 	public override copy(source: this, recursive = true): this {
 		super.copy(source, false);
-		this.points = source.points.map((point) => ({...point}));
+		this.polygons = structuredClone(source.polygons);
 		this.automatic = source.automatic;
 		this.floorMesh.geometry.dispose();
 		this.floorMesh.geometry = this.createGeometry();
@@ -125,14 +140,28 @@ export class FloorObject extends DTObject {
 
 	private updateAreaLabel(): void {
 		this.updateWorldMatrix(true, false);
-		const worldPoints = this.points.map((point) =>
-			this.localToWorld(new Vector3(point.x, 0, point.z)),
-		);
-		const area = Math.abs(
-			worldPoints.reduce((sum, point, index) => {
-				const next = worldPoints[(index + 1) % worldPoints.length];
-				return sum + point.x * next.z - next.x * point.z;
-			}, 0) / 2,
+		const ringArea = (points: FloorPoint[]) => {
+			const worldPoints = points.map((point) =>
+				this.localToWorld(new Vector3(point.x, 0, point.z)),
+			);
+			const normal = worldPoints.reduce(
+				(sum, point, index) =>
+					sum.add(
+						new Vector3().crossVectors(
+							point,
+							worldPoints[(index + 1) % worldPoints.length],
+						),
+					),
+				new Vector3(),
+			);
+			return normal.length() / 2;
+		};
+		const area = this.polygons.reduce(
+			(sum, polygon) =>
+				sum +
+				ringArea(polygon.points) -
+				polygon.holes.reduce((holes, hole) => holes + ringArea(hole), 0),
+			0,
 		);
 		const labelText = `${area.toFixed(2)}m²`;
 		if (!this.areaLabel) {
@@ -142,25 +171,37 @@ export class FloorObject extends DTObject {
 			this.areaLabel.setText(labelText);
 		}
 
-		const center = this.points.reduce<Vector3>(
-			(sum, point) => sum.add(new Vector3(point.x, 0, point.z)),
-			new Vector3(),
-		).multiplyScalar(1 / this.points.length);
+		const points = this.polygons.flatMap((polygon) => polygon.points);
+		const center = points
+			.reduce<Vector3>(
+				(sum, point) => sum.add(new Vector3(point.x, 0, point.z)),
+				new Vector3(),
+			)
+			.multiplyScalar(1 / points.length);
 		this.areaLabel.position.copy(center);
 		this.areaLabel.position.y = 0.15;
 		this.areaLabel.visible = true;
 	}
 
 	private createGeometry(): ShapeGeometry {
-		const points = this.points.length >= 3 ? this.points : DEFAULT_FLOOR_POINTS;
-		const shape = new Shape();
-		shape.moveTo(points[0].x, -points[0].z);
-		for (const point of points.slice(1)) {
-			shape.lineTo(point.x, -point.z);
-		}
-		shape.closePath();
-
-		const geometry = new ShapeGeometry(shape);
+		const drawRing = (path: Path, points: FloorPoint[]) => {
+			path.moveTo(points[0].x, -points[0].z);
+			for (const point of points.slice(1)) path.lineTo(point.x, -point.z);
+			path.closePath();
+		};
+		const shapes = this.polygons.map(({points, holes}) => {
+			const shape = new Shape();
+			drawRing(shape, points);
+			shape.holes = holes.map((points) => {
+				const hole = new Path();
+				drawRing(hole, points);
+				return hole;
+			});
+			return shape;
+		});
+		const geometry = new ShapeGeometry(shapes);
+		geometry.clearGroups();
+		geometry.addGroup(0, geometry.index!.count, 0);
 		geometry.rotateX(-Math.PI / 2);
 		geometry.computeVertexNormals();
 		this.createPlanarUv(geometry);

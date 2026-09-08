@@ -46,6 +46,7 @@ import {
 	isFurnitureMeshType,
 } from "../objects/furniture/furniture-registry.js";
 import {DoorObject} from "../objects/house/door.js";
+import type {FloorPolygon} from "../objects/house/floor.js";
 import {FloorObject} from "../objects/house/floor.js";
 import {GateObject} from "../objects/house/gate.js";
 import {WallObject} from "../objects/house/wall.js";
@@ -859,6 +860,7 @@ export class SpaceSync {
 				const floorData = data.floor as
 					| {
 							points?: Array<{x?: number; z?: number}>;
+							polygons?: FloorPolygon[];
 							automatic?: boolean;
 					  }
 					| undefined;
@@ -873,6 +875,7 @@ export class SpaceSync {
 					color,
 					floorData?.automatic === true,
 				);
+				if (floorData?.polygons?.length) floor.setPolygons(floorData.polygons);
 				object = floor;
 				materialTarget = floor.floorMesh;
 			} else if (meshType === "wall") {
@@ -1253,6 +1256,7 @@ export class SpaceSync {
 			data.meshType = "floor";
 			data.floor = {
 				points: object.points.map((point) => ({...point})),
+				polygons: structuredClone(object.polygons),
 				automatic: object.automatic,
 			};
 			const material = object.floorMesh.material as any;

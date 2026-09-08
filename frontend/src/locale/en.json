@@ -6,6 +6,8 @@
 	"clone": "Clone",
 	"moveToPoint": "Move to point",
 	"centerOrigin": "Center Origin",
+	"mergeFloors": "Merge Floors",
+	"mergeFloorsHint": "Merge coplanar, unlocked floors using the first selected floor's material. Other floors must have no child objects.",
 	"generateFloorFromWalls": "Generate floor from selected walls",
 	"edit": "Edit",
 	"viewEntity": "View Entity",

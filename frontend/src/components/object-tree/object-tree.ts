@@ -16,6 +16,7 @@ import {
 	Sprite,
 } from "three";
 
+import {canMergeFloors} from "../../editor/merge-floors.js";
 import {resolveMeshType} from "../../editor/mesh-handler.js";
 import {localManager} from "../../locale/locale.js";
 import {DTObject} from "../../objects/dt-object.js";
@@ -1169,6 +1170,14 @@ export class DT3DTree extends LitElement {
 		this.closeContextMenu();
 	}
 
+	/** Dispatch a merge for the selected floors. */
+	private dispatchMergeFloors(ids: UUID[]) {
+		this.dispatchEvent(new CustomEvent("floors-merge", {
+			detail: {ids}, bubbles: true, composed: true,
+		}));
+		this.closeContextMenu();
+	}
+
 	/** Dispatch floor generation for the selected wall set. */
 	private dispatchGenerateFloor(ids: UUID[]) {
 		this.dispatchEvent(
@@ -1568,6 +1577,20 @@ export class DT3DTree extends LitElement {
 				@click=${() => this.closeContextMenu()}
 			></div>
 			<div class="context-menu" style="top:${y}px; left:${x}px;">
+				${contextObjects.length > 1 && contextObjects.every((object) => object instanceof FloorObject)
+					? html`
+						<button
+							?disabled=${!canMergeFloors(contextObjects)}
+							title=${localManager.get("mergeFloorsHint")}
+							@click=${(event: MouseEvent) => {
+								event.stopPropagation();
+								this.dispatchMergeFloors(contextObjects.map((object) => object.uuid));
+							}}
+						>
+							${localManager.get("mergeFloors")}
+						</button>
+					`
+					: null}
 				${selectedWalls.length > 0
 					? html`
 						<button

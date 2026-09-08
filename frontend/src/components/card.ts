@@ -104,6 +104,7 @@ import {
 } from "../editor/material-library.js";
 import {applyImageTextureToMesh} from "../editor/material-texture.js";
 import {MeasurementManager} from "../editor/measurements.js";
+import {mergeFloors} from "../editor/merge-floors.js";
 import {createMeshObject, resolveMeshType} from "../editor/mesh-handler.js";
 import {
 	isWallOpeningObject,
@@ -5527,6 +5528,49 @@ export class DT3DCard extends LitElement {
 
 		this.tree.addEventListener("walls-generate-floor", (e: any) => {
 			this.generateFloorsFromWalls(e.detail.ids as string[]);
+		});
+
+		this.tree.addEventListener("floors-merge", (event: Event) => {
+			if (this.isVisualizationOnly() || !this.space) return;
+			const {ids} = (event as CustomEvent<{ids: string[]}>).detail;
+			const objects = ids.map((id) => this.space.getObjectByProperty("uuid", id));
+			if (objects.some((object) => !object)) return;
+			const parents = new Set(objects.map((object) => object.parent));
+			const edit = mergeFloors(objects);
+			if (!edit) return;
+			const refresh = (selection: Object3D[]) => {
+				this.setSelectedObjects(selection);
+				this.floorManager?.resetWallBaseline();
+				this.refreshAfterObjectMutation(edit.floor);
+			};
+			refresh([edit.floor]);
+			this.recordAction({
+				type: "update-object",
+				label: localManager.get("mergeFloors"),
+				undo: () => {
+					edit.undo();
+					refresh(objects);
+				},
+				redo: () => {
+					edit.redo();
+					refresh([edit.floor]);
+				},
+				sync: async (operation) => {
+					await this.spaceSync?.syncObjectUpdate(edit.floor);
+					for (const object of edit.removed) {
+						if (operation === "undo") await this.spaceSync?.syncObjectHierarchyCreate(object);
+						else await this.spaceSync?.syncObjectDelete(object);
+					}
+					// Persist sibling order after removing or restoring floor entries.
+					for (const parent of parents) {
+						for (const sibling of parent.children) {
+							if (!sibling.internal && sibling !== edit.floor && !edit.removed.includes(sibling)) {
+								await this.spaceSync?.syncObjectUpdate(sibling);
+							}
+						}
+					}
+				},
+			});
 		});
 
 		this.tree.addEventListener("entity-open", (e: any) => {
