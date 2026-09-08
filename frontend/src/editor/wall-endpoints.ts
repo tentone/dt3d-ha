@@ -14,6 +14,7 @@ import {
 import {WallObject} from "../objects/house/wall.js";
 import {getCSSVar} from "../utils/css-utils.js";
 import {markObjectInternal} from "../utils/internal-object.js";
+import {collectWallEndpoints, groupWallJunctions, sameWallJunctionPoint, WALL_JUNCTION_EPSILON} from "./wall-junctions.js";
 
 type WallEndpoint = "start" | "end";
 
@@ -85,7 +86,7 @@ export type WallEndpointFinish = {
 	edit: WallEndpointEdit | null;
 };
 
-const POINT_EPSILON = 1e-4;
+const POINT_EPSILON = WALL_JUNCTION_EPSILON;
 const MINIMUM_WALL_LENGTH = 1e-3;
 
 class WallEndpointHandle extends Mesh {
@@ -636,32 +637,22 @@ export class WallEndpointManager {
 		endpoints: Omit<EndpointReference, "fixedPoint">[];
 		interiorWalls: WallObject[];
 	} {
-		const endpoints: Omit<EndpointReference, "fixedPoint">[] = [];
+		const endpoints = groupWallJunctions(collectWallEndpoints(space)).find(
+			(junction) => junction.some((endpoint) => sameWallJunctionPoint(endpoint.point, point)),
+		) ?? [];
+		const endpointWalls = new Set(endpoints.map(({wall}) => wall));
 		const interiorWalls: WallObject[] = [];
 		space.traverse((object) => {
 			if (
 				!(object instanceof WallObject) ||
 				object.internal ||
-				!object.parent
+				!object.parent ||
+				endpointWalls.has(object)
 			) {
 				return;
 			}
 
 			const wallPoints = this.getWallSpaceEndpoints(object, space);
-			if (
-				Math.abs(wallPoints.start.y - point.y) <= POINT_EPSILON &&
-				this.distance2D(wallPoints.start, point) <= POINT_EPSILON
-			) {
-				endpoints.push({wall: object, endpoint: "start"});
-				return;
-			}
-			if (
-				Math.abs(wallPoints.end.y - point.y) <= POINT_EPSILON &&
-				this.distance2D(wallPoints.end, point) <= POINT_EPSILON
-			) {
-				endpoints.push({wall: object, endpoint: "end"});
-				return;
-			}
 
 			const projection = this.projectPointToSegment(
 				point,

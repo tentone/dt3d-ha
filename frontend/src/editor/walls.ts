@@ -14,6 +14,7 @@ import {
 import {WallObject} from "../objects/house/wall.js";
 import {snapPointToClosestAxis} from "./axis-snap.js";
 import type {FloorplanConfig} from "./general-config.js";
+import {collectWallEndpoints, WALL_JUNCTION_EPSILON} from "./wall-junctions.js";
 
 /**
  * Wall tool modes possible in the WallManager.
@@ -500,7 +501,7 @@ export class WallManager {
 		// A direct hit on a wall is an explicit connection and takes priority over
 		// inferred alignment with another wall.
 		if (placement.connectedWall) {
-			return placement;
+			return this.snapConnectedPlacement(placement, this.draftStart);
 		}
 
 		const smartSnap = this.findSmartSnap(placement.point, this.draftStart);
@@ -519,7 +520,7 @@ export class WallManager {
 	private snapStartingPlacement(placement: WallPlacement): WallPlacement {
 		this.clearGuides();
 		if (placement.connectedWall) {
-			return placement;
+			return this.snapConnectedPlacement(placement, null);
 		}
 
 		const wallReferences = this.collectWallReferences();
@@ -543,11 +544,52 @@ export class WallManager {
 		};
 	}
 
+	/** A hit on a junction mesh must use the shared endpoint, not its surface. */
+	private snapConnectedPlacement(
+		placement: WallPlacement,
+		origin: Vector3 | null,
+	): WallPlacement {
+		const {space} = this.getContext();
+		const wall = placement.connectedWall;
+		if (!space || !wall) {
+			return placement;
+		}
+		let closest = JOINT_SNAP_DISTANCE;
+		let result = placement;
+		for (const {point} of collectWallEndpoints(space)) {
+			if (origin && point.distanceToSquared(origin) <= 1e-8) {
+				continue;
+			}
+			const local = wall.worldToLocal(space.localToWorld(point.clone()));
+			if (
+				Math.abs(local.y) > WALL_JUNCTION_EPSILON ||
+				Math.abs(local.z) > WALL_JUNCTION_EPSILON ||
+				Math.abs(local.x) > wall.length / 2 + WALL_JUNCTION_EPSILON
+			) {
+				continue;
+			}
+			const distance = point.distanceTo(placement.point);
+			if (distance <= closest) {
+				closest = distance;
+				result = {point: point.clone(), connectedWall: wall, wallOffset: local.x};
+			}
+		}
+		if (result !== placement) {
+			this.showGuides([{points: [placement.point, result.point], type: "point"}]);
+		}
+		return result;
+	}
+
 	private findSmartSnap(
 		point: Vector3,
 		origin: Vector3,
 		wallReferences = this.collectWallReferences(),
 	): SmartSnap | null {
+		const pointSnap = this.findEndpointPointSnap(point, origin, wallReferences);
+		if (pointSnap) {
+			return pointSnap;
+		}
+
 		const combinedSnap = this.findCombinedAlignment(
 			point,
 			origin,
@@ -555,15 +597,6 @@ export class WallManager {
 		);
 		if (combinedSnap) {
 			return combinedSnap;
-		}
-
-		const pointSnap = this.findEndpointPointSnap(
-			point,
-			origin,
-			wallReferences,
-		);
-		if (pointSnap) {
-			return pointSnap;
 		}
 
 		const endpointSnap = this.findEndpointAlignment(
