@@ -2315,7 +2315,7 @@ let u0 = class extends Zt {
     return Me`
 		<div class="connection-status-container">
 			<div style="margin: 5px;" class="${this.success ? "connection-status-success" : "connection-status-error"}">
-				${this.msg}<br>${"2026-09-08T09:12:25.922Z"}
+				${this.msg}<br>${"2026-09-08T11:17:37.246Z"}
 			</div>
 		</div>`;
   }
