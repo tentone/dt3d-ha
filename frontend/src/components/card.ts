@@ -501,6 +501,7 @@ export class DT3DCard extends LitElement {
 		if (modifier && !event.altKey && (key === "z" || key === "y")) {
 			const redo = key === "y" || event.shiftKey;
 			const changed = redo ? this.actionStack.redo() : this.actionStack.undo();
+			if (changed) this.floorManager?.resetWallBaseline();
 			if (changed) {
 				event.preventDefault();
 			}
@@ -1521,6 +1522,7 @@ export class DT3DCard extends LitElement {
 	}
 
 	private applySpaceConfigFromApi(space: SpaceResponse | null): void {
+		this.floorManager?.resetWallBaseline();
 		const apiConfig = space?.config ?? {};
 		const hasCardGeneral = hasCardGeneralConfiguration(apiConfig);
 		const hasGeneral = hasSpaceGeneralConfiguration(apiConfig);
@@ -2221,7 +2223,7 @@ export class DT3DCard extends LitElement {
 					: this.spaceSync?.syncObjectHierarchyCreate(object),
 		});
 		if (this.objectContainsWall(object)) {
-			this.reconcileWallNetworkAfterChange("Wall network");
+			this.reconcileWallNetworkAfterChange("Wall network", true);
 		}
 	}
 
@@ -2559,15 +2561,15 @@ export class DT3DCard extends LitElement {
 		});
 	}
 
-	private reconcileWallNetworkAfterChange(label: string): void {
+	private reconcileWallNetworkAfterChange(label: string, allowFloorCreation = false): void {
 		const wallEdit = this.wallEndpointManager?.analyzeWallJoins() ?? null;
 		const floorEdit =
-			this.floorManager?.reconcileFloorsFromClosedWalls() ?? null;
+			this.floorManager?.reconcileFloorsFromClosedWalls(allowFloorCreation) ?? null;
 		this.recordWallNetworkEdit(wallEdit, floorEdit, label);
 	}
 
 	private applyAutomaticFloorSetting(): void {
-		const edit = this.floorManager?.reconcileFloorsFromClosedWalls() ?? null;
+		const edit = this.floorManager?.reconcileFloorsFromClosedWalls(false) ?? null;
 		if (!edit) {
 			return;
 		}
@@ -4991,7 +4993,7 @@ export class DT3DCard extends LitElement {
 								endpointFinish.edit,
 							) ?? endpointFinish.edit;
 						const floorEdit =
-							this.floorManager?.reconcileFloorsFromClosedWalls() ?? null;
+							this.floorManager?.reconcileFloorsFromClosedWalls(false) ?? null;
 						this.recordWallNetworkEdit(wallEdit, floorEdit);
 					}
 					return;

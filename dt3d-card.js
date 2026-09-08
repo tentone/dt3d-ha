@@ -2315,7 +2315,7 @@ let u0 = class extends Zt {
     return Me`
 		<div class="connection-status-container">
 			<div style="margin: 5px;" class="${this.success ? "connection-status-success" : "connection-status-error"}">
-				${this.msg}<br>${"2026-09-08T08:59:34.481Z"}
+				${this.msg}<br>${"2026-09-08T09:12:25.922Z"}
 			</div>
 		</div>`;
   }
@@ -47025,7 +47025,12 @@ function Sf(s, e) {
 const ci = 1e-5, _p = 1e-4;
 class eH {
   constructor(e, t, i) {
-    this.active = !1, this.points = [], this.hoverPoint = null, this.draftHelpers = wt(new ht(), !0), this.raycaster = new xo(), this.pointer = new re(), this.helpers = e, this.getContext = t, this.callbacks = i, this.draftHelpers.name = "Floor Draft", this.helpers.add(this.draftHelpers);
+    this.previousFaces = [], this.faceWalls = /* @__PURE__ */ new WeakMap(), this.active = !1, this.points = [], this.hoverPoint = null, this.draftHelpers = wt(new ht(), !0), this.raycaster = new xo(), this.pointer = new re(), this.helpers = e, this.getContext = t, this.callbacks = i, this.draftHelpers.name = "Floor Draft", this.helpers.add(this.draftHelpers);
+  }
+  /** Remember loaded/history state without creating or changing any floors. */
+  resetWallBaseline() {
+    const { space: e } = this.getContext();
+    this.previousFaces = e ? this.findClosedWallFaces(e) : [];
   }
   isActive() {
     return this.active;
@@ -47075,75 +47080,88 @@ class eH {
     ).map((n) => this.createFloorFromSpacePoints(n, !1));
   }
   /**
-   * Reconcile automatic floors with every bounded face in the wall network.
+   * Reconcile only rooms changed since the last wall edit or space load.
    * Manual floors are never changed and suppress an automatic floor where
    * they already cover the same room.
    */
-  reconcileFloorsFromClosedWalls() {
-    const { space: e, automaticFloors: t } = this.getContext();
-    if (!e)
+  reconcileFloorsFromClosedWalls(e = !0) {
+    const { space: t, automaticFloors: i } = this.getContext();
+    if (!t)
       return null;
-    const i = [], n = [];
-    e.traverse((y) => {
-      y instanceof s0 && !y.internal && (y.automatic ? n.push(y) : i.push(this.floorSpacePoints(y, e)));
+    const n = this.previousFaces, r = this.findClosedWallFaces(t);
+    if (this.previousFaces = r, !i)
+      return null;
+    const o = new Set(
+      r.map((b) => this.pointsSignature(b))
+    ), a = new Set(
+      n.map((b) => this.pointsSignature(b))
+    ), l = n.filter(
+      (b) => !o.has(this.pointsSignature(b))
+    ), c = [], h = [];
+    t.traverse((b) => {
+      b instanceof s0 && !b.internal && (b.automatic ? l.some(
+        (A) => this.pointsSignature(A) === this.pointsSignature(this.floorSpacePoints(b, t))
+      ) ? h.push(b) : c.push(this.floorSpacePoints(b, t)) : c.push(this.floorSpacePoints(b, t)));
     });
-    const r = t ? this.findClosedWallFaces(e).filter(
-      (y) => !i.some(
-        (m) => this.polygonCoversFace(m, y)
+    const u = r.filter((b) => !a.has(this.pointsSignature(b))).filter(
+      (b) => !c.some(
+        (A) => this.polygonCoversFace(A, b)
       )
-    ) : [], o = new Map(
-      n.map((y) => [
-        y,
-        this.captureFloorSnapshot(y)
-      ])
-    ), a = new Set(n), l = /* @__PURE__ */ new Map();
-    for (let y = 0; y < r.length; y++) {
-      const m = this.pointsSignature(r[y]), g = [...a].find(
-        (x) => this.pointsSignature(this.floorSpacePoints(x, e)) === m
+    ), d = new Map(
+      h.map((b) => [b, this.captureFloorSnapshot(b)])
+    ), p = new Set(h), f = /* @__PURE__ */ new Map();
+    for (let b = 0; b < u.length; b++) {
+      const A = [...p].find(
+        (E) => l.some(
+          (I) => this.faceWalls.get(I) === this.faceWalls.get(u[b]) && this.pointsSignature(I) === this.pointsSignature(this.floorSpacePoints(E, t))
+        )
       );
-      g && (l.set(y, g), a.delete(g));
+      A && (f.set(b, A), p.delete(A));
     }
-    for (let y = 0; y < r.length; y++) {
-      if (l.has(y))
+    for (let b = 0; b < u.length; b++) {
+      if (f.has(b))
         continue;
-      let m = null, g = Number.NEGATIVE_INFINITY;
-      for (const x of a) {
-        const M = this.floorMatchScore(
-          this.floorSpacePoints(x, e),
-          r[y]
+      let A = null, E = Number.NEGATIVE_INFINITY;
+      for (const I of p) {
+        const S = this.floorMatchScore(
+          this.floorSpacePoints(I, t),
+          u[b]
         );
-        M > g && (m = x, g = M);
+        S > E && (A = I, E = S);
       }
-      m && Number.isFinite(g) && (l.set(y, m), a.delete(m));
+      A && Number.isFinite(E) && (f.set(b, A), p.delete(A));
     }
-    const c = [], h = [];
-    for (let y = 0; y < r.length; y++) {
-      const m = r[y], g = l.get(y);
-      if (!g) {
-        const x = this.createFloorFromSpacePoints(m, !0);
-        x.init(), e.add(x), c.push(x);
+    const y = [], m = [];
+    for (let b = 0; b < u.length; b++) {
+      const A = u[b], E = f.get(b);
+      if (!E) {
+        if (!e || n.some(
+          (S) => this.faceWalls.get(S) === this.faceWalls.get(A)
+        ))
+          continue;
+        const I = this.createFloorFromSpacePoints(A, !0);
+        I.init(), t.add(I), y.push(I);
         continue;
       }
-      this.pointsSignature(this.floorSpacePoints(g, e)) !== this.pointsSignature(m) && (this.setFloorSpacePoints(g, m, e), h.push(g));
+      this.pointsSignature(this.floorSpacePoints(E, t)) !== this.pointsSignature(A) && (this.setFloorSpacePoints(E, A, t), m.push(E));
     }
-    const u = [...a];
-    for (const y of u)
-      y.removeFromParent();
-    if (c.length === 0 && h.length === 0 && u.length === 0)
+    if (y.length === 0 && m.length === 0)
       return null;
-    const d = [.../* @__PURE__ */ new Set([...h, ...u])], p = d.map(
-      (y) => o.get(y)
+    const g = m, x = g.map(
+      (b) => d.get(b)
     );
-    for (const y of c) {
-      const m = this.captureFloorSnapshot(y);
-      p.push({ ...m, present: !1 });
+    for (const b of y) {
+      const A = this.captureFloorSnapshot(b);
+      x.push({ ...A, present: !1 });
     }
-    const f = [...d, ...c].map((y) => y.parent ? this.captureFloorSnapshot(y) : { ...o.get(y), present: !1 });
+    const M = [...g, ...y].map(
+      (b) => this.captureFloorSnapshot(b)
+    );
     return {
-      createdFloors: c,
-      existingFloors: d,
-      undo: () => this.applyFloorSnapshot(p),
-      redo: () => this.applyFloorSnapshot(f)
+      createdFloors: y,
+      existingFloors: g,
+      undo: () => this.applyFloorSnapshot(x),
+      redo: () => this.applyFloorSnapshot(M)
     };
   }
   finalizeFloor() {
@@ -47165,7 +47183,10 @@ class eH {
       return null;
     const a = t.getBoundingClientRect();
     this.pointer.x = (e.clientX - a.left) / a.width * 2 - 1, this.pointer.y = -((e.clientY - a.top) / a.height) * 2 + 1, this.raycaster.setFromCamera(this.pointer, i);
-    const l = this.raycaster.intersectObjects(n.children, !0)[0];
+    const l = this.raycaster.intersectObjects(
+      n.children,
+      !0
+    )[0];
     if (!l)
       return null;
     const c = n.worldToLocal(l.point.clone());
@@ -47190,56 +47211,78 @@ class eH {
   }
   findClosedWallFaces(e, t) {
     const i = [], n = t ? new Set(t) : null;
-    e.traverse((c) => {
-      if (!(c instanceof $t) || c.internal || n && !n.has(c))
+    e.traverse((h) => {
+      if (!(h instanceof $t) || h.internal || n && !n.has(h))
         return;
-      const h = e.worldToLocal(
-        c.localToWorld(new O(-c.length / 2, 0, 0))
-      ), u = e.worldToLocal(
-        c.localToWorld(new O(c.length / 2, 0, 0))
+      const u = e.worldToLocal(
+        h.localToWorld(new O(-h.length / 2, 0, 0))
+      ), d = e.worldToLocal(
+        h.localToWorld(new O(h.length / 2, 0, 0))
       );
-      Math.abs(h.y - u.y) <= ci && this.distance2D(h, u) > ci && i.push({ a: h, b: u, splits: [0, 1] });
+      Math.abs(u.y - d.y) <= ci && this.distance2D(u, d) > ci && i.push({
+        wallId: h.uuid,
+        a: u,
+        b: d,
+        splits: [0, 1]
+      });
     });
-    for (let c = 0; c < i.length; c++)
-      for (let h = c + 1; h < i.length; h++)
-        this.addSegmentIntersections(i[c], i[h]);
-    const r = [], o = (c) => {
-      const h = r.findIndex(
-        (u) => Math.abs(u.point.y - c.y) <= ci && this.distance2D(u.point, c) <= ci
+    for (let h = 0; h < i.length; h++)
+      for (let u = h + 1; u < i.length; u++)
+        this.addSegmentIntersections(i[h], i[u]);
+    const r = [], o = (h) => {
+      const u = r.findIndex(
+        (d) => Math.abs(d.point.y - h.y) <= ci && this.distance2D(d.point, h) <= ci
       );
-      return h >= 0 ? h : (r.push({ point: c.clone(), neighbors: /* @__PURE__ */ new Set() }), r.length - 1);
-    };
-    for (const c of i) {
-      const h = [...new Set(c.splits.map((u) => this.round(u)))].filter((u) => u >= 0 && u <= 1).sort((u, d) => u - d);
-      for (let u = 1; u < h.length; u++) {
-        const d = o(c.a.clone().lerp(c.b, h[u - 1])), p = o(c.a.clone().lerp(c.b, h[u]));
-        d !== p && (r[d].neighbors.add(p), r[p].neighbors.add(d));
+      return u >= 0 ? u : (r.push({ point: h.clone(), neighbors: /* @__PURE__ */ new Set() }), r.length - 1);
+    }, a = /* @__PURE__ */ new Map();
+    for (const h of i) {
+      const u = [
+        ...new Set(h.splits.map((d) => this.round(d)))
+      ].filter((d) => d >= 0 && d <= 1).sort((d, p) => d - p);
+      for (let d = 1; d < u.length; d++) {
+        const p = o(h.a.clone().lerp(h.b, u[d - 1])), f = o(h.a.clone().lerp(h.b, u[d]));
+        if (p !== f) {
+          for (const y of [`${p}:${f}`, `${f}:${p}`]) {
+            const m = a.get(y) ?? /* @__PURE__ */ new Set();
+            m.add(h.wallId), a.set(y, m);
+          }
+          r[p].neighbors.add(f), r[f].neighbors.add(p);
+        }
       }
     }
-    const a = /* @__PURE__ */ new Set(), l = [];
-    for (let c = 0; c < r.length; c++)
-      for (const h of r[c].neighbors) {
-        const u = `${c}:${h}`;
-        if (a.has(u))
+    const l = /* @__PURE__ */ new Set(), c = [];
+    for (let h = 0; h < r.length; h++)
+      for (const u of r[h].neighbors) {
+        const d = `${h}:${u}`;
+        if (l.has(d))
           continue;
-        const d = [];
-        let p = c, f = h;
-        for (; !a.has(`${p}:${f}`); ) {
-          a.add(`${p}:${f}`), d.push(p);
-          const g = [...r[f].neighbors].sort(
-            (b, A) => this.edgeAngle(r[f].point, r[b].point) - this.edgeAngle(r[f].point, r[A].point)
-          ), x = g.indexOf(p), M = g[(x - 1 + g.length) % g.length];
-          p = f, f = M;
+        const p = [];
+        let f = h, y = u;
+        for (; !l.has(`${f}:${y}`); ) {
+          l.add(`${f}:${y}`), p.push(f);
+          const x = [...r[y].neighbors].sort(
+            (A, E) => this.edgeAngle(r[y].point, r[A].point) - this.edgeAngle(r[y].point, r[E].point)
+          ), M = x.indexOf(f), b = x[(M - 1 + x.length) % x.length];
+          f = y, y = b;
         }
-        if (p !== c || f !== h)
+        if (f !== h || y !== u)
           continue;
-        const y = this.extractSimpleFace(d, r);
-        if (y.length < 3)
+        const m = this.extractSimpleFace(p, r);
+        if (m.length < 3)
           continue;
-        const m = y.map((g) => r[g].point.clone());
-        this.signedArea(m) > _p && l.push(m);
+        const g = m.map((x) => r[x].point.clone());
+        if (this.signedArea(g) > _p) {
+          const x = new Set(
+            m.flatMap((M, b) => [
+              ...a.get(
+                `${M}:${m[(b + 1) % m.length]}`
+              ) ?? []
+            ])
+          );
+          this.faceWalls.set(g, [...x].sort().join(";")), c.push(g);
+        }
       }
-    return l;
+    return c;
   }
   addSegmentIntersections(e, t) {
     if (Math.abs(e.a.y - t.a.y) > ci)
@@ -47258,9 +47301,7 @@ class eH {
   }
   floorSpacePoints(e, t) {
     return e.points.map(
-      (i) => t.worldToLocal(
-        e.localToWorld(new O(i.x, 0, i.z))
-      )
+      (i) => t.worldToLocal(e.localToWorld(new O(i.x, 0, i.z)))
     );
   }
   setFloorSpacePoints(e, t, i) {
@@ -47315,7 +47356,9 @@ class eH {
     ), i = [];
     for (const n of [t, [...t].reverse()])
       for (let r = 0; r < n.length; r++)
-        i.push([...n.slice(r), ...n.slice(0, r)].join(";"));
+        i.push(
+          [...n.slice(r), ...n.slice(0, r)].join(";")
+        );
     return i.sort()[0];
   }
   polygonCoversFace(e, t) {
@@ -47347,11 +47390,7 @@ class eH {
           l.length >= 3 && new Set(l).size === l.length && i.push(l);
       }
     return i.sort(
-      (n, r) => Math.abs(
-        this.signedArea(r.map((o) => t[o].point))
-      ) - Math.abs(
-        this.signedArea(n.map((o) => t[o].point))
-      )
+      (n, r) => Math.abs(this.signedArea(r.map((o) => t[o].point))) - Math.abs(this.signedArea(n.map((o) => t[o].point)))
     )[0] ?? [];
   }
   removeCollinearPoints(e) {
@@ -65022,7 +65061,8 @@ let Qu = class extends Zt {
       }
       const e = s.ctrlKey || s.metaKey, t = s.key.toLowerCase();
       if (e && !s.altKey && (t === "z" || t === "y")) {
-        (t === "y" || s.shiftKey ? this.actionStack.redo() : this.actionStack.undo()) && s.preventDefault();
+        const r = t === "y" || s.shiftKey ? this.actionStack.redo() : this.actionStack.undo();
+        r && this.floorManager?.resetWallBaseline(), r && s.preventDefault();
         return;
       }
       if (s.key !== "Delete")
@@ -65474,6 +65514,7 @@ let Qu = class extends Zt {
     return this.spaceGeneralConfig = e.general, this.applyGeneralConfig(), this.spaceSceneConfig = this.sceneManager ? this.sceneManager.setSpaceSceneConfig(e.scene) : ia(e.scene), rn.write(A4, this.spaceSceneConfig), this.floorplanConfig = e.floorplan, this.wallConnectionManager.invalidate(), this.getSpaceConfiguration();
   }
   applySpaceConfigFromApi(s) {
+    this.floorManager?.resetWallBaseline();
     const e = s?.config ?? {}, t = RV(e), i = CV(e), n = IV(e), r = AV(e), o = o0({
       general: i ? e.general ?? e : Yu(),
       scene: n ? e.scene ?? e.spaceScene : this.spaceSceneConfig,
@@ -65798,7 +65839,7 @@ let Qu = class extends Zt {
       undo: () => this.removeObject(s),
       redo: () => this.insertObject(s, e, t),
       sync: (i) => i === "undo" ? this.spaceSync?.syncObjectDelete(s) : this.spaceSync?.syncObjectHierarchyCreate(s)
-    }), this.objectContainsWall(s) && this.reconcileWallNetworkAfterChange("Wall network");
+    }), this.objectContainsWall(s) && this.reconcileWallNetworkAfterChange("Wall network", !0);
   }
   /**
    * Adds a 3D object to the scene.
@@ -65984,12 +66025,12 @@ let Qu = class extends Zt {
       sync: n
     });
   }
-  reconcileWallNetworkAfterChange(s) {
-    const e = this.wallEndpointManager?.analyzeWallJoins() ?? null, t = this.floorManager?.reconcileFloorsFromClosedWalls() ?? null;
-    this.recordWallNetworkEdit(e, t, s);
+  reconcileWallNetworkAfterChange(s, e = !1) {
+    const t = this.wallEndpointManager?.analyzeWallJoins() ?? null, i = this.floorManager?.reconcileFloorsFromClosedWalls(e) ?? null;
+    this.recordWallNetworkEdit(t, i, s);
   }
   applyAutomaticFloorSetting() {
-    const s = this.floorManager?.reconcileFloorsFromClosedWalls() ?? null;
+    const s = this.floorManager?.reconcileFloorsFromClosedWalls(!1) ?? null;
     if (!s)
       return;
     const e = [...s.createdFloors, ...s.existingFloors];
@@ -67289,7 +67330,7 @@ let Qu = class extends Zt {
           if (this.transformStart = null, this.multiTransformStart = null, h.edit) {
             const m = this.wallEndpointManager?.analyzeWallJoins(
               h.edit
-            ) ?? h.edit, g = this.floorManager?.reconcileFloorsFromClosedWalls() ?? null;
+            ) ?? h.edit, g = this.floorManager?.reconcileFloorsFromClosedWalls(!1) ?? null;
             this.recordWallNetworkEdit(m, g);
           }
           return;

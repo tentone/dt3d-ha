@@ -32,6 +32,7 @@ type FloorCallbacks = {
 };
 
 type WallSegment = {
+	wallId: string;
 	a: Vector3;
 	b: Vector3;
 	splits: number[];
@@ -62,6 +63,15 @@ const FLOOR_MINIMUM_AREA = 1e-4;
 
 /** Draws planar floors and derives floor polygons from closed wall networks. */
 export class FloorManager {
+	private previousFaces: Vector3[][] = [];
+
+	private faceWalls = new WeakMap<Vector3[], string>();
+
+	/** Remember loaded/history state without creating or changing any floors. */
+	public resetWallBaseline(): void {
+		const {space} = this.getContext();
+		this.previousFaces = space ? this.findClosedWallFaces(space) : [];
+	}
 	private active = false;
 
 	private points: Vector3[] = [];
@@ -203,52 +213,77 @@ export class FloorManager {
 	}
 
 	/**
-	 * Reconcile automatic floors with every bounded face in the wall network.
+	 * Reconcile only rooms changed since the last wall edit or space load.
 	 * Manual floors are never changed and suppress an automatic floor where
 	 * they already cover the same room.
 	 */
-	public reconcileFloorsFromClosedWalls(): AutomaticFloorEdit | null {
+	public reconcileFloorsFromClosedWalls(
+		allowCreation = true,
+	): AutomaticFloorEdit | null {
 		const {space, automaticFloors: automaticFloorsEnabled} = this.getContext();
 		if (!space) {
 			return null;
 		}
+		const previousFaces = this.previousFaces;
+		const allFaces = this.findClosedWallFaces(space);
+		this.previousFaces = allFaces;
+		if (!automaticFloorsEnabled) {
+			return null;
+		}
+		const currentSignatures = new Set(
+			allFaces.map((face) => this.pointsSignature(face)),
+		);
+		const previousSignatures = new Set(
+			previousFaces.map((face) => this.pointsSignature(face)),
+		);
+		const changedPrevious = previousFaces.filter(
+			(face) => !currentSignatures.has(this.pointsSignature(face)),
+		);
 
 		const manualPolygons: Vector3[][] = [];
 		const automaticFloors: FloorObject[] = [];
 		space.traverse((object) => {
 			if (object instanceof FloorObject && !object.internal) {
 				if (object.automatic) {
-					automaticFloors.push(object);
+					if (
+						changedPrevious.some(
+							(face) =>
+								this.pointsSignature(face) ===
+								this.pointsSignature(this.floorSpacePoints(object, space)),
+						)
+					) {
+						automaticFloors.push(object);
+					} else {
+						manualPolygons.push(this.floorSpacePoints(object, space));
+					}
 				} else {
 					manualPolygons.push(this.floorSpacePoints(object, space));
 				}
 			}
 		});
-		const faces = automaticFloorsEnabled
-			? this.findClosedWallFaces(space).filter(
+		const faces = allFaces
+			.filter((face) => !previousSignatures.has(this.pointsSignature(face)))
+			.filter(
 				(face) =>
 					!manualPolygons.some((polygon) =>
 						this.polygonCoversFace(polygon, face),
 					),
-			)
-			: [];
+			);
 		const beforeExisting = new Map(
-			automaticFloors.map((floor) => [
-				floor,
-				this.captureFloorSnapshot(floor),
-			]),
+			automaticFloors.map((floor) => [floor, this.captureFloorSnapshot(floor)]),
 		);
 		const unmatchedFloors = new Set(automaticFloors);
 		const matches = new Map<number, FloorObject>();
 
-		// Preserve exact matches first, then pair changed rooms with the most
-		// closely overlapping previous automatic floor.
+		// Match wall identity before overlap so translated rooms keep their floors.
 		for (let index = 0; index < faces.length; index++) {
-			const signature = this.pointsSignature(faces[index]);
-			const match = [...unmatchedFloors].find(
-				(floor) =>
-					this.pointsSignature(this.floorSpacePoints(floor, space)) ===
-					signature,
+			const match = [...unmatchedFloors].find((floor) =>
+				changedPrevious.some(
+					(previous) =>
+						this.faceWalls.get(previous) === this.faceWalls.get(faces[index]) &&
+						this.pointsSignature(previous) ===
+							this.pointsSignature(this.floorSpacePoints(floor, space)),
+				),
 			);
 			if (match) {
 				matches.set(index, match);
@@ -283,6 +318,17 @@ export class FloorManager {
 			const face = faces[index];
 			const floor = matches.get(index);
 			if (!floor) {
+				if (!allowCreation) continue;
+				// A moved room that had no floor stays floorless. Only a new
+				// closed section gets a new floor.
+				if (
+					previousFaces.some(
+						(previous) =>
+							this.faceWalls.get(previous) === this.faceWalls.get(face),
+					)
+				) {
+					continue;
+				}
 				const newFloor = this.createFloorFromSpacePoints(face, true);
 				newFloor.init();
 				space.add(newFloor);
@@ -297,15 +343,11 @@ export class FloorManager {
 				updated.push(floor);
 			}
 		}
-		const removed = [...unmatchedFloors];
-		for (const floor of removed) {
-			floor.removeFromParent();
-		}
-		if (created.length === 0 && updated.length === 0 && removed.length === 0) {
+		if (created.length === 0 && updated.length === 0) {
 			return null;
 		}
 
-		const existingFloors = [...new Set([...updated, ...removed])];
+		const existingFloors = updated;
 		const before: AutomaticFloorSnapshot[] = existingFloors.map(
 			(floor) => beforeExisting.get(floor)!,
 		);
@@ -313,12 +355,9 @@ export class FloorManager {
 			const state = this.captureFloorSnapshot(floor);
 			before.push({...state, present: false});
 		}
-		const after = [...existingFloors, ...created].map((floor) => {
-			if (floor.parent) {
-				return this.captureFloorSnapshot(floor);
-			}
-			return {...beforeExisting.get(floor)!, present: false};
-		});
+		const after = [...existingFloors, ...created].map((floor) =>
+			this.captureFloorSnapshot(floor),
+		);
 
 		return {
 			createdFloors: created,
@@ -364,7 +403,10 @@ export class FloorManager {
 		this.pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
 		this.pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
 		this.raycaster.setFromCamera(this.pointer, camera);
-		const intersection = this.raycaster.intersectObjects(space.children, true)[0];
+		const intersection = this.raycaster.intersectObjects(
+			space.children,
+			true,
+		)[0];
 		if (!intersection) {
 			return null;
 		}
@@ -438,7 +480,12 @@ export class FloorManager {
 				Math.abs(start.y - end.y) <= POINT_EPSILON &&
 				this.distance2D(start, end) > POINT_EPSILON
 			) {
-				segments.push({a: start, b: end, splits: [0, 1]});
+				segments.push({
+					wallId: object.uuid,
+					a: start,
+					b: end,
+					splits: [0, 1],
+				});
 			}
 		});
 
@@ -462,14 +509,22 @@ export class FloorManager {
 			return nodes.length - 1;
 		};
 
+		const edgeWalls = new Map<string, Set<string>>();
 		for (const segment of segments) {
-			const splits = [...new Set(segment.splits.map((value) => this.round(value)))]
+			const splits = [
+				...new Set(segment.splits.map((value) => this.round(value))),
+			]
 				.filter((value) => value >= 0 && value <= 1)
 				.sort((a, b) => a - b);
 			for (let index = 1; index < splits.length; index++) {
 				const a = getNode(segment.a.clone().lerp(segment.b, splits[index - 1]));
 				const b = getNode(segment.a.clone().lerp(segment.b, splits[index]));
 				if (a !== b) {
+					for (const key of [`${a}:${b}`, `${b}:${a}`]) {
+						const ids = edgeWalls.get(key) ?? new Set<string>();
+						ids.add(segment.wallId);
+						edgeWalls.set(key, ids);
+					}
 					nodes[a].neighbors.add(b);
 					nodes[b].neighbors.add(a);
 				}
@@ -491,12 +546,14 @@ export class FloorManager {
 				while (!visited.has(`${previous}:${current}`)) {
 					visited.add(`${previous}:${current}`);
 					face.push(previous);
-					const neighbors = [...nodes[current].neighbors].sort((a, b) =>
-						this.edgeAngle(nodes[current].point, nodes[a].point) -
-						this.edgeAngle(nodes[current].point, nodes[b].point),
+					const neighbors = [...nodes[current].neighbors].sort(
+						(a, b) =>
+							this.edgeAngle(nodes[current].point, nodes[a].point) -
+							this.edgeAngle(nodes[current].point, nodes[b].point),
 					);
 					const reverseIndex = neighbors.indexOf(previous);
-					const next = neighbors[(reverseIndex - 1 + neighbors.length) % neighbors.length];
+					const next =
+						neighbors[(reverseIndex - 1 + neighbors.length) % neighbors.length];
 					previous = current;
 					current = next;
 				}
@@ -510,6 +567,14 @@ export class FloorManager {
 				}
 				const points = simpleFace.map((node) => nodes[node].point.clone());
 				if (this.signedArea(points) > FLOOR_MINIMUM_AREA) {
+					const ids = new Set(
+						simpleFace.flatMap((node, index) => [
+							...(edgeWalls.get(
+								`${node}:${simpleFace[(index + 1) % simpleFace.length]}`,
+							) ?? []),
+						]),
+					);
+					this.faceWalls.set(points, [...ids].sort().join(";"));
 					faces.push(points);
 				}
 			}
@@ -573,9 +638,7 @@ export class FloorManager {
 
 	private floorSpacePoints(floor: FloorObject, space: Group): Vector3[] {
 		return floor.points.map((point) =>
-			space.worldToLocal(
-				floor.localToWorld(new Vector3(point.x, 0, point.z)),
-			),
+			space.worldToLocal(floor.localToWorld(new Vector3(point.x, 0, point.z))),
 		);
 	}
 
@@ -677,7 +740,9 @@ export class FloorManager {
 		const variants: string[] = [];
 		for (const direction of [values, [...values].reverse()]) {
 			for (let index = 0; index < direction.length; index++) {
-				variants.push([...direction.slice(index), ...direction.slice(0, index)].join(";"));
+				variants.push(
+					[...direction.slice(index), ...direction.slice(0, index)].join(";"),
+				);
 			}
 		}
 		return variants.sort()[0];
@@ -707,8 +772,7 @@ export class FloorManager {
 			const a = polygon[j];
 			const b = polygon[i];
 			const cross =
-				(b.x - a.x) * (point.z - a.z) -
-				(b.z - a.z) * (point.x - a.x);
+				(b.x - a.x) * (point.z - a.z) - (b.z - a.z) * (point.x - a.x);
 			if (
 				Math.abs(cross) <= POINT_EPSILON &&
 				point.x >= Math.min(a.x, b.x) - POINT_EPSILON &&
@@ -720,9 +784,8 @@ export class FloorManager {
 			}
 
 			const crosses =
-				(a.z > point.z) !== (b.z > point.z) &&
-				point.x <
-					a.x + ((b.x - a.x) * (point.z - a.z)) / (b.z - a.z);
+				a.z > point.z !== b.z > point.z &&
+				point.x < a.x + ((b.x - a.x) * (point.z - a.z)) / (b.z - a.z);
 			if (crosses) {
 				inside = !inside;
 			}
@@ -757,12 +820,8 @@ export class FloorManager {
 		return (
 			candidates.sort(
 				(a, b) =>
-					Math.abs(
-						this.signedArea(b.map((node) => nodes[node].point)),
-					) -
-					Math.abs(
-						this.signedArea(a.map((node) => nodes[node].point)),
-					),
+					Math.abs(this.signedArea(b.map((node) => nodes[node].point))) -
+					Math.abs(this.signedArea(a.map((node) => nodes[node].point))),
 			)[0] ?? []
 		);
 	}
@@ -810,7 +869,12 @@ export class FloorManager {
 		return true;
 	}
 
-	private segmentsIntersect(a: Vector3, b: Vector3, c: Vector3, d: Vector3): boolean {
+	private segmentsIntersect(
+		a: Vector3,
+		b: Vector3,
+		c: Vector3,
+		d: Vector3,
+	): boolean {
 		const orientation = (p: Vector3, q: Vector3, r: Vector3) =>
 			(q.x - p.x) * (r.z - p.z) - (q.z - p.z) * (r.x - p.x);
 		const abC = orientation(a, b, c);
