@@ -4,21 +4,14 @@ import {html, LitElement, unsafeCSS} from "lit";
 import {customElement, property, state} from "lit/decorators.js";
 import {repeat} from "lit/directives/repeat.js";
 import type {Material} from "three";
-import {
-	AmbientLight,
-	Color,
-	DirectionalLight,
-	Mesh,
-	PerspectiveCamera,
-	Scene,
-	SphereGeometry,
-	SRGBColorSpace,
-	WebGLRenderer,
-} from "three";
 
 import {MATERIAL_DRAG_MIME} from "../../editor/material-library.js";
 import {localManager} from "../../locale/locale.js";
 import componentStyles from "./material-manager.css?inline";
+import {
+	materialPreviewKey,
+	MaterialPreviewRenderer,
+} from "./material-preview.js";
 
 @customElement("dt3d-material-manager")
 export class DT3DMaterialManager extends LitElement {
@@ -47,10 +40,14 @@ export class DT3DMaterialManager extends LitElement {
 
 	private previewFrame: number | null = null;
 	private previewGeneration = 0;
+	private previewRenderer: MaterialPreviewRenderer | null = null;
+	private previewKeys = new Map<string, string>();
+	private cancelPreviewYield: (() => void) | null = null;
 
 	protected updated(changed: Map<string, unknown>): void {
 		if (changed.has("open") && !this.open) {
 			this.cancelPreviewGeneration();
+			this.disposePreviewRenderer();
 			return;
 		}
 		if (
@@ -61,13 +58,21 @@ export class DT3DMaterialManager extends LitElement {
 		}
 	}
 
+	public connectedCallback(): void {
+		super.connectedCallback();
+		if (this.open) this.refreshPreviews();
+	}
+
 	public disconnectedCallback(): void {
 		super.disconnectedCallback();
 		this.cancelPreviewGeneration();
+		this.disposePreviewRenderer();
+		this.previewKeys.clear();
+		this.previewUrls = new Map();
 	}
 
 	public refreshPreviews(): void {
-		if (!this.open) return;
+		if (!this.open || !this.isConnected) return;
 		this.cancelPreviewGeneration();
 		const generation = this.previewGeneration;
 		this.previewFrame = requestAnimationFrame(() => {
@@ -78,75 +83,72 @@ export class DT3DMaterialManager extends LitElement {
 
 	private cancelPreviewGeneration(): void {
 		this.previewGeneration += 1;
+		this.cancelPreviewYield?.();
+		this.cancelPreviewYield = null;
 		if (this.previewFrame !== null) cancelAnimationFrame(this.previewFrame);
 		this.previewFrame = null;
 	}
 
+	private disposePreviewRenderer(): void {
+		this.previewRenderer?.dispose();
+		this.previewRenderer = null;
+	}
+
 	private async yieldForPreview(generation: number): Promise<boolean> {
 		await new Promise<void>((resolve) => {
-			const scheduleIdle = window.requestIdleCallback?.bind(window);
-			if (scheduleIdle) {
-				scheduleIdle(() => resolve(), {timeout: 180});
+			const finish = () => {
+				this.cancelPreviewYield = null;
+				resolve();
+			};
+			if (window.requestIdleCallback) {
+				const id = window.requestIdleCallback(finish, {timeout: 180});
+				this.cancelPreviewYield = () => {
+					window.cancelIdleCallback(id);
+					finish();
+				};
 			} else {
-				setTimeout(resolve, 0);
+				const id = setTimeout(finish, 0);
+				this.cancelPreviewYield = () => {
+					clearTimeout(id);
+					finish();
+				};
 			}
 		});
-		return generation === this.previewGeneration && this.open;
+		return (
+			generation === this.previewGeneration && this.open && this.isConnected
+		);
 	}
 
 	private async renderMaterialPreviews(generation: number): Promise<void> {
-		if (this.materials.length === 0) {
-			this.previewUrls = new Map();
+		const ids = new Set(this.materials.map((material) => material.uuid));
+		for (const id of this.previewKeys.keys()) {
+			if (!ids.has(id)) this.previewKeys.delete(id);
+		}
+		this.previewUrls = new Map(
+			[...this.previewUrls].filter(([id]) => ids.has(id)),
+		);
+		if (!ids.size) {
+			this.disposePreviewRenderer();
 			return;
 		}
-		if (!(await this.yieldForPreview(generation))) return;
-
-		let renderer: WebGLRenderer | null = null;
-		let geometry: SphereGeometry | null = null;
-		try {
-			renderer = new WebGLRenderer({
-				alpha: true,
-				antialias: true,
-				preserveDrawingBuffer: true,
-			});
-			renderer.setPixelRatio(1);
-			renderer.setSize(160, 120, false);
-			renderer.outputColorSpace = SRGBColorSpace;
-
-			const scene = new Scene();
-			const backgroundColor = getComputedStyle(this)
+		const background =
+			getComputedStyle(this)
 				.getPropertyValue("--secondary-background-color")
-				.trim();
-			scene.background = new Color(backgroundColor || "#f1f1f1");
-			const camera = new PerspectiveCamera(32, 4 / 3, 0.1, 20);
-			camera.position.set(0, 0.1, 3.8);
-			camera.lookAt(0, 0, 0);
-			geometry = new SphereGeometry(0.82, 48, 32);
-			const sphere = new Mesh(geometry, this.materials[0]);
-			scene.add(sphere);
-			scene.add(new AmbientLight(0xffffff, 1.35));
-			const keyLight = new DirectionalLight(0xffffff, 2.8);
-			keyLight.position.set(3, 4, 4);
-			scene.add(keyLight);
-			const rimLight = new DirectionalLight(0x87aaff, 0.85);
-			rimLight.position.set(-3, 1, -2);
-			scene.add(rimLight);
-
-			const previews = new Map<string, string>();
+				.trim() || "#f1f1f1";
+		try {
 			for (const material of this.materials) {
 				if (!(await this.yieldForPreview(generation))) return;
-				sphere.material = material;
-				renderer.render(scene, camera);
-				previews.set(material.uuid, renderer.domElement.toDataURL("image/png"));
-				this.previewUrls = new Map(previews);
+				const key = materialPreviewKey(material, background);
+				if (this.previewKeys.get(material.uuid) === key) continue;
+				this.previewRenderer ??= new MaterialPreviewRenderer();
+				const url = this.previewRenderer.render(material, background);
+				this.previewKeys.set(material.uuid, key);
+				this.previewUrls = new Map(this.previewUrls).set(material.uuid, url);
 			}
 		} catch (error) {
 			if (generation !== this.previewGeneration) return;
 			console.warn("DT3D: Unable to render material previews", error);
-			this.previewUrls = new Map();
-		} finally {
-			geometry?.dispose();
-			renderer?.dispose();
+			this.disposePreviewRenderer();
 		}
 	}
 
