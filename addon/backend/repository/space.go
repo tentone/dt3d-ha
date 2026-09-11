@@ -29,7 +29,7 @@ func (r *SpaceRepository) Create(space *models.Space) error {
 		if space.IsDefault {
 			if err := tx.Model(&models.Space{}).
 				Where("is_default = ?", true).
-				Update("is_default", false).Error; err != nil {
+				Updates(map[string]interface{}{"is_default": false, "cache_version": gorm.Expr("cache_version + 1")}).Error; err != nil {
 				return err
 			}
 		}
@@ -50,10 +50,19 @@ func (r *SpaceRepository) FindAll(includeObjects bool) ([]models.Space, error) {
 
 func (r *SpaceRepository) FindByID(id string) (*models.Space, error) {
 	var space models.Space
-	if err := r.db.Preload("ObjectInstances").First(&space, "id = ?", id).Error; err != nil {
+	// Read the version, configuration and hierarchy from the same database snapshot.
+	if err := r.db.Transaction(func(tx *gorm.DB) error {
+		return tx.Preload("ObjectInstances").First(&space, "id = ?", id).Error
+	}); err != nil {
 		return nil, err
 	}
 	return &space, nil
+}
+
+func (r *SpaceRepository) FindVersion(id string) (int64, error) {
+	var space models.Space
+	err := r.db.Select("id", "cache_version").First(&space, "id = ?", id).Error
+	return space.CacheVersion, err
 }
 
 func (r *SpaceRepository) Update(space *models.Space) error {
@@ -61,12 +70,21 @@ func (r *SpaceRepository) Update(space *models.Space) error {
 		if space.IsDefault {
 			if err := tx.Model(&models.Space{}).
 				Where("id <> ? AND is_default = ?", space.ID, true).
-				Update("is_default", false).Error; err != nil {
+				Updates(map[string]interface{}{"is_default": false, "cache_version": gorm.Expr("cache_version + 1")}).Error; err != nil {
 				return err
 			}
 		}
 
-		return tx.Save(space).Error
+		// Do not save preloaded associations or a version read before a concurrent edit.
+		if err := tx.Model(&models.Space{}).Where("id = ?", space.ID).
+			Updates(map[string]interface{}{
+				"name": space.Name, "description": space.Description,
+				"is_default": space.IsDefault, "config": space.Config,
+				"cache_version": gorm.Expr("cache_version + 1"),
+			}).Error; err != nil {
+			return err
+		}
+		return tx.Preload("ObjectInstances").First(space, "id = ?", space.ID).Error
 	})
 }
 
@@ -186,6 +204,8 @@ func (r *SpaceRepository) Delete(space *models.Space) error {
 			return err
 		}
 
-		return tx.Model(&next).Update("is_default", true).Error
+		return tx.Model(&next).Updates(map[string]interface{}{
+			"is_default": true, "cache_version": gorm.Expr("cache_version + 1"),
+		}).Error
 	})
 }

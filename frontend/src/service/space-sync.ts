@@ -73,11 +73,20 @@ import {SpaceDataCache} from "./space-cache.js";
 type SpaceSyncDependencies = {
 	apiClient: SpaceApi;
 	readOnly?: boolean;
+	onLoadStateChanged?: (state: SpaceLoadState) => void;
+	onSpaceApplied?: (space: SpaceResponse) => void | Promise<void>;
+	onSpacesChanged?: (spaces: SpaceResponse[]) => void;
 	sceneManager: SceneManager;
 	space: Group;
 	tree: DT3DTree;
 	resolveMeshType: (object: Object3D) => string | null;
 	createEntityObject: (entityId: string) => Object3D | null;
+};
+
+export type SpaceLoadState = {
+	blocked: boolean;
+	refreshing: boolean;
+	error: string | null;
 };
 
 type DeferredResourceTask = {
@@ -187,8 +196,7 @@ function classifyLoadedProceduralMaterials(
 		const matchesGeneratedDefault =
 			loadedMaterials.length === generatedDefaults.length &&
 			Boolean(generatedDefault) &&
-			getMaterialEqualityKey(item) ===
-				getMaterialEqualityKey(generatedDefault);
+			getMaterialEqualityKey(item) === getMaterialEqualityKey(generatedDefault);
 		if (matchesGeneratedDefault) markMaterialGenerated(item);
 		else markMaterialUserManaged(item);
 	}
@@ -333,6 +341,13 @@ export class SpaceSync {
 	private progressTotal = 0;
 	private resourceLoadGeneration = 0;
 	private isSyncingFromApi = false;
+	private loadGeneration = 0;
+	private requestedSpaceId: string | null = null;
+	private stagingSpace: Group | null = null;
+	private onLoadStateChanged?: SpaceSyncDependencies["onLoadStateChanged"];
+	private onSpaceApplied?: SpaceSyncDependencies["onSpaceApplied"];
+	private onSpacesChanged?: SpaceSyncDependencies["onSpacesChanged"];
+	public editingBlocked = false;
 
 	public activeSpaceId: string | null = null;
 
@@ -343,6 +358,9 @@ export class SpaceSync {
 	constructor({
 		apiClient,
 		readOnly = false,
+		onLoadStateChanged,
+		onSpaceApplied,
+		onSpacesChanged,
 		sceneManager,
 		space,
 		tree,
@@ -352,6 +370,9 @@ export class SpaceSync {
 		this.apiClient = apiClient;
 		this.cache = new SpaceDataCache(apiClient.getCacheNamespace());
 		this.readOnly = readOnly;
+		this.onLoadStateChanged = onLoadStateChanged;
+		this.onSpaceApplied = onSpaceApplied;
+		this.onSpacesChanged = onSpacesChanged;
 		this.sceneManager = sceneManager;
 		this.space = space;
 		this.tree = tree;
@@ -379,7 +400,14 @@ export class SpaceSync {
 	 */
 	public clearSpace(): void {
 		this.resourceLoadGeneration += 1;
-		this.space.traverse((child) => {
+		this.disposeObjects(this.space);
+		this.sceneManager.requestShadowMapUpdate();
+		this.objectApiIds.clear();
+		this.pendingObjectCreates.clear();
+	}
+
+	private disposeObjects(root: Group): void {
+		root.traverse((child) => {
 			if (child instanceof DTObject) {
 				child.dispose();
 			}
@@ -391,10 +419,7 @@ export class SpaceSync {
 				cssObject.element?.remove();
 			}
 		});
-		this.space.clear();
-		this.sceneManager.requestShadowMapUpdate();
-		this.objectApiIds.clear();
-		this.pendingObjectCreates.clear();
+		root.clear();
 	}
 
 	/**
@@ -403,20 +428,33 @@ export class SpaceSync {
 	public async initializeSpaceFromApi(
 		preferredSpaceId?: string,
 	): Promise<SpaceResponse | null> {
-		this.isSyncingFromApi = true;
+		this.setLoadState(true);
 
 		try {
 			const spaces = await this.trackProgress(
 				"Load spaces",
 				"Available spaces",
-				() => this.apiClient.listSpaces(),
+				() =>
+					this.apiClient.listSpaces(true, (spaces) =>
+						this.setAvailableSpaces(spaces),
+					),
 			);
-			this.availableSpaces = spaces;
+			this.setAvailableSpaces(spaces);
 			let space = preferredSpaceId
 				? spaces.find((candidate) => candidate.id === preferredSpaceId)
 				: undefined;
 			space ??= spaces.find((candidate) => candidate.is_default);
 			space ??= spaces[0];
+
+			if (!space) {
+				// Confirm an empty cached list before creating anything.
+				const current = await this.apiClient.listSpaces(false);
+				this.setAvailableSpaces(current);
+				space =
+					current.find((candidate) => candidate.id === preferredSpaceId) ??
+					current.find((candidate) => candidate.is_default) ??
+					current[0];
+			}
 
 			if (!space) {
 				if (this.readOnly) {
@@ -425,6 +463,7 @@ export class SpaceSync {
 					this.clearSpace();
 					this.sceneManager.createDefaultScene();
 					this.tree.updateTreeFromScene(this.space, true);
+					this.setLoadState(false);
 					return null;
 				}
 
@@ -438,6 +477,10 @@ export class SpaceSync {
 			return await this.loadSpace(space);
 		} catch (error) {
 			console.error("DT3D: Failed to load spaces from API", error);
+			this.setLoadState(
+				false,
+				"Unable to load the space. Retry to enable editing.",
+			);
 			this.availableSpaces = [];
 			this.activeSpaceId = null;
 			this.activeSpace = null;
@@ -445,8 +488,6 @@ export class SpaceSync {
 			this.sceneManager.createDefaultScene();
 			this.tree.updateTreeFromScene(this.space, true);
 			return null;
-		} finally {
-			this.isSyncingFromApi = false;
 		}
 	}
 
@@ -454,20 +495,32 @@ export class SpaceSync {
 	 * Replace the active editor contents with a different API space.
 	 */
 	public async loadSpaceFromApi(spaceId: string): Promise<SpaceResponse> {
-		this.availableSpaces = await this.apiClient.listSpaces();
-		const space = this.availableSpaces.find(
-			(candidate) => candidate.id === spaceId,
-		);
-		if (!space) {
-			throw new Error(`Space not found: ${spaceId}`);
-		}
+		// Loading by id also works when the cached list has not caught up yet.
+		return this.loadSpace(spaceId);
+	}
 
-		this.isSyncingFromApi = true;
-		try {
-			return await this.loadSpace(space);
-		} finally {
-			this.isSyncingFromApi = false;
-		}
+	public retrySpaceLoad(): Promise<SpaceResponse | null> {
+		const spaceId = this.requestedSpaceId ?? this.activeSpaceId;
+		return spaceId
+			? this.loadSpace(spaceId)
+			: this.initializeSpaceFromApi();
+	}
+
+	private setAvailableSpaces(spaces: SpaceResponse[]): void {
+		this.availableSpaces = spaces.map(
+			(space): SpaceResponse => ({...space, object_instances: []}),
+		);
+		this.onSpacesChanged?.(this.availableSpaces);
+	}
+
+	private setLoadState(refreshing: boolean, error: string | null = null): void {
+		this.editingBlocked = refreshing || error !== null;
+		this.isSyncingFromApi = this.editingBlocked;
+		this.onLoadStateChanged?.({
+			blocked: this.editingBlocked,
+			refreshing,
+			error,
+		});
 	}
 
 	/**
@@ -536,7 +589,7 @@ export class SpaceSync {
 	 */
 	public async deleteSpace(spaceId: string): Promise<SpaceResponse | null> {
 		await this.apiClient.deleteSpace(spaceId);
-		this.availableSpaces = await this.apiClient.listSpaces();
+		this.setAvailableSpaces(await this.apiClient.listSpaces(false));
 
 		if (this.activeSpaceId !== spaceId) {
 			return this.activeSpace;
@@ -556,38 +609,115 @@ export class SpaceSync {
 		return null;
 	}
 
-	private async loadSpace(space: SpaceResponse): Promise<SpaceResponse> {
-		const instances = await this.trackProgress(
-			"Load scene objects",
-			space.name,
-			() => this.apiClient.listObjects(space.id),
-		);
-
-		this.activeSpaceId = space.id;
-		this.activeSpace = space;
-
-		if (instances.length === 0) {
-			this.clearSpace();
-			this.sceneManager.createDefaultScene();
-			this.tree.updateTreeFromScene(this.space, true);
-			if (!this.readOnly) {
-				this.isSyncingFromApi = false;
-				const spaceId = space.id;
-				window.setTimeout(() => {
-					if (this.activeSpaceId !== spaceId) {
-						return;
-					}
-					void this.syncAllObjectsToApi().catch((error) => {
-						console.error("DT3D: Failed to persist the default scene", error);
-					});
-				}, 0);
+	private async loadSpace(
+		spaceOrId: SpaceResponse | string,
+	): Promise<SpaceResponse> {
+		const spaceId = typeof spaceOrId === "string" ? spaceOrId : spaceOrId.id;
+		const generation = ++this.loadGeneration;
+		this.requestedSpaceId = spaceId;
+		this.resourceLoadGeneration += 1;
+		this.setLoadState(true);
+		let cached: SpaceResponse | null = null;
+		try {
+			cached = await this.apiClient.getCachedSpace(spaceId);
+			if (generation !== this.loadGeneration)
+				throw new Error("Space load superseded");
+			// Handle rejection immediately while the cached scene's assets are prepared.
+			const refresh = this.trackProgress("Check scene version", spaceId, () =>
+				this.apiClient.loadSpaceState(spaceId),
+			).then(
+				(space): {space: SpaceResponse | null; error: unknown} => ({
+					space,
+					error: null,
+				}),
+				(error: unknown): {space: SpaceResponse | null; error: unknown} => ({
+					space: null,
+					error,
+				}),
+			);
+			let cacheReady = false;
+			if (cached) {
+				try {
+					await this.applySnapshot(cached, false);
+					cacheReady = true;
+				} catch (error) {
+					console.warn(
+						"DT3D: Cached scene resources could not be loaded",
+						error,
+					);
+				}
 			}
-			return space;
+			const result = await refresh;
+			if (generation !== this.loadGeneration)
+				throw new Error("Space load superseded");
+			if (result.error) throw result.error;
+			const fresh = result.space!;
+			if (
+				!cacheReady ||
+				!cached?.cache_version ||
+				cached.cache_version !== fresh.cache_version
+			) {
+				await this.applySnapshot(fresh, true);
+			}
+			if (generation !== this.loadGeneration)
+				throw new Error("Space load superseded");
+			this.setLoadState(false);
+			void this.migrateLegacyMeshMetadata(this.resourceLoadGeneration);
+			if (fresh.object_instances.length === 0 && !this.readOnly) {
+				void this.syncAllObjectsToApi().catch((error) => {
+					console.error("DT3D: Failed to persist the default scene", error);
+				});
+			}
+			return this.activeSpace!;
+		} catch (error) {
+			if (generation !== this.loadGeneration) throw error;
+			this.setLoadState(
+				false,
+				"Scene refresh failed. Retry to enable editing.",
+			);
+			if (cached) {
+				console.warn(
+					"DT3D: Keeping the cached scene after refresh failed",
+					error,
+				);
+				return this.activeSpace ?? cached;
+			}
+			throw error;
 		}
+	}
 
-		this.loadObjectsFromApi(instances);
-		this.tree.updateTreeFromScene(this.space, true);
-		return space;
+	private async applySnapshot(
+		snapshot: SpaceResponse,
+		staged: boolean,
+	): Promise<void> {
+		const generation = this.loadGeneration;
+		const previous = this.activeSpace;
+		let committed = !staged;
+		this.activeSpaceId = snapshot.id;
+		this.activeSpace = snapshot;
+		try {
+			const ready = this.loadObjectsFromApi(
+				snapshot.object_instances,
+				[],
+				staged,
+			);
+			if (staged) await ready;
+			committed = true;
+			if (snapshot.object_instances.length === 0)
+				this.sceneManager.createDefaultScene();
+			this.tree.updateTreeFromScene(this.space, true);
+			this.setAvailableSpaces([
+				...this.availableSpaces.filter((space) => space.id !== snapshot.id),
+				snapshot,
+			]);
+			await Promise.all([ready, this.onSpaceApplied?.(snapshot)]);
+		} catch (error) {
+			if (!committed && generation === this.loadGeneration) {
+				this.activeSpace = previous;
+				this.activeSpaceId = previous?.id ?? snapshot.id;
+			}
+			throw error;
+		}
 	}
 
 	public async updateActiveSpaceConfig(
@@ -598,7 +728,12 @@ export class SpaceSync {
 			isDefault: boolean;
 		},
 	): Promise<SpaceResponse | null> {
-		if (!this.activeSpaceId || !this.activeSpace) {
+		if (
+			this.readOnly ||
+			this.editingBlocked ||
+			!this.activeSpaceId ||
+			!this.activeSpace
+		) {
 			return null;
 		}
 
@@ -626,78 +761,95 @@ export class SpaceSync {
 	/**
 	 * Load object instances into the space and reconstruct hierarchy.
 	 */
-	public loadObjectsFromApi(
+	public async loadObjectsFromApi(
 		instances: ObjectInstanceResponse[],
 		additionalResourceTasks: DeferredResourceTask[] = [],
-	): void {
-		this.clearSpace();
+		staged = false,
+	): Promise<void> {
+		if (!staged) this.clearSpace();
+		else this.resourceLoadGeneration += 1;
+		const root = staged ? new Group() : this.space;
+		this.stagingSpace = staged ? root : null;
 		const resourceLoadGeneration = this.resourceLoadGeneration;
 		const resourceTasks: DeferredResourceTask[] = [];
 
 		const objectsById = new Map<string, Object3D>();
+		const apiIds = new Map<string, string>();
+		try {
+			for (const instance of instances) {
+				const object = this.createObjectFromInstance(
+					instance,
+					resourceTasks,
+					resourceLoadGeneration,
+				);
+				if (!object) {
+					continue;
+				}
 
-		for (const instance of instances) {
-			const object = this.createObjectFromInstance(
-				instance,
-				resourceTasks,
-				resourceLoadGeneration,
+				object.userData.apiId = instance.id;
+				apiIds.set(object.uuid, instance.id);
+				objectsById.set(instance.id, object);
+			}
+
+			const originalOrder = new Map(
+				instances.map((instance, index) => [instance.id, index]),
 			);
-			if (!object) {
-				continue;
-			}
+			const orderedInstances = [...instances].sort((left, right) => {
+				const leftParent = left.parent_id ?? "";
+				const rightParent = right.parent_id ?? "";
+				if (leftParent !== rightParent) {
+					return leftParent.localeCompare(rightParent);
+				}
 
-			object.userData.apiId = instance.id;
-			this.objectApiIds.set(object.uuid, instance.id);
-			objectsById.set(instance.id, object);
+				const leftOrder = left.data?.sortOrder;
+				const rightOrder = right.data?.sortOrder;
+				const leftIndex = originalOrder.get(left.id) ?? 0;
+				const rightIndex = originalOrder.get(right.id) ?? 0;
+				const normalizedLeft =
+					typeof leftOrder === "number" && Number.isFinite(leftOrder)
+						? leftOrder
+						: leftIndex;
+				const normalizedRight =
+					typeof rightOrder === "number" && Number.isFinite(rightOrder)
+						? rightOrder
+						: rightIndex;
+
+				return normalizedLeft - normalizedRight || leftIndex - rightIndex;
+			});
+
+			for (const instance of orderedInstances) {
+				const object = objectsById.get(instance.id);
+				if (!object) {
+					continue;
+				}
+
+				const parentId = instance.parent_id;
+				const parent = parentId ? objectsById.get(parentId) : null;
+				if (parent) {
+					parent.add(object);
+				} else {
+					root.add(object);
+				}
+
+				if (object instanceof DTObject) {
+					object.init();
+				}
+			}
+			this.sceneManager.applyShadowSettingsToObject(root);
+			resourceTasks.push(...additionalResourceTasks);
+			await this.runResourceTasks(resourceTasks, resourceLoadGeneration);
+			if (resourceLoadGeneration !== this.resourceLoadGeneration)
+				throw new Error("Scene load superseded");
+			if (staged) {
+				this.disposeObjects(this.space);
+				this.space.add(...root.children.slice());
+				this.sceneManager.requestShadowMapUpdate();
+			}
+			this.objectApiIds = apiIds;
+		} finally {
+			if (this.stagingSpace === root) this.stagingSpace = null;
+			if (staged) this.disposeObjects(root);
 		}
-
-		const originalOrder = new Map(
-			instances.map((instance, index) => [instance.id, index]),
-		);
-		const orderedInstances = [...instances].sort((left, right) => {
-			const leftParent = left.parent_id ?? "";
-			const rightParent = right.parent_id ?? "";
-			if (leftParent !== rightParent) {
-				return leftParent.localeCompare(rightParent);
-			}
-
-			const leftOrder = left.data?.sortOrder;
-			const rightOrder = right.data?.sortOrder;
-			const leftIndex = originalOrder.get(left.id) ?? 0;
-			const rightIndex = originalOrder.get(right.id) ?? 0;
-			const normalizedLeft =
-				typeof leftOrder === "number" && Number.isFinite(leftOrder)
-					? leftOrder
-					: leftIndex;
-			const normalizedRight =
-				typeof rightOrder === "number" && Number.isFinite(rightOrder)
-					? rightOrder
-					: rightIndex;
-
-			return normalizedLeft - normalizedRight || leftIndex - rightIndex;
-		});
-
-		for (const instance of orderedInstances) {
-			const object = objectsById.get(instance.id);
-			if (!object) {
-				continue;
-			}
-
-			const parentId = instance.parent_id;
-			const parent = parentId ? objectsById.get(parentId) : null;
-			if (parent) {
-				parent.add(object);
-			} else {
-				this.space.add(object);
-			}
-
-			if (object instanceof DTObject) {
-				object.init();
-			}
-		}
-		this.sceneManager.applyShadowSettingsToObject(this.space);
-		resourceTasks.push(...additionalResourceTasks);
-		this.scheduleResourceTasks(resourceTasks, resourceLoadGeneration);
 	}
 
 	/**
@@ -982,7 +1134,9 @@ export class SpaceSync {
 			if (materialTarget && meshType) {
 				const materials = getMaterialList(materialTarget.material);
 				for (const material of materials) markMaterialGenerated(material);
-				generatedMaterialDefaults = materials.map((material) => material.clone());
+				generatedMaterialDefaults = materials.map((material) =>
+					material.clone(),
+				);
 			}
 		} else if (instanceType === "entity") {
 			const entityId = data.entityId as string | undefined;
@@ -1175,8 +1329,8 @@ export class SpaceSync {
 		const data: Record<string, any> = {
 			sortOrder: object.parent
 				? object.parent.children
-					.filter((child) => child.internal !== true)
-					.indexOf(object)
+						.filter((child) => child.internal !== true)
+						.indexOf(object)
 				: 0,
 			position: {
 				x: position.x,
@@ -1632,23 +1786,6 @@ export class SpaceSync {
 		this.tree.refreshSelectedObject();
 	}
 
-	private scheduleResourceTasks(
-		tasks: DeferredResourceTask[],
-		resourceLoadGeneration: number,
-	): void {
-		if (tasks.length === 0) {
-			return;
-		}
-
-		window.requestAnimationFrame(() => {
-			window.setTimeout(() => {
-				void this.runResourceTasks(tasks, resourceLoadGeneration).then(() =>
-					this.migrateLegacyMeshMetadata(resourceLoadGeneration),
-				);
-			}, 0);
-		});
-	}
-
 	private async migrateLegacyMeshMetadata(
 		resourceLoadGeneration: number,
 	): Promise<void> {
@@ -1725,6 +1862,7 @@ export class SpaceSync {
 		tasks: DeferredResourceTask[],
 		resourceLoadGeneration: number,
 	): Promise<void> {
+		const errors: unknown[] = [];
 		let nextTaskIndex = 0;
 		const workerCount = Math.min(3, tasks.length);
 		await Promise.all(
@@ -1738,6 +1876,7 @@ export class SpaceSync {
 					try {
 						await this.trackProgress(task.operation, task.label, task.load);
 					} catch (error) {
+						errors.push(error);
 						console.error(
 							`DT3D: ${task.operation} failed for ${task.label}`,
 							error,
@@ -1750,6 +1889,8 @@ export class SpaceSync {
 				}
 			}),
 		);
+		if (errors.length)
+			throw new AggregateError(errors, "Scene resources failed to load");
 	}
 
 	private isResourceTargetCurrent(
@@ -1760,7 +1901,12 @@ export class SpaceSync {
 			return false;
 		}
 
-		return object === this.space || this.isDescendant(object, this.space);
+		return (
+			object === this.space ||
+			this.isDescendant(object, this.space) ||
+			(this.stagingSpace !== null &&
+				this.isDescendant(object, this.stagingSpace))
+		);
 	}
 
 	private async trackProgress<T>(

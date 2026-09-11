@@ -119,21 +119,75 @@ export class SpaceApi {
 	/**
 	 * Get lightweight metadata for all spaces from the backend. Object instances are loaded on demand for the selected space.
 	 */
-	public listSpaces(): Promise<SpaceResponse[]> {
-		return this.readCached(
+	public async listSpaces(
+		useCache = true,
+		onRefresh?: (spaces: SpaceResponse[]) => void,
+	): Promise<SpaceResponse[]> {
+		await this.getSharedCache().invalidation;
+		const cached = useCache ? await this.cache.getSpaceList() : null;
+		const refresh = this.readCached(
 			"list",
-			() => this.cache.getSpaceList(),
+			async (): Promise<SpaceResponse[] | null> => null,
 			() => this.fetchJson<SpaceResponse[]>("/spaces?include_objects=false"),
 			(spaces) => this.cache.putSpaceList(spaces),
 			() => this.cache.invalidateSpaceList(),
 		);
+		if (cached !== null) {
+			void refresh.then(onRefresh).catch((error) => {
+				console.warn(
+					"DT3D: Using the cached space list; refresh failed",
+					error,
+				);
+			});
+			return cached;
+		}
+		return refresh;
 	}
 
-	/**
-	 * Get one space, including its current configuration.
-	 */
+	/** Read the last complete scene, including configuration and every object attribute. */
+	public async getCachedSpace(spaceId: string): Promise<SpaceResponse | null> {
+		await this.getSharedCache().invalidation;
+		return this.cache.getSpace(spaceId);
+	}
+
+	/** Always check the server; HTTP caches must not hide a changed scene. */
+	public getSpaceVersion(
+		spaceId: string,
+	): Promise<{id: string; cache_version: number}> {
+		return this.fetchJson(`/spaces/${spaceId}/version`);
+	}
+
+	/** Reuse a validated snapshot or fetch one coherent version of the entire scene. */
+	public loadSpaceState(spaceId: string): Promise<SpaceResponse> {
+		return this.readCached(
+			`state:${spaceId}`,
+			async () => {
+				const [cached, version] = await Promise.all([
+					this.cache.getSpace(spaceId),
+					this.getSpaceVersion(spaceId),
+				]);
+				return cached &&
+					Number.isSafeInteger(version.cache_version) &&
+					version.cache_version >= 1 &&
+					cached.cache_version === version.cache_version
+					? cached
+					: null;
+			},
+			() => this.fetchJson<SpaceResponse>(`/spaces/${spaceId}`),
+			(space) => this.cacheSpaceSnapshot(space),
+			() => this.cache.invalidateSpace(spaceId),
+		);
+	}
+
+	/** Fetch and cache the complete current scene (also used by archive exports). */
 	public getSpace(spaceId: string): Promise<SpaceResponse> {
-		return this.fetchJson<SpaceResponse>(`/spaces/${spaceId}`);
+		return this.readCached(
+			`space:${spaceId}`,
+			async (): Promise<SpaceResponse | null> => null,
+			() => this.fetchJson<SpaceResponse>(`/spaces/${spaceId}`),
+			(space) => this.cacheSpaceSnapshot(space),
+			() => this.cache.invalidateSpace(spaceId),
+		);
 	}
 
 	/**
@@ -195,29 +249,10 @@ export class SpaceApi {
 		spaceId: string,
 		useCache = true,
 	): Promise<ObjectInstanceResponse[]> {
-		const fetchObjects = () =>
-			this.fetchJson<ObjectInstanceResponse[]>(`/spaces/${spaceId}/objects`);
-		if (!useCache) return fetchObjects();
-		let cacheVersion: number | null = null;
-		return this.readCached(
-			`objects:${spaceId}`,
-			async () => {
-				const spaces = await this.listSpaces();
-				const version = spaces.find(
-					(space) => space.id === spaceId,
-				)?.cache_version;
-				cacheVersion =
-					typeof version === "number" &&
-					Number.isSafeInteger(version) &&
-					version >= 0
-						? version
-						: null;
-				return this.cache.getSpace(spaceId, cacheVersion);
-			},
-			fetchObjects,
-			(instances) => this.cache.putSpace(spaceId, cacheVersion, instances),
-			() => this.cache.invalidateSpace(spaceId),
-		);
+		const space = await (useCache
+			? this.loadSpaceState(spaceId)
+			: this.getSpace(spaceId));
+		return space.object_instances;
 	}
 
 	/**
@@ -284,11 +319,41 @@ export class SpaceApi {
 	/**
 	 * Fetch binary geometry data from the backend.
 	 */
-	public getGeometry(
+	public async getGeometry(
 		spaceId: string,
 		geometryId: string,
 	): Promise<ArrayBuffer> {
-		return this.fetchArrayBuffer(`/spaces/${spaceId}/geometries/${geometryId}`);
+		const cached = await this.cache.getGeometry(spaceId, geometryId);
+		if (cached) return cached;
+		const data = await this.fetchArrayBuffer(
+			`/spaces/${spaceId}/geometries/${geometryId}`,
+		);
+		await this.cache.putGeometry(spaceId, geometryId, data);
+		return data;
+	}
+
+	private async cacheSpaceSnapshot(space: SpaceResponse): Promise<void> {
+		const geometryIds = [
+			...new Set(
+				space.object_instances
+					.map((instance) => instance.data?.geometryFileId)
+					.filter(
+						(id): id is string => typeof id === "string" && id.length > 0,
+					),
+			),
+		];
+		let next = 0;
+		await Promise.all(
+			Array.from({length: Math.min(3, geometryIds.length)}, async () => {
+				while (next < geometryIds.length) {
+					const geometryId = geometryIds[next++];
+					await this.getGeometry(space.id, geometryId);
+				}
+			}),
+		);
+		// Publish the new snapshot only after all referenced binary assets are on disk.
+		// A failed download leaves the previous snapshot and its assets available.
+		await this.cache.putSpace(space);
 	}
 
 	/**
@@ -300,6 +365,7 @@ export class SpaceApi {
 	 */
 	private async fetchJson<T>(path: string, options?: RequestInit): Promise<T> {
 		const response = await fetch(`${this.baseUrl}${path}`, {
+			cache: "no-store",
 			...options,
 			headers: {
 				"Content-Type": "application/json",
@@ -403,6 +469,7 @@ export class SpaceApi {
 		options?: RequestInit,
 	): Promise<ArrayBuffer> {
 		const response = await fetch(`${this.baseUrl}${path}`, {
+			cache: "no-store",
 			...options,
 			headers: {
 				...this.getAuthHeaders(),

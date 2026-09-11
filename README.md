@@ -106,6 +106,16 @@ use_self_signed_certificate: false
 - Certificates mounted from Home Assistant are available under `/ssl`.
 - The frontend can download and upload spaces as portable `.dt3d` ZIP archives. Each archive contains a versioned `space.json` database snapshot and the space's persisted assets under `assets/`.
 
+### Browser scene cache
+
+- IndexedDB database `dt3d-ha-space-cache` stores the lightweight space list, complete snapshots of spaces opened by the client, and their binary geometry. Snapshots include configuration, every object record and parent ID, sibling ordering, transforms, materials, embedded textures, entity rules, and other stored attributes. Cache namespaces separate backend addresses and service keys.
+- `GET /api/spaces` (also `?include_objects=false`) returns metadata with empty `object_instances` arrays. The client displays the cached list immediately and refreshes it in the background. `?include_objects=true` remains available for callers that need all objects.
+- `GET /api/spaces/:spaceID/version` returns only `id` and `cache_version`. Versions increase transactionally for object creation, updates and subtree deletion, space metadata/configuration changes, and changes to the default space. Geometry uploads use immutable IDs; linking a new geometry to an object increments the scene version.
+- `GET /api/spaces/:spaceID` reads configuration, objects and version in one database transaction. `SpaceApi.loadSpaceState()` checks the version directly on the server and downloads this snapshot only when the cached version differs or is missing.
+- A loaded cached scene stays visible while a changed scene and its resources are prepared in a detached object tree. The replacement is applied after its resources finish loading. Editor controls and saves remain disabled until validation and resource loading complete. A failed refresh preserves the displayed scene and offers Retry; offline scenes remain viewable with editing disabled.
+- Cached lists and snapshots do not expire after one minute. Local edits retain the previous snapshot for display while invalidating its version; deleting a space removes its cached snapshot, list entry and geometry. Browsers can still evict storage, and a missing or unavailable IndexedDB cache falls back to network loading. Older object-only cache records are replaced by complete snapshots on the next successful load.
+- Update the frontend and backend together to enable the version endpoint. Run `npm run test:space-cache` in `frontend` and `go test ./...` in `addon/backend` to verify the cache and API contract.
+
 ## Repository structure
 
 ```text

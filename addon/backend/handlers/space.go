@@ -36,6 +36,7 @@ func (h *SpaceHandler) Register(router gin.IRouter) {
 		spaces.GET("", h.listSpaces)
 		spaces.POST("", h.createSpace)
 		spaces.GET(":spaceID", h.getSpace)
+		spaces.GET(":spaceID/version", h.getSpaceVersion)
 		spaces.PUT(":spaceID", h.updateSpace)
 		spaces.DELETE(":spaceID", h.deleteSpace)
 		spaces.POST(":spaceID/clone", h.cloneSpace)
@@ -50,7 +51,7 @@ func (h *SpaceHandler) Register(router gin.IRouter) {
 }
 
 func (h *SpaceHandler) listSpaces(c *gin.Context) {
-	includeObjects := true
+	includeObjects := false
 	if rawValue, provided := c.GetQuery("include_objects"); provided {
 		value, err := strconv.ParseBool(rawValue)
 		if err != nil {
@@ -105,7 +106,23 @@ func (h *SpaceHandler) getSpace(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
+	c.Header("Cache-Control", "no-store")
 	c.JSON(http.StatusOK, toSpaceResponse(*space))
+}
+
+func (h *SpaceHandler) getSpaceVersion(c *gin.Context) {
+	spaceID := c.Param("spaceID")
+	version, err := h.spaces.GetSpaceVersion(spaceID)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "space not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.Header("Cache-Control", "no-store")
+	c.JSON(http.StatusOK, gin.H{"id": spaceID, "cache_version": version})
 }
 
 func (h *SpaceHandler) updateSpace(c *gin.Context) {

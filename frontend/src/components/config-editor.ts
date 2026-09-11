@@ -173,14 +173,15 @@ export class DT3DConfigEditor extends LitElement {
 				port,
 				String(this._config?.service_key ?? ""),
 			);
-			const spaces = await apiClient.listSpaces();
+			const spaces = await apiClient.listSpaces(false);
 			const configuredSpaceId =
 				this._config?.default_space ?? this._config?.defaultSpace;
 			const selectedSpace =
 				spaces.find((space) => space.id === configuredSpaceId) ?? spaces[0];
 			if (selectedSpace) {
-				selectedSpace.object_instances = await apiClient.listObjects(
-					selectedSpace.id,
+				Object.assign(
+					selectedSpace,
+					await apiClient.loadSpaceState(selectedSpace.id),
 				);
 			}
 			if (requestSequence === this.spacesRequestSequence) {

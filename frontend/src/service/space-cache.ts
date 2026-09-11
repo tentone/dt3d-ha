@@ -1,15 +1,12 @@
-import type {ObjectInstanceResponse, SpaceResponse} from "./space-api.js";
+import type {SpaceResponse} from "./space-api.js";
 
 const DATABASE_NAME = "dt3d-ha-space-cache";
-const DATABASE_VERSION = 2;
+const DATABASE_VERSION = 3;
 const SPACE_LIST_STORE = "spaceLists";
 const SPACE_STORE = "spaces";
 const GEOMETRY_STORE = "geometries";
 const SPACE_KEY_INDEX = "spaceKey";
 const GEOMETRY_FILE_ID_DATA_KEY = "geometryFileId";
-
-// Bound staleness for metadata and backends without object cache versions.
-export const SPACE_CACHE_MAX_AGE_MS = 60_000;
 
 type CachedSpaceList = {
 	key: string;
@@ -19,9 +16,8 @@ type CachedSpaceList = {
 
 type CachedSpace = {
 	key: string;
-	cacheVersion: number | null;
-	savedAt?: number;
-	instances: ObjectInstanceResponse[];
+	savedAt: number;
+	space: SpaceResponse;
 };
 
 type CachedGeometry = {
@@ -68,9 +64,7 @@ export class SpaceDataCache {
 				),
 				done,
 			]);
-			return cached && Date.now() - cached.savedAt < SPACE_CACHE_MAX_AGE_MS
-				? cached.spaces
-				: null;
+			return cached?.spaces ?? null;
 		} catch (error) {
 			console.warn("DT3D: Failed to read the cached space list", error);
 			return null;
@@ -86,7 +80,9 @@ export class SpaceDataCache {
 			transaction.objectStore(SPACE_LIST_STORE).put({
 				key: this.namespace,
 				savedAt: Date.now(),
-				spaces,
+				spaces: spaces.map(
+					(space): SpaceResponse => ({...space, object_instances: []}),
+				),
 			} satisfies CachedSpaceList);
 			await done;
 		} catch (error) {
@@ -100,17 +96,23 @@ export class SpaceDataCache {
 			if (!database) return;
 			const transaction = database.transaction(SPACE_LIST_STORE, "readwrite");
 			const done = waitForTransaction(transaction);
-			transaction.objectStore(SPACE_LIST_STORE).delete(this.namespace);
-			await done;
+			// The list is always refreshed by SpaceApi. Keep it available offline even
+			// after an edit or a failed request; scene versions are checked separately.
+			const store = transaction.objectStore(SPACE_LIST_STORE);
+			await Promise.all([
+				getRequestResult<CachedSpaceList | undefined>(
+					store.get(this.namespace),
+				).then((cached) => {
+					if (cached) store.put({...cached, savedAt: 0});
+				}),
+				done,
+			]);
 		} catch (error) {
 			console.warn("DT3D: Failed to invalidate the cached space list", error);
 		}
 	}
 
-	public async getSpace(
-		spaceId: string,
-		cacheVersion: number | null,
-	): Promise<ObjectInstanceResponse[] | null> {
+	public async getSpace(spaceId: string): Promise<SpaceResponse | null> {
 		try {
 			const database = await this.openDatabase();
 			if (!database) {
@@ -126,38 +128,24 @@ export class SpaceDataCache {
 				done,
 			]);
 
-			if (!cached || cached.cacheVersion !== cacheVersion) {
-				return null;
-			}
-			if (
-				cacheVersion === null &&
-				(!cached.savedAt ||
-					Date.now() - cached.savedAt >= SPACE_CACHE_MAX_AGE_MS)
-			) {
-				return null;
-			}
-
-			return cached.instances;
+			// Old records lack configuration and cannot represent a complete scene.
+			return cached?.space ?? null;
 		} catch (error) {
 			console.warn("DT3D: Failed to read the local space cache", error);
 			return null;
 		}
 	}
 
-	public async putSpace(
-		spaceId: string,
-		cacheVersion: number | null,
-		instances: ObjectInstanceResponse[],
-	): Promise<void> {
+	public async putSpace(space: SpaceResponse): Promise<void> {
 		try {
 			const database = await this.openDatabase();
 			if (!database) {
 				return;
 			}
 
-			const spaceKey = this.getSpaceKey(spaceId);
+			const spaceKey = this.getSpaceKey(space.id);
 			const referencedGeometryIds = new Set(
-				instances
+				space.object_instances
 					.map((instance) => instance.data?.[GEOMETRY_FILE_ID_DATA_KEY])
 					.filter(
 						(geometryId): geometryId is string =>
@@ -165,25 +153,45 @@ export class SpaceDataCache {
 					),
 			);
 			const transaction = database.transaction(
-				[SPACE_STORE, GEOMETRY_STORE],
+				[SPACE_LIST_STORE, SPACE_STORE, GEOMETRY_STORE],
 				"readwrite",
 			);
 			const done = waitForTransaction(transaction);
-			transaction.objectStore(SPACE_STORE).put({
-				key: spaceKey,
-				cacheVersion,
-				savedAt: Date.now(),
-				instances,
-			} satisfies CachedSpace);
-
+			const spaceStore = transaction.objectStore(SPACE_STORE);
+			const listStore = transaction.objectStore(SPACE_LIST_STORE);
 			const geometryStore = transaction.objectStore(GEOMETRY_STORE);
-			// Prune by primary key without reading potentially large geometry buffers.
 			await Promise.all([
-				getRequestResult(
-					geometryStore
-						.index(SPACE_KEY_INDEX)
-						.getAllKeys(IDBKeyRange.only(spaceKey)),
-				).then((keys) => {
+				Promise.all([
+					getRequestResult<CachedSpace | undefined>(spaceStore.get(spaceKey)),
+					getRequestResult<CachedSpaceList | undefined>(
+						listStore.get(this.namespace),
+					),
+					// Prune keys without reading potentially large geometry buffers.
+					getRequestResult(
+						geometryStore
+							.index(SPACE_KEY_INDEX)
+							.getAllKeys(IDBKeyRange.only(spaceKey)),
+					),
+				]).then(([previous, list, keys]) => {
+					// A delayed response (including another tab) must not roll the cache back.
+					if (previous?.space?.cache_version > space.cache_version) return;
+					spaceStore.put({
+						key: spaceKey,
+						savedAt: Date.now(),
+						space,
+					} satisfies CachedSpace);
+					const metadata = {...space, object_instances: []} as SpaceResponse;
+					const spaces = list?.spaces ?? [];
+					const index = spaces.findIndex(
+						(candidate) => candidate.id === space.id,
+					);
+					if (index < 0) spaces.push(metadata);
+					else spaces[index] = metadata;
+					listStore.put({
+						key: this.namespace,
+						savedAt: Date.now(),
+						spaces,
+					} satisfies CachedSpaceList);
 					for (const key of keys) {
 						if (
 							typeof key === "string" &&
@@ -209,14 +217,24 @@ export class SpaceDataCache {
 
 			const spaceKey = this.getSpaceKey(spaceId);
 			const transaction = database.transaction(
-				[SPACE_STORE, GEOMETRY_STORE],
+				[SPACE_LIST_STORE, SPACE_STORE, GEOMETRY_STORE],
 				"readwrite",
 			);
 			const done = waitForTransaction(transaction);
 			transaction.objectStore(SPACE_STORE).delete(spaceKey);
 
+			const listStore = transaction.objectStore(SPACE_LIST_STORE);
 			const geometryStore = transaction.objectStore(GEOMETRY_STORE);
 			await Promise.all([
+				getRequestResult<CachedSpaceList | undefined>(
+					listStore.get(this.namespace),
+				).then((list) => {
+					if (list)
+						listStore.put({
+							...list,
+							spaces: list.spaces.filter((space) => space.id !== spaceId),
+						});
+				}),
 				getRequestResult(
 					geometryStore
 						.index(SPACE_KEY_INDEX)
@@ -240,8 +258,19 @@ export class SpaceDataCache {
 
 			const transaction = database.transaction(SPACE_STORE, "readwrite");
 			const done = waitForTransaction(transaction);
-			transaction.objectStore(SPACE_STORE).delete(this.getSpaceKey(spaceId));
-			await done;
+			const store = transaction.objectStore(SPACE_STORE);
+			await Promise.all([
+				getRequestResult<CachedSpace | undefined>(
+					store.get(this.getSpaceKey(spaceId)),
+				).then((cached) => {
+					if (cached?.space) {
+						// Retain the last scene for immediate display, but require validation.
+						delete cached.space.cache_version;
+						store.put(cached);
+					}
+				}),
+				done,
+			]);
 		} catch (error) {
 			console.warn("DT3D: Failed to invalidate the local space cache", error);
 		}

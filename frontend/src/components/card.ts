@@ -151,6 +151,7 @@ import {StaticLightObject} from "../objects/static-light.js";
 import {ViewportObject} from "../objects/viewport-object.js";
 import type {SpaceResponse} from "../service/space-api.js";
 import {SpaceApi} from "../service/space-api.js";
+import type {SpaceLoadState} from "../service/space-sync.js";
 import {SpaceSync} from "../service/space-sync.js";
 import {
 	collectDroppedFiles,
@@ -340,6 +341,8 @@ export class DT3DCard extends LitElement {
 	private materialLibrary: Material[] = [];
 
 	private materialLibraryLoadSequence = 0;
+	private materialLibraryReady: Promise<void> = Promise.resolve();
+	private spaceLoadStatus: HTMLDivElement | null = null;
 
 	private selectedMaterial: Material | null = null;
 
@@ -478,7 +481,7 @@ export class DT3DCard extends LitElement {
 		}
 
 		if (
-			this.isVisualizationOnly() ||
+			this.isEditingDisabled() ||
 			this.hasOpenDialog() ||
 			this.isKeyboardEventFromEditableElement(event)
 		) {
@@ -672,7 +675,7 @@ export class DT3DCard extends LitElement {
 	 * @param directory - Whether to select a complete directory instead of files.
 	 */
 	private selectFiles(directory = false): void {
-		if (!this.space || this.isVisualizationOnly()) {
+		if (!this.space || this.isEditingDisabled()) {
 			return;
 		}
 
@@ -683,7 +686,7 @@ export class DT3DCard extends LitElement {
 	}
 
 	private importModels(files: File[], position?: Vector3): Promise<void> {
-		if (!this.space || this.isVisualizationOnly()) {
+		if (!this.space || this.isEditingDisabled()) {
 			return Promise.resolve();
 		}
 
@@ -695,7 +698,7 @@ export class DT3DCard extends LitElement {
 
 	/** Select an image and open the two-point floorplan calibration flow. */
 	private selectFloorplanImage(): void {
-		if (!this.space || this.isVisualizationOnly()) {
+		if (!this.space || this.isEditingDisabled()) {
 			return;
 		}
 
@@ -714,7 +717,7 @@ export class DT3DCard extends LitElement {
 
 	/** Prompt for two image points and create the scaled reference plane. */
 	private openFloorplanCalibrationModal(file: File, imageUrl: string): void {
-		if (!this.content || this.isVisualizationOnly()) {
+		if (!this.content || this.isEditingDisabled()) {
 			return;
 		}
 
@@ -837,6 +840,68 @@ export class DT3DCard extends LitElement {
 
 	private isVisualizationOnly(): boolean {
 		return this.config?.visualization_only === true;
+	}
+
+	private isEditingDisabled(): boolean {
+		return (
+			this.isVisualizationOnly() || this.spaceSync?.editingBlocked === true
+		);
+	}
+
+	private updateSpaceLoadState(state: SpaceLoadState): void {
+		for (const panel of [
+			this.objectSidebar,
+			this.tree,
+			this.bottomBar,
+			this.materialManager,
+			this.spaceSelector,
+		]) {
+			if (panel) panel.inert = state.blocked;
+		}
+		if (state.blocked) {
+			this.attachTransform(null);
+			this.setSelectedObject(null);
+			this.cancelMoveToPoint();
+			this.closeObjectMenus();
+			this.spaceConfigMenu?.remove();
+			this.spaceConfigMenu = null;
+			this.wallManager?.setMode("none");
+			this.floorManager?.setActive(false);
+			this.measurementManager?.setMode("none");
+			if (this.transform) this.transform.enabled = false;
+		}
+		if (!this.content) return;
+		if (!this.spaceLoadStatus) {
+			this.spaceLoadStatus = document.createElement("div");
+			this.spaceLoadStatus.setAttribute("role", "status");
+			this.spaceLoadStatus.style.cssText = `
+				position: absolute; top: 56px; left: 50%; transform: translateX(-50%);
+				z-index: 1000; padding: 10px 14px; border-radius: 8px; max-width: 80%;
+				background: var(--card-background-color, #fff);
+				color: var(--primary-text-color, #222);
+				box-shadow: 0 2px 8px #0003; font: 14px sans-serif;
+			`;
+			this.content.appendChild(this.spaceLoadStatus);
+		}
+		this.spaceLoadStatus.hidden = !state.blocked;
+		this.spaceLoadStatus.replaceChildren(
+			document.createTextNode(
+				state.error
+					? localManager.get("sceneRefreshFailed")
+					: localManager.get("sceneRefreshing"),
+			),
+		);
+		if (state.error) {
+			const retry = document.createElement("button");
+			retry.textContent = localManager.get("retry");
+			retry.style.marginLeft = "10px";
+			retry.addEventListener("click", () => {
+				void this.spaceSync
+					?.retrySpaceLoad()
+					.catch((error) => console.warn("DT3D: Scene retry failed", error));
+			});
+			this.spaceLoadStatus.appendChild(retry);
+		}
 	}
 
 	private shouldHideOccludingWalls(): boolean {
@@ -1543,7 +1608,13 @@ export class DT3DCard extends LitElement {
 		});
 
 		this.applySpaceConfiguration(nextConfig);
-		void this.loadMaterialLibrary(nextConfig.materials, space?.id ?? null);
+		this.materialLibraryReady = this.loadMaterialLibrary(
+			nextConfig.materials,
+			space?.id ?? null,
+		);
+		void this.materialLibraryReady.catch((error) =>
+			console.warn("DT3D: Material library failed to load", error),
+		);
 
 		if (
 			space &&
@@ -1654,7 +1725,7 @@ export class DT3DCard extends LitElement {
 		const material = this.materialLibrary.find(
 			(candidate) => candidate.uuid === materialId,
 		);
-		if (!material || this.isVisualizationOnly()) return;
+		if (!material || this.isEditingDisabled()) return;
 
 		markMaterialUserManaged(material);
 		this.setSelectedObjects([]);
@@ -1670,7 +1741,7 @@ export class DT3DCard extends LitElement {
 	}
 
 	private createLibraryMaterial(): void {
-		if (this.isVisualizationOnly()) return;
+		if (this.isEditingDisabled()) return;
 		const material = createStandardMaterial(this.getNextMaterialName());
 		delete material.userData[STANDARD_MATERIAL_DATA_KEY];
 		const add = () => {
@@ -1702,7 +1773,7 @@ export class DT3DCard extends LitElement {
 	}
 
 	private mergeIdenticalMaterials(): void {
-		if (this.isVisualizationOnly() || this.materialLibrary.length < 2) return;
+		if (this.isEditingDisabled() || this.materialLibrary.length < 2) return;
 
 		const canonicalByKey = new Map<string, Material>();
 		const replacementsByUuid = new Map<string, Material>();
@@ -1795,7 +1866,7 @@ export class DT3DCard extends LitElement {
 		if (
 			!material ||
 			material === this.standardMaterial ||
-			this.isVisualizationOnly()
+			this.isEditingDisabled()
 		) {
 			return;
 		}
@@ -1967,6 +2038,7 @@ export class DT3DCard extends LitElement {
 	}
 
 	private async persistSpaceConfiguration(): Promise<void> {
+		if (this.isEditingDisabled()) return;
 		const metadata = this.pendingSpaceMetadata;
 		if (metadata && !metadata.name.trim()) {
 			return;
@@ -2081,7 +2153,7 @@ export class DT3DCard extends LitElement {
 	}
 
 	private recordAction(action: EditorAction): void {
-		if (!this.isVisualizationOnly()) {
+		if (!this.isEditingDisabled()) {
 			this.actionStack.record(action);
 		}
 	}
@@ -2234,7 +2306,7 @@ export class DT3DCard extends LitElement {
 	 * @param object - The 3D object to add to the scene.
 	 */
 	public addToScene(object: Object3D | null | undefined, name?: string): void {
-		if (this.isVisualizationOnly()) {
+		if (this.isEditingDisabled()) {
 			return;
 		}
 
@@ -2263,7 +2335,7 @@ export class DT3DCard extends LitElement {
 
 	/** Create one manual floor for each uncovered face bounded by selected walls. */
 	private generateFloorsFromWalls(ids: string[]): void {
-		if (this.isVisualizationOnly() || !this.floorManager) {
+		if (this.isEditingDisabled() || !this.floorManager) {
 			return;
 		}
 
@@ -2328,7 +2400,7 @@ export class DT3DCard extends LitElement {
 			return;
 		}
 
-		if (this.isVisualizationOnly()) {
+		if (this.isEditingDisabled()) {
 			this.transform.detach();
 			this.transform.enabled = false;
 			this.transform.getHelper().visible = false;
@@ -2816,7 +2888,7 @@ export class DT3DCard extends LitElement {
 	}
 
 	private requestDeleteObject(objectId: string): void {
-		if (!this.space || this.isVisualizationOnly()) {
+		if (!this.space || this.isEditingDisabled()) {
 			return;
 		}
 
@@ -2842,7 +2914,7 @@ export class DT3DCard extends LitElement {
 	 * Enter a one-shot mode that places an object at the next scene double-click.
 	 */
 	private beginMoveToPoint(objectId: string): void {
-		if (!this.space || this.isVisualizationOnly()) {
+		if (!this.space || this.isEditingDisabled()) {
 			return;
 		}
 
@@ -2894,7 +2966,7 @@ export class DT3DCard extends LitElement {
 	 * @param objectId - ID of the object to be delete from the space.
 	 */
 	private deleteObject(objectId: string): void {
-		if (!this.space || this.isVisualizationOnly()) {
+		if (!this.space || this.isEditingDisabled()) {
 			return;
 		}
 
@@ -2935,7 +3007,7 @@ export class DT3DCard extends LitElement {
 	 * @param objectId - Object ID to clone
 	 */
 	private cloneObject(objectId: string): void {
-		if (!this.space || this.isVisualizationOnly()) {
+		if (!this.space || this.isEditingDisabled()) {
 			return;
 		}
 
@@ -2973,7 +3045,7 @@ export class DT3DCard extends LitElement {
 	private async handleCanvasDrop(event: DragEvent): Promise<void> {
 		event.preventDefault();
 
-		if (this.isVisualizationOnly()) {
+		if (this.isEditingDisabled()) {
 			return;
 		}
 		const materialId = event.dataTransfer?.getData(MATERIAL_DRAG_MIME) ?? "";
@@ -3049,7 +3121,7 @@ export class DT3DCard extends LitElement {
 		file: File | null,
 	): Promise<void> {
 		event.preventDefault();
-		if (this.isVisualizationOnly()) {
+		if (this.isEditingDisabled()) {
 			return;
 		}
 
@@ -3205,7 +3277,7 @@ export class DT3DCard extends LitElement {
 	 * @param event - Mouse or pointer event
 	 */
 	private handlePointerMove(event: MouseEvent): void {
-		if (!this.isVisualizationOnly()) {
+		if (!this.isEditingDisabled()) {
 			this.wallManager?.handlePointerMove(event);
 			this.floorManager?.handlePointerMove(event);
 			this.wallEndpointManager?.handlePointerMove(event);
@@ -3435,7 +3507,7 @@ export class DT3DCard extends LitElement {
 		event.preventDefault();
 		event.stopPropagation();
 
-		if (this.isVisualizationOnly()) {
+		if (this.isEditingDisabled()) {
 			this.tree?.closeContextMenu();
 			return false;
 		}
@@ -3465,7 +3537,7 @@ export class DT3DCard extends LitElement {
 	 * @param event - Pointer event from the canvas.
 	 */
 	private startSceneLongPress(event: PointerEvent): void {
-		if (this.isVisualizationOnly()) {
+		if (this.isEditingDisabled()) {
 			return;
 		}
 
@@ -3605,7 +3677,7 @@ export class DT3DCard extends LitElement {
 			return;
 		}
 
-		if (this.isVisualizationOnly()) {
+		if (this.isEditingDisabled()) {
 			this.hintBox.message = "";
 		} else if (this.bottomBar?.measurementTool === "distance") {
 			this.hintBox.message = localManager.get("hintMeasureDistance");
@@ -3641,7 +3713,7 @@ export class DT3DCard extends LitElement {
 	 * Open the space-level scene configuration menu.
 	 */
 	private openSpaceConfigMenu(): void {
-		if (!this.content || this.spaceConfigMenu || this.isVisualizationOnly()) {
+		if (!this.content || this.spaceConfigMenu || this.isEditingDisabled()) {
 			return;
 		}
 
@@ -3678,7 +3750,7 @@ export class DT3DCard extends LitElement {
 	 * Open the grid configuration form.
 	 */
 	private openGridConfigModal(): void {
-		if (!this.content || this.gridConfigModal || this.isVisualizationOnly()) {
+		if (!this.content || this.gridConfigModal || this.isEditingDisabled()) {
 			return;
 		}
 
@@ -3733,7 +3805,7 @@ export class DT3DCard extends LitElement {
 
 	/** Open the floorplan defaults form from the object sidebar. */
 	private openWallSettingsModal(): void {
-		if (!this.content || this.wallSettingsModal || this.isVisualizationOnly()) {
+		if (!this.content || this.wallSettingsModal || this.isEditingDisabled()) {
 			return;
 		}
 
@@ -3897,8 +3969,8 @@ export class DT3DCard extends LitElement {
 	 *
 	 * @param anchor - Menu anchor in viewport coordinates.
 	 */
-	private openMeshMenu(anchor: { left: number; top: number } | null): void {
-		if (!this.content || this.isVisualizationOnly()) {
+	private openMeshMenu(anchor: {left: number; top: number} | null): void {
+		if (!this.content || this.isEditingDisabled()) {
 			return;
 		}
 
@@ -3925,7 +3997,7 @@ export class DT3DCard extends LitElement {
 	 * Create a saved viewport from the active camera configuration.
 	 */
 	private addViewportFromCurrentCamera(): void {
-		if (!this.sceneManager || this.isVisualizationOnly()) {
+		if (!this.sceneManager || this.isEditingDisabled()) {
 			return;
 		}
 
@@ -3953,8 +4025,8 @@ export class DT3DCard extends LitElement {
 	}
 
 	/** Open the static-light type menu at the top card level. */
-	private openLightMenu(anchor: { left: number; top: number } | null): void {
-		if (!this.content || this.isVisualizationOnly()) return;
+	private openLightMenu(anchor: {left: number; top: number} | null): void {
+		if (!this.content || this.isEditingDisabled()) return;
 
 		this.closeObjectMenus();
 		const {x, y} = this.getObjectMenuPosition(anchor, 240);
@@ -3974,8 +4046,8 @@ export class DT3DCard extends LitElement {
 	}
 
 	/** Open the model upload menu at the top card level. */
-	private openUploadMenu(anchor: { left: number; top: number } | null): void {
-		if (!this.content || this.isVisualizationOnly()) return;
+	private openUploadMenu(anchor: {left: number; top: number} | null): void {
+		if (!this.content || this.isEditingDisabled()) return;
 
 		this.closeObjectMenus();
 		const {x, y} = this.getObjectMenuPosition(anchor, 160);
@@ -4001,7 +4073,7 @@ export class DT3DCard extends LitElement {
 
 	/** Open the furniture type menu at the top card level. */
 	private openFurnitureMenu(anchor: {left: number; top: number} | null): void {
-		if (!this.content || this.isVisualizationOnly()) return;
+		if (!this.content || this.isEditingDisabled()) return;
 
 		this.closeObjectMenus();
 		const {x, y} = this.getObjectMenuPosition(anchor, 290);
@@ -4025,7 +4097,7 @@ export class DT3DCard extends LitElement {
 
 	/** Open the door, window, and gate tool menu at the top card level. */
 	private openOpeningMenu(anchor: {left: number; top: number} | null): void {
-		if (!this.content || this.isVisualizationOnly()) return;
+		if (!this.content || this.isEditingDisabled()) return;
 
 		this.closeObjectMenus();
 		const {x, y} = this.getObjectMenuPosition(anchor, 160);
@@ -4049,7 +4121,7 @@ export class DT3DCard extends LitElement {
 	 * Open the form used to create and activate a space.
 	 */
 	private openCreateSpaceModal(): void {
-		if (!this.content || this.spaceFormModal || this.isVisualizationOnly()) {
+		if (!this.content || this.spaceFormModal || this.isEditingDisabled()) {
 			return;
 		}
 
@@ -4110,7 +4182,7 @@ export class DT3DCard extends LitElement {
 		name: string,
 		description: string,
 	): Promise<boolean> {
-		if (!this.spaceSync || this.isVisualizationOnly()) {
+		if (!this.spaceSync || this.isEditingDisabled()) {
 			return false;
 		}
 
@@ -4125,8 +4197,7 @@ export class DT3DCard extends LitElement {
 			this.resetMaterialLibrary();
 			const space = await this.spaceSync.createSpace(name, description);
 			this.actionStack.clear();
-			this.applySpaceConfigFromApi(space);
-			this.applyDefaultViewportOnLoad();
+			if (!space) this.applySpaceConfigFromApi(null);
 			if (this.spaceSelector) {
 				this.spaceSelector.spaces = this.spaceSync.availableSpaces;
 				this.spaceSelector.selectedSpaceId = space.id;
@@ -4149,7 +4220,7 @@ export class DT3DCard extends LitElement {
 		if (
 			!this.content ||
 			this.spaceFormModal ||
-			this.isVisualizationOnly() ||
+			this.isEditingDisabled() ||
 			!this.spaceSync
 		) {
 			return;
@@ -4206,7 +4277,7 @@ export class DT3DCard extends LitElement {
 	}
 
 	private async cloneSpace(spaceId: string, name: string): Promise<boolean> {
-		if (!this.spaceSync || this.isVisualizationOnly()) {
+		if (!this.spaceSync || this.isEditingDisabled()) {
 			return false;
 		}
 
@@ -4221,8 +4292,7 @@ export class DT3DCard extends LitElement {
 			this.resetMaterialLibrary();
 			const space = await this.spaceSync.cloneSpace(spaceId, name);
 			this.actionStack.clear();
-			this.applySpaceConfigFromApi(space);
-			this.applyDefaultViewportOnLoad();
+			if (!space) this.applySpaceConfigFromApi(null);
 			if (this.spaceSelector) {
 				this.spaceSelector.spaces = this.spaceSync.availableSpaces;
 				this.spaceSelector.selectedSpaceId = space.id;
@@ -4239,7 +4309,7 @@ export class DT3DCard extends LitElement {
 	}
 
 	private async exportSpace(spaceId: string): Promise<void> {
-		if (!this.spaceSync || !spaceId || this.isVisualizationOnly()) {
+		if (!this.spaceSync || !spaceId || this.isEditingDisabled()) {
 			return;
 		}
 
@@ -4275,7 +4345,7 @@ export class DT3DCard extends LitElement {
 	}
 
 	private requestImportSpace(file: File): void {
-		if (!this.spaceSync || this.isVisualizationOnly()) {
+		if (!this.spaceSync || this.isEditingDisabled()) {
 			return;
 		}
 
@@ -4299,11 +4369,8 @@ export class DT3DCard extends LitElement {
 		});
 	}
 
-	private async importSpace(
-		file: File,
-		targetSpaceId?: string,
-	): Promise<void> {
-		if (!this.spaceSync || this.isVisualizationOnly()) {
+	private async importSpace(file: File, targetSpaceId?: string): Promise<void> {
+		if (!this.spaceSync || this.isEditingDisabled()) {
 			return;
 		}
 
@@ -4320,8 +4387,7 @@ export class DT3DCard extends LitElement {
 				? await this.spaceSync.importObjectsIntoSpace(file, targetSpaceId)
 				: await this.spaceSync.importSpace(file);
 			this.actionStack.clear();
-			this.applySpaceConfigFromApi(space);
-			this.applyDefaultViewportOnLoad();
+			if (!space) this.applySpaceConfigFromApi(null);
 			if (this.spaceSelector) {
 				this.spaceSelector.spaces = this.spaceSync.availableSpaces;
 				this.spaceSelector.selectedSpaceId = space.id;
@@ -4336,7 +4402,7 @@ export class DT3DCard extends LitElement {
 	}
 
 	private requestDeleteSpace(spaceId: string): void {
-		if (!spaceId || this.isVisualizationOnly()) {
+		if (!spaceId || this.isEditingDisabled()) {
 			return;
 		}
 
@@ -4352,7 +4418,7 @@ export class DT3DCard extends LitElement {
 	}
 
 	private async deleteSpace(spaceId: string): Promise<void> {
-		if (!this.spaceSync || this.isVisualizationOnly()) {
+		if (!this.spaceSync || this.isEditingDisabled()) {
 			return;
 		}
 
@@ -4367,8 +4433,7 @@ export class DT3DCard extends LitElement {
 			this.resetMaterialLibrary();
 			const space = await this.spaceSync.deleteSpace(spaceId);
 			this.actionStack.clear();
-			this.applySpaceConfigFromApi(space);
-			this.applyDefaultViewportOnLoad();
+			if (!space) this.applySpaceConfigFromApi(null);
 			if (this.spaceSelector) {
 				this.spaceSelector.spaces = this.spaceSync.availableSpaces;
 				this.spaceSelector.selectedSpaceId = space?.id ?? "";
@@ -4460,7 +4525,7 @@ export class DT3DCard extends LitElement {
 		if (changedViewports.length > 0) {
 			this.tree.updateTreeDiff(this.space);
 
-			if (!this.isVisualizationOnly()) {
+			if (!this.isEditingDisabled()) {
 				this.syncViewportObjects(changedViewports);
 			}
 		}
@@ -4478,7 +4543,7 @@ export class DT3DCard extends LitElement {
 
 	private async changeActiveSpace(spaceId: string): Promise<void> {
 		if (
-			this.isVisualizationOnly() ||
+			this.isEditingDisabled() ||
 			!this.spaceSync ||
 			!spaceId ||
 			spaceId === this.spaceSync.activeSpaceId
@@ -4503,8 +4568,7 @@ export class DT3DCard extends LitElement {
 			this.resetMaterialLibrary();
 			const space = await this.spaceSync.loadSpaceFromApi(spaceId);
 			this.actionStack.clear();
-			this.applySpaceConfigFromApi(space);
-			this.applyDefaultViewportOnLoad();
+			if (!space) this.applySpaceConfigFromApi(null);
 			if (this.spaceSelector) {
 				this.spaceSelector.selectedSpaceId = space.id;
 			}
@@ -4521,7 +4585,7 @@ export class DT3DCard extends LitElement {
 	}
 
 	private setDefaultViewport(viewport: ViewportObject): void {
-		if (this.isVisualizationOnly()) {
+		if (this.isEditingDisabled()) {
 			return;
 		}
 
@@ -4582,7 +4646,7 @@ export class DT3DCard extends LitElement {
 	}
 
 	private updateViewportFromCurrentCamera(viewport: ViewportObject): void {
-		if (!this.sceneManager || this.isVisualizationOnly()) {
+		if (!this.sceneManager || this.isEditingDisabled()) {
 			return;
 		}
 
@@ -4635,7 +4699,7 @@ export class DT3DCard extends LitElement {
 
 	/** Activate a floorplan editing tool and synchronize the editor controls. */
 	private selectWallTool(mode: WallOptions): void {
-		if (this.isVisualizationOnly()) {
+		if (this.isEditingDisabled()) {
 			return;
 		}
 
@@ -4657,7 +4721,7 @@ export class DT3DCard extends LitElement {
 	 * @param type - Object type to add.
 	 */
 	private handleAddObject(type: string): void {
-		if (this.isVisualizationOnly()) {
+		if (this.isEditingDisabled()) {
 			return;
 		}
 
@@ -4903,7 +4967,7 @@ export class DT3DCard extends LitElement {
 		);
 		this.updateSkyFromDateTime();
 		this.sceneManager.transform.addEventListener("objectChange", () => {
-			if (this.isVisualizationOnly()) {
+			if (this.isEditingDisabled()) {
 				return;
 			}
 
@@ -4922,7 +4986,7 @@ export class DT3DCard extends LitElement {
 		this.sceneManager.transform.addEventListener(
 			"dragging-changed",
 			(event: any) => {
-				if (this.isVisualizationOnly()) {
+				if (this.isEditingDisabled()) {
 					this.transformStart = null;
 					this.multiTransformStart = null;
 					this.endCollisionDrag();
@@ -5308,7 +5372,7 @@ export class DT3DCard extends LitElement {
 		this.applyVisualizationMode();
 
 		this.bottomBar.addEventListener("transform-tool-selected", (e: any) => {
-			if (this.isVisualizationOnly()) {
+			if (this.isEditingDisabled()) {
 				return;
 			}
 
@@ -5327,13 +5391,13 @@ export class DT3DCard extends LitElement {
 		});
 
 		this.bottomBar.addEventListener("focus-selection", () => {
-			if (!this.isVisualizationOnly()) {
+			if (!this.isEditingDisabled()) {
 				this.focusSelectedObjects();
 			}
 		});
 
 		this.bottomBar.addEventListener("measurement-mode-selected", (e: any) => {
-			if (this.isVisualizationOnly()) {
+			if (this.isEditingDisabled()) {
 				return;
 			}
 
@@ -5352,7 +5416,7 @@ export class DT3DCard extends LitElement {
 		});
 
 		this.bottomBar.addEventListener("measurements-clear", () => {
-			if (this.isVisualizationOnly()) {
+			if (this.isEditingDisabled()) {
 				return;
 			}
 
@@ -5384,7 +5448,7 @@ export class DT3DCard extends LitElement {
 		});
 
 		this.bottomBar.addEventListener("grid-config-open", () => {
-			if (this.isVisualizationOnly()) {
+			if (this.isEditingDisabled()) {
 				return;
 			}
 
@@ -5392,7 +5456,7 @@ export class DT3DCard extends LitElement {
 		});
 
 		this.objectSidebar.addEventListener("mesh-menu-open", (event: Event) => {
-			if (this.isVisualizationOnly()) {
+			if (this.isEditingDisabled()) {
 				return;
 			}
 
@@ -5406,28 +5470,31 @@ export class DT3DCard extends LitElement {
 		});
 
 		this.objectSidebar.addEventListener("upload-menu-open", (event: Event) => {
-			if (this.isVisualizationOnly()) return;
+			if (this.isEditingDisabled()) return;
 			this.openUploadMenu(
-				(event as CustomEvent<{ left: number; top: number } | null>).detail,
-			);
-		});
-
-		this.objectSidebar.addEventListener("furniture-menu-open", (event: Event) => {
-			if (this.isVisualizationOnly()) return;
-			this.openFurnitureMenu(
 				(event as CustomEvent<{left: number; top: number} | null>).detail,
 			);
 		});
 
+		this.objectSidebar.addEventListener(
+			"furniture-menu-open",
+			(event: Event) => {
+				if (this.isEditingDisabled()) return;
+				this.openFurnitureMenu(
+					(event as CustomEvent<{left: number; top: number} | null>).detail,
+				);
+			},
+		);
+
 		this.objectSidebar.addEventListener("opening-menu-open", (event: Event) => {
-			if (this.isVisualizationOnly()) return;
+			if (this.isEditingDisabled()) return;
 			this.openOpeningMenu(
 				(event as CustomEvent<{left: number; top: number} | null>).detail,
 			);
 		});
 
 		this.objectSidebar.addEventListener("add-object", (e: any) => {
-			if (this.isVisualizationOnly()) {
+			if (this.isEditingDisabled()) {
 				return;
 			}
 
@@ -5440,6 +5507,19 @@ export class DT3DCard extends LitElement {
 		this.spaceSync = new SpaceSync({
 			apiClient: this.getApiClient(),
 			readOnly: this.isVisualizationOnly(),
+			onLoadStateChanged: (state) => this.updateSpaceLoadState(state),
+			onSpacesChanged: (spaces) => {
+				if (this.spaceSelector) this.spaceSelector.spaces = spaces;
+			},
+			onSpaceApplied: async (space) => {
+				this.actionStack.clear();
+				this.resetMaterialLibrary();
+				this.applySpaceConfigFromApi(space);
+				this.applyDefaultViewportOnLoad();
+				this.updateEntityObjects();
+				if (this.spaceSelector) this.spaceSelector.selectedSpaceId = space.id;
+				await this.materialLibraryReady;
+			},
 			sceneManager: this.sceneManager,
 			space: this.space,
 			tree: this.tree,
@@ -5462,9 +5542,7 @@ export class DT3DCard extends LitElement {
 					this.spaceSelector.selectedSpaceId = space?.id ?? "";
 					this.spaceSelector.loading = false;
 				}
-				this.applySpaceConfigFromApi(space);
-				this.applyDefaultViewportOnLoad();
-				this.updateEntityObjects();
+				if (!space) this.applySpaceConfigFromApi(null);
 			});
 
 		// Listen for selection events from the tree
@@ -5473,13 +5551,13 @@ export class DT3DCard extends LitElement {
 			const objects = ids
 				.map((id) => this.space.getObjectByProperty("uuid", id))
 				.filter((object): object is Object3D => Boolean(object));
-			if (!this.isVisualizationOnly()) {
+			if (!this.isEditingDisabled()) {
 				this.setSelectedObjects(objects);
 			}
 		});
 
 		this.tree.addEventListener("object-delete", (e: any) => {
-			if (this.isVisualizationOnly()) {
+			if (this.isEditingDisabled()) {
 				return;
 			}
 
@@ -5488,7 +5566,7 @@ export class DT3DCard extends LitElement {
 		});
 
 		this.tree.addEventListener("object-clone", (e: any) => {
-			if (this.isVisualizationOnly()) {
+			if (this.isEditingDisabled()) {
 				return;
 			}
 
@@ -5502,7 +5580,7 @@ export class DT3DCard extends LitElement {
 		});
 
 		this.tree.addEventListener("object-center-origin", (event: Event) => {
-			if (this.isVisualizationOnly() || !this.space) return;
+			if (this.isEditingDisabled() || !this.space) return;
 			const {id} = (event as CustomEvent<{id: string}>).detail;
 			const object = this.space.getObjectByProperty("uuid", id);
 			if (!object) return;
@@ -5531,7 +5609,7 @@ export class DT3DCard extends LitElement {
 		});
 
 		this.tree.addEventListener("floors-merge", (event: Event) => {
-			if (this.isVisualizationOnly() || !this.space) return;
+			if (this.isEditingDisabled() || !this.space) return;
 			const {ids} = (event as CustomEvent<{ids: string[]}>).detail;
 			const objects = ids.map((id) => this.space.getObjectByProperty("uuid", id));
 			if (objects.some((object) => !object)) return;
@@ -5591,14 +5669,14 @@ export class DT3DCard extends LitElement {
 		});
 
 		this.objectSidebar.addEventListener("light-menu-open", (event: Event) => {
-			if (this.isVisualizationOnly()) return;
+			if (this.isEditingDisabled()) return;
 			this.openLightMenu(
 				(event as CustomEvent<{ left: number; top: number } | null>).detail,
 			);
 		});
 
 		this.tree.addEventListener("viewport-set-default", (e: any) => {
-			if (this.isVisualizationOnly()) {
+			if (this.isEditingDisabled()) {
 				return;
 			}
 
@@ -5607,7 +5685,7 @@ export class DT3DCard extends LitElement {
 		});
 
 		this.tree.addEventListener("viewport-update", (e: any) => {
-			if (this.isVisualizationOnly()) {
+			if (this.isEditingDisabled()) {
 				return;
 			}
 
@@ -5616,7 +5694,7 @@ export class DT3DCard extends LitElement {
 		});
 
 		this.tree.addEventListener("object-updated", (e: Event) => {
-			if (this.isVisualizationOnly()) {
+			if (this.isEditingDisabled()) {
 				return;
 			}
 
@@ -5765,14 +5843,14 @@ export class DT3DCard extends LitElement {
 		});
 
 		this.tree.addEventListener("material-updated", (event: Event) => {
-			if (this.isVisualizationOnly()) return;
+			if (this.isEditingDisabled()) return;
 			this.handleMaterialUpdated(
 				(event as CustomEvent<MaterialUpdateDetail>).detail,
 			);
 		});
 
 		this.tree.addEventListener("object-moved", (e: any) => {
-			if (this.isVisualizationOnly()) {
+			if (this.isEditingDisabled()) {
 				return;
 			}
 
@@ -5810,7 +5888,7 @@ export class DT3DCard extends LitElement {
 		this.canvas.addEventListener("dblclick", (event: MouseEvent) => {
 			this.clearPendingEntityClickAction();
 
-			if (!this.isVisualizationOnly()) {
+			if (!this.isEditingDisabled()) {
 				if (this.handleMoveToPointDoubleClick(event)) {
 					return;
 				}
@@ -5838,7 +5916,7 @@ export class DT3DCard extends LitElement {
 			const {object} = this.pickObjectFromEvent(event);
 			const entityWasSelected =
 				object instanceof EntityObject && this.selectedObjects.includes(object);
-			if (object && !this.isVisualizationOnly()) {
+			if (object && !this.isEditingDisabled()) {
 				const toggleSelection = event.ctrlKey || event.metaKey;
 				const selectedObjects = toggleSelection
 					? this.selectedObjects.includes(object)
@@ -6009,7 +6087,7 @@ export class DT3DCard extends LitElement {
 	 * The entities list is fetched from Home Assistant.
 	 */
 	public addEntityModal(): void {
-		if (this.isVisualizationOnly()) {
+		if (this.isEditingDisabled()) {
 			return;
 		}
 
@@ -6035,7 +6113,7 @@ export class DT3DCard extends LitElement {
 	 * @param id - The ID of the entity to add.
 	 */
 	private addEntityToScene(id: string): void {
-		if (this.isVisualizationOnly()) {
+		if (this.isEditingDisabled()) {
 			return;
 		}
 
