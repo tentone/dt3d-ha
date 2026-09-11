@@ -454,6 +454,7 @@ export class SpaceSync {
 	 * Replace the active editor contents with a different API space.
 	 */
 	public async loadSpaceFromApi(spaceId: string): Promise<SpaceResponse> {
+		this.availableSpaces = await this.apiClient.listSpaces();
 		const space = this.availableSpaces.find(
 			(candidate) => candidate.id === spaceId,
 		);
@@ -523,7 +524,6 @@ export class SpaceSync {
 		await this.trackProgress("Import objects", file.name, () =>
 			importSpaceArchiveObjects(this.apiClient, file, spaceId),
 		);
-		await this.cache.invalidateSpace(spaceId);
 		const space = await this.apiClient.getSpace(spaceId);
 		this.availableSpaces = this.availableSpaces.map((candidate) =>
 			candidate.id === space.id ? space : candidate,
@@ -536,7 +536,6 @@ export class SpaceSync {
 	 */
 	public async deleteSpace(spaceId: string): Promise<SpaceResponse | null> {
 		await this.apiClient.deleteSpace(spaceId);
-		await this.cache.deleteSpace(spaceId);
 		this.availableSpaces = await this.apiClient.listSpaces();
 
 		if (this.activeSpaceId !== spaceId) {
@@ -558,25 +557,11 @@ export class SpaceSync {
 	}
 
 	private async loadSpace(space: SpaceResponse): Promise<SpaceResponse> {
-		const cacheVersion = space.cache_version;
-		const canUseCache =
-			typeof cacheVersion === "number" &&
-			Number.isSafeInteger(cacheVersion) &&
-			cacheVersion >= 0;
-		let instances = canUseCache
-			? await this.trackProgress("Read scene cache", space.name, () =>
-				this.cache.getSpace(space.id, cacheVersion),
-			)
-			: null;
-		let shouldCacheSpace = false;
-		if (!instances) {
-			instances = await this.trackProgress(
-				"Load scene objects",
-				space.name,
-				() => this.apiClient.listObjects(space.id),
-			);
-			shouldCacheSpace = canUseCache;
-		}
+		const instances = await this.trackProgress(
+			"Load scene objects",
+			space.name,
+			() => this.apiClient.listObjects(space.id),
+		);
 
 		this.activeSpaceId = space.id;
 		this.activeSpace = space;
@@ -600,19 +585,7 @@ export class SpaceSync {
 			return space;
 		}
 
-		this.loadObjectsFromApi(
-			instances,
-			shouldCacheSpace
-				? [
-					{
-						operation: "Cache scene",
-						label: space.name,
-						load: () =>
-							this.cache.putSpace(space.id, cacheVersion!, instances),
-					},
-				]
-				: [],
-		);
+		this.loadObjectsFromApi(instances);
 		this.tree.updateTreeFromScene(this.space, true);
 		return space;
 	}
@@ -1466,14 +1439,13 @@ export class SpaceSync {
 			"Create object",
 			this.getObjectLabel(object),
 			() =>
-				this.apiClient.createObject(spaceId, payload).then(async (response) => {
+				this.apiClient.createObject(spaceId, payload).then((response) => {
 					if (
 						this.activeSpaceId === spaceId &&
 						this.shouldPersistObject(object)
 					) {
 						this.setObjectApiId(object, response.id);
 					}
-					await this.cache.invalidateSpace(response.space_id);
 				}),
 		);
 
@@ -1518,12 +1490,11 @@ export class SpaceSync {
 			"Update object",
 			this.getObjectLabel(object),
 			async () => {
-				const response = await this.apiClient.updateObject(
+				await this.apiClient.updateObject(
 					this.activeSpaceId,
 					objectId,
 					payload,
 				);
-				await this.cache.invalidateSpace(response.space_id);
 			},
 		);
 	}
@@ -1544,7 +1515,6 @@ export class SpaceSync {
 		await this.trackProgress("Delete object", this.getObjectLabel(object), () =>
 			this.apiClient.deleteObject(this.activeSpaceId, objectId),
 		);
-		await this.cache.invalidateSpace(this.activeSpaceId);
 		this.clearObjectMapping(object);
 	}
 

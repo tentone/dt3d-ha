@@ -1,3 +1,5 @@
+import {SpaceDataCache} from "./space-cache.js";
+
 export type SpaceResponse = {
 	id: string;
 	cache_version?: number;
@@ -80,9 +82,18 @@ export function buildBackendApiUrl(address: string, port: number): string {
  * It centralizes request configuration and response typing.
  */
 export class SpaceApi {
+	private static sharedCaches = new Map<
+		string,
+		{
+			revision: number;
+			invalidation: Promise<void>;
+			pending: Map<string, Promise<unknown>>;
+		}
+	>();
 	private baseUrl: string;
 	private cacheNamespace: string;
 	private serviceKey: string;
+	private cache: SpaceDataCache;
 
 	/**
 	 * Constructor for space API.
@@ -95,6 +106,7 @@ export class SpaceApi {
 		this.baseUrl = buildBackendApiUrl(address, port);
 		this.serviceKey = serviceKey;
 		this.cacheNamespace = this.buildCacheNamespace();
+		this.cache = new SpaceDataCache(this.cacheNamespace);
 	}
 
 	/**
@@ -108,7 +120,13 @@ export class SpaceApi {
 	 * Get lightweight metadata for all spaces from the backend. Object instances are loaded on demand for the selected space.
 	 */
 	public listSpaces(): Promise<SpaceResponse[]> {
-		return this.fetchJson<SpaceResponse[]>("/spaces?include_objects=false");
+		return this.readCached(
+			"list",
+			() => this.cache.getSpaceList(),
+			() => this.fetchJson<SpaceResponse[]>("/spaces?include_objects=false"),
+			(spaces) => this.cache.putSpaceList(spaces),
+			() => this.cache.invalidateSpaceList(),
+		);
 	}
 
 	/**
@@ -173,9 +191,32 @@ export class SpaceApi {
 	/**
 	 * Fetch all object instances for a space.
 	 */
-	public listObjects(spaceId: string): Promise<ObjectInstanceResponse[]> {
-		return this.fetchJson<ObjectInstanceResponse[]>(
-			`/spaces/${spaceId}/objects`,
+	public async listObjects(
+		spaceId: string,
+		useCache = true,
+	): Promise<ObjectInstanceResponse[]> {
+		const fetchObjects = () =>
+			this.fetchJson<ObjectInstanceResponse[]>(`/spaces/${spaceId}/objects`);
+		if (!useCache) return fetchObjects();
+		let cacheVersion: number | null = null;
+		return this.readCached(
+			`objects:${spaceId}`,
+			async () => {
+				const spaces = await this.listSpaces();
+				const version = spaces.find(
+					(space) => space.id === spaceId,
+				)?.cache_version;
+				cacheVersion =
+					typeof version === "number" &&
+					Number.isSafeInteger(version) &&
+					version >= 0
+						? version
+						: null;
+				return this.cache.getSpace(spaceId, cacheVersion);
+			},
+			fetchObjects,
+			(instances) => this.cache.putSpace(spaceId, cacheVersion, instances),
+			() => this.cache.invalidateSpace(spaceId),
 		);
 	}
 
@@ -272,11 +313,89 @@ export class SpaceApi {
 			throw new Error(message || `Request failed: ${response.status}`);
 		}
 
+		// Every caller, including archive imports, invalidates the shared cache.
+		if (options?.method && options.method !== "GET") {
+			await this.invalidateAfterWrite(path, options.method);
+		}
+
 		if (response.status === 204) {
 			return null as T;
 		}
 
 		return response.json() as Promise<T>;
+	}
+
+	private getSharedCache() {
+		let shared = SpaceApi.sharedCaches.get(this.cacheNamespace);
+		if (!shared) {
+			shared = {
+				revision: 0,
+				invalidation: Promise.resolve(),
+				pending: new Map(),
+			};
+			SpaceApi.sharedCaches.set(this.cacheNamespace, shared);
+		}
+		return shared;
+	}
+
+	/** Share pending disk/network reads across cards, while keeping mutable data private. */
+	private async readCached<T>(
+		key: string,
+		read: () => Promise<T | null>,
+		fetchValue: () => Promise<T>,
+		write: (value: T) => Promise<void>,
+		invalidate: () => Promise<void>,
+	): Promise<T> {
+		const shared = this.getSharedCache();
+		const revision = shared.revision;
+		const requestKey = `${revision}:${key}`;
+		let pending = shared.pending.get(requestKey) as Promise<T> | undefined;
+		if (!pending) {
+			pending = (async () => {
+				await shared.invalidation;
+				const cached = await read();
+				const value = cached ?? (await fetchValue());
+				if (revision === shared.revision && cached === null) {
+					await write(value);
+					// A write can finish while an IndexedDB transaction is committing.
+					if (revision !== shared.revision) await invalidate();
+				}
+				if (revision !== shared.revision) {
+					return this.readCached(key, read, fetchValue, write, invalidate);
+				}
+				return value;
+			})();
+			shared.pending.set(requestKey, pending);
+		}
+		try {
+			return structuredClone(await pending);
+		} finally {
+			if (shared.pending.get(requestKey) === pending) {
+				shared.pending.delete(requestKey);
+			}
+		}
+	}
+
+	private async invalidateAfterWrite(
+		path: string,
+		method: string,
+	): Promise<void> {
+		const segments = path.split("/");
+		if (segments[1] !== "spaces" || segments[3] === "geometries") return;
+		const spaceId = segments[2];
+		const shared = this.getSharedCache();
+		shared.revision += 1;
+		shared.invalidation = shared.invalidation.then(async () => {
+			await this.cache.invalidateSpaceList();
+			if (spaceId) {
+				if (method === "DELETE" && segments.length === 3) {
+					await this.cache.deleteSpace(spaceId);
+				} else {
+					await this.cache.invalidateSpace(spaceId);
+				}
+			}
+		});
+		await shared.invalidation;
 	}
 
 	private async fetchArrayBuffer(

@@ -68,7 +68,7 @@ export async function exportSpaceArchive(
 ): Promise<Blob> {
 	const [space, objectInstances] = await Promise.all([
 		apiClient.getSpace(spaceId),
-		apiClient.listObjects(spaceId),
+		apiClient.listObjects(spaceId, false),
 	]);
 	const files: ArchiveFiles = {};
 	const embeddedAssets: EmbeddedAsset[] = [];

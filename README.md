@@ -19,7 +19,7 @@
   - It is required that the addon is reachable from the Home Assistant frontend, and complies with the CORS policy.
 - Frontend card: renders the scene, provides the editor, consumes Home Assistant entity states, opens entity dialogs, and calls Home Assistant services in the same way as any other custom frontend card.
 - Backend app/add-on provides the 3D space API and persists spaces, object hierarchies, transforms, materials, viewports, space configuration and uploaded geometry.
-- The frontend stores editor preferences and a versioned cache of space objects and geometry in browser storage. The backend remains the source of truth and invalidates cached space data after changes.
+- The frontend stores editor preferences and caches the space list, each space's object hierarchy, and geometry in IndexedDB. Cards and the configuration editor share this cache for the same backend and service key, including pending list/object requests. The list is reused for up to one minute; the next load after that checks the backend, and object trees are reused while their backend cache version matches. Older backends without cache versions also cache trees for up to one minute. Successful edits invalidate the relevant cached data immediately. Browser reloads retain the cache, and unavailable browser storage falls back to network loading.
 - Persistent spaces and objects are synchronized to the backend.
 - Home Assistant entity state is consumed live and is not copied into the DT3D database as an alternative entity registry.
 
