@@ -2717,7 +2717,7 @@ let H0 = class extends Kt {
     return ve`
 		<div class="connection-status-container">
 			<div style="margin: 5px;" class="${this.success ? "connection-status-success" : "connection-status-error"}">
-				${this.msg}<br>${"2026-09-13T09:30:41.975Z"}
+				${this.msg}<br>${"2026-09-13T13:08:00.739Z"}
 			</div>
 		</div>`;
   }
@@ -67856,7 +67856,7 @@ var FQ = Object.getOwnPropertyDescriptor, kQ = (s, e, t, n) => {
 const h6 = "space-scene-config", u6 = "grid-config", O1 = 300, VQ = 50, GQ = 300, Hu = 16, d6 = 8, HQ = 260, UQ = 140, y0 = (s) => s === !0 || s === "true" || s === "1";
 let $d = class extends Kt {
   constructor() {
-    super(...arguments), this.entityOptions = [], this.entityOptionsSignature = "", this.container = null, this.content = null, this.canvas = null, this.camera = null, this.transform = null, this.materialManager = null, this.materialLibrary = [], this.materialLibraryLoadSequence = 0, this.materialLibraryReady = Promise.resolve(), this.spaceLoadStatus = null, this.selectedMaterial = null, this.standardMaterial = null, this.materialManagerOpen = !1, this.cssRendererContainer = null, this.syncProgressComponent = null, this.cameraToggle = null, this.xrControls = null, this.xrSystem = null, this.xrAvailabilitySequence = 0, this.activeXrSession = null, this.activeXrMode = null, this.xrSessionRequestPending = !1, this.controlsEnabledBeforeXr = !0, this.cameraViewportBeforeXr = null, this.arSpaceTransform = null, this.orientationCube = null, this.objectTreeResizeObserver = null, this.spaceSelector = null, this.connectionStatus = null, this.measurementManager = null, this.wallManager = null, this.wallOcclusionManager = new xq(), this.wallConnectionManager = new pq(), this.wallEndpointManager = null, this.floorManager = null, this.lastSelectedObject = null, this.selectedObjects = [], this.selectionPivot = null, this.moveToPointObject = null, this.raycaster = new Uo(), this.apiClient = null, this.spaceSync = null, this.pointer = new oe(), this.hoveredObject = null, this.sceneLongPressTimer = null, this.sceneLongPressPointerId = null, this.sceneLongPressStart = null, this.suppressNextCanvasClick = !1, this.suppressNextCanvasClickTimer = null, this.pendingEntityClickTimer = null, this.entityInteractions = Hd(), this.handleXrDeviceChange = () => {
+    super(...arguments), this.entityOptions = [], this.entityOptionsSignature = "", this.container = null, this.content = null, this.canvas = null, this.camera = null, this.transform = null, this.materialManager = null, this.materialLibrary = [], this.materialLibraryLoadSequence = 0, this.materialLibraryReady = Promise.resolve(), this.selectedMaterial = null, this.standardMaterial = null, this.materialManagerOpen = !1, this.cssRendererContainer = null, this.syncProgressComponent = null, this.cameraToggle = null, this.xrControls = null, this.xrSystem = null, this.xrAvailabilitySequence = 0, this.activeXrSession = null, this.activeXrMode = null, this.xrSessionRequestPending = !1, this.controlsEnabledBeforeXr = !0, this.cameraViewportBeforeXr = null, this.arSpaceTransform = null, this.orientationCube = null, this.objectTreeResizeObserver = null, this.spaceSelector = null, this.connectionStatus = null, this.measurementManager = null, this.wallManager = null, this.wallOcclusionManager = new xq(), this.wallConnectionManager = new pq(), this.wallEndpointManager = null, this.floorManager = null, this.lastSelectedObject = null, this.selectedObjects = [], this.selectionPivot = null, this.moveToPointObject = null, this.raycaster = new Uo(), this.apiClient = null, this.spaceSync = null, this.pointer = new oe(), this.hoveredObject = null, this.sceneLongPressTimer = null, this.sceneLongPressPointerId = null, this.sceneLongPressStart = null, this.suppressNextCanvasClick = !1, this.suppressNextCanvasClickTimer = null, this.pendingEntityClickTimer = null, this.entityInteractions = Hd(), this.handleXrDeviceChange = () => {
       this.refreshXrAvailability();
     }, this.handleXrSessionEnd = (s) => {
       const e = s.currentTarget;
@@ -68021,22 +68021,7 @@ let $d = class extends Kt {
       this.spaceSelector
     ])
       e && (e.inert = s.blocked);
-    if (s.blocked && (this.attachTransform(null), this.setSelectedObject(null), this.cancelMoveToPoint(), this.closeObjectMenus(), this.spaceConfigMenu?.remove(), this.spaceConfigMenu = null, this.wallManager?.setMode("none"), this.floorManager?.setActive(!1), this.measurementManager?.setMode("none"), this.transform && (this.transform.enabled = !1)), !!this.content && (this.spaceLoadStatus || (this.spaceLoadStatus = document.createElement("div"), this.spaceLoadStatus.setAttribute("role", "status"), this.spaceLoadStatus.style.cssText = `
-				position: absolute; top: 56px; left: 50%; transform: translateX(-50%);
-				z-index: 1000; padding: 10px 14px; border-radius: 8px; max-width: 80%;
-				background: var(--card-background-color, #fff);
-				color: var(--primary-text-color, #222);
-				box-shadow: 0 2px 8px #0003; font: 14px sans-serif;
-			`, this.content.appendChild(this.spaceLoadStatus)), this.spaceLoadStatus.hidden = !s.blocked, this.spaceLoadStatus.replaceChildren(
-      document.createTextNode(
-        s.error ? M.get("sceneRefreshFailed") : M.get("sceneRefreshing")
-      )
-    ), s.error)) {
-      const e = document.createElement("button");
-      e.textContent = M.get("retry"), e.style.marginLeft = "10px", e.addEventListener("click", () => {
-        this.spaceSync?.retrySpaceLoad().catch((t) => console.warn("DT3D: Scene retry failed", t));
-      }), this.spaceLoadStatus.appendChild(e);
-    }
+    s.blocked && (this.attachTransform(null), this.setSelectedObject(null), this.cancelMoveToPoint(), this.closeObjectMenus(), this.spaceConfigMenu?.remove(), this.spaceConfigMenu = null, this.wallManager?.setMode("none"), this.floorManager?.setActive(!1), this.measurementManager?.setMode("none"), this.transform && (this.transform.enabled = !1)), this.content;
   }
   shouldHideOccludingWalls() {
     return this.config?.hide_occluding_walls !== !1;

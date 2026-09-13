@@ -341,8 +341,8 @@ export class DT3DCard extends LitElement {
 	private materialLibrary: Material[] = [];
 
 	private materialLibraryLoadSequence = 0;
+	
 	private materialLibraryReady: Promise<void> = Promise.resolve();
-	private spaceLoadStatus: HTMLDivElement | null = null;
 
 	private selectedMaterial: Material | null = null;
 
@@ -858,6 +858,7 @@ export class DT3DCard extends LitElement {
 		]) {
 			if (panel) panel.inert = state.blocked;
 		}
+
 		if (state.blocked) {
 			this.attachTransform(null);
 			this.setSelectedObject(null);
@@ -871,37 +872,6 @@ export class DT3DCard extends LitElement {
 			if (this.transform) this.transform.enabled = false;
 		}
 		if (!this.content) return;
-		if (!this.spaceLoadStatus) {
-			this.spaceLoadStatus = document.createElement("div");
-			this.spaceLoadStatus.setAttribute("role", "status");
-			this.spaceLoadStatus.style.cssText = `
-				position: absolute; top: 56px; left: 50%; transform: translateX(-50%);
-				z-index: 1000; padding: 10px 14px; border-radius: 8px; max-width: 80%;
-				background: var(--card-background-color, #fff);
-				color: var(--primary-text-color, #222);
-				box-shadow: 0 2px 8px #0003; font: 14px sans-serif;
-			`;
-			this.content.appendChild(this.spaceLoadStatus);
-		}
-		this.spaceLoadStatus.hidden = !state.blocked;
-		this.spaceLoadStatus.replaceChildren(
-			document.createTextNode(
-				state.error
-					? localManager.get("sceneRefreshFailed")
-					: localManager.get("sceneRefreshing"),
-			),
-		);
-		if (state.error) {
-			const retry = document.createElement("button");
-			retry.textContent = localManager.get("retry");
-			retry.style.marginLeft = "10px";
-			retry.addEventListener("click", () => {
-				void this.spaceSync
-					?.retrySpaceLoad()
-					.catch((error) => console.warn("DT3D: Scene retry failed", error));
-			});
-			this.spaceLoadStatus.appendChild(retry);
-		}
 	}
 
 	private shouldHideOccludingWalls(): boolean {
