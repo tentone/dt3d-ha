@@ -322,6 +322,7 @@ function externalizeDataUrls(
 				"image/avif": ".avif",
 				"image/gif": ".gif",
 				"image/jpeg": ".jpg",
+				"image/ktx2": ".ktx2",
 				"image/png": ".png",
 				"image/svg+xml": ".svg",
 				"image/webp": ".webp",

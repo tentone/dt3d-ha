@@ -300,11 +300,11 @@ export class SpaceApi {
 	/**
 	 * Store binary geometry data for a space.
 	 */
-	public uploadGeometry(
+	public async uploadGeometry(
 		spaceId: string,
 		geometry: ArrayBuffer,
 	): Promise<GeometryFileResponse> {
-		return this.fetchJson<GeometryFileResponse>(
+		const result = await this.fetchJson<GeometryFileResponse>(
 			`/spaces/${spaceId}/geometries`,
 			{
 				body: geometry,
@@ -314,6 +314,8 @@ export class SpaceApi {
 				method: "POST",
 			},
 		);
+		await this.cache.putGeometry(spaceId, result.id, geometry);
+		return result;
 	}
 
 	/**

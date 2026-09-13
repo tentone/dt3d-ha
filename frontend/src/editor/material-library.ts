@@ -1,11 +1,10 @@
-import type {Material, Object3D, Texture} from "three";
+import type {Material, Object3D} from "three";
 import {
-	MaterialLoader,
 	Mesh,
 	MeshStandardMaterial,
-	ObjectLoader,
 } from "three";
 
+import {parseMaterial} from "../service/material-codec.js";
 import type {MaterialObject} from "./material-handler.js";
 import {getMaterials} from "./material-handler.js";
 
@@ -264,21 +263,7 @@ export async function parseSerializedLibraryMaterial(
 	if (!data || typeof data !== "object") return null;
 
 	try {
-		const materialData = data as Record<string, any>;
-		const materialLoader = new MaterialLoader();
-		if (
-			Array.isArray(materialData.images) &&
-			Array.isArray(materialData.textures)
-		) {
-			const objectLoader = new ObjectLoader();
-			const images = await objectLoader.parseImagesAsync(materialData.images);
-			const textures: Record<string, Texture> = objectLoader.parseTextures(
-				materialData.textures,
-				images,
-			);
-			materialLoader.setTextures(textures);
-		}
-		return materialLoader.parse(materialData);
+		return await parseMaterial(data);
 	} catch (error) {
 		console.warn("DT3D: Failed to parse library material", error);
 		return null;

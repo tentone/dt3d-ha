@@ -1,12 +1,10 @@
-import type {Material, Object3D} from "three";
+import type {BufferGeometry, Material, Object3D} from "three";
 import {
 	BoxGeometry,
 	BufferGeometryLoader,
 	Group,
-	MaterialLoader,
 	Mesh,
 	MeshStandardMaterial,
-	ObjectLoader,
 	Texture,
 } from "three";
 
@@ -20,6 +18,7 @@ import {
 } from "../editor/entity-rules.js";
 import {
 	getMaterialEqualityKey,
+	getMaterialTargets,
 	isGeneratedMaterial,
 	isUserManagedMaterial,
 	markMaterialGenerated,
@@ -55,8 +54,12 @@ import {StaticLightObject} from "../objects/static-light.js";
 import {ViewportObject} from "../objects/viewport-object.js";
 import {
 	deserializeGeometryBinary,
+	geometryRevision,
+	getGeometryCompression,
+	rememberGeometryBinary,
 	serializeGeometryToBinary,
 } from "./geometry-binary.js";
+import {parseMaterial} from "./material-codec.js";
 import type {
 	ObjectInstancePayload,
 	ObjectInstanceResponse,
@@ -69,6 +72,11 @@ import {
 	importSpaceArchiveObjects,
 } from "./space-archive.js";
 import {SpaceDataCache} from "./space-cache.js";
+import {
+	assetContentKey,
+	getPortableTextureUrl,
+	optimizeMaterialTextures,
+} from "./texture-compression.js";
 
 type SpaceSyncDependencies = {
 	apiClient: SpaceApi;
@@ -81,6 +89,7 @@ type SpaceSyncDependencies = {
 	tree: DT3DTree;
 	resolveMeshType: (object: Object3D) => string | null;
 	createEntityObject: (entityId: string) => Object3D | null;
+	getMaterialLibrary?: () => Material[];
 };
 
 export type SpaceLoadState = {
@@ -112,6 +121,7 @@ export type SyncProgressSnapshot = {
 const OBJECT_INSTANCE_TYPE_USER_DATA_KEY = "objectInstanceType";
 const GEOMETRY_FILE_ID_DATA_KEY = "geometryFileId";
 const GEOMETRY_FILE_GEOMETRY_UUID_USER_DATA_KEY = "geometryFileGeometryUuid";
+const ASSET_MIGRATION_KEY = "assetCompressionPending";
 const GEOMETRY_BOUNDING_BOX_DATA_KEY = "geometryBoundingBox";
 const LEGACY_METADATA_MIGRATION_DATA_KEY = "legacyMetadataMigration";
 const MATERIAL_RESOURCE_READY_DATA_KEY = "materialResourceReady";
@@ -142,32 +152,6 @@ function serializeMaterial(
 		console.warn("DT3D: Failed to serialize mesh material", error);
 		return null;
 	}
-}
-
-async function parseSerializedMaterial(
-	data: unknown,
-): Promise<Material | null> {
-	if (!data || typeof data !== "object") {
-		return null;
-	}
-
-	const materialData = data as Record<string, any>;
-	const materialLoader = new MaterialLoader();
-
-	if (
-		Array.isArray(materialData.images) &&
-		Array.isArray(materialData.textures)
-	) {
-		const objectLoader = new ObjectLoader();
-		const images = await objectLoader.parseImagesAsync(materialData.images);
-		const textures: Record<string, Texture> = objectLoader.parseTextures(
-			materialData.textures,
-			images,
-		);
-		materialLoader.setTextures(textures);
-	}
-
-	return materialLoader.parse(materialData);
 }
 
 function createPlaceholderMaterial(color: number): MeshStandardMaterial {
@@ -321,6 +305,8 @@ function storeGeometryBoundingBox(data: Record<string, any>, mesh: Mesh): void {
  * SpaceSync handles loading spaces and syncing object changes with the API.
  */
 export class SpaceSync {
+	private readonly getMaterialLibrary: () => Material[];
+	private libraryCompressionPending = false;
 	private apiClient: SpaceApi;
 	private cache: SpaceDataCache;
 	private readOnly: boolean;
@@ -366,6 +352,7 @@ export class SpaceSync {
 		tree,
 		resolveMeshType,
 		createEntityObject,
+		getMaterialLibrary = () => [],
 	}: SpaceSyncDependencies) {
 		this.apiClient = apiClient;
 		this.cache = new SpaceDataCache(apiClient.getCacheNamespace());
@@ -378,6 +365,7 @@ export class SpaceSync {
 		this.tree = tree;
 		this.resolveMeshType = resolveMeshType;
 		this.createEntityObject = createEntityObject;
+		this.getMaterialLibrary = getMaterialLibrary;
 	}
 
 	public setReadOnly(readOnly: boolean): void {
@@ -399,6 +387,7 @@ export class SpaceSync {
 	 * Clear all objects from the active space and reset API mappings.
 	 */
 	public clearSpace(): void {
+		this.libraryCompressionPending = false;
 		this.resourceLoadGeneration += 1;
 		this.disposeObjects(this.space);
 		this.sceneManager.requestShadowMapUpdate();
@@ -501,9 +490,7 @@ export class SpaceSync {
 
 	public retrySpaceLoad(): Promise<SpaceResponse | null> {
 		const spaceId = this.requestedSpaceId ?? this.activeSpaceId;
-		return spaceId
-			? this.loadSpace(spaceId)
-			: this.initializeSpaceFromApi();
+		return spaceId ? this.loadSpace(spaceId) : this.initializeSpaceFromApi();
 	}
 
 	private setAvailableSpaces(spaces: SpaceResponse[]): void {
@@ -662,7 +649,7 @@ export class SpaceSync {
 			if (generation !== this.loadGeneration)
 				throw new Error("Space load superseded");
 			this.setLoadState(false);
-			void this.migrateLegacyMeshMetadata(this.resourceLoadGeneration);
+			void this.migrateLoadedAssets(this.resourceLoadGeneration);
 			if (fresh.object_instances.length === 0 && !this.readOnly) {
 				void this.syncAllObjectsToApi().catch((error) => {
 					console.error("DT3D: Failed to persist the default scene", error);
@@ -711,6 +698,32 @@ export class SpaceSync {
 				snapshot,
 			]);
 			await Promise.all([ready, this.onSpaceApplied?.(snapshot)]);
+			if (generation === this.loadGeneration) {
+				await this.optimizeObjectTextures(
+					this.space,
+					this.resourceLoadGeneration,
+				);
+				for (const material of this.getMaterialLibrary()) {
+					if (generation !== this.loadGeneration) return;
+					const changed = await optimizeMaterialTextures(material, this.cache);
+					const previous = snapshot.config?.materials?.find(
+						(item: Record<string, any>) => item.uuid === material.uuid,
+					);
+					// A library material may already have been optimized through a mesh sharing it.
+					const hasPortableMap = Object.values(material).some(
+						(value) => value instanceof Texture && getPortableTextureUrl(value),
+					);
+					if (
+						changed ||
+						(hasPortableMap &&
+							previous &&
+							JSON.stringify(previous.images) !==
+								JSON.stringify(material.toJSON().images))
+					) {
+						this.libraryCompressionPending = true;
+					}
+				}
+			}
 		} catch (error) {
 			if (!committed && generation === this.loadGeneration) {
 				this.activeSpace = previous;
@@ -912,6 +925,7 @@ export class SpaceSync {
 					createPlaceholderMaterial(color),
 				);
 				mesh.userData[GEOMETRY_FILE_ID_DATA_KEY] = geometryFileId;
+				mesh.userData.geometryCompression = data.geometryCompression;
 				mesh.userData[RESOURCE_PLACEHOLDER_DATA_KEY] = true;
 				if (storedBoundingBox) {
 					mesh.userData[GEOMETRY_BOUNDING_BOX_DATA_KEY] = storedBoundingBox;
@@ -949,12 +963,18 @@ export class SpaceSync {
 					label: instance.name,
 					load: async () => {
 						const geometry = new BufferGeometryLoader().parse(data.geometry);
+						const key = assetContentKey(
+							new TextEncoder().encode(JSON.stringify(data.geometry)),
+							"inline-geometry",
+						);
+						await this.prepareDerivedGeometry(geometry, key);
 						if (!this.isResourceTargetCurrent(mesh, resourceLoadGeneration)) {
 							geometry.dispose();
 							return;
 						}
 						const placeholderGeometry = mesh.geometry;
 						mesh.geometry = geometry;
+						mesh.userData[ASSET_MIGRATION_KEY] = true;
 						delete mesh.userData[RESOURCE_PLACEHOLDER_DATA_KEY];
 						placeholderGeometry.dispose();
 						this.tree.refreshSelectedObject();
@@ -1240,12 +1260,12 @@ export class SpaceSync {
 						if (Array.isArray(data.material)) {
 							const materials = (
 								await Promise.all(
-									data.material.map((item) => parseSerializedMaterial(item)),
+									data.material.map((item) => parseMaterial(item)),
 								)
 							).filter((item): item is Material => Boolean(item));
 							if (materials.length > 0) material = materials;
 						} else if (data.material && typeof data.material === "object") {
-							material = await parseSerializedMaterial(data.material);
+							material = await parseMaterial(data.material);
 						}
 						if (material) {
 							if (generatedMaterialDefaults.length > 0) {
@@ -1318,6 +1338,7 @@ export class SpaceSync {
 		if (!this.activeSpaceId || !this.shouldPersistObject(object)) {
 			return null;
 		}
+		await this.optimizeObjectTextures(object, this.resourceLoadGeneration);
 
 		const storedType = object.userData[OBJECT_INSTANCE_TYPE_USER_DATA_KEY];
 		const declaredType =
@@ -1329,8 +1350,8 @@ export class SpaceSync {
 		const data: Record<string, any> = {
 			sortOrder: object.parent
 				? object.parent.children
-						.filter((child) => child.internal !== true)
-						.indexOf(object)
+					.filter((child) => child.internal !== true)
+					.indexOf(object)
 				: 0,
 			position: {
 				x: position.x,
@@ -1490,6 +1511,7 @@ export class SpaceSync {
 					return null;
 				}
 				data[GEOMETRY_FILE_ID_DATA_KEY] = geometryFileId;
+				data.geometryCompression = object.userData.geometryCompression;
 				if (object.userData[RESOURCE_PLACEHOLDER_DATA_KEY] === true) {
 					const storedBoundingBox = getStoredBoundingBox(
 						object.userData[GEOMETRY_BOUNDING_BOX_DATA_KEY],
@@ -1625,6 +1647,8 @@ export class SpaceSync {
 		if (!this.shouldPersistObject(object)) {
 			return;
 		}
+		const spaceId = this.activeSpaceId;
+		const generation = this.resourceLoadGeneration;
 
 		const objectId = this.getObjectApiId(object);
 		if (!objectId) {
@@ -1636,7 +1660,13 @@ export class SpaceSync {
 		}
 
 		const payload = await this.buildObjectPayload(object);
-		if (!payload) {
+		if (
+			!payload ||
+			spaceId !== this.activeSpaceId ||
+			this.readOnly ||
+			!this.isResourceTargetCurrent(object, generation) ||
+			this.getObjectApiId(object) !== objectId
+		) {
 			return;
 		}
 
@@ -1644,13 +1674,10 @@ export class SpaceSync {
 			"Update object",
 			this.getObjectLabel(object),
 			async () => {
-				await this.apiClient.updateObject(
-					this.activeSpaceId,
-					objectId,
-					payload,
-				);
+				await this.apiClient.updateObject(spaceId, objectId, payload);
 			},
 		);
+		delete object.userData[ASSET_MIGRATION_KEY];
 	}
 
 	/**
@@ -1714,22 +1741,39 @@ export class SpaceSync {
 		}
 
 		const existingGeometryFileId = object.userData[GEOMETRY_FILE_ID_DATA_KEY];
+		const spaceId = this.activeSpaceId;
+		const geometry = object.geometry;
+		const revision = geometryRevision(geometry);
 		const uploadedGeometryUuid =
 			object.userData[GEOMETRY_FILE_GEOMETRY_UUID_USER_DATA_KEY];
 		if (
 			typeof existingGeometryFileId === "string" &&
+			!object.userData.geometryNeedsUpload &&
+			(!object.userData.geometryFileRevision ||
+				object.userData.geometryFileRevision === revision) &&
 			(!uploadedGeometryUuid || uploadedGeometryUuid === object.geometry.uuid)
 		) {
 			return existingGeometryFileId;
 		}
 
-		const geometryData = await serializeGeometryToBinary(object.geometry);
+		const geometryData = await serializeGeometryToBinary(geometry);
+		if (spaceId !== this.activeSpaceId || object.geometry !== geometry)
+			return null;
 		const response = await this.trackProgress(
 			"Upload geometry",
 			this.getObjectLabel(object),
-			() => this.apiClient.uploadGeometry(this.activeSpaceId, geometryData),
+			() => this.apiClient.uploadGeometry(spaceId, geometryData),
 		);
-		await this.cache.putGeometry(this.activeSpaceId, response.id, geometryData);
+		await this.cache.putGeometry(spaceId, response.id, geometryData);
+		if (
+			spaceId !== this.activeSpaceId ||
+			object.geometry !== geometry ||
+			revision !== geometryRevision(geometry)
+		)
+			return null;
+		object.userData.geometryCompression = getGeometryCompression(geometryData);
+		object.userData.geometryFileRevision = revision;
+		delete object.userData.geometryNeedsUpload;
 		object.userData[GEOMETRY_FILE_ID_DATA_KEY] = response.id;
 		object.userData[GEOMETRY_FILE_GEOMETRY_UUID_USER_DATA_KEY] =
 			object.geometry.uuid;
@@ -1769,6 +1813,18 @@ export class SpaceSync {
 		if (!geometry) {
 			return;
 		}
+		const storedCompression = getGeometryCompression(geometryData);
+		if (!object.userData.geometryCompression)
+			object.userData[ASSET_MIGRATION_KEY] = true;
+		if (!storedCompression.compressed) {
+			const key = `geometry-v1:${spaceId}:${geometryFileId}`;
+			const compressed = await this.prepareDerivedGeometry(geometry, key);
+			object.userData.geometryNeedsUpload =
+				getGeometryCompression(compressed).compressed;
+			if (object.userData.geometryNeedsUpload)
+				object.userData[ASSET_MIGRATION_KEY] = true;
+		}
+		object.userData.geometryCompression = storedCompression;
 		if (
 			this.activeSpaceId !== spaceId ||
 			object.userData[GEOMETRY_FILE_ID_DATA_KEY] !== geometryFileId ||
@@ -1781,9 +1837,115 @@ export class SpaceSync {
 		const placeholderGeometry = object.geometry;
 		object.geometry = geometry;
 		object.userData[GEOMETRY_FILE_GEOMETRY_UUID_USER_DATA_KEY] = geometry.uuid;
+		object.userData.geometryFileRevision = geometryRevision(geometry);
 		delete object.userData[RESOURCE_PLACEHOLDER_DATA_KEY];
 		placeholderGeometry.dispose();
 		this.tree.refreshSelectedObject();
+	}
+
+	private async prepareDerivedGeometry(
+		geometry: BufferGeometry,
+		key: string,
+	): Promise<ArrayBuffer> {
+		const cached = await this.cache.getDerivedAsset(key);
+		if (cached) {
+			try {
+				// Never promote damaged local bytes into a saved server asset.
+				const validated = await deserializeGeometryBinary(cached);
+				validated.dispose();
+				rememberGeometryBinary(geometry, cached);
+				return cached;
+			} catch (error) {
+				console.warn(
+					"DT3D: Rebuilding invalid compressed geometry cache",
+					error,
+				);
+			}
+		}
+		const data = await serializeGeometryToBinary(geometry);
+		await this.cache.putDerivedAsset(key, data);
+		return data;
+	}
+
+	private async optimizeObjectTextures(
+		root: Object3D,
+		generation: number,
+	): Promise<void> {
+		for (const target of getMaterialTargets(root)) {
+			if (!this.isResourceTargetCurrent(target, generation)) return;
+			const color = getMeshPredominantTextureColor(target as Mesh);
+			if (color) target.userData[TEXTURE_PREDOMINANT_COLOR_DATA_KEY] = color;
+			const changed = await optimizeMaterialTextures(
+				target.material,
+				this.cache,
+			);
+			if (!this.isResourceTargetCurrent(target, generation)) return;
+			if (changed) {
+				const map = getMaterialList(target.material)
+					.map((material) => (material as any).map)
+					.find((map) => map instanceof Texture);
+				const url = map && getPortableTextureUrl(map);
+				if (url && target.userData.textureDataUrl)
+					target.userData.textureDataUrl = url;
+				let owner: Object3D = target;
+				while (
+					owner.internal === true &&
+					owner.parent &&
+					owner.parent !== this.space
+				)
+					owner = owner.parent;
+				owner.userData[ASSET_MIGRATION_KEY] = true;
+			}
+		}
+	}
+
+	private async migrateLoadedAssets(generation: number): Promise<void> {
+		const spaceId = this.activeSpaceId;
+		try {
+			await this.migrateLegacyMeshMetadata(generation);
+			const objects: Object3D[] = [];
+			this.space.traverse((object) => {
+				if (object.userData[ASSET_MIGRATION_KEY]) objects.push(object);
+			});
+			let changed = false;
+			for (const object of objects) {
+				if (
+					this.readOnly ||
+					this.editingBlocked ||
+					!this.isResourceTargetCurrent(object, generation) ||
+					spaceId !== this.activeSpaceId
+				)
+					return;
+				if (!this.getObjectApiId(object) || !this.shouldPersistObject(object))
+					continue;
+				await this.syncObjectUpdate(object);
+				delete object.userData[ASSET_MIGRATION_KEY];
+				changed = true;
+			}
+			if (
+				this.libraryCompressionPending &&
+				!this.readOnly &&
+				!this.editingBlocked &&
+				spaceId === this.activeSpaceId &&
+				generation === this.resourceLoadGeneration
+			) {
+				await this.updateActiveSpaceConfig({
+					...this.activeSpace.config,
+					materials: this.getMaterialLibrary().map((material) =>
+						material.toJSON(),
+					),
+				});
+				this.libraryCompressionPending = false;
+				changed = true;
+			}
+			if (changed && spaceId === this.activeSpaceId)
+				await this.apiClient.getSpace(spaceId);
+		} catch (error) {
+			console.warn(
+				"DT3D: Asset upgrade could not be saved; cached/original assets remain available",
+				error,
+			);
+		}
 	}
 
 	private async migrateLegacyMeshMetadata(

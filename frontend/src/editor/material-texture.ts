@@ -8,6 +8,7 @@ import {
 	TextureLoader,
 } from "three";
 
+import {isKtx2DataUrl, loadKtx2DataUrl} from "../service/texture-compression.js";
 import {isImageFile, readFileAsDataUrl} from "../utils/file-utils";
 
 export type TexturedMaterialData = {
@@ -37,6 +38,7 @@ const COLOR_TEXTURE_PROPERTIES = new Set([
  * @returns A promise that resolves with the loaded texture.
  */
 export function loadTexture(dataUrl: string): Promise<Texture> {
+	if (isKtx2DataUrl(dataUrl)) return loadKtx2DataUrl(dataUrl);
 	return new Promise((resolve, reject) => {
 		new TextureLoader().load(dataUrl, resolve, undefined, reject);
 	});
@@ -256,6 +258,7 @@ function isMesh(target: MaterialTarget): target is Mesh {
  * Find the most common quantized color in a texture. Sampling a small canvas keeps this inexpensive even when the source image is large.
  */
 export function getTexturePredominantColor(texture: Texture): string | null {
+	if ("isCompressedTexture" in texture) return null;
 	const image = texture.image as
 		| (CanvasImageSource & {height?: number; width?: number})
 		| undefined;

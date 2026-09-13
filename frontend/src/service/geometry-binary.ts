@@ -34,6 +34,8 @@ type AttributeMetadata = {
 
 type GeometryMetadata = {
 	attributes: Record<string, AttributeMetadata>;
+	morphAttributes?: Record<string, AttributeMetadata[]>;
+	morphTargetsRelative?: boolean;
 	drawRange?: {
 		count: number;
 		start: number;
@@ -74,6 +76,55 @@ type DracoGeometryMetadata = {
 
 const LEGACY_MAGIC = "DT3DGEO1";
 const DRACO_MAGIC = "DT3DGEO2";
+export const GEOMETRY_COMPRESSION_KEY = "dt3dCompression";
+export type GeometryCompression = {
+	version: 1;
+	codec: "draco" | "none";
+	compressed: boolean;
+};
+const attributeIds = new WeakMap<object, number>();
+let nextAttributeId = 0;
+
+function attributeIdentity(attribute: object | null): number | null {
+	if (!attribute) return null;
+	if (!attributeIds.has(attribute))
+		attributeIds.set(attribute, ++nextAttributeId);
+	return attributeIds.get(attribute)!;
+}
+
+export function getGeometryCompression(
+	buffer: ArrayBuffer,
+): GeometryCompression {
+	const compressed =
+		new TextDecoder().decode(
+			new Uint8Array(buffer, 0, Math.min(8, buffer.byteLength)),
+		) === DRACO_MAGIC;
+	return {version: 1, codec: compressed ? "draco" : "none", compressed};
+}
+
+/** Includes buffer revisions so in-place editor changes invalidate previously uploaded bytes. */
+export function geometryRevision(geometry: BufferGeometry): string {
+	return JSON.stringify([
+		geometry.uuid,
+		attributeIdentity(geometry.index),
+		geometry.index?.version,
+		Object.entries(geometry.attributes).map(([name, a]) => [
+			name,
+			attributeIdentity(a),
+			a.count,
+			a.itemSize,
+			a.normalized,
+			"data" in a ? a.data.version : a.version,
+		]),
+		Object.entries(geometry.morphAttributes).map(([name, arrays]) => [
+			name,
+			arrays.map((a) => ("data" in a ? a.data.version : a.version)),
+		]),
+		geometry.groups,
+		geometry.drawRange,
+		geometry.morphTargetsRelative,
+	]);
+}
 const HEADER_OFFSET = 12;
 const POSITION_QUANTIZATION_BITS = 14;
 const NORMAL_QUANTIZATION_BITS = 10;
@@ -92,6 +143,21 @@ const typedArrayConstructors: Record<string, GeometryTypedArrayConstructor> = {
 };
 let decoderModulePromise: Promise<any> | null = null;
 let encoderModulePromise: Promise<any> | null = null;
+const binaryCache = new WeakMap<
+	BufferGeometry,
+	{revision: string; data: Promise<ArrayBuffer>}
+>();
+
+export function rememberGeometryBinary(
+	geometry: BufferGeometry,
+	buffer: ArrayBuffer,
+): void {
+	geometry.userData[GEOMETRY_COMPRESSION_KEY] = getGeometryCompression(buffer);
+	binaryCache.set(geometry, {
+		revision: geometryRevision(geometry),
+		data: Promise.resolve(buffer),
+	});
+}
 
 function getTypedArrayConstructor(name: string): GeometryTypedArrayConstructor {
 	const constructor = typedArrayConstructors[name];
@@ -223,6 +289,13 @@ function serializeGeometryLegacy(geometry: BufferGeometry): ArrayBuffer {
 	for (const [name, attribute] of Object.entries(geometry.attributes)) {
 		metadata.attributes[name] = serializeAttribute(attribute, chunks);
 	}
+	metadata.morphTargetsRelative = geometry.morphTargetsRelative;
+	metadata.morphAttributes = Object.fromEntries(
+		Object.entries(geometry.morphAttributes).map(([name, attributes]) => [
+			name,
+			attributes.map((attribute) => serializeAttribute(attribute, chunks)),
+		]),
+	);
 
 	if (geometry.drawRange.start !== 0 || geometry.drawRange.count !== Infinity) {
 		metadata.drawRange = {
@@ -468,27 +541,46 @@ async function serializeGeometryDraco(
 export async function serializeGeometryToBinary(
 	geometry: BufferGeometry,
 ): Promise<ArrayBuffer> {
+	const revision = geometryRevision(geometry);
+	let cached = binaryCache.get(geometry);
+	if (!cached || cached.revision !== revision) {
+		cached = {revision, data: serializeGeometryUncached(geometry)};
+		binaryCache.set(geometry, cached);
+	}
+	return (await cached.data).slice(0);
+}
+
+async function serializeGeometryUncached(
+	geometry: BufferGeometry,
+): Promise<ArrayBuffer> {
 	const position = geometry.getAttribute("position");
 	const elementCount = geometry.index?.count ?? position?.count ?? 0;
 	if (
 		!position ||
+		Object.keys(geometry.morphAttributes).length > 0 ||
 		position.count === 0 ||
 		elementCount % 3 !== 0 ||
 		!Object.values(geometry.attributes).every(
 			(attribute) => attribute.count === position.count,
 		)
 	) {
-		return serializeGeometryLegacy(geometry);
+		const data = serializeGeometryLegacy(geometry);
+		geometry.userData[GEOMETRY_COMPRESSION_KEY] = getGeometryCompression(data);
+		return data;
 	}
 
 	try {
-		return await serializeGeometryDraco(geometry);
+		const data = await serializeGeometryDraco(geometry);
+		geometry.userData[GEOMETRY_COMPRESSION_KEY] = getGeometryCompression(data);
+		return data;
 	} catch (error) {
 		console.warn(
 			"DT3D: Draco compression failed; uploading uncompressed geometry",
 			error,
 		);
-		return serializeGeometryLegacy(geometry);
+		const data = serializeGeometryLegacy(geometry);
+		geometry.userData[GEOMETRY_COMPRESSION_KEY] = getGeometryCompression(data);
+		return data;
 	}
 }
 
@@ -510,6 +602,13 @@ function deserializeGeometryLegacy(
 
 	for (const [name, attributeMetadata] of Object.entries(metadata.attributes)) {
 		geometry.setAttribute(name, deserializeAttribute(attributeMetadata, body));
+	}
+	geometry.morphTargetsRelative = metadata.morphTargetsRelative ?? false;
+	for (const [name, attributes] of Object.entries(
+		metadata.morphAttributes ?? {},
+	)) {
+		(geometry.morphAttributes as Record<string, BufferAttribute[]>)[name] =
+			attributes.map((attribute) => deserializeAttribute(attribute, body));
 	}
 
 	for (const group of metadata.groups) {
@@ -731,10 +830,21 @@ export async function deserializeGeometryBinary(
 	const body = bytes.slice(headerEnd);
 
 	if (magic === LEGACY_MAGIC) {
-		return deserializeGeometryLegacy(metadata as GeometryMetadata, body);
+		const geometry = deserializeGeometryLegacy(
+			metadata as GeometryMetadata,
+			body,
+		);
+		geometry.userData[GEOMETRY_COMPRESSION_KEY] =
+			getGeometryCompression(buffer);
+		return geometry;
 	}
 	if (magic === DRACO_MAGIC) {
-		return deserializeGeometryDraco(metadata as DracoGeometryMetadata, body);
+		const geometry = await deserializeGeometryDraco(
+			metadata as DracoGeometryMetadata,
+			body,
+		);
+		rememberGeometryBinary(geometry, buffer);
+		return geometry;
 	}
 
 	throw new Error("Invalid DT3D geometry file");

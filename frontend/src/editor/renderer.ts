@@ -30,6 +30,7 @@ import {SSRPass} from "three/examples/jsm/postprocessing/SSRPass.js";
 import {UnrealBloomPass} from "three/examples/jsm/postprocessing/UnrealBloomPass.js";
 import {CSS3DRenderer} from "three/examples/jsm/renderers/CSS3DRenderer.js";
 
+import {initializeTextureCompression} from "../service/texture-compression.js";
 import type {RenderingConfig} from "./general-config.js";
 import {normalizeGeneralConfig} from "./general-config.js";
 import type {NavigationControls, ShadowMapCapabilities} from "./scene.js";
@@ -221,6 +222,7 @@ export class RendererManager {
 		this.cssRenderer.setSize(width, height);
 
 		this.renderer = this.createRenderer();
+		initializeTextureCompression(this.renderer);
 		const pipeline = this.createPostProcessingPipeline();
 		this.composer = pipeline.composer;
 		this.renderPass = pipeline.renderPass;

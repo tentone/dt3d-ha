@@ -1,7 +1,6 @@
 import type {Object3D} from "three";
 import {LoadingManager, Mesh, MeshStandardMaterial} from "three";
 import {ColladaLoader} from "three/examples/jsm/loaders/ColladaLoader.js";
-import {DRACOLoader} from "three/examples/jsm/loaders/DRACOLoader.js";
 import {FBXLoader} from "three/examples/jsm/loaders/FBXLoader.js";
 import {GLTFLoader} from "three/examples/jsm/loaders/GLTFLoader.js";
 import {MTLLoader} from "three/examples/jsm/loaders/MTLLoader.js";
@@ -9,6 +8,8 @@ import {OBJLoader} from "three/examples/jsm/loaders/OBJLoader.js";
 import {STLLoader} from "three/examples/jsm/loaders/STLLoader.js";
 import {TDSLoader} from "three/examples/jsm/loaders/TDSLoader.js";
 
+import {createDracoLoader} from "../service/draco-loader.js";
+import {getCompressedTextureLoader} from "../service/texture-compression.js";
 import {
 	getFileExtension,
 	LocalFileAssets,
@@ -67,9 +68,16 @@ function loadModelFromFile(
 		const url = assets.getVirtualUrl(file);
 		let loaderFinished = false;
 		let managerFinished = false;
+		let loadedObject: Object3D | null = null;
+		let delivered = false;
 
 		const finishIfReady = () => {
-			if (loaderFinished && managerFinished) resolve();
+			if (!loaderFinished || !managerFinished || delivered) return;
+			delivered = true;
+			// OBJ/FBX loaders may return before their images finish. Save/optimize only
+			// once all selected-file dependencies have hydrated their texture sources.
+			if (loadedObject) onLoaded(loadedObject, file);
+			resolve();
 		};
 		manager.onStart = () => {
 			managerFinished = false;
@@ -80,7 +88,7 @@ function loadModelFromFile(
 		};
 
 		const addLoadedModel = (object: Object3D | null | undefined) => {
-			if (object) onLoaded(object, file);
+			loadedObject = object ?? null;
 			loaderFinished = true;
 			finishIfReady();
 		};
@@ -92,8 +100,9 @@ function loadModelFromFile(
 
 		if (extension === "gltf" || extension === "glb") {
 			const loader = new GLTFLoader(manager);
-			const dracoLoader = new DRACOLoader(manager);
-			dracoLoader.setDecoderPath("https://www.gstatic.com/draco/v1/decoders/");
+			const textureLoader = getCompressedTextureLoader(manager);
+			if (textureLoader) loader.setKTX2Loader(textureLoader);
+			const dracoLoader = createDracoLoader();
 			loader.setDRACOLoader(dracoLoader);
 			loader.load(
 				url,

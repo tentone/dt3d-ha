@@ -5506,6 +5506,7 @@ export class DT3DCard extends LitElement {
 		this.tree.scene = this.space;
 		this.spaceSync = new SpaceSync({
 			apiClient: this.getApiClient(),
+			getMaterialLibrary: () => this.materialLibrary,
 			readOnly: this.isVisualizationOnly(),
 			onLoadStateChanged: (state) => this.updateSpaceLoadState(state),
 			onSpacesChanged: (spaces) => {

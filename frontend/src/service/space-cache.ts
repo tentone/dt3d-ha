@@ -1,7 +1,8 @@
 import type {SpaceResponse} from "./space-api.js";
 
 const DATABASE_NAME = "dt3d-ha-space-cache";
-const DATABASE_VERSION = 3;
+const DATABASE_VERSION = 4;
+const DERIVED_ASSET_STORE = "derivedAssets";
 const SPACE_LIST_STORE = "spaceLists";
 const SPACE_STORE = "spaces";
 const GEOMETRY_STORE = "geometries";
@@ -352,6 +353,60 @@ export class SpaceDataCache {
 		return `${this.namespace}:${spaceId}`;
 	}
 
+	/** Content-addressed compression results; isolated by backend/credential namespace. */
+	public async getDerivedAsset(id: string): Promise<ArrayBuffer | null> {
+		try {
+			const database = await this.openDatabase();
+			if (!database) return null;
+			const transaction = database.transaction(DERIVED_ASSET_STORE, "readonly");
+			const done = waitForTransaction(transaction);
+			const [record] = await Promise.all([
+				getRequestResult(
+					transaction
+						.objectStore(DERIVED_ASSET_STORE)
+						.get(`${this.namespace}:${id}`),
+				),
+				done,
+			]);
+			return record?.data ?? null;
+		} catch (error) {
+			console.warn("DT3D: Failed to read compressed asset cache", error);
+			return null;
+		}
+	}
+
+	public async putDerivedAsset(id: string, data: ArrayBuffer): Promise<void> {
+		// Bound this optional cache. Complete saved scenes remain in the space cache.
+		if (data.byteLength > 16 * 1024 * 1024) return;
+		try {
+			const database = await this.openDatabase();
+			if (!database) return;
+			const transaction = database.transaction(
+				DERIVED_ASSET_STORE,
+				"readwrite",
+			);
+			const done = waitForTransaction(transaction);
+			const store = transaction.objectStore(DERIVED_ASSET_STORE);
+			store.put({key: `${this.namespace}:${id}`, data, savedAt: Date.now()});
+			await Promise.all([
+				getRequestResult(store.count()).then((count) => {
+					let remaining = count - 64;
+					if (remaining <= 0) return;
+					const request = store.index("savedAt").openKeyCursor();
+					request.onsuccess = () => {
+						const cursor = request.result;
+						if (!cursor || remaining-- <= 0) return;
+						store.delete(cursor.primaryKey);
+						cursor.continue();
+					};
+				}),
+				done,
+			]);
+		} catch (error) {
+			console.warn("DT3D: Failed to cache compressed asset", error);
+		}
+	}
+
 	private getGeometryKey(spaceId: string, geometryId: string): string {
 		return `${this.getSpaceKey(spaceId)}:${geometryId}`;
 	}
@@ -379,6 +434,12 @@ export class SpaceDataCache {
 				};
 				request.onupgradeneeded = () => {
 					const database = request.result;
+					if (!database.objectStoreNames.contains(DERIVED_ASSET_STORE)) {
+						const store = database.createObjectStore(DERIVED_ASSET_STORE, {
+							keyPath: "key",
+						});
+						store.createIndex("savedAt", "savedAt");
+					}
 					if (!database.objectStoreNames.contains(SPACE_LIST_STORE)) {
 						database.createObjectStore(SPACE_LIST_STORE, {keyPath: "key"});
 					}

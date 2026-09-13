@@ -116,6 +116,15 @@ use_self_signed_certificate: false
 - Cached lists and snapshots do not expire after one minute. Local edits retain the previous snapshot for display while invalidating its version; deleting a space removes its cached snapshot, list entry and geometry. Browsers can still evict storage, and a missing or unavailable IndexedDB cache falls back to network loading. Older object-only cache records are replaced by complete snapshots on the next successful load.
 - Update the frontend and backend together to enable the version endpoint. Run `npm run test:space-cache` in `frontend` and `go test ./...` in `addon/backend` to verify the cache and API contract.
 
+### Automatic asset compression
+
+- Imported meshes already used Draco (`DT3DGEO2`) on upload. Loading a space now also detects older raw binary (`DT3DGEO1`) and inline geometry, prepares compressed replacements, and saves them automatically when editing is allowed. Material groups, attribute types, UVs and draw ranges are retained. Unsupported geometry and morph targets use the lossless raw fallback. Procedural walls, floors and furniture continue to store compact construction parameters.
+- Static material images are automatically encoded to KTX2/Basis UASTC in a background worker, with mipmaps when requested by the original texture. Images larger than 2048 pixels on either side are resized proportionally. Color maps use sRGB; data and normal maps retain linear sampling. The loader selects a GPU format supported by the device (such as BC7, ASTC or ETC2); devices without compressed-texture support fall back to RGBA. Video, dynamic canvas, HDR, cube and other special textures are kept unchanged, as are images that cannot be read because of cross-origin restrictions or codec failures.
+- Geometry and textures carry versioned `userData.dt3dCompression` metadata. Saved mesh records also carry `geometryCompression`; textures distinguish portable compression from actual `gpuCompressed` storage. The binary format and image container determine compression status, rather than trusting a flag alone. Unchanged Draco data and KTX2 textures are reused; editing a geometry buffer invalidates its saved revision.
+- KTX2 bytes are embedded in material image records, so existing space snapshots, material libraries and `.dt3d` archives retain portable textures across different GPUs. IndexedDB caches these snapshots, uploaded geometry immediately, and derived compression results by content. The optional derived cache is bounded to 64 entries of at most 16 MiB each and is isolated by backend/service key. Read-only and offline views can optimize locally without writing to the server. Browser eviction or storage failures may require a download or recompression.
+- Both import decoders and texture codecs ship inside `dt3d-card.js`, including their WASM; no codec CDN is needed. Draco reduces geometry download/storage size, not its decoded GPU memory. GPU texture compression reduces texture memory; it does not reduce polygon counts or draw calls.
+
+
 ## Repository structure
 
 ```text
