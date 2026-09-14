@@ -123,10 +123,16 @@ function externalDracoLoaderAssets() {
 					.endsWith("/three/examples/jsm/loaders/KTX2Loader.js")
 			) {
 				return {
-					code: code.replace(
-						/new URL\([^;]+?import\.meta\.url\s*\)\.toString\(\)/g,
-						'\"\"',
-					),
+					code: code
+						.replace(
+							/new URL\([^;]+?import\.meta\.url\s*\)\.toString\(\)/g,
+							'""',
+						)
+						// Odd legacy mip chains are decoded as RGBA and immediately repaired.
+						.replace(
+							/console\.warn\( 'THREE\.KTX2Loader: ETC1S and UASTC textures should use multiple-of-four dimensions\.' \);/g,
+							"",
+						),
 					map: null,
 				};
 			}

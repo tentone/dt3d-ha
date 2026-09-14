@@ -95,11 +95,8 @@ export function initializeTextureCompression(renderer: WebGLRenderer): void {
 		// KTX2Loader transfers the input buffer to a worker. Retain portable bytes for saving.
 		const portable = buffer.slice(0);
 		const repairRequired = hasInvalidCompressedMipDimensions(buffer);
-		const decodingBuffer = repairRequired
-			? alignInvalidKtxHeader(buffer)
-			: buffer;
 		return (repairRequired ? parseForRepair : parse)(
-			decodingBuffer,
+			buffer,
 			(texture) => {
 				attachPortableSource(texture, portable, repairRequired);
 				onLoad?.(texture);
@@ -107,24 +104,6 @@ export function initializeTextureCompression(renderer: WebGLRenderer): void {
 			onError,
 		);
 	};
-}
-
-function alignInvalidKtxHeader(buffer: ArrayBuffer): ArrayBuffer {
-	const result = buffer.slice(0);
-	const header = new DataView(result);
-	header.setUint32(
-		20,
-		Math.ceil(header.getUint32(20, true) / GPU_TEXTURE_BLOCK_SIZE) *
-			GPU_TEXTURE_BLOCK_SIZE,
-		true,
-	);
-	header.setUint32(
-		24,
-		Math.ceil(header.getUint32(24, true) / GPU_TEXTURE_BLOCK_SIZE) *
-			GPU_TEXTURE_BLOCK_SIZE,
-		true,
-	);
-	return result;
 }
 
 function hasInvalidCompressedMipDimensions(buffer: ArrayBuffer): boolean {
