@@ -1,6 +1,4 @@
 {
-	"sceneRefreshing": "Loading the latest scene…",
-	"sceneRefreshFailed": "Scene refresh failed. Editing is paused until the latest scene loads.",
 	"retry": "Retry",
 	"cancel": "Cancel",
 	"confirm": "Confirm",

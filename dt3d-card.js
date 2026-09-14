@@ -2717,7 +2717,7 @@ let W0 = class extends Kt {
     return ve`
 		<div class="connection-status-container">
 			<div style="margin: 5px;" class="${this.success ? "connection-status-success" : "connection-status-error"}">
-				${this.msg}<br>${"2026-09-14T13:56:26.414Z"}
+				${this.msg}<br>${"2026-09-14T19:58:01.686Z"}
 			</div>
 		</div>`;
   }
