@@ -22,8 +22,10 @@ export const COMPRESSION_DATA_KEY = "dt3dCompression";
 export const TEXTURE_PREVIEW_DATA_KEY = "dt3dPreview";
 const MAX_TEXTURE_SIZE = 2048;
 const MAX_TEXTURE_PREVIEW_SIZE = 128;
+const GPU_TEXTURE_BLOCK_SIZE = 4;
 let maxTextureSize = MAX_TEXTURE_SIZE;
 let loader: KTX2Loader | null = null;
+let repairLoader: KTX2Loader | null = null;
 let encoder: Worker | null = null;
 let encoderIdleTimer: ReturnType<typeof setTimeout> | undefined;
 let sequence = 0;
@@ -33,6 +35,14 @@ const optimized = new WeakMap<
 	Texture,
 	{version: number; settings: string; result: Promise<Texture>}
 >();
+
+type CompressionData = {
+	version: number;
+	codec: string;
+	compressed: boolean;
+	gpuCompressed?: boolean;
+	repairRequired?: boolean;
+};
 
 function unpack(value: string): Uint8Array<ArrayBuffer> {
 	return new Uint8Array(unzlibSync(decodeBase64(value)));
@@ -65,19 +75,74 @@ export function initializeTextureCompression(renderer: WebGLRenderer): void {
 		.setTranscoderPath("dt3d-codecs/")
 		.setWorkerLimit(2)
 		.detectSupport(renderer);
+	repairLoader = new KTX2Loader(manager)
+		.setTranscoderPath("dt3d-codecs/")
+		.setWorkerLimit(1);
+	// Invalid legacy mip chains cannot be uploaded in a block-compressed GPU format.
+	// Decode those to RGBA so the normal optimizer can rebuild a valid KTX2 asset.
+	repairLoader.workerConfig = {
+		astcSupported: false,
+		astcHDRSupported: false,
+		etc1Supported: false,
+		etc2Supported: false,
+		dxtSupported: false,
+		bptcSupported: false,
+		pvrtcSupported: false,
+	};
 	const parse = loader.parse.bind(loader);
+	const parseForRepair = repairLoader.parse.bind(repairLoader);
 	loader.parse = (buffer, onLoad, onError) => {
 		// KTX2Loader transfers the input buffer to a worker. Retain portable bytes for saving.
 		const portable = buffer.slice(0);
-		return parse(
-			buffer,
+		const repairRequired = hasInvalidCompressedMipDimensions(buffer);
+		const decodingBuffer = repairRequired
+			? alignInvalidKtxHeader(buffer)
+			: buffer;
+		return (repairRequired ? parseForRepair : parse)(
+			decodingBuffer,
 			(texture) => {
-				attachPortableSource(texture, portable);
+				attachPortableSource(texture, portable, repairRequired);
 				onLoad?.(texture);
 			},
 			onError,
 		);
 	};
+}
+
+function alignInvalidKtxHeader(buffer: ArrayBuffer): ArrayBuffer {
+	const result = buffer.slice(0);
+	const header = new DataView(result);
+	header.setUint32(
+		20,
+		Math.ceil(header.getUint32(20, true) / GPU_TEXTURE_BLOCK_SIZE) *
+			GPU_TEXTURE_BLOCK_SIZE,
+		true,
+	);
+	header.setUint32(
+		24,
+		Math.ceil(header.getUint32(24, true) / GPU_TEXTURE_BLOCK_SIZE) *
+			GPU_TEXTURE_BLOCK_SIZE,
+		true,
+	);
+	return result;
+}
+
+function hasInvalidCompressedMipDimensions(buffer: ArrayBuffer): boolean {
+	if (buffer.byteLength < 44) return false;
+	const bytes = new Uint8Array(buffer, 0, 12);
+	const identifier = [171, 75, 84, 88, 32, 50, 48, 187, 13, 10, 26, 10];
+	if (!identifier.every((byte, index) => bytes[index] === byte)) return false;
+	const header = new DataView(buffer);
+	const vkFormat = header.getUint32(12, true);
+	const width = header.getUint32(20, true);
+	const height = header.getUint32(24, true);
+	const levelCount = header.getUint32(40, true);
+	return (
+		vkFormat === 0 &&
+		levelCount > 1 &&
+		(width % GPU_TEXTURE_BLOCK_SIZE !== 0 ||
+			height % GPU_TEXTURE_BLOCK_SIZE !== 0)
+	);
 }
 
 export function getCompressedTextureLoader(
@@ -106,7 +171,11 @@ function toDataUrl(buffer: ArrayBuffer): string {
 	return `data:image/ktx2;base64,${btoa(binary)}`;
 }
 
-function attachPortableSource(texture: Texture, data: ArrayBuffer): void {
+function attachPortableSource(
+	texture: Texture,
+	data: ArrayBuffer,
+	repairRequired = false,
+): void {
 	const url = toDataUrl(data);
 	sources.set(texture.source, url);
 	// Source is shared by Texture.clone(). Standard Three material/library serialization
@@ -122,6 +191,7 @@ function attachPortableSource(texture: Texture, data: ArrayBuffer): void {
 		codec: "ktx2-basis",
 		compressed: true,
 		gpuCompressed: texture.format !== RGBAFormat,
+		...(repairRequired && {repairRequired: true}),
 	};
 }
 
@@ -285,10 +355,14 @@ async function compressTexture(
 	property: string,
 	cache: SpaceDataCache,
 ): Promise<Texture> {
+	const compressionData = texture.userData[
+		COMPRESSION_DATA_KEY
+	] as CompressionData | undefined;
+	const repairRequired = compressionData?.repairRequired === true;
 	if (
 		!loader ||
-		getPortableTextureUrl(texture) ||
-		"isCompressedTexture" in texture ||
+		(!repairRequired && getPortableTextureUrl(texture)) ||
+		(!repairRequired && "isCompressedTexture" in texture) ||
 		"isVideoTexture" in texture ||
 		"isCanvasTexture" in texture ||
 		"isCubeTexture" in texture ||
@@ -297,7 +371,15 @@ async function compressTexture(
 		texture.premultiplyAlpha
 	)
 		return texture;
-	const image = texture.image as CanvasImageSource & {
+	const repairTexture = texture as Texture & {
+		mipmaps?: Array<{
+			width: number;
+			height: number;
+			data: Uint8Array;
+		}>;
+	};
+	const repairMip = repairRequired ? repairTexture.mipmaps?.[0] : undefined;
+	const image = (repairMip ?? texture.image) as CanvasImageSource & {
 		width: number;
 		height: number;
 		data?: Uint8Array;
@@ -308,26 +390,36 @@ async function compressTexture(
 			1,
 			maxTextureSize / Math.max(image.width, image.height),
 		);
-		const width = Math.max(1, Math.round(image.width * scale));
-		const height = Math.max(1, Math.round(image.height * scale));
+		const width = alignTextureDimension(Math.round(image.width * scale));
+		const height = alignTextureDimension(Math.round(image.height * scale));
 		const canvas = document.createElement("canvas");
 		canvas.width = width;
 		canvas.height = height;
 		const context = canvas.getContext("2d", {willReadFrequently: true});
 		if (!context) return texture;
 		if (image.data) {
-			// Preserve raw data maps exactly before encoding; HDR/special formats are excluded.
+			// HDR/special formats are excluded. Use an intermediate canvas so raw maps can
+			// be resized to GPU block boundaries just like browser image sources.
 			if (
 				texture.format !== RGBAFormat ||
-				image.data.length !== image.width * image.height * 4 ||
-				scale !== 1
+				image.data.length !== image.width * image.height * 4
 			)
 				return texture;
-			context.putImageData(
-				new ImageData(new Uint8ClampedArray(image.data), width, height),
+			const sourceCanvas = document.createElement("canvas");
+			sourceCanvas.width = image.width;
+			sourceCanvas.height = image.height;
+			const sourceContext = sourceCanvas.getContext("2d");
+			if (!sourceContext) return texture;
+			sourceContext.putImageData(
+				new ImageData(
+					new Uint8ClampedArray(image.data),
+					image.width,
+					image.height,
+				),
 				0,
 				0,
 			);
+			context.drawImage(sourceCanvas, 0, 0, width, height);
 		} else context.drawImage(image, 0, 0, width, height);
 		const pixels = new Uint8Array(
 			context.getImageData(0, 0, width, height).data.buffer,
@@ -375,6 +467,21 @@ async function compressTexture(
 		};
 		return texture;
 	}
+}
+
+function alignTextureDimension(value: number): number {
+	const maximum = Math.max(
+		GPU_TEXTURE_BLOCK_SIZE,
+		Math.floor(maxTextureSize / GPU_TEXTURE_BLOCK_SIZE) *
+			GPU_TEXTURE_BLOCK_SIZE,
+	);
+	return Math.min(
+		maximum,
+		Math.max(
+			GPU_TEXTURE_BLOCK_SIZE,
+			Math.ceil(value / GPU_TEXTURE_BLOCK_SIZE) * GPU_TEXTURE_BLOCK_SIZE,
+		),
+	);
 }
 
 /** Converts every static material map (including normal/roughness/alpha), once per source revision. */
