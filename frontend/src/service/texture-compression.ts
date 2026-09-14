@@ -26,6 +26,8 @@ const GPU_TEXTURE_BLOCK_SIZE = 4;
 let maxTextureSize = MAX_TEXTURE_SIZE;
 let loader: KTX2Loader | null = null;
 let repairLoader: KTX2Loader | null = null;
+let repairLoaderIdleTimer: ReturnType<typeof setTimeout> | undefined;
+let repairLoads = 0;
 let encoder: Worker | null = null;
 let encoderIdleTimer: ReturnType<typeof setTimeout> | undefined;
 let sequence = 0;
@@ -75,22 +77,52 @@ export function initializeTextureCompression(renderer: WebGLRenderer): void {
 		.setTranscoderPath("dt3d-codecs/")
 		.setWorkerLimit(2)
 		.detectSupport(renderer);
-	repairLoader = new KTX2Loader(manager)
-		.setTranscoderPath("dt3d-codecs/")
-		.setWorkerLimit(1);
-	// Invalid legacy mip chains cannot be uploaded in a block-compressed GPU format.
-	// Decode those to RGBA so the normal optimizer can rebuild a valid KTX2 asset.
-	repairLoader.workerConfig = {
-		astcSupported: false,
-		astcHDRSupported: false,
-		etc1Supported: false,
-		etc2Supported: false,
-		dxtSupported: false,
-		bptcSupported: false,
-		pvrtcSupported: false,
-	};
 	const parse = loader.parse.bind(loader);
-	const parseForRepair = repairLoader.parse.bind(repairLoader);
+	const parseForRepair: KTX2Loader["parse"] = (buffer, onLoad, onError) => {
+		clearTimeout(repairLoaderIdleTimer);
+		if (!repairLoader) {
+			repairLoader = new KTX2Loader(manager)
+				.setTranscoderPath("dt3d-codecs/")
+				.setWorkerLimit(1);
+			// Invalid legacy mip chains cannot be uploaded in a block-compressed GPU
+			// format. Decode them to RGBA so the optimizer can rebuild valid KTX2.
+			repairLoader.workerConfig = {
+				astcSupported: false,
+				astcHDRSupported: false,
+				etc1Supported: false,
+				etc2Supported: false,
+				dxtSupported: false,
+				bptcSupported: false,
+				pvrtcSupported: false,
+			};
+		}
+		const activeLoader = repairLoader;
+		repairLoads += 1;
+		let finished = false;
+		const finish = () => {
+			if (finished) return;
+			finished = true;
+			repairLoads -= 1;
+			if (repairLoads > 0) return;
+			repairLoaderIdleTimer = setTimeout(() => {
+				if (repairLoads === 0 && repairLoader === activeLoader) {
+					activeLoader.dispose();
+					repairLoader = null;
+				}
+			}, 1000);
+		};
+		activeLoader.parse(
+			buffer,
+			(texture) => {
+				finish();
+				onLoad?.(texture);
+			},
+			(error) => {
+				finish();
+				onError?.(error);
+			},
+		);
+	};
 	loader.parse = (buffer, onLoad, onError) => {
 		// KTX2Loader transfers the input buffer to a worker. Retain portable bytes for saving.
 		const portable = buffer.slice(0);

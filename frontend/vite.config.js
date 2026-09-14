@@ -132,6 +132,11 @@ function externalDracoLoaderAssets() {
 						.replace(
 							/console\.warn\( 'THREE\.KTX2Loader: ETC1S and UASTC textures should use multiple-of-four dimensions\.' \);/g,
 							"",
+						)
+						// The RGBA repair loader overlaps briefly, then disposes after its queue drains.
+						.replace(
+							/console\.warn\(\s*'THREE\.KTX2Loader: Multiple active KTX2 loaders may cause performance issues\.'\s*\+ ' Use a single KTX2Loader instance, or call \.dispose\(\) on old instances\.'\s*\);/g,
+							"",
 						),
 					map: null,
 				};
