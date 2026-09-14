@@ -19,7 +19,9 @@ import {decodeBase64} from "../utils/base64.js";
 import type {SpaceDataCache} from "./space-cache.js";
 
 export const COMPRESSION_DATA_KEY = "dt3dCompression";
+export const TEXTURE_PREVIEW_DATA_KEY = "dt3dPreview";
 const MAX_TEXTURE_SIZE = 2048;
+const MAX_TEXTURE_PREVIEW_SIZE = 128;
 let maxTextureSize = MAX_TEXTURE_SIZE;
 let loader: KTX2Loader | null = null;
 let encoder: Worker | null = null;
@@ -125,6 +127,40 @@ function attachPortableSource(texture: Texture, data: ArrayBuffer): void {
 
 export function getPortableTextureUrl(texture: Texture): string | undefined {
 	return sources.get(texture.source);
+}
+
+/** A small browser-readable thumbnail retained when the live image becomes GPU-only. */
+export function getTexturePreviewDataUrl(texture: Texture): string | undefined {
+	const value = texture.userData[TEXTURE_PREVIEW_DATA_KEY];
+	return typeof value === "string" && value.startsWith("data:image/")
+		? value
+		: undefined;
+}
+
+function createTexturePreviewDataUrl(source: CanvasImageSource): string | undefined {
+	const dimensions = source as CanvasImageSource & {
+		height?: number;
+		width?: number;
+	};
+	const sourceWidth = Number(dimensions.width);
+	const sourceHeight = Number(dimensions.height);
+	if (sourceWidth <= 0 || sourceHeight <= 0) return undefined;
+
+	try {
+		const scale = Math.min(
+			1,
+			MAX_TEXTURE_PREVIEW_SIZE / Math.max(sourceWidth, sourceHeight),
+		);
+		const preview = document.createElement("canvas");
+		preview.width = Math.max(1, Math.round(sourceWidth * scale));
+		preview.height = Math.max(1, Math.round(sourceHeight * scale));
+		const context = preview.getContext("2d");
+		if (!context) return undefined;
+		context.drawImage(source, 0, 0, preview.width, preview.height);
+		return preview.toDataURL("image/webp", 0.82);
+	} catch {
+		return undefined;
+	}
 }
 
 export function decodeKtx2(data: ArrayBuffer): Promise<Texture> {
@@ -304,6 +340,9 @@ async function compressTexture(
 			normalMap: property === "normalMap",
 			mipmaps: texture.generateMipmaps,
 		};
+		const previewDataUrl =
+			getTexturePreviewDataUrl(texture) ??
+			createTexturePreviewDataUrl(canvas);
 		const key = assetContentKey(pixels, JSON.stringify(options));
 		let data = await cache.getDerivedAsset(key);
 		let result: Texture | undefined;
@@ -320,6 +359,9 @@ async function compressTexture(
 			await cache.putDerivedAsset(key, data);
 		}
 		copyTextureSettings(texture, result);
+		if (previewDataUrl) {
+			result.userData[TEXTURE_PREVIEW_DATA_KEY] = previewDataUrl;
+		}
 		return result;
 	} catch (error) {
 		console.warn(

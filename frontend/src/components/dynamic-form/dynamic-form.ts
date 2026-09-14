@@ -1,6 +1,7 @@
 import type {TemplateResult} from "lit";
 import {html, LitElement, unsafeCSS} from "lit";
 import {customElement, property} from "lit/decorators.js";
+import type {Texture} from "three";
 import {
 	ClampToEdgeWrapping,
 	CubeReflectionMapping,
@@ -13,6 +14,7 @@ import {
 	UVMapping,
 } from "three";
 
+import {getTexturePreviewDataUrl} from "../../service/texture-compression.js";
 import componentStyles from "./dynamic-form.css?inline";
 
 /**
@@ -243,6 +245,10 @@ export class DynamicForm extends LitElement {
 	private getTexturePreviewUrl(value: unknown): string | null {
 		if (!value || typeof value !== "object") {
 			return null;
+		}
+		if ((value as {isTexture?: unknown}).isTexture === true) {
+			const retainedPreview = getTexturePreviewDataUrl(value as Texture);
+			if (retainedPreview) return retainedPreview;
 		}
 
 		const texture = value as {

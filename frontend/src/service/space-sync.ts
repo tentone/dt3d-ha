@@ -306,6 +306,7 @@ function storeGeometryBoundingBox(data: Record<string, any>, mesh: Mesh): void {
  */
 export class SpaceSync {
 	private readonly getMaterialLibrary: () => Material[];
+	private configUpdateQueue: Promise<void> = Promise.resolve();
 	private libraryCompressionPending = false;
 	private apiClient: SpaceApi;
 	private cache: SpaceDataCache;
@@ -751,24 +752,47 @@ export class SpaceSync {
 		}
 
 		const spaceId = this.activeSpaceId;
-		const activeSpace = this.activeSpace;
-		const updatedSpace = await this.apiClient.updateSpace(spaceId, {
-			name: metadata?.name ?? activeSpace.name,
-			description: metadata?.description ?? activeSpace.description,
-			is_default: metadata?.isDefault ?? activeSpace.is_default,
-			config,
-		});
-		if (this.activeSpaceId === spaceId) {
-			this.activeSpace = updatedSpace;
-		}
-		this.availableSpaces = this.availableSpaces.map((space) => {
-			if (space.id === updatedSpace.id) {
-				return updatedSpace;
+		const update = this.configUpdateQueue.then(async () => {
+			if (
+				this.readOnly ||
+				this.editingBlocked ||
+				this.activeSpaceId !== spaceId ||
+				!this.activeSpace
+			) {
+				return null;
 			}
-			return updatedSpace.is_default ? {...space, is_default: false} : space;
-		});
 
-		return updatedSpace;
+			const activeSpace = this.activeSpace;
+			const updatedSpace = await this.apiClient.updateSpace(spaceId, {
+				name: metadata?.name ?? activeSpace.name,
+				description: metadata?.description ?? activeSpace.description,
+				is_default: metadata?.isDefault ?? activeSpace.is_default,
+				config,
+			});
+			if (this.activeSpaceId === spaceId) {
+				this.activeSpace = updatedSpace;
+			}
+			this.availableSpaces = this.availableSpaces.map((space) => {
+				if (space.id === updatedSpace.id) {
+					return updatedSpace;
+				}
+				return updatedSpace.is_default ? {...space, is_default: false} : space;
+			});
+
+			return updatedSpace;
+		});
+		this.configUpdateQueue = update.then(
+			(): void => undefined,
+			(): void => undefined,
+		);
+		return update;
+	}
+
+	/** Prepare library materials before their JSON is captured for persistence. */
+	public async prepareMaterialTexturesForSync(
+		material: Material | Material[],
+	): Promise<void> {
+		await optimizeMaterialTextures(material, this.cache);
 	}
 
 	/**

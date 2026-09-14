@@ -341,7 +341,7 @@ export class DT3DCard extends LitElement {
 	private materialLibrary: Material[] = [];
 
 	private materialLibraryLoadSequence = 0;
-	
+
 	private materialLibraryReady: Promise<void> = Promise.resolve();
 
 	private selectedMaterial: Material | null = null;
@@ -2009,12 +2009,15 @@ export class DT3DCard extends LitElement {
 
 	private async persistSpaceConfiguration(): Promise<void> {
 		if (this.isEditingDisabled()) return;
-		const metadata = this.pendingSpaceMetadata;
-		if (metadata && !metadata.name.trim()) {
-			return;
-		}
 
 		try {
+			await this.materialLibraryReady;
+			if (this.isEditingDisabled()) return;
+			await this.spaceSync?.prepareMaterialTexturesForSync(this.materialLibrary);
+			if (this.isEditingDisabled()) return;
+			const metadata = this.pendingSpaceMetadata;
+			if (metadata && !metadata.name.trim()) return;
+
 			const updatedSpace = await this.spaceSync?.updateActiveSpaceConfig(
 				this.getSpaceConfiguration(),
 				metadata
