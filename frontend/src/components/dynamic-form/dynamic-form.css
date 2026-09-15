@@ -107,16 +107,16 @@ select option {
 }
 
 input[type="color"]::-moz-color-swatch {
-  border: none;
+	border: none;
 }
 
 input[type="color"]::-webkit-color-swatch-wrapper {
-  padding: 0;
-  border-radius: 0;
+	padding: 0;
+	border-radius: 0;
 }
 
 input[type="color"]::-webkit-color-swatch {
-  border: none;
+	border: none;
 }
 
 .info-input {
@@ -228,11 +228,13 @@ input[type="color"]::-webkit-color-swatch {
 	white-space: nowrap;
 }
 
+.texture-download-button,
 .texture-clear-button {
 	display: flex;
 	align-items: center;
 	justify-content: center;
 	width: 36px;
+	flex-shrink: 0;
 	padding: 0;
 	box-sizing: border-box;
 	border: 1px solid var(--divider-color);
@@ -242,12 +244,24 @@ input[type="color"]::-webkit-color-swatch {
 	cursor: pointer;
 }
 
+.texture-download-button {
+	color: var(--primary-text-color);
+}
+
+.texture-download-error {
+	color: var(--error-color, #db4437);
+	font-size: 12px;
+}
+
+.texture-download-button:hover:not(:disabled),
+.texture-download-button:focus-visible,
 .texture-clear-button:hover:not(:disabled),
 .texture-clear-button:focus-visible {
 	border-color: currentColor;
 	outline: none;
 }
 
+.texture-download-button:disabled,
 .texture-clear-button:disabled {
 	opacity: 0.5;
 	cursor: default;

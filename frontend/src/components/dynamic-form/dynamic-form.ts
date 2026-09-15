@@ -15,6 +15,7 @@ import {
 } from "three";
 
 import {getTexturePreviewDataUrl} from "../../service/texture-compression.js";
+import {downloadTextureImage} from "../../utils/texture-download.js";
 import componentStyles from "./dynamic-form.css?inline";
 
 /**
@@ -58,6 +59,7 @@ export type DynamicFormInputField = {
 	mixed?: boolean;
 	replaceLabel?: string;
 	clearLabel?: string;
+	downloadLabel?: string;
 	/** Restrict entity options by matching their ID or friendly name. */
 	entityFilter?: RegExp | string;
 	/**
@@ -474,6 +476,31 @@ export class DynamicForm extends LitElement {
 		control?.querySelector<HTMLInputElement>(".texture-file-input")?.click();
 	}
 
+	private textureDownloads = new Set<string>();
+	private textureDownloadErrors = new Map<string, string>();
+
+	private async downloadTexture(
+		field: DynamicFormInputField,
+		value: Texture,
+	): Promise<void> {
+		if (this.textureDownloads.has(field.attribute)) return;
+		this.textureDownloads.add(field.attribute);
+		this.textureDownloadErrors.delete(field.attribute);
+		this.requestUpdate();
+		try {
+			await downloadTextureImage(value, field.label);
+		} catch (error) {
+			console.warn("Unable to download texture", error);
+			this.textureDownloadErrors.set(
+				field.attribute,
+				"Unable to download this texture as an image.",
+			);
+		} finally {
+			this.textureDownloads.delete(field.attribute);
+			this.requestUpdate();
+		}
+	}
+
 	private renderTextureField(
 		field: DynamicFormInputField,
 		data: unknown,
@@ -580,6 +607,16 @@ export class DynamicForm extends LitElement {
 						? html`
 								<button
 									type="button"
+									class="texture-download-button"
+									?disabled=${this.textureDownloads.has(field.attribute)}
+									title=${field.downloadLabel ?? "Download texture as PNG"}
+									aria-label=${field.downloadLabel ?? "Download texture as PNG"}
+									@click=${() => this.downloadTexture(field, value as Texture)}
+								>
+									<ha-icon icon="mdi:download"></ha-icon>
+								</button>
+								<button
+									type="button"
 									class="texture-clear-button"
 									?disabled=${!field.editable}
 									title=${field.clearLabel ?? "Clear texture"}
@@ -591,6 +628,11 @@ export class DynamicForm extends LitElement {
 							`
 						: null}
 				</div>
+				${this.textureDownloadErrors.has(field.attribute)
+					? html`<span class="texture-download-error" role="alert"
+							>${this.textureDownloadErrors.get(field.attribute)}</span
+						>`
+					: null}
 				${texture
 					? html`
 							<div class="texture-properties">
