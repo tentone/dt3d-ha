@@ -3,6 +3,7 @@ import type {Group} from "three";
 import type {WallConnectionShape,WallObject} from "../objects/house/wall.js";
 import type {WallEndpointReference} from "./wall-junctions.js";
 import {collectWallEndpoints, groupWallJunctions} from "./wall-junctions.js";
+import {resolveWallOcclusionMaterialUuid} from "./wall-occlusion.js";
 
 /** Derives separate corner meshes and wall-body insets from shared endpoints. */
 export class WallConnectionManager {
@@ -74,7 +75,7 @@ export class WallConnectionManager {
 			const customization = wall.getCustomization();
 			wallParts.set(
 				wall.uuid,
-				`${wallParts.get(wall.uuid) ?? `${wall.uuid}:${wall.height}:${wall.thickness}:${wall.connectionShape}:${wall.connectionShapeRevision}:${customization.baseboardEnabled}:${customization.baseboardHeight}:${customization.baseboardDepth}:${customization.baseboardColor}:${materials.map(({uuid}) => uuid).join(",")}`}|${part}`,
+				`${wallParts.get(wall.uuid) ?? `${wall.uuid}:${wall.height}:${wall.thickness}:${wall.connectionShape}:${wall.connectionShapeRevision}:${customization.baseboardEnabled}:${customization.baseboardHeight}:${customization.baseboardDepth}:${customization.baseboardColor}:${materials.map(resolveWallOcclusionMaterialUuid).join(",")}`}|${part}`,
 			);
 		}
 		return `${shape}|${[...wallParts.values()].sort().join(";")}`;

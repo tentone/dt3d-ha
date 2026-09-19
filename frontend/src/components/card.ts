@@ -402,7 +402,7 @@ export class DT3DCard extends LitElement {
 	 */
 	private wallManager: WallManager | null = null;
 
-	/** Hides camera-facing exterior walls for visualization cutaway views. */
+	/** Makes camera-facing exterior walls translucent in visualization views. */
 	private wallOcclusionManager = new WallOcclusionManager();
 
 	/** Builds separate wall-junction meshes at shared centerline endpoints. */

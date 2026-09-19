@@ -1,5 +1,5 @@
-import type {Camera, Group} from "three";
-import {Frustum, Matrix4, Vector3} from "three";
+import type {Camera, Group, Material} from "three";
+import {Frustum, Matrix4, Mesh, Vector3} from "three";
 
 import {WallObject} from "../objects/house/wall.js";
 
@@ -8,6 +8,14 @@ const EXIT_LATERAL_VIEW_ANGLE = (40 * Math.PI) / 180;
 const MINIMUM_FACING_FACTOR = 0.25;
 const MINIMUM_ORIENTATION_DIFFERENCE = (15 * Math.PI) / 180;
 const CONNECTED_ENDPOINT_DISTANCE = 0.2;
+const OCCLUDING_WALL_OPACITY = 0.2;
+const SOURCE_MATERIAL_UUID_KEY = "wallOcclusionSourceMaterialUuid";
+
+/** Keep derived wall junctions stable while a temporary cutaway material is active. */
+export function resolveWallOcclusionMaterialUuid(material: Material): string {
+	const sourceUuid = material.userData[SOURCE_MATERIAL_UUID_KEY];
+	return typeof sourceUuid === "string" ? sourceUuid : material.uuid;
+}
 
 type WallCandidate = {
 	wall: WallObject;
@@ -23,12 +31,20 @@ export type WallOcclusionContext = {
 	space: Group | null;
 };
 
+type TransparentMeshState = {
+	wall: WallObject;
+	material: Material | Material[];
+	transparentMaterial: Material | Material[];
+	castShadow: boolean;
+};
+
 /**
- * Creates a visualization-only cutaway by hiding the closest camera-facing
- * wall and, at a corner, one connected wall with a different orientation.
+ * Creates a visualization-only cutaway by making the closest camera-facing
+ * wall translucent and, at a corner, one connected wall with a different
+ * orientation.
  */
 export class WallOcclusionManager {
-	private hiddenWalls = new Set<WallObject>();
+	private transparentMeshes = new Map<Mesh, TransparentMeshState>();
 
 	private lateralViewActive = false;
 
@@ -63,7 +79,7 @@ export class WallOcclusionManager {
 			: ENTER_LATERAL_VIEW_ANGLE;
 		this.lateralViewActive = elevation <= threshold;
 		if (!this.lateralViewActive || horizontalMagnitude < 1e-6) {
-			this.restoreHiddenWalls();
+			this.restoreTransparentWalls();
 			return;
 		}
 
@@ -98,7 +114,7 @@ export class WallOcclusionManager {
 
 	public restore(): void {
 		this.lateralViewActive = false;
-		this.restoreHiddenWalls();
+		this.restoreTransparentWalls();
 	}
 
 	private collectCandidates(space: Group): WallCandidate[] {
@@ -153,7 +169,7 @@ export class WallOcclusionManager {
 	}
 
 	private isAvailable(wall: WallObject, space: Group): boolean {
-		if (!wall.visible && !this.hiddenWalls.has(wall)) {
+		if (!wall.visible) {
 			return false;
 		}
 
@@ -190,22 +206,80 @@ export class WallOcclusionManager {
 	}
 
 	private applySelection(selected: Set<WallObject>): void {
-		for (const wall of this.hiddenWalls) {
-			if (!selected.has(wall)) {
-				wall.visible = true;
+		const selectedMeshes = new Map<Mesh, WallObject>();
+		for (const wall of selected) {
+			for (const mesh of this.getWallMeshes(wall)) {
+				selectedMeshes.set(mesh, wall);
 			}
 		}
-		for (const wall of selected) {
-			wall.visible = false;
+
+		for (const [mesh, state] of this.transparentMeshes) {
+			if (selectedMeshes.get(mesh) === state.wall) {
+				continue;
+			}
+			this.restoreMesh(mesh, state);
+			this.transparentMeshes.delete(mesh);
 		}
-		this.hiddenWalls = selected;
+
+		for (const [mesh, wall] of selectedMeshes) {
+			if (this.transparentMeshes.has(mesh)) {
+				continue;
+			}
+			const state: TransparentMeshState = {
+				wall,
+				material: mesh.material,
+				transparentMaterial: this.createTransparentMaterial(mesh.material),
+				castShadow: mesh.castShadow,
+			};
+			this.transparentMeshes.set(mesh, state);
+			mesh.material = state.transparentMaterial;
+			mesh.castShadow = false;
+		}
 	}
 
-	private restoreHiddenWalls(): void {
-		for (const wall of this.hiddenWalls) {
-			wall.visible = true;
+	private createTransparentMaterial(
+		material: Material | Material[],
+	): Material | Material[] {
+		const create = (source: Material): Material => {
+			const transparent = source.clone();
+			transparent.depthWrite = false;
+			transparent.opacity = Math.min(source.opacity, OCCLUDING_WALL_OPACITY);
+			transparent.transparent = true;
+			transparent.userData[SOURCE_MATERIAL_UUID_KEY] =
+				resolveWallOcclusionMaterialUuid(source);
+			transparent.needsUpdate = true;
+			return transparent;
+		};
+		return Array.isArray(material) ? material.map(create) : create(material);
+	}
+
+	/** Include the wall structure and every attached opening or accessory. */
+	private getWallMeshes(wall: WallObject): Mesh[] {
+		const meshes: Mesh[] = [];
+		wall.traverse((object) => {
+			if (object instanceof Mesh) {
+				meshes.push(object);
+			}
+		});
+		return meshes;
+	}
+
+	private restoreTransparentWalls(): void {
+		for (const [mesh, state] of this.transparentMeshes) {
+			this.restoreMesh(mesh, state);
 		}
-		this.hiddenWalls.clear();
+		this.transparentMeshes.clear();
+	}
+
+	private restoreMesh(mesh: Mesh, state: TransparentMeshState): void {
+		mesh.material = state.material;
+		mesh.castShadow = state.castShadow;
+		const materials = Array.isArray(state.transparentMaterial)
+			? state.transparentMaterial
+			: [state.transparentMaterial];
+		for (const material of materials) {
+			material.dispose();
+		}
 	}
 
 	private horizontalDistanceToSegmentSquared(
