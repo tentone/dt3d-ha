@@ -16,7 +16,7 @@ import {getCSSVar} from "../utils/css-utils.js";
 import {markObjectInternal} from "../utils/internal-object.js";
 import {collectWallEndpoints, groupWallJunctions, sameWallJunctionPoint, WALL_JUNCTION_EPSILON} from "./wall-junctions.js";
 
-type WallEndpoint = "start" | "end";
+export type WallEndpoint = "start" | "end";
 
 type WallEndpointContext = {
 	canvas: HTMLCanvasElement | null;
@@ -64,7 +64,7 @@ type EndpointSnapshot = {
 };
 
 type EndpointDrag = {
-	handle: WallEndpointHandle;
+	handle: WallEndpointHandle | null;
 	origin: Vector3;
 	references: EndpointReference[];
 	before: EndpointSnapshot | null;
@@ -375,6 +375,132 @@ export class WallEndpointManager {
 				redo: () => this.applySnapshot(after),
 			},
 		};
+	}
+
+	/** Move one logical endpoint using the same junction-aware edit as a handle drag. */
+	public setEndpoint(
+		wall: WallObject,
+		endpoint: WallEndpoint,
+		point: Vector3,
+	): WallEndpointEdit | null {
+		const {space} = this.getContext();
+		if (
+			!space ||
+			wall.locked ||
+			!wall.parent ||
+			![point.x, point.y, point.z].every(Number.isFinite)
+		) {
+			return null;
+		}
+
+		const endpoints = this.getWallSpaceEndpoints(wall, space);
+		const origin = endpoints[endpoint];
+		if (point.distanceTo(origin) <= POINT_EPSILON) {
+			return null;
+		}
+
+		const drag: EndpointDrag = {
+			handle: null,
+			origin: origin.clone(),
+			references: [],
+			before: null,
+			createdWalls: [],
+			existingWalls: [],
+			existingChildren: [],
+			blocked: false,
+		};
+		if (!this.initializeDrag(drag, space) || !drag.before) {
+			return null;
+		}
+
+		if (
+			drag.references.some(
+				(reference) => point.distanceTo(reference.fixedPoint) < MINIMUM_WALL_LENGTH,
+			)
+		) {
+			this.applySnapshot(drag.before);
+			return null;
+		}
+
+		for (const reference of drag.references) {
+			const start =
+				reference.endpoint === "start" ? point : reference.fixedPoint;
+			const end =
+				reference.endpoint === "end" ? point : reference.fixedPoint;
+			this.setWallSpacePoints(reference.wall, start, end, space);
+		}
+
+		const allWalls = [...drag.existingWalls, ...drag.createdWalls];
+		const allChildren = [
+			...new Set([
+				...drag.existingChildren,
+				...allWalls.flatMap((candidate) => this.getWallUserChildren(candidate)),
+			]),
+		];
+		const after = this.captureSnapshot(allWalls, allChildren, space);
+		const before = drag.before;
+		this.refreshHandles();
+
+		return {
+			createdWalls: drag.createdWalls,
+			existingObjects: [
+				...new Set<Object3D>([
+					...drag.existingWalls,
+					...drag.existingChildren,
+				]),
+			],
+			undo: () => this.applySnapshot(before),
+			redo: () => this.applySnapshot(after),
+		};
+	}
+
+	/** Resize a wall about its center, moving both connected junctions. */
+	public setLength(wall: WallObject, length: number): WallEndpointEdit | null {
+		const {space} = this.getContext();
+		if (
+			!space ||
+			wall.locked ||
+			!wall.parent ||
+			!Number.isFinite(length) ||
+			length < MINIMUM_WALL_LENGTH ||
+			Math.abs(length - wall.length) <= POINT_EPSILON
+		) {
+			return null;
+		}
+
+		const {start, end} = this.getWallSpaceEndpoints(wall, space);
+		const direction = end.clone().sub(start);
+		if (direction.lengthSq() <= POINT_EPSILON * POINT_EPSILON) {
+			return null;
+		}
+		direction.normalize();
+		const midpoint = start.clone().add(end).multiplyScalar(0.5);
+		const nextStart = midpoint.clone().addScaledVector(direction, -length / 2);
+		const nextEnd = midpoint.clone().addScaledVector(direction, length / 2);
+
+		// Preflight both sides so a locked wall on either junction cannot leave a
+		// half-applied resize.
+		for (const point of [start, end]) {
+			const junction = this.findJunction(point, space);
+			const walls = [
+				...junction.endpoints.map(({wall: candidate}) => candidate),
+				...junction.interiorWalls,
+			];
+			if (walls.some((candidate) => candidate.locked)) {
+				return null;
+			}
+		}
+
+		const startEdit = this.setEndpoint(wall, "start", nextStart);
+		if (!startEdit) {
+			return null;
+		}
+		const endEdit = this.setEndpoint(wall, "end", nextEnd);
+		if (!endEdit) {
+			startEdit.undo();
+			return null;
+		}
+		return this.combineEdits(startEdit, endEdit);
 	}
 
 	/**
@@ -915,6 +1041,7 @@ export class WallEndpointManager {
 		wall.setFromPoints(
 			this.spacePointToParent(start, wall.parent, space),
 			this.spacePointToParent(end, wall.parent, space),
+			true,
 		);
 		wall.updateWorldMatrix(false, true);
 	}

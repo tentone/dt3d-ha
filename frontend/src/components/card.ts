@@ -192,6 +192,7 @@ import type {DT3DMeshMenu} from "./mesh-menu/mesh-menu.js";
 import type {
 	MaterialUpdateDetail,
 	ObjectUpdateDetail,
+	WallGeometryUpdateDetail,
 } from "./object-inspector/object-inspector.js";
 import type {
 	DT3DObjectSidebar,
@@ -5814,6 +5815,40 @@ export class DT3DCard extends LitElement {
 			if (updatedObjects.some((object) => this.objectContainsWall(object))) {
 				this.reconcileWallNetworkAfterChange("Wall update");
 			}
+		});
+
+		this.tree.addEventListener("wall-geometry-updated", (event: Event) => {
+			if (this.isEditingDisabled() || !this.wallEndpointManager) {
+				return;
+			}
+
+			const {wall, attribute, value} = (
+				event as CustomEvent<WallGeometryUpdateDetail>
+			).detail;
+			let edit: WallEndpointEdit | null;
+			if (attribute === "length") {
+				edit = this.wallEndpointManager.setLength(wall, value as number);
+			} else {
+				edit = this.wallEndpointManager.setEndpoint(
+					wall,
+					attribute === "startPoint" ? "start" : "end",
+					value as Vector3,
+				);
+			}
+			if (!edit) {
+				this.tree.refreshSelectedObject();
+				return;
+			}
+
+			const wallEdit =
+				this.wallEndpointManager.analyzeWallJoins(edit) ?? edit;
+			const floorEdit =
+				this.floorManager?.reconcileFloorsFromClosedWalls(false) ?? null;
+			this.recordWallNetworkEdit(
+				wallEdit,
+				floorEdit,
+				attribute === "length" ? "Wall length" : "Wall endpoint",
+			);
 		});
 
 		this.tree.addEventListener("material-updated", (event: Event) => {

@@ -1821,6 +1821,7 @@ export class DT3DTree extends LitElement {
 					.selectedObject=${this.selectedObject}
 					.selectedObjects=${this.getSelectedObjects()}
 					.selectedMaterial=${this.selectedMaterial}
+					.coordinateRoot=${this.scene}
 					.multiple=${this.selectedIds.size > 1}
 					.entityOptions=${this.entityOptions}
 					@object-updated=${this.handleObjectUpdated}

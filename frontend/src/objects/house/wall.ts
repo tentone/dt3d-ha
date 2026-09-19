@@ -1,12 +1,14 @@
-import type {ColorRepresentation, Object3D, Vector3} from "three";
+import type {ColorRepresentation, Object3D} from "three";
 import {
 	BoxGeometry,
 	BufferGeometry,
 	Color,
 	CylinderGeometry,
 	Group,
+	Matrix4,
 	Mesh,
 	MeshStandardMaterial,
+	Vector3,
 } from "three";
 import {mergeGeometries} from "three/examples/jsm/utils/BufferGeometryUtils.js";
 
@@ -195,19 +197,44 @@ export class WallObject extends DTObject {
 	 *
 	 * @param start - Starting point
 	 * @param end - Ending point
+	 * @param alignInThreeDimensions - Preserve different endpoint elevations
 	 */
-	public setFromPoints(start: Vector3, end: Vector3): void {
+	public setFromPoints(
+		start: Vector3,
+		end: Vector3,
+		alignInThreeDimensions = false,
+	): void {
 		const direction = end.clone().sub(start);
-		const length = Math.hypot(direction.x, direction.z);
+		const length = alignInThreeDimensions
+			? direction.length()
+			: Math.hypot(direction.x, direction.z);
 		if (length <= 0) {
 			return;
 		}
 
 		const midpoint = start.clone().add(end).multiplyScalar(0.5);
-		this.position.set(midpoint.x, start.y, midpoint.z);
+		if (!alignInThreeDimensions) {
+			this.position.set(midpoint.x, start.y, midpoint.z);
+			const angle = Math.atan2(direction.z, direction.x);
+			this.rotation.set(0, -angle, 0);
+		} else {
+			this.position.copy(midpoint);
 
-		const angle = Math.atan2(direction.z, direction.x);
-		this.rotation.set(0, -angle, 0);
+			// Keep local X on the requested segment and local Z as horizontal as
+			// possible so manual endpoint coordinates are represented exactly.
+			const xAxis = direction.multiplyScalar(1 / length);
+			const worldUp = new Vector3(0, 1, 0);
+			const zAxis = new Vector3().crossVectors(xAxis, worldUp);
+			if (zAxis.lengthSq() <= 1e-12) {
+				zAxis.set(0, 0, 1);
+			} else {
+				zAxis.normalize();
+			}
+			const yAxis = new Vector3().crossVectors(zAxis, xAxis).normalize();
+			this.quaternion.setFromRotationMatrix(
+				new Matrix4().makeBasis(xAxis, yAxis, zAxis),
+			);
+		}
 
 		this.length = length;
 		this.updateGeometry();

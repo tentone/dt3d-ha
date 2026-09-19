@@ -161,7 +161,7 @@ Shared wall endpoints use a separate connection mesh. Each connected wall body s
 
 #### Edit walls and floors
 
-- Select a wall to change its corner connection shape, height, thickness, material, and optional baseboard height, depth, and color in the inspector. This edits that wall independently of the creation defaults.
+- Select a wall to edit its start and end coordinates or its length under **Wall dimensions**. Moving an endpoint also moves every wall connected at that junction. Changing the length keeps the wall center fixed and moves both endpoints, including their connected walls. The inspector also lets you change corner connection shape, height, thickness, material, and optional baseboard height, depth, and color independently of the creation defaults.
 - Use Ctrl/Cmd or Shift to select multiple walls, doors, windows, or gates of the same type and edit their shared configuration together. Mixed object types keep the inspector read-only, and multi-editing does not expose names, transforms, identifiers, or other object-specific properties.
 - Select the walls around one or more closed areas, then right-click any selected wall in the scene or object tree and choose **Generate floor from selected walls**. DT3D creates manual floors for the selected boundaries that do not already have a floor.
 - A selected wall displays blue handles across the full height of its start and end points. Double-click a handle, then drag the translation control to reshape the wall. Every wall sharing that junction moves with it. A shared handle uses the tallest connected wall and changes color when hovered.

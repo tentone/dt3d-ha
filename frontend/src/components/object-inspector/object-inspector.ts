@@ -4,7 +4,7 @@ import "../entity-rules/entity-rules.js";
 import {html, LitElement, unsafeCSS} from "lit";
 import {customElement, property} from "lit/decorators.js";
 import type {Material, Object3D} from "three";
-import {Mesh} from "three";
+import {Mesh, Vector3} from "three";
 
 import {normalizeEntityActionOverride} from "../../editor/entity-actions.js";
 import type {EntityRule} from "../../editor/entity-rules.js";
@@ -62,6 +62,12 @@ export type MaterialUpdateDetail = {
 	attribute: string;
 	undo: () => void;
 	redo: () => void;
+};
+
+export type WallGeometryUpdateDetail = {
+	wall: WallObject;
+	attribute: "startPoint" | "endPoint" | "length";
+	value: Vector3 | number;
 };
 
 const WALL_CONFIGURATION_ATTRIBUTES = new Set([
@@ -179,6 +185,10 @@ export class DT3DObjectInspector extends LitElement {
 
 	@property({attribute: false})
 	public entityOptions: DynamicFormEntityOption[] = [];
+
+	/** Coordinate system used for editable wall endpoints. */
+	@property({attribute: false})
+	public coordinateRoot: Object3D | null = null;
 
 	private materialTextureVersions = new Map<string, number>();
 
@@ -660,6 +670,61 @@ export class DT3DObjectInspector extends LitElement {
 		if (this.isLocked() && attribute !== "locked") {
 			return;
 		}
+		const [wallGeometryAttribute, wallGeometryAxis] = attribute.split(".") as [
+			"startPoint" | "endPoint" | "length" | string,
+			"x" | "y" | "z" | undefined,
+		];
+		if (
+			updatedObject instanceof WallObject &&
+			(wallGeometryAttribute === "startPoint" ||
+				wallGeometryAttribute === "endPoint" ||
+				wallGeometryAttribute === "length")
+		) {
+			let geometryValue: number | Vector3;
+			if (wallGeometryAttribute === "length") {
+				geometryValue = Number(value);
+			} else if (
+				wallGeometryAxis === "x" ||
+				wallGeometryAxis === "y" ||
+				wallGeometryAxis === "z"
+			) {
+				const currentPoint =
+					this.getWallGeometryData()?.[wallGeometryAttribute];
+				if (!currentPoint) {
+					return;
+				}
+				geometryValue = currentPoint.clone();
+				geometryValue[wallGeometryAxis] = Number(value);
+			} else if (value && typeof value === "object") {
+				geometryValue = new Vector3(
+					Number((value as {x?: unknown}).x),
+					Number((value as {y?: unknown}).y),
+					Number((value as {z?: unknown}).z),
+				);
+			} else {
+				return;
+			}
+			if (
+				typeof geometryValue === "number"
+					? !Number.isFinite(geometryValue) || geometryValue <= 0
+					: !geometryValue.toArray().every(Number.isFinite)
+			) {
+				return;
+			}
+			this.dispatchEvent(
+				new CustomEvent<WallGeometryUpdateDetail>("wall-geometry-updated", {
+					detail: {
+						wall: updatedObject,
+						attribute: wallGeometryAttribute,
+						value: geometryValue,
+					},
+					bubbles: true,
+					composed: true,
+				}),
+			);
+			this.requestUpdate();
+			return;
+		}
 		const undo = this.captureRestore(updatedObject, attribute, type);
 
 		if (attribute === "locked") {
@@ -1095,6 +1160,65 @@ export class DT3DObjectInspector extends LitElement {
 				enabled: true,
 			},
 		];
+	}
+
+	private getWallGeometryFields(locked: boolean): DynamicFormField[] {
+		if (!(this.selectedObject instanceof WallObject)) {
+			return [];
+		}
+
+		return [
+			{
+				label: localManager.get("wallStartPoint"),
+				attribute: "startPoint",
+				type: "Vector3",
+				tooltip: localManager.get("wallStartPointTooltip"),
+				editable: !locked,
+				enabled: true,
+			},
+			{
+				label: localManager.get("wallEndPoint"),
+				attribute: "endPoint",
+				type: "Vector3",
+				tooltip: localManager.get("wallEndPointTooltip"),
+				editable: !locked,
+				enabled: true,
+			},
+			{
+				label: localManager.get("wallLength"),
+				attribute: "length",
+				type: "number",
+				tooltip: localManager.get("wallLengthTooltip"),
+				editable: !locked,
+				enabled: true,
+				min: 0.001,
+				step: 0.01,
+			},
+		];
+	}
+
+	private getWallGeometryData(): {
+		startPoint: Vector3;
+		endPoint: Vector3;
+		length: number;
+	} | null {
+		const wall = this.selectedObject;
+		const root = this.coordinateRoot;
+		if (!(wall instanceof WallObject) || !root || !wall.parent) {
+			return null;
+		}
+
+		root.updateWorldMatrix(true, false);
+		wall.updateWorldMatrix(true, false);
+		return {
+			startPoint: root.worldToLocal(
+				wall.localToWorld(new Vector3(-wall.length / 2, 0, 0)),
+			),
+			endPoint: root.worldToLocal(
+				wall.localToWorld(new Vector3(wall.length / 2, 0, 0)),
+			),
+			length: wall.length,
+		};
 	}
 
 	private getOpeningFields(locked: boolean): DynamicFormField[] {
@@ -2104,6 +2228,13 @@ export class DT3DObjectInspector extends LitElement {
 			"wall",
 			localManager.get("wall"),
 			this.getWallFields(locked),
+		);
+		this.addSubFormField(
+			fields,
+			"wallGeometry",
+			localManager.get("wallGeometry"),
+			this.getWallGeometryFields(locked),
+			this.getWallGeometryData(),
 		);
 		this.addSubFormField(
 			fields,
