@@ -1,0 +1,366 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="DT3D turns Home Assistant into an interactive 3D digital twin with a built-in editor, live entity controls, and multi-space support."
+    />
+    <meta name="theme-color" content="#07111f" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="DT3D — A 3D digital twin for Home Assistant" />
+    <meta
+      property="og:description"
+      content="Build, connect, and control your home in one live 3D space."
+    />
+    <meta property="og:url" content="https://tentone.github.io/dt3d-ha/" />
+    <meta name="twitter:card" content="summary" />
+    <title>DT3D — 3D Digital Twin for Home Assistant</title>
+    <link rel="canonical" href="https://tentone.github.io/dt3d-ha/" />
+    <link rel="icon" href="./assets/icon.png" type="image/png" />
+    <link rel="stylesheet" href="./styles.css" />
+    <script src="./app.js" defer></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+
+    <header class="site-header" data-header>
+      <a class="brand" href="#top" aria-label="DT3D home">
+        <img src="./assets/icon.png" width="38" height="38" alt="" />
+        <span>DT3D</span>
+      </a>
+
+      <button
+        class="menu-toggle"
+        type="button"
+        aria-expanded="false"
+        aria-controls="site-nav"
+        data-menu-toggle
+      >
+        <span></span><span></span>
+        <span class="sr-only">Open navigation</span>
+      </button>
+
+      <nav id="site-nav" class="site-nav" aria-label="Main navigation" data-nav>
+        <a href="#editor">Editor</a>
+        <a href="#features">Features</a>
+        <a href="#install">Install</a>
+        <a href="#docs">Docs</a>
+      </nav>
+
+      <a
+        class="header-github"
+        href="https://github.com/tentone/dt3d-ha"
+        target="_blank"
+        rel="noreferrer"
+      >
+        GitHub
+        <svg viewBox="0 0 16 16" aria-hidden="true">
+          <path d="M4.2 11.8 11.8 4.2M5.5 4.2h6.3v6.3" />
+        </svg>
+      </a>
+    </header>
+
+    <main id="main">
+      <section class="hero" id="top">
+        <div class="hero-grid" aria-hidden="true"></div>
+        <div class="hero-copy" data-reveal>
+          <p class="eyebrow"><span></span> Home Assistant, modeled in 3D</p>
+          <h1>Your home.<br /><em>Live in 3D.</em></h1>
+          <p class="hero-summary">
+            Build an interactive digital twin of your home. See live entity states,
+            control devices in context, and shape every room from one integrated editor.
+          </p>
+          <div class="hero-actions">
+            <a
+              class="button button-primary"
+              href="https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2Ftentone%2Fdt3d-ha"
+              target="_blank"
+              rel="noreferrer"
+            >
+              Install add-on
+              <svg viewBox="0 0 16 16" aria-hidden="true">
+                <path d="M3 8h10M9 4l4 4-4 4" />
+              </svg>
+            </a>
+            <a class="button button-ghost" href="#editor">Explore DT3D</a>
+          </div>
+        </div>
+
+        <div class="hero-visual" data-reveal>
+          <div class="scene-frame">
+            <div class="scene-topbar">
+              <div class="scene-dots"><i></i><i></i><i></i></div>
+              <span>default-space / live</span>
+              <span class="status"><i></i> connected</span>
+            </div>
+            <img
+              src="./assets/dt3d-scene.png"
+              alt="A DT3D digital twin of a home with live Home Assistant entity markers"
+              width="1495"
+              height="880"
+              fetchpriority="high"
+            />
+            <div class="entity-card entity-card-light">
+              <span class="entity-icon">☀</span>
+              <span><small>Living room</small><strong>Light on</strong></span>
+            </div>
+            <div class="entity-card entity-card-climate">
+              <span class="entity-icon">°</span>
+              <span><small>Inside</small><strong>21.4°C</strong></span>
+            </div>
+          </div>
+        </div>
+
+        <div class="hero-proof" aria-label="Key product capabilities" data-reveal>
+          <div><span>01</span><strong>Live entity state</strong></div>
+          <div><span>02</span><strong>Built-in 3D editor</strong></div>
+          <div><span>03</span><strong>VR + AR ready</strong></div>
+        </div>
+      </section>
+
+      <section class="editor-section section" id="editor">
+        <div class="section-heading" data-reveal>
+          <p class="eyebrow"><span></span> Model it your way</p>
+          <h2>The editor is<br />part of the experience.</h2>
+          <p>
+            Draw walls, place openings, import models, tune materials, and organize the
+            scene without leaving your Home Assistant dashboard.
+          </p>
+        </div>
+
+        <div class="editor-stage" data-reveal>
+          <div class="editor-image-wrap">
+            <img
+              src="./assets/layout-editor.png"
+              alt="DT3D editor showing walls, windows, tools, and the object inspector"
+              width="1743"
+              height="958"
+              loading="lazy"
+            />
+          </div>
+          <ol class="editor-notes" aria-label="Editor workflow">
+            <li>
+              <span>01</span>
+              <div><strong>Build the structure</strong><small>Trace a floorplan, draw connected walls, and add floors automatically.</small></div>
+            </li>
+            <li>
+              <span>02</span>
+              <div><strong>Make it recognizable</strong><small>Add doors, windows, furniture, lights, textures, and imported GLB models.</small></div>
+            </li>
+            <li>
+              <span>03</span>
+              <div><strong>Connect the real home</strong><small>Link Home Assistant entities to objects, actions, and visual state rules.</small></div>
+            </li>
+          </ol>
+        </div>
+      </section>
+
+      <section class="features-section section" id="features">
+        <div class="section-heading section-heading-row" data-reveal>
+          <div>
+            <p class="eyebrow"><span></span> More than a floorplan</p>
+            <h2>A spatial interface<br />for your smart home.</h2>
+          </div>
+          <p>
+            DT3D keeps the model and the live home connected, so every view is both a
+            visual map and a useful control surface.
+          </p>
+        </div>
+
+        <div class="feature-grid">
+          <article class="feature-card feature-card-wide" data-reveal>
+            <span class="feature-number">01</span>
+            <div class="feature-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M4 19V8l8-4 8 4v11M8 19v-6h8v6M3 19h18" /></svg>
+            </div>
+            <h3>Every entity,<br />in its place</h3>
+            <p>
+              Display sensors, cameras, lights, switches, binary sensors, and climate
+              entities where they actually belong. Open details or call services directly
+              from the scene.
+            </p>
+          </article>
+
+          <article class="feature-card" data-reveal>
+            <span class="feature-number">02</span>
+            <div class="feature-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M5 5h14v14H5zM5 10h14M10 5v14M14 14h5" /></svg>
+            </div>
+            <h3>Multiple spaces</h3>
+            <p>
+              Keep separate homes, floors, or large areas organized in independent scenes,
+              each with its own viewports and appearance.
+            </p>
+          </article>
+
+          <article class="feature-card" data-reveal>
+            <span class="feature-number">03</span>
+            <div class="feature-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M12 3v18M3 12h18M5.6 5.6l12.8 12.8M18.4 5.6 5.6 18.4" /></svg>
+            </div>
+            <h3>Made to fit</h3>
+            <p>
+              Use grid snapping, calibrated floorplans, measurement tools, material controls,
+              and built-in parametric furniture.
+            </p>
+          </article>
+
+          <article class="feature-card feature-card-accent" data-reveal>
+            <span class="feature-number">04</span>
+            <div class="feature-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M8 3h8v4H8zM5 7h14v10H5zM8 17h8v4H8zM9 12h6" /></svg>
+            </div>
+            <h3>Portable by design</h3>
+            <p>
+              Download a complete space as a single <code>.dt3d</code> archive, including
+              scene data and persisted assets, then import it as a new space.
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <section class="day-night section" aria-labelledby="day-night-title">
+        <div class="day-night-copy" data-reveal>
+          <p class="eyebrow"><span></span> Responsive environments</p>
+          <h2 id="day-night-title">A scene that changes with the day.</h2>
+          <p>
+            Configure daylight, sky, shadows, tone mapping, and post-processing per space.
+            Entity-driven rules keep objects visibly in sync with the home around them.
+          </p>
+          <ul>
+            <li>Live lights, doors, gates, and windows</li>
+            <li>Saved cameras and presentation-ready viewports</li>
+            <li>Visualization-only cards for clean wall-panel views</li>
+          </ul>
+        </div>
+
+        <div class="comparison" data-comparison data-reveal>
+          <div class="comparison-layer comparison-night">
+            <img
+              src="./assets/scene-night.png"
+              alt="A DT3D home scene rendered at night"
+              width="1564"
+              height="987"
+              loading="lazy"
+            />
+          </div>
+          <div class="comparison-layer comparison-day">
+            <img
+              src="./assets/scene-day.png"
+              alt="The same DT3D home scene rendered in daylight"
+              width="1337"
+              height="923"
+              loading="lazy"
+            />
+          </div>
+          <div class="comparison-line" aria-hidden="true"><span></span></div>
+          <input
+            type="range"
+            min="0"
+            max="100"
+            value="52"
+            aria-label="Compare day and night scene appearance"
+            data-comparison-input
+          />
+          <span class="comparison-label comparison-label-day">Day</span>
+          <span class="comparison-label comparison-label-night">Night</span>
+        </div>
+      </section>
+
+      <section class="install-section section" id="install">
+        <div class="install-intro" data-reveal>
+          <p class="eyebrow"><span></span> Two parts, one experience</p>
+          <h2>Bring DT3D into<br />Home Assistant.</h2>
+          <p>
+            Install the add-on to store your scenes, then add the frontend card through
+            HACS. The setup guide walks through the connection and first editor view.
+          </p>
+        </div>
+
+        <div class="install-steps">
+          <article data-reveal>
+            <div class="step-top"><span>Step 01</span><b>Add-on</b></div>
+            <h3>Store and serve your spaces.</h3>
+            <p>
+              Add the DT3D repository to Home Assistant, install the add-on, and choose a
+              service key for authenticated access.
+            </p>
+            <a
+              class="button button-primary"
+              href="https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2Ftentone%2Fdt3d-ha"
+              target="_blank"
+              rel="noreferrer"
+            >
+              Add repository
+              <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4" /></svg>
+            </a>
+          </article>
+
+          <article data-reveal>
+            <div class="step-top"><span>Step 02</span><b>HACS</b></div>
+            <h3>Put the card on your dashboard.</h3>
+            <p>
+              Add the custom frontend repository through HACS, then create a dashboard card
+              and connect it to the add-on.
+            </p>
+            <a
+              class="button button-light"
+              href="https://my.home-assistant.io/redirect/hacs_repository/?owner=tentone&amp;repository=dt3d-ha&amp;category=plugin"
+              target="_blank"
+              rel="noreferrer"
+            >
+              Add to HACS
+              <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4" /></svg>
+            </a>
+          </article>
+        </div>
+
+        <div class="install-note" data-reveal>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 4 7v5c0 4.5 3.1 7.5 8 9 4.9-1.5 8-4.5 8-9V7zM9 12l2 2 4-4" /></svg>
+          <div>
+            <strong>Plan the connection before you build.</strong>
+            <span>If Home Assistant uses HTTPS, the DT3D backend must also be available over HTTPS.</span>
+          </div>
+          <a href="https://github.com/tentone/dt3d-ha/blob/main/SETUP_GUIDE.md" target="_blank" rel="noreferrer">Read setup guide</a>
+        </div>
+      </section>
+
+      <section class="docs-section section" id="docs">
+        <div class="docs-panel" data-reveal>
+          <div>
+            <p class="eyebrow eyebrow-light"><span></span> Ready when you are</p>
+            <h2>Build a home you can see, understand, and control.</h2>
+          </div>
+          <div class="docs-links">
+            <a href="https://github.com/tentone/dt3d-ha/blob/main/SETUP_GUIDE.md" target="_blank" rel="noreferrer">
+              <span><small>Start here</small><strong>Setup guide</strong></span>
+              <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4" /></svg>
+            </a>
+            <a href="https://github.com/tentone/dt3d-ha/blob/main/MANUAL.md" target="_blank" rel="noreferrer">
+              <span><small>Build with confidence</small><strong>User manual</strong></span>
+              <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4" /></svg>
+            </a>
+            <a href="https://github.com/tentone/dt3d-ha" target="_blank" rel="noreferrer">
+              <span><small>Explore the project</small><strong>Source code</strong></span>
+              <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4" /></svg>
+            </a>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <a class="brand" href="#top">
+        <img src="./assets/icon.png" width="34" height="34" alt="" />
+        <span>DT3D</span>
+      </a>
+      <p>Open source. Built for Home Assistant.</p>
+      <div>
+        <a href="https://github.com/tentone/dt3d-ha/blob/main/LICENSE" target="_blank" rel="noreferrer">License</a>
+        <a href="https://github.com/tentone/dt3d-ha/issues" target="_blank" rel="noreferrer">Issues</a>
+      </div>
+    </footer>
+  </body>
+</html>
