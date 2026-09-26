@@ -680,6 +680,7 @@ export class SceneManager {
 		}
 
 		this.applyDaylightConfig(this.spaceSceneConfig.daylight);
+		this.applyAppearanceConfig();
 	}
 
 	/**
@@ -1496,6 +1497,12 @@ export class SceneManager {
 		const augmentedReality = this.immersiveMode === "ar";
 		const skyVisible =
 			!augmentedReality && this.spaceSceneConfig.sky.enabled;
+		const followedPosition = this.spaceSceneConfig.sky.followDateTime
+			? this.dateTimeSunPosition
+			: null;
+		const sunAboveHorizon =
+			(followedPosition?.elevation ??
+				this.spaceSceneConfig.daylight.sunElevation) > 0;
 
 		if (this.sky) {
 			this.sky.visible = skyVisible;
@@ -1503,7 +1510,7 @@ export class SceneManager {
 
 		if (this.lensFlare) {
 			this.lensFlare.visible =
-				skyVisible && this.spaceSceneConfig.sky.lensFlare;
+				skyVisible && this.spaceSceneConfig.sky.lensFlare && sunAboveHorizon;
 		}
 
 		this.scene.background =

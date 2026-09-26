@@ -2722,7 +2722,7 @@ let X0 = class extends _t {
     return ve`
 		<div class="connection-status-container">
 			<div style="margin: 5px;" class="${this.success ? "connection-status-success" : "connection-status-error"}">
-				${this.msg}<br>${"2026-09-19T16:49:41.856Z"}
+				${this.msg}<br>${"2026-09-26T19:22:54.768Z"}
 			</div>
 		</div>`;
   }
@@ -47592,7 +47592,7 @@ class CX {
     e && Number.isFinite(e.elevation) && Number.isFinite(e.azimuth) ? this.dateTimeSunPosition = {
       elevation: Rr(e.elevation, -90, 90),
       azimuth: (e.azimuth % 360 + 360) % 360
-    } : this.dateTimeSunPosition = null, this.applyDaylightConfig(this.spaceSceneConfig.daylight);
+    } : this.dateTimeSunPosition = null, this.applyDaylightConfig(this.spaceSceneConfig.daylight), this.applyAppearanceConfig();
   }
   /**
    * Enable or disable the grid helper.
@@ -48038,8 +48038,8 @@ class CX {
    * Apply the sky visibility and fallback scene background.
    */
   applyAppearanceConfig() {
-    const e = this.immersiveMode === "ar", t = !e && this.spaceSceneConfig.sky.enabled;
-    this.sky && (this.sky.visible = t), this.lensFlare && (this.lensFlare.visible = t && this.spaceSceneConfig.sky.lensFlare), this.scene.background = e || this.spaceSceneConfig.background.type === "transparent" ? null : new Ae(this.spaceSceneConfig.background.color);
+    const e = this.immersiveMode === "ar", t = !e && this.spaceSceneConfig.sky.enabled, i = ((this.spaceSceneConfig.sky.followDateTime ? this.dateTimeSunPosition : null)?.elevation ?? this.spaceSceneConfig.daylight.sunElevation) > 0;
+    this.sky && (this.sky.visible = t), this.lensFlare && (this.lensFlare.visible = t && this.spaceSceneConfig.sky.lensFlare && i), this.scene.background = e || this.spaceSceneConfig.background.type === "transparent" ? null : new Ae(this.spaceSceneConfig.background.color);
   }
   /**
    * Apply daylight config to ambient light, sun, and sky dome.
