@@ -9,7 +9,12 @@ export type FurnitureType =
 	| "couch"
 	| "bathtub"
 	| "shelf"
-	| "cabinet";
+	| "cabinet"
+	| "standing-desk"
+	| "wardrobe"
+	| "bed"
+	| "kitchen-cabinet-top"
+	| "kitchen-cabinet-bottom";
 
 export type FurnitureParameters = Record<string, number | boolean>;
 

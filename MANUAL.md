@@ -87,8 +87,15 @@ Open **Objects > Furniture** and choose a model. DT3D creates a lightweight proc
 | Bathtub | `1.70 × 0.75 × 0.60`     | Rim, wall, and base thickness                                      |
 | Shelf   | `1.00 × 0.32 × 1.80`     | Board thickness, shelf count, and optional back panel              |
 | Cabinet | `1.20 × 0.45 × 0.90`     | Board thickness, door count, interior shelf count, and handle size |
+| Standing desk | `1.40 × 0.70 × 1.10` | Height, top thickness, column thickness, and leg inset |
+| Wardrobe (with doors) | `1.50 × 0.60 × 2.10` | Board thickness, door count, interior shelf count, and handle size |
+| Bed | `1.60 × 2.10 × 1.00` | Sleeping surface height, mattress thickness, board thickness, and optional headboard |
+| Kitchen cabinet (top) | `1.20 × 0.35 × 0.70` | Board thickness, door count, interior shelf count, and handle size |
+| Kitchen cabinet (bottom) | `1.20 × 0.60 × 0.90` | Board thickness, doors, shelves, handles, plinth height, and countertop thickness |
 
 Expand the furniture-specific inspector section to change these construction parameters. The object rebuilds immediately while keeping its transform and material, so it can be resized without scaling every part manually.
+
+Raise upper kitchen cabinets to the desired wall-mounting height using the position controls. Wardrobe and kitchen cabinet doors are modeled closed. Standing desk height can be changed for sitting or standing use.
 
 ### Add Home Assistant entities
 

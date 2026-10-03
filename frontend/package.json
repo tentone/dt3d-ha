@@ -9,6 +9,7 @@
 		"test:compression": "playwright test",
 		"test:space-cache": "node --test tests/space-cache.test.mjs",
 		"test:center-origin": "node --test tests/center-origin.test.mjs",
+		"test:furniture": "node --test tests/furniture.test.mjs",
 		"format": "prettier --write --use-tabs .",
 		"lint": "eslint .",
 		"lint-fix": "eslint . --fix"

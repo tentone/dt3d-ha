@@ -1,4 +1,5 @@
 import {BathtubObject} from "./bathtub.js";
+import {BedObject} from "./bed.js";
 import {CabinetObject} from "./cabinet.js";
 import {ChairObject} from "./chair.js";
 import {CouchObject} from "./couch.js";
@@ -8,6 +9,12 @@ import type {
 	FurnitureType,
 } from "./furniture.js";
 import {ShelfObject} from "./shelf.js";
+import {StandingDeskObject} from "./standing-desk.js";
+import {
+	KitchenCabinetBottomObject,
+	KitchenCabinetTopObject,
+	WardrobeObject,
+} from "./storage.js";
 import {TableObject} from "./table.js";
 
 export type FurnitureOption = {
@@ -18,6 +25,36 @@ export type FurnitureOption = {
 };
 
 export const FURNITURE_OPTIONS: FurnitureOption[] = [
+	{
+		type: "furniture-standing-desk",
+		furnitureType: "standing-desk",
+		labelKey: "furnitureStandingDesk",
+		icon: "mdi:desk",
+	},
+	{
+		type: "furniture-wardrobe",
+		furnitureType: "wardrobe",
+		labelKey: "furnitureWardrobe",
+		icon: "mdi:wardrobe-outline",
+	},
+	{
+		type: "furniture-bed",
+		furnitureType: "bed",
+		labelKey: "furnitureBed",
+		icon: "mdi:bed-outline",
+	},
+	{
+		type: "furniture-kitchen-cabinet-top",
+		furnitureType: "kitchen-cabinet-top",
+		labelKey: "furnitureKitchenCabinetTop",
+		icon: "mdi:cupboard-outline",
+	},
+	{
+		type: "furniture-kitchen-cabinet-bottom",
+		furnitureType: "kitchen-cabinet-bottom",
+		labelKey: "furnitureKitchenCabinetBottom",
+		icon: "mdi:countertop-outline",
+	},
 	{
 		type: "furniture-table",
 		furnitureType: "table",
@@ -64,7 +101,9 @@ export function furnitureTypeFromMeshType(type: string): FurnitureType | null {
 }
 
 export function isFurnitureMeshType(type: string): boolean {
-	return type.startsWith("furniture-") && furnitureTypeFromMeshType(type) !== null;
+	return (
+		type.startsWith("furniture-") && furnitureTypeFromMeshType(type) !== null
+	);
 }
 
 export function createFurnitureObject(
@@ -73,6 +112,16 @@ export function createFurnitureObject(
 	color?: number,
 ): FurnitureObject | null {
 	switch (furnitureTypeFromMeshType(meshType)) {
+		case "standing-desk":
+			return new StandingDeskObject(parameters, color);
+		case "wardrobe":
+			return new WardrobeObject(parameters, color);
+		case "bed":
+			return new BedObject(parameters, color);
+		case "kitchen-cabinet-top":
+			return new KitchenCabinetTopObject(parameters, color);
+		case "kitchen-cabinet-bottom":
+			return new KitchenCabinetBottomObject(parameters, color);
 		case "table":
 			return new TableObject(parameters, color);
 		case "chair":
