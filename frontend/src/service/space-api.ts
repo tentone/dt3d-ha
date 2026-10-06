@@ -255,9 +255,25 @@ export class SpaceApi {
 		return space.object_instances;
 	}
 
-	/**
-	 * Create a new object instance.
-	 */
+	/** Save a material independently of any object. */
+	public async storeMaterial(
+		spaceId: string,
+		definition: Record<string, any>,
+	): Promise<void> {
+		await this.fetchJson<void>(
+			`/spaces/${spaceId}/materials/${definition.uuid}`,
+			{
+				method: "PUT",
+				body: JSON.stringify(definition),
+			},
+		);
+	}
+
+	public deleteMaterial(spaceId: string, materialId: string): Promise<void> {
+		return this.fetchJson<void>(`/spaces/${spaceId}/materials/${materialId}`, {method: "DELETE"});
+	}
+
+	/** Create a new object instance. */
 	public createObject(
 		spaceId: string,
 		payload: ObjectInstancePayload,

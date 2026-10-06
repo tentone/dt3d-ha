@@ -21,6 +21,9 @@ func NewObjectInstanceRepository(db *gorm.DB) *ObjectInstanceRepository {
 
 func (r *ObjectInstanceRepository) Create(instance *models.ObjectInstance) error {
 	return r.db.Transaction(func(tx *gorm.DB) error {
+		if err := normalizeObjectAssets(tx, instance); err != nil {
+			return err
+		}
 		if err := tx.Create(instance).Error; err != nil {
 			return err
 		}
@@ -45,6 +48,9 @@ func (r *ObjectInstanceRepository) FindByID(id string) (*models.ObjectInstance, 
 
 func (r *ObjectInstanceRepository) Update(instance *models.ObjectInstance) error {
 	return r.db.Transaction(func(tx *gorm.DB) error {
+		if err := normalizeObjectAssets(tx, instance); err != nil {
+			return err
+		}
 		if err := tx.Save(instance).Error; err != nil {
 			return err
 		}

@@ -1,6 +1,6 @@
 {
 	"name": "dt3d-card",
-	"version": "0.7.0",
+	"version": "0.8.0",
 	"private": true,
 	"type": "module",
 	"scripts": {
@@ -9,6 +9,7 @@
 		"test:compression": "playwright test",
 		"test:space-cache": "node --test tests/space-cache.test.mjs",
 		"test:center-origin": "node --test tests/center-origin.test.mjs",
+		"test:materials": "node --test tests/material-library.test.mjs",
 		"test:furniture": "node --test tests/furniture.test.mjs",
 		"format": "prettier --write --use-tabs .",
 		"lint": "eslint .",

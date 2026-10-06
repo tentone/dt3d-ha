@@ -73,6 +73,8 @@ The left sidebar organizes creation tools into primary actions, **Floorplan**, a
 
 After adding a mesh or furniture object, select it to edit its dimensions, transform, material properties, or apply an image texture. Keep imported geometry and texture sizes modest because they are downloaded and uploaded by each client.
 
+The material library retains created materials even when no object uses them. Materials, textures, and image sources are stored separately in the database; objects reference materials by UUID. Removing an object or replacing a texture does not delete these assets. Use the material library's delete action to remove a material explicitly; its textures remain stored. Existing scenes migrate automatically when the updated add-on starts.
+
 <img src="readme/3_add_objects.png" width="500">
 
 ### Use the built-in furniture models

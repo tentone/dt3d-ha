@@ -167,6 +167,7 @@ func main() {
 	api := router.Group("/api", handlers.RequireServiceKey(opt.ServiceKey))
 	spaceHandler := handlers.NewSpaceHandler(spaceService, geometryFilesDir)
 	handlers.RegisterRoutes(api, spaceHandler)
+	handlers.RegisterMaterialRoutes(api, db)
 
 	if err := runServer(router, fmt.Sprintf("0.0.0.0:%d", opt.Port), opt); err != nil {
 		log.Fatalf("failed to start server: %v", err)
@@ -195,11 +196,15 @@ func initializeDatabase(path string) (*gorm.DB, error) {
 	sqlDB.SetMaxOpenConns(1)
 	sqlDB.SetMaxIdleConns(1)
 
-	if err := db.AutoMigrate(&models.Space{}, &models.ObjectInstance{}); err != nil {
+	if err := db.AutoMigrate(&models.Space{}, &models.ObjectInstance{}, &models.Material{}, &models.Texture{}, &models.TextureImage{}); err != nil {
 		sqlDB.Close()
 		return nil, fmt.Errorf("migrate database %q: %w", path, err)
 	}
 
+	if err := repository.MigrateMaterialLibrary(db); err != nil {
+		sqlDB.Close()
+		return nil, fmt.Errorf("migrate materials: %w", err)
+	}
 	return db, nil
 }
 

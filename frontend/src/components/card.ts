@@ -1739,7 +1739,12 @@ export class DT3DCard extends LitElement {
 			label: material.name,
 			undo: remove,
 			redo: add,
-			sync: () => this.persistSpaceConfiguration(),
+			sync: async () => {
+				await this.persistSpaceConfiguration();
+				if (!this.materialLibrary.includes(material)) {
+					await this.spaceSync?.deleteLibraryMaterial(material.uuid);
+				}
+			},
 		});
 	}
 
@@ -1814,11 +1819,17 @@ export class DT3DCard extends LitElement {
 			this.setSelectedMaterial(beforeSelection);
 			this.refreshAfterMaterialMutation(beforeSelection);
 		};
-		const sync = () =>
-			Promise.all([
-				...owners.map((owner) => this.spaceSync?.syncObjectUpdate(owner)),
-				this.persistSpaceConfiguration(),
-			]);
+		const sync = async () => {
+			await Promise.all(
+				owners.map((owner) => this.spaceSync?.syncObjectUpdate(owner)),
+			);
+			await this.persistSpaceConfiguration();
+			for (const material of beforeLibrary) {
+				if (!this.materialLibrary.includes(material)) {
+					await this.spaceSync?.deleteLibraryMaterial(material.uuid);
+				}
+			}
+		};
 
 		merge();
 		this.recordAction({
@@ -1904,11 +1915,15 @@ export class DT3DCard extends LitElement {
 			this.setSelectedMaterial(material);
 			this.refreshAfterMaterialMutation(material);
 		};
-		const sync = () =>
-			Promise.all([
-				...owners.map((owner) => this.spaceSync?.syncObjectUpdate(owner)),
-				this.persistSpaceConfiguration(),
-			]);
+		const sync = async () => {
+			await Promise.all(
+				owners.map((owner) => this.spaceSync?.syncObjectUpdate(owner)),
+			);
+			await this.persistSpaceConfiguration();
+			if (!this.materialLibrary.includes(material)) {
+				await this.spaceSync?.deleteLibraryMaterial(material.uuid);
+			}
+		};
 
 		remove();
 		this.recordAction({

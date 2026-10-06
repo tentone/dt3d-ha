@@ -237,6 +237,15 @@ async function restoreArchiveObjects(
 	});
 
 	try {
+		// Register definitions before restoring objects containing material UUIDs.
+		const library = restoreEmbeddedAssets(
+			archive.space.config?.materials ?? [],
+			archive.assets.embedded,
+			files,
+		) as Record<string, any>[];
+		for (const material of library) {
+			await apiClient.storeMaterial(targetSpaceId, material);
+		}
 		for (const oldGeometryId of geometryIds) {
 			const geometry = files[geometryArchivePath(oldGeometryId)];
 			const response = await apiClient.uploadGeometry(

@@ -34,7 +34,16 @@ func (r *SpaceRepository) Create(space *models.Space) error {
 			}
 		}
 
-		return tx.Create(space).Error
+		if space.ID == "" {
+			space.ID = uuid.NewString()
+		}
+		if err := normalizeLibrary(tx, space); err != nil {
+			return err
+		}
+		if err := tx.Create(space).Error; err != nil {
+			return err
+		}
+		return loadLibrary(tx, space)
 	})
 }
 
@@ -45,14 +54,25 @@ func (r *SpaceRepository) FindAll(includeObjects bool) ([]models.Space, error) {
 		query = query.Preload("ObjectInstances")
 	}
 	err := query.Find(&spaces).Error
-	return spaces, err
+	if err != nil {
+		return nil, err
+	}
+	for i := range spaces {
+		if err := loadLibrary(r.db, &spaces[i]); err != nil {
+			return nil, err
+		}
+	}
+	return spaces, nil
 }
 
 func (r *SpaceRepository) FindByID(id string) (*models.Space, error) {
 	var space models.Space
 	// Read the version, configuration and hierarchy from the same database snapshot.
 	if err := r.db.Transaction(func(tx *gorm.DB) error {
-		return tx.Preload("ObjectInstances").First(&space, "id = ?", id).Error
+		if err := tx.Preload("ObjectInstances").First(&space, "id = ?", id).Error; err != nil {
+			return err
+		}
+		return loadLibrary(tx, &space)
 	}); err != nil {
 		return nil, err
 	}
@@ -75,6 +95,10 @@ func (r *SpaceRepository) Update(space *models.Space) error {
 			}
 		}
 
+		if err := normalizeLibrary(tx, space); err != nil {
+			return err
+		}
+
 		// Do not save preloaded associations or a version read before a concurrent edit.
 		if err := tx.Model(&models.Space{}).Where("id = ?", space.ID).
 			Updates(map[string]interface{}{
@@ -84,7 +108,10 @@ func (r *SpaceRepository) Update(space *models.Space) error {
 			}).Error; err != nil {
 			return err
 		}
-		return tx.Preload("ObjectInstances").First(space, "id = ?", space.ID).Error
+		if err := tx.Preload("ObjectInstances").First(space, "id = ?", space.ID).Error; err != nil {
+			return err
+		}
+		return loadLibrary(tx, space)
 	})
 }
 
@@ -107,6 +134,14 @@ func (r *SpaceRepository) Clone(sourceID, name string) (*models.Space, error) {
 			return err
 		}
 
+		// Copy all assets, including unused textures and materials, preserving UUID references.
+		for _, table := range []string{"materials", "textures", "texture_images"} {
+			columns := "space_id, uuid, data"
+			selectColumns := "?, uuid, data"
+			if err := tx.Exec("INSERT INTO "+table+" ("+columns+") SELECT "+selectColumns+" FROM "+table+" WHERE space_id = ?", clone.ID, source.ID).Error; err != nil {
+				return err
+			}
+		}
 		idMap := make(map[string]string, len(source.ObjectInstances))
 		sourceIDByClonedID := make(map[string]string, len(source.ObjectInstances))
 		clones := make(map[string]*models.ObjectInstance, len(source.ObjectInstances))
@@ -171,6 +206,9 @@ func (r *SpaceRepository) Clone(sourceID, name string) (*models.Space, error) {
 		for _, sourceInstance := range source.ObjectInstances {
 			clone.ObjectInstances = append(clone.ObjectInstances, *clones[sourceInstance.ID])
 		}
+		if err := loadLibrary(tx, &clone); err != nil {
+			return err
+		}
 		clonedSpace = &clone
 		return nil
 	})
@@ -188,6 +226,11 @@ func (r *SpaceRepository) Delete(space *models.Space) error {
 			return err
 		}
 
+		for _, asset := range []interface{}{&models.Material{}, &models.Texture{}, &models.TextureImage{}} {
+			if err := tx.Where("space_id = ?", space.ID).Delete(asset).Error; err != nil {
+				return err
+			}
+		}
 		if err := tx.Delete(space).Error; err != nil {
 			return err
 		}

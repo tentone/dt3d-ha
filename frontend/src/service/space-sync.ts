@@ -788,6 +788,12 @@ export class SpaceSync {
 		return update;
 	}
 
+	/** Only an explicit library action deletes a persisted material. */
+	public async deleteLibraryMaterial(materialId: string): Promise<void> {
+		if (this.readOnly || !this.activeSpaceId || this.isSyncingFromApi) return;
+		await this.apiClient.deleteMaterial(this.activeSpaceId, materialId);
+	}
+
 	/** Prepare library materials before their JSON is captured for persistence. */
 	public async prepareMaterialTexturesForSync(
 		material: Material | Material[],
@@ -897,7 +903,7 @@ export class SpaceSync {
 		resourceTasks: DeferredResourceTask[] = [],
 		resourceLoadGeneration = this.resourceLoadGeneration,
 	): Object3D | null {
-		const data = instance.data ?? {};
+		const data = {...instance.data};
 		const declaredType = instance.type.trim();
 		let instanceType:
 			| "mesh"
@@ -1250,6 +1256,23 @@ export class SpaceSync {
 			).toLowerCase();
 		}
 
+		// Object records contain UUID references; definitions live in the independent library.
+		const definitions = new Map<string, Record<string, any>>(
+			(this.activeSpace?.config?.materials ?? []).map(
+				(material: Record<string, any>) => [material.uuid, material],
+			),
+		);
+		const resolveMaterial = (value: unknown): unknown => {
+			if (typeof value !== "string") return value;
+			const definition = definitions.get(value);
+			if (!definition)
+				throw new Error(`Material ${value} is missing from the library`);
+			return definition;
+		};
+		data.material = Array.isArray(data.material)
+			? data.material.map(resolveMaterial)
+			: resolveMaterial(data.material);
+
 		const hasSerializedMaterial =
 			Boolean(data.material) && typeof data.material === "object";
 		const hasTextureData = typeof data.textureDataUrl === "string";
@@ -1374,8 +1397,8 @@ export class SpaceSync {
 		const data: Record<string, any> = {
 			sortOrder: object.parent
 				? object.parent.children
-					.filter((child) => child.internal !== true)
-					.indexOf(object)
+						.filter((child) => child.internal !== true)
+						.indexOf(object)
 				: 0,
 			position: {
 				x: position.x,
@@ -1573,6 +1596,19 @@ export class SpaceSync {
 
 		if (object instanceof DTObject) {
 			data.locked = object.locked;
+		}
+
+		if (data.material && this.activeSpaceId) {
+			const spaceId = this.activeSpaceId;
+			const save = async (definition: Record<string, any>): Promise<string> => {
+				await this.apiClient.storeMaterial(spaceId, definition);
+				return definition.uuid;
+			};
+			data.material = Array.isArray(data.material)
+				? await Promise.all(data.material.map(save))
+				: await save(data.material);
+			delete data.textureDataUrl;
+			delete data.textureName;
 		}
 
 		const parent =
