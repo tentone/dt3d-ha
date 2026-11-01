@@ -15,6 +15,11 @@ import {BedObject} from "./bed.js";
 import {CabinetObject} from "./cabinet.js";
 import {ChairObject} from "./chair.js";
 import {CouchObject} from "./couch.js";
+import {CenterpieceObject} from "./dining-room/decoration.js";
+import {DiningLightObject} from "./dining-room/lighting.js";
+import {DiningSeatingObject} from "./dining-room/seating.js";
+import {DiningStorageObject} from "./dining-room/storage.js";
+import {DiningTableObject} from "./dining-room/tables.js";
 import type {
 	FurnitureObject,
 	FurnitureParameters,
@@ -278,7 +283,7 @@ export const FURNITURE_OPTIONS: FurnitureOption[] = [
 		category: "decoration",
 		labelKey: "livingModelRug",
 		icon: "mdi:rug",
-		rooms: ["living-room"],
+		rooms: ["living-room", "dining-room"],
 		keywords: ["rug", "carpet"],
 	},
 	{
@@ -288,7 +293,7 @@ export const FURNITURE_OPTIONS: FurnitureOption[] = [
 		category: "decoration",
 		labelKey: "livingModelMirror",
 		icon: "mdi:mirror",
-		rooms: ["living-room", "bathroom"],
+		rooms: ["living-room", "bathroom", "dining-room"],
 		keywords: ["mirror"],
 	},
 	{
@@ -297,8 +302,14 @@ export const FURNITURE_OPTIONS: FurnitureOption[] = [
 		category: "decoration",
 		labelKey: "livingModelPlant",
 		icon: "mdi:flower-outline",
-		rooms: ["living-room"],
-		keywords: ["indoor plant", "palm", "succulent", "houseplant"],
+		rooms: ["living-room", "dining-room"],
+		keywords: [
+			"indoor plant",
+			"decorative plant",
+			"palm",
+			"succulent",
+			"houseplant",
+		],
 	},
 	{
 		type: "furniture-vase",
@@ -458,6 +469,77 @@ export const FURNITURE_OPTIONS: FurnitureOption[] = [
 		rooms: ["bathroom"],
 		keywords: ["bath mat", "bathmat", "bathroom rug"],
 	},
+	{
+		type: "furniture-dining-table",
+		furnitureType: "dining-table",
+		category: "tables-desks",
+		labelKey: "diningModelTable",
+		icon: "mdi:table-furniture",
+		rooms: ["dining-room"],
+		keywords: [
+			"rectangular dining table",
+			"round dining table",
+			"oval dining table",
+			"square dining table",
+			"extendable dining table",
+			"extension leaf",
+		],
+	},
+	{
+		type: "furniture-dining-seating",
+		furnitureType: "dining-seating",
+		category: "seating",
+		labelKey: "diningModelSeating",
+		icon: "mdi:chair-rolling",
+		rooms: ["dining-room"],
+		keywords: [
+			"dining chair",
+			"upholstered dining chair",
+			"dining bench",
+			"bar stool",
+		],
+	},
+	{
+		type: "furniture-dining-storage",
+		furnitureType: "dining-storage",
+		category: "storage",
+		labelKey: "diningModelStorage",
+		icon: "mdi:buffet",
+		rooms: ["dining-room"],
+		keywords: [
+			"sideboard",
+			"buffet cabinet",
+			"china cabinet",
+			"display cabinet",
+			"drinks cabinet",
+			"wine rack",
+		],
+	},
+	{
+		type: "furniture-dining-light",
+		furnitureType: "dining-light",
+		category: "lighting",
+		labelKey: "diningModelLight",
+		icon: "mdi:chandelier",
+		rooms: ["dining-room"],
+		keywords: ["chandelier", "pendant light", "wall light", "sconce"],
+	},
+	{
+		type: "furniture-centerpiece",
+		furnitureType: "centerpiece",
+		category: "decoration",
+		labelKey: "diningModelCenterpiece",
+		icon: "mdi:flower-vase-outline",
+		rooms: ["dining-room"],
+		keywords: [
+			"centerpiece",
+			"centrepiece",
+			"fruit bowl",
+			"floral arrangement",
+			"candle arrangement",
+			"table decoration",
+		],
+	},
 ];
 
 export function furnitureTypeFromMeshType(type: string): FurnitureType | null {
@@ -544,4 +626,9 @@ const CUSTOM_FURNITURE_FACTORIES: Partial<
 	"laundry-basket": LaundryBasketObject,
 	"bathroom-stool": BathroomStoolObject,
 	"bath-mat": BathMatObject,
+	"dining-table": DiningTableObject,
+	"dining-seating": DiningSeatingObject,
+	"dining-storage": DiningStorageObject,
+	"dining-light": DiningLightObject,
+	centerpiece: CenterpieceObject,
 };

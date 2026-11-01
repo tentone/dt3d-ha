@@ -94,7 +94,7 @@ test("search combines category filters, labels, identifiers, aliases, and query 
 		"furniture-standing-desk",
 	);
 	assert.equal(filterModels("géometric sphere")[0].type, "sphere");
-	assert.equal(filterModels("lighting").length, 6);
+	assert.equal(filterModels("lighting").length, 7);
 	assert.equal(filterModels("living room", "all", "living-room").length, 18);
 	assert.equal(filterModels("bean bag", "seating", "living-room")[0].type, "furniture-ottoman");
 	assert.equal(filterModels("this model does not exist").length, 0);

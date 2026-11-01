@@ -155,6 +155,23 @@ Choose a family, position its outlined preview, and double-click to place it. Op
 
 The fixtures have open bowl geometry. Shower glass remains translucent, and under-sink cabinets include a rear pipe cutout. Cabinet presets rebuild their corresponding doors, shelves, and supports. Dimensions describe the main fixture body; taps, open lids, handles, and other fittings can extend beyond it. Position wall-hung fixtures, wall basins, medicine cabinets, mirrors, shelves, rails, and hooks at the desired installation height using the transform controls.
 
+### Dining room collection
+
+Open **Model Library**, select **Dining Room**, and browse **Tables**, **Seating**, **Storage**, **Lighting**, and **Decoration**. Eight customizable families cover the 22 requested dining room objects. Search recognizes individual variants such as “extendable dining table”, “upholstered dining chair”, “china cabinet”, and “wine rack”.
+
+Choose a family, move its outlined preview, and double-click to place it. Select a preset in its inspector configuration section, then adjust its dimensions and details. Presets load suitable starting dimensions; edits support saving, cloning, and undo.
+
+| Family | Variants and controls |
+| --- | --- |
+| Dining tables | Rectangular, round, oval, square, or extendable; top shape, dimensions, thickness, support style, leg count and inset, and extension leaf length / extended state |
+| Dining seating | Dining chair, upholstered chair, bench, or bar stool; dimensions, seat height and thickness, square / tapered / pedestal legs, upholstery, back slats, arms, and stool footrest |
+| Dining storage | Sideboard, buffet, china cabinet, display cabinet, drinks cabinet, or wine rack; dimensions, columns, shelves, drawers, board thickness, feet, glass opacity, open doors, and optional dishes / bottles / stemware |
+| Dining lighting | Chandelier, pendant, or wall light; dimensions, 1–10 lights, candle / globe / dome shade, on/off, total brightness, and warm / neutral / cool white |
+| Rug, mirror, decorative plant | Shared existing models with the same shape, size, and detail controls across room collections |
+| Centerpieces | Fruit bowl, floral arrangement, or candles on a tray; dimensions, item count, optional contents, and candle flames |
+
+Dining light sources illuminate the scene; their brightness control describes the whole fixture. Extendable table width describes the closed table, with leaf length added while extended. Cabinet dimensions describe the closed body; opened doors and handles can extend beyond it. Move pendant/chandelier canopies, wall lights, and mirrors to their installation height with the transform controls. Place centerpieces on a tabletop using the placement preview or height control.
+
 ### Add Home Assistant entities
 
 Select **Add entity**, search by entity ID or friendly name, and choose the entity. Move its preview to the desired position and double-click to place it. Adjust it afterwards with the transform controls. Entity visuals update from the Home Assistant state supplied to the card.

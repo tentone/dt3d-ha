@@ -165,12 +165,19 @@ export class DT3DModelLibrary extends LitElement {
 		const results = filterModels(this.query, this.category, this.room);
 		const matching = filterModels(this.query, "all", this.room);
 		const roomModels = filterModels("", "all", this.room);
-		const order = MODEL_ROOMS.find((room) => room.id === this.room)?.categories;
+		const selectedRoom = MODEL_ROOMS.find((room) => room.id === this.room);
+		const order = selectedRoom?.categories;
 		const categories = MODEL_CATEGORIES.filter(
 			(category) =>
 				this.room === "all" ||
 				roomModels.some((entry) => entry.category === category.id),
-		).sort((a, b) => (order ? order.indexOf(a.id) - order.indexOf(b.id) : 0));
+		)
+			.sort((a, b) => (order ? order.indexOf(a.id) - order.indexOf(b.id) : 0))
+			.map((category) => ({
+				...category,
+				labelKey:
+					selectedRoom?.categoryLabels?.[category.id] ?? category.labelKey,
+			}));
 		return html`
 			<div class="overlay" @click=${this.close}></div>
 			<section

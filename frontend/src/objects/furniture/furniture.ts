@@ -41,7 +41,12 @@ export type FurnitureType =
 	| "bathroom-accessory"
 	| "laundry-basket"
 	| "bathroom-stool"
-	| "bath-mat";
+	| "bath-mat"
+	| "dining-table"
+	| "dining-seating"
+	| "dining-storage"
+	| "dining-light"
+	| "centerpiece";
 
 export type FurnitureParameters = Record<string, number | boolean | string>;
 

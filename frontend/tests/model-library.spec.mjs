@@ -71,6 +71,219 @@ async function placeSelectedModel(page) {
 	);
 }
 
+test("dining room shows five ordered categories, renders previews and saves extendable tables with undo", async ({
+	page,
+}) => {
+	const saved = [];
+	page.on("request", (request) => {
+		if (request.method() === "PUT" && request.url().includes("/objects/"))
+			saved.push(request.postDataJSON());
+	});
+	await openLibrary(page);
+	const library = page.locator("dt3d-model-library");
+	await library
+		.getByRole("combobox", { name: "Filter by room" })
+		.selectOption("dining-room");
+	await expect(library.locator(".model")).toHaveCount(8);
+	await expect(library.locator(".preview img")).toHaveCount(8);
+	await expect(library.locator(".model-section h3")).toHaveText([
+		"Tables",
+		"Seating",
+		"Storage",
+		"Lighting",
+		"Decoration",
+	]);
+	await expect(library.locator("nav button span:first-of-type")).toHaveText([
+		"All models",
+		"Tables",
+		"Seating",
+		"Storage",
+		"Lighting",
+		"Decoration",
+	]);
+	await library.getByRole("searchbox").fill("extendable dining table");
+	await expect(library.locator(".model")).toHaveCount(1);
+	await library
+		.getByRole("button", { name: "Add Dining tables", exact: true })
+		.click();
+	await placeSelectedModel(page);
+	const inspector = page.locator("dt3d-object-inspector");
+	await inspector
+		.locator("summary")
+		.filter({ hasText: "Dining table configuration" })
+		.click();
+	await inspector
+		.getByRole("combobox", { name: "Dining table preset", exact: true })
+		.selectOption("extendable-dining-table");
+	const original = await page.evaluate(() =>
+		window.testCard.space.children
+			.find((item) => item.userData.meshType === "furniture-dining-table")
+			.getParameters(),
+	);
+	expect(original.width).toBe(1.6);
+	expect(original.extensionEnabled).toBe(true);
+	await inspector
+		.getByRole("checkbox", { name: "Extend table", exact: true })
+		.uncheck();
+	await expect
+		.poll(() =>
+			saved.some(
+				(item) =>
+					item.data?.furniture?.style === "extendable-dining-table" &&
+					item.data.furniture.extensionEnabled === false,
+			),
+		)
+		.toBe(true);
+	await inspector
+		.getByRole("checkbox", { name: "Extend table", exact: true })
+		.blur();
+	await page.keyboard.press("Control+z");
+	await expect
+		.poll(() =>
+			page.evaluate(() =>
+				window.testCard.space.children
+					.find((item) => item.userData.meshType === "furniture-dining-table")
+					.getParameters(),
+			),
+		)
+		.toEqual(original);
+});
+
+test("dining seating and wine storage presets expose working controls after placement", async ({
+	page,
+}) => {
+	await openLibrary(page);
+	let library = page.locator("dt3d-model-library");
+	await library
+		.getByRole("combobox", { name: "Filter by room" })
+		.selectOption("dining-room");
+	await library.getByRole("searchbox").fill("bar stool");
+	await library
+		.getByRole("button", {
+			name: "Add Dining chairs / benches / stools",
+			exact: true,
+		})
+		.click();
+	await placeSelectedModel(page);
+	const inspector = page.locator("dt3d-object-inspector");
+	await inspector
+		.locator("summary")
+		.filter({ hasText: "Dining seating configuration" })
+		.click();
+	await inspector
+		.getByRole("combobox", { name: "Dining seating preset", exact: true })
+		.selectOption("bar-stool");
+	await expect(
+		inspector.getByRole("spinbutton", { name: "Seat height", exact: true }),
+	).toHaveValue("0.75");
+	await inspector
+		.getByRole("checkbox", { name: "Stool footrest", exact: true })
+		.uncheck();
+	await expect
+		.poll(() =>
+			page.evaluate(() =>
+				Boolean(
+					window.testCard.space.children
+						.find(
+							(item) => item.userData.meshType === "furniture-dining-seating",
+						)
+						.getObjectByName("Stool Footrest"),
+				),
+			),
+		)
+		.toBe(false);
+	await openLibrary(page);
+	library = page.locator("dt3d-model-library");
+	await library
+		.getByRole("combobox", { name: "Filter by room" })
+		.selectOption("dining-room");
+	await library.getByRole("searchbox").fill("wine rack");
+	await library
+		.getByRole("button", { name: "Add Dining room storage", exact: true })
+		.click();
+	await placeSelectedModel(page);
+	const summary = inspector
+		.locator("summary")
+		.filter({ hasText: "Dining storage configuration" });
+	if (!(await summary.evaluate((element) => element.parentElement.open)))
+		await summary.click();
+	await inspector
+		.getByRole("combobox", { name: "Dining storage preset", exact: true })
+		.selectOption("wine-rack");
+	await inspector
+		.getByRole("spinbutton", { name: "Columns", exact: true })
+		.fill("3");
+	await inspector
+		.getByRole("spinbutton", { name: "Columns", exact: true })
+		.blur();
+	await expect
+		.poll(() =>
+			page.evaluate(() => {
+				let count = 0;
+				window.testCard.space.children
+					.find((item) => item.userData.meshType === "furniture-dining-storage")
+					.traverse((item) => {
+						if (item.name === "Wine Bottle") count++;
+					});
+				return count;
+			}),
+		)
+		.toBe(15);
+});
+
+test("dining lights save their light count and on/off state", async ({
+	page,
+}) => {
+	const saved = [];
+	page.on("request", (request) => {
+		if (request.method() === "PUT" && request.url().includes("/objects/"))
+			saved.push(request.postDataJSON());
+	});
+	await openLibrary(page);
+	const library = page.locator("dt3d-model-library");
+	await library
+		.getByRole("combobox", { name: "Filter by room" })
+		.selectOption("dining-room");
+	await library.getByRole("searchbox").fill("chandelier");
+	await library
+		.getByRole("button", { name: "Add Dining room lighting", exact: true })
+		.click();
+	await placeSelectedModel(page);
+	const inspector = page.locator("dt3d-object-inspector");
+	await inspector
+		.locator("summary")
+		.filter({ hasText: "Dining lighting configuration" })
+		.click();
+	await inspector
+		.getByRole("spinbutton", { name: "Light count", exact: true })
+		.fill("8");
+	await inspector
+		.getByRole("spinbutton", { name: "Light count", exact: true })
+		.blur();
+	await inspector
+		.getByRole("checkbox", { name: "Light on", exact: true })
+		.uncheck();
+	await expect
+		.poll(() =>
+			saved.some(
+				(item) =>
+					item.data?.furniture?.lightCount === 8 &&
+					item.data.furniture.enabled === false,
+			),
+		)
+		.toBe(true);
+	const lights = await page.evaluate(() => {
+		const result = [];
+		window.testCard.space.children
+			.find((item) => item.userData.meshType === "furniture-dining-light")
+			.traverse((item) => {
+				if (item.isPointLight) result.push(item.intensity);
+			});
+		return result;
+	});
+	expect(lights).toEqual(Array(8).fill(0));
+});
+
 test("bathroom collection shows six categories, renders previews and saves fixture variants", async ({
 	page,
 }) => {
@@ -629,7 +842,10 @@ test("supports empty searches, opening placement, lighting, closing, and keyboar
 		.toBe("door");
 	await openLibrary(page);
 	library = page.locator("dt3d-model-library");
-	await library.getByRole("button", { name: "Lighting" }).click();
+	await library
+		.locator("nav")
+		.getByRole("button", { name: "Lighting" })
+		.click();
 	await library
 		.getByRole("button", { name: "Add Point Light", exact: true })
 		.click();

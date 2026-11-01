@@ -1,7 +1,10 @@
 import type {Mesh} from "three";
 import {ExtrudeGeometry, Shape} from "three";
 
-import type {FurnitureParameters} from "./furniture.js";
+import type {
+	FurnitureParameterDefinition,
+	FurnitureParameters,
+} from "./furniture.js";
 import {
 	choice,
 	dimensions,
@@ -36,82 +39,94 @@ export class TableObject extends LivingRoomObject {
 	constructor(
 		parameters: Partial<FurnitureParameters> = {},
 		color = 0x98724e,
-		type: "table" | "living-table" = "table",
+		type: "table" | "living-table" | "dining-table" = "table",
+		definitions?: FurnitureParameterDefinition[],
 	) {
 		super(
 			type,
-			type === "table" ? "Table" : "Living room table",
-			"furnitureTableParameters",
-			type === "table"
-				? TABLE_PARAMETER_DEFINITIONS
-				: [
-					choice("style", "TableStyle", "coffee-table", [
-						{
-							value: "coffee-table",
-							parameters: {
-								width: 1.1,
-								depth: 0.6,
-								height: 0.42,
-								tableCount: 1,
-								topShape: "rounded",
+			type === "dining-table"
+				? "Dining table"
+				: type === "table"
+					? "Table"
+					: "Living room table",
+			type === "dining-table"
+				? "diningTableControls"
+				: "furnitureTableParameters",
+			definitions ??
+				(type === "table"
+					? TABLE_PARAMETER_DEFINITIONS
+					: [
+						choice("style", "TableStyle", "coffee-table", [
+							{
+								value: "coffee-table",
+								parameters: {
+									width: 1.1,
+									depth: 0.6,
+									height: 0.42,
+									tableCount: 1,
+									topShape: "rounded",
+								},
 							},
-						},
-						{
-							value: "side-table",
-							parameters: {
-								width: 0.5,
-								depth: 0.5,
-								height: 0.55,
-								tableCount: 1,
-								topShape: "round",
+							{
+								value: "side-table",
+								parameters: {
+									width: 0.5,
+									depth: 0.5,
+									height: 0.55,
+									tableCount: 1,
+									topShape: "round",
+								},
 							},
-						},
-						{
-							value: "nesting-tables",
-							parameters: {
-								width: 0.7,
-								depth: 0.55,
-								height: 0.5,
-								tableCount: 3,
-								topShape: "oval",
+							{
+								value: "nesting-tables",
+								parameters: {
+									width: 0.7,
+									depth: 0.55,
+									height: 0.5,
+									tableCount: 3,
+									topShape: "oval",
+								},
 							},
-						},
-						{
-							value: "console-table",
-							parameters: {
-								width: 1.3,
-								depth: 0.32,
-								height: 0.78,
-								tableCount: 1,
-								topShape: "rectangle",
+							{
+								value: "console-table",
+								parameters: {
+									width: 1.3,
+									depth: 0.32,
+									height: 0.78,
+									tableCount: 1,
+									topShape: "rectangle",
+								},
 							},
-						},
-						{
-							value: "corner-table",
-							parameters: {
-								width: 0.65,
-								depth: 0.65,
-								height: 0.55,
-								tableCount: 1,
-								topShape: "corner",
-								legCount: 3,
+							{
+								value: "corner-table",
+								parameters: {
+									width: 0.65,
+									depth: 0.65,
+									height: 0.55,
+									tableCount: 1,
+									topShape: "corner",
+									legCount: 3,
+								},
 							},
-						},
+						]),
+						...TABLE_PARAMETER_DEFINITIONS,
 					]),
-					...TABLE_PARAMETER_DEFINITIONS,
-				],
 			parameters,
 			color,
 		);
 	}
 
+	protected getTableWidth(): number {
+		return Number(this.parameters.width);
+	}
+
 	protected buildFurniture(material: Mesh["material"]): void {
 		const p = this.parameters;
-		const count = Number(p.tableCount),
+		const count = Number(p.tableCount ?? 1),
 			legMaterial = this.accent(0x38383b, 0.45, 0.35);
 		for (let index = 0; index < count; index++) {
 			const scale = Math.pow(0.77, index),
-				w = Number(p.width) * scale,
+				w = this.getTableWidth() * scale,
 				d = Number(p.depth) * scale;
 			const h = Number(p.height) * (1 - index * 0.2),
 				t = Math.min(Number(p.topThickness), h * 0.25);

@@ -33,8 +33,21 @@ export type ModelRoom = {
 	id: string;
 	labelKey: string;
 	categories: ModelCategoryId[];
+	categoryLabels?: Partial<Record<ModelCategoryId, string>>;
 };
 export const MODEL_ROOMS: ModelRoom[] = [
+	{
+		id: "dining-room",
+		labelKey: "diningRoom",
+		categories: [
+			"tables-desks",
+			"seating",
+			"storage",
+			"lighting",
+			"decoration",
+		],
+		categoryLabels: {"tables-desks": "diningCategoryTables"},
+	},
 	{
 		id: "living-room",
 		labelKey: "livingRoom",
