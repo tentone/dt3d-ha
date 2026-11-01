@@ -20,11 +20,15 @@ import {
 } from "./primitives.js";
 
 export class RugObject extends LivingRoomObject {
-	constructor(parameters: Partial<FurnitureParameters> = {}, color = 0xbcb097) {
+	constructor(
+		parameters: Partial<FurnitureParameters> = {},
+		color = 0xbcb097,
+		type: "rug" | "bath-mat" = "rug",
+	) {
 		super(
-			"rug",
-			"Rug",
-			"livingRugControls",
+			type,
+			type === "bath-mat" ? "Bath mat" : "Rug",
+			type === "bath-mat" ? "bathMatControls" : "livingRugControls",
 			[
 				...dimensions(2, 1.4, 0.012).map((definition) =>
 					definition.name === "height"

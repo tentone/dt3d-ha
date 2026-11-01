@@ -32,7 +32,16 @@ export type FurnitureType =
 	| "artwork"
 	| "wall-clock"
 	| "fireplace"
-	| "curtains";
+	| "curtains"
+	| "sanitary-fixture"
+	| "washbasin"
+	| "shower"
+	| "bathroom-storage"
+	| "towel-rail"
+	| "bathroom-accessory"
+	| "laundry-basket"
+	| "bathroom-stool"
+	| "bath-mat";
 
 export type FurnitureParameters = Record<string, number | boolean | string>;
 

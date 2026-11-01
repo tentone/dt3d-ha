@@ -71,6 +71,155 @@ async function placeSelectedModel(page) {
 	);
 }
 
+test("bathroom collection shows six categories, renders previews and saves fixture variants", async ({
+	page,
+}) => {
+	const saved = [];
+	page.on("request", (request) => {
+		if (request.method() === "PUT" && request.url().includes("/objects/"))
+			saved.push(request.postDataJSON());
+	});
+	await openLibrary(page);
+	const library = page.locator("dt3d-model-library");
+	await library
+		.getByRole("combobox", { name: "Filter by room" })
+		.selectOption("bathroom");
+	await expect(library.locator(".model")).toHaveCount(11);
+	await expect(library.locator(".preview img")).toHaveCount(11);
+	await expect(library.locator("nav button span:first-of-type")).toHaveText([
+		"All models",
+		"Sanitary fixtures",
+		"Washbasins",
+		"Bathing",
+		"Storage",
+		"Accessories",
+		"Other",
+	]);
+	await expect(library.locator(".model-section h3")).toHaveText([
+		"Sanitary fixtures",
+		"Washbasins",
+		"Bathing",
+		"Storage",
+		"Accessories",
+		"Other",
+	]);
+	await library.getByRole("searchbox").fill("wall-hung toilet");
+	await library
+		.getByRole("button", { name: "Add Sanitary fixtures", exact: true })
+		.click();
+	await placeSelectedModel(page);
+	const inspector = page.locator("dt3d-object-inspector");
+	await inspector
+		.locator("summary")
+		.filter({ hasText: "Sanitary fixture configuration" })
+		.click();
+	await inspector
+		.getByRole("combobox", { name: "Fixture preset", exact: true })
+		.selectOption("wall-hung-toilet");
+	await inspector
+		.getByRole("checkbox", { name: "Open lid", exact: true })
+		.check();
+	await expect
+		.poll(() =>
+			page.evaluate(() => {
+				const object = window.testCard.space.children.find(
+					(item) => item.userData.meshType === "furniture-sanitary-fixture",
+				);
+				return {
+					style: object.parameters.style,
+					width: object.parameters.width,
+					lidOpen: object.parameters.lidOpen,
+				};
+			}),
+		)
+		.toEqual({ style: "wall-hung-toilet", width: 0.38, lidOpen: true });
+	await expect
+		.poll(() =>
+			saved.some(
+				(item) =>
+					item.data?.furniture?.style === "wall-hung-toilet" &&
+					item.data.furniture.lidOpen,
+			),
+		)
+		.toBe(true);
+});
+
+test("bathroom shower and storage presets expose working inspector controls after placement", async ({
+	page,
+}) => {
+	await openLibrary(page);
+	let library = page.locator("dt3d-model-library");
+	await library
+		.getByRole("combobox", { name: "Filter by room" })
+		.selectOption("bathroom");
+	await library.getByRole("searchbox").fill("walk-in shower");
+	await library
+		.getByRole("button", { name: "Add Showers", exact: true })
+		.click();
+	await placeSelectedModel(page);
+	const inspector = page.locator("dt3d-object-inspector");
+	await inspector
+		.locator("summary")
+		.filter({ hasText: "Shower configuration" })
+		.click();
+	await inspector
+		.getByRole("combobox", { name: "Shower preset", exact: true })
+		.selectOption("shower-enclosure");
+	const initialX = await page.evaluate(
+		() =>
+			window.testCard.space.children
+				.find((item) => item.userData.meshType === "furniture-shower")
+				.getObjectByName("Shower Sliding Door").position.x,
+	);
+	await inspector
+		.getByRole("spinbutton", { name: "Door opening", exact: true })
+		.fill("1");
+	await inspector
+		.getByRole("spinbutton", { name: "Door opening", exact: true })
+		.blur();
+	await expect
+		.poll(() =>
+			page.evaluate(
+				() =>
+					window.testCard.space.children
+						.find((item) => item.userData.meshType === "furniture-shower")
+						.getObjectByName("Shower Sliding Door").position.x,
+			),
+		)
+		.toBeLessThan(initialX);
+	await openLibrary(page);
+	library = page.locator("dt3d-model-library");
+	await library
+		.getByRole("combobox", { name: "Filter by room" })
+		.selectOption("bathroom");
+	await library.getByRole("searchbox").fill("under-sink cabinet");
+	await library
+		.getByRole("button", { name: "Add Bathroom storage", exact: true })
+		.click();
+	await placeSelectedModel(page);
+	const storageSummary = inspector
+		.locator("summary")
+		.filter({ hasText: "Bathroom storage configuration" });
+	if (!(await storageSummary.evaluate((element) => element.parentElement.open)))
+		await storageSummary.click();
+	await inspector
+		.getByRole("combobox", { name: "Cabinet preset", exact: true })
+		.selectOption("under-sink-cabinet");
+	await expect
+		.poll(() =>
+			page.evaluate(() =>
+				Boolean(
+					window.testCard.space.children
+						.find(
+							(item) => item.userData.meshType === "furniture-bathroom-storage",
+						)
+						.getObjectByName("Sink Cutout Side"),
+				),
+			),
+		)
+		.toBe(true);
+});
+
 test("model placement previews follow the pointer and save only once after a double-click", async ({
 	page,
 }) => {

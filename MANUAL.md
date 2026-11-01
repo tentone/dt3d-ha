@@ -133,6 +133,28 @@ Each library entry represents a customizable family. Choose the model, double-cl
 
 Lamp and fireplace light sources illuminate the scene. Primary material edits change the main finish while preserving detail finishes such as glass, metal feet, foliage, and screens. Nesting table dimensions describe the largest table; cinema spacing describes the complete arrangement. Position wall shelves, mirrors, artwork, curtains, screens, and mounted lighting at the desired installation height with the transform controls.
 
+### Bathroom collection
+
+Open **Model Library**, select **Bathroom** in the room filter, and browse **Sanitary fixtures**, **Washbasins**, **Bathing**, **Storage**, **Accessories**, and **Other**. The collection groups the requested objects into 11 customizable families. Search recognizes individual variants such as “wall-hung toilet”, “countertop basin”, “corner bathtub”, and “heated towel rail”.
+
+Choose a family, position its outlined preview, and double-click to place it. Open its configuration section in the inspector to select a preset and adjust its dimensions and details. Presets load suitable starting dimensions; custom edits, cloning, saving, and undo work the same way as for living room models.
+
+| Family | Variants and controls |
+| --- | --- |
+| Sanitary fixtures | Floor-mounted toilet, wall-hung toilet, bidet, or urinal; dimensions, seat height, optional toilet lid, and open/closed lid |
+| Washbasins / vanity | Pedestal, wall-mounted, countertop, double basin, or vanity unit; dimensions, 1–2 bowls, bowl depth, taps, and vanity cabinet finish |
+| Bathtub | Existing built-in model plus freestanding oval and corner variants; dimensions, wall/rim/base thickness, and taps |
+| Showers | Tray, walk-in shower, or enclosure; dimensions, tray height, shower fittings, glass opacity, metal frame, and sliding door opening |
+| Bathroom storage | Medicine cabinet, bathroom cabinet, tall cabinet, wall shelf, or under-sink cabinet; dimensions, shelves, doors, board thickness, feet, open/closed doors, and back panel |
+| Mirror | Shared with the living room collection; rectangular, round, oval, or arched frame, dimensions, frame width, and optional stand |
+| Towel rails | Standard bar or heated ladder rail; dimensions, crossbar count, optional towel, and heater indicator |
+| Bathroom holders / hooks | Toilet paper holder, soap holder, or towel hooks; dimensions, hook count, and optional paper roll or soap |
+| Laundry basket | Oval or rectangular, woven or slatted; dimensions, slat count, optional lid, and laundry contents |
+| Bathroom stool | Rounded or round seat; dimensions, 3–4 legs, seat thickness, and non-slip feet |
+| Bath mat | Uses the shared rug geometry with bathroom dimensions; rectangular, rounded, round, or oval, with optional border and fringe |
+
+The fixtures have open bowl geometry. Shower glass remains translucent, and under-sink cabinets include a rear pipe cutout. Cabinet presets rebuild their corresponding doors, shelves, and supports. Dimensions describe the main fixture body; taps, open lids, handles, and other fittings can extend beyond it. Position wall-hung fixtures, wall basins, medicine cabinets, mirrors, shelves, rails, and hooks at the desired installation height using the transform controls.
+
 ### Add Home Assistant entities
 
 Select **Add entity**, search by entity ID or friendly name, and choose the entity. Move its preview to the desired position and double-click to place it. Adjust it afterwards with the transform controls. Entity visuals update from the Home Assistant state supplied to the card.

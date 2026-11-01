@@ -1,3 +1,15 @@
+import {
+	BathroomAccessoryObject,
+	TowelRailObject,
+} from "./bathroom/accessories.js";
+import {ShowerObject} from "./bathroom/bathing.js";
+import {SanitaryFixtureObject, WashbasinObject} from "./bathroom/fixtures.js";
+import {
+	BathMatObject,
+	BathroomStoolObject,
+	LaundryBasketObject,
+} from "./bathroom/other.js";
+import {BathroomStorageObject} from "./bathroom/storage.js";
 import {BathtubObject} from "./bathtub.js";
 import {BedObject} from "./bed.js";
 import {CabinetObject} from "./cabinet.js";
@@ -45,7 +57,12 @@ export type FurnitureCategory =
 	| "bathroom"
 	| "entertainment"
 	| "decoration"
-	| "lighting";
+	| "lighting"
+	| "sanitary-fixtures"
+	| "washbasins"
+	| "bathing"
+	| "accessories"
+	| "other";
 
 export type FurnitureOption = {
 	type: `furniture-${FurnitureType}`;
@@ -54,6 +71,7 @@ export type FurnitureOption = {
 	icon: string;
 	category: FurnitureCategory;
 	rooms?: string[];
+	roomCategories?: Partial<Record<string, FurnitureCategory>>;
 	keywords?: string[];
 };
 
@@ -132,6 +150,9 @@ export const FURNITURE_OPTIONS: FurnitureOption[] = [
 	{
 		type: "furniture-bathtub",
 		furnitureType: "bathtub",
+		rooms: ["bathroom"],
+		roomCategories: {bathroom: "bathing"},
+		keywords: ["bathtub", "freestanding bathtub", "corner bathtub", "bath"],
 		category: "bathroom",
 		labelKey: "furnitureBathtub",
 		icon: "mdi:bathtub-outline",
@@ -263,10 +284,11 @@ export const FURNITURE_OPTIONS: FurnitureOption[] = [
 	{
 		type: "furniture-mirror",
 		furnitureType: "mirror",
+		roomCategories: {bathroom: "accessories"},
 		category: "decoration",
 		labelKey: "livingModelMirror",
 		icon: "mdi:mirror",
-		rooms: ["living-room"],
+		rooms: ["living-room", "bathroom"],
 		keywords: ["mirror"],
 	},
 	{
@@ -323,6 +345,119 @@ export const FURNITURE_OPTIONS: FurnitureOption[] = [
 		rooms: ["living-room"],
 		keywords: ["curtains", "drapes", "drapery"],
 	},
+	{
+		type: "furniture-sanitary-fixture",
+		furnitureType: "sanitary-fixture",
+		category: "sanitary-fixtures",
+		labelKey: "bathModelSanitaryFixture",
+		icon: "mdi:toilet",
+		rooms: ["bathroom"],
+		keywords: [
+			"toilet",
+			"wall-hung toilet",
+			"wall hung toilet",
+			"bidet",
+			"urinal",
+		],
+	},
+	{
+		type: "furniture-washbasin",
+		furnitureType: "washbasin",
+		category: "washbasins",
+		labelKey: "bathModelWashbasin",
+		icon: "mdi:hand-wash-outline",
+		rooms: ["bathroom"],
+		keywords: [
+			"pedestal basin",
+			"wall-mounted basin",
+			"wall mounted basin",
+			"countertop basin",
+			"double basin",
+			"vanity unit",
+			"washbasin",
+			"sink",
+		],
+	},
+	{
+		type: "furniture-shower",
+		furnitureType: "shower",
+		category: "bathing",
+		labelKey: "bathModelShower",
+		icon: "mdi:shower",
+		rooms: ["bathroom"],
+		keywords: [
+			"shower tray",
+			"walk-in shower",
+			"walk in shower",
+			"shower enclosure",
+		],
+	},
+	{
+		type: "furniture-bathroom-storage",
+		furnitureType: "bathroom-storage",
+		category: "storage",
+		labelKey: "bathModelBathroomStorage",
+		icon: "mdi:cupboard-outline",
+		rooms: ["bathroom"],
+		keywords: [
+			"medicine cabinet",
+			"bathroom cabinet",
+			"tall cabinet",
+			"wall shelf",
+			"under-sink cabinet",
+			"under sink cabinet",
+		],
+	},
+	{
+		type: "furniture-towel-rail",
+		furnitureType: "towel-rail",
+		category: "accessories",
+		labelKey: "bathModelTowelRail",
+		icon: "mdi:radiator",
+		rooms: ["bathroom"],
+		keywords: ["towel rail", "heated towel rail", "towel warmer"],
+	},
+	{
+		type: "furniture-bathroom-accessory",
+		furnitureType: "bathroom-accessory",
+		category: "accessories",
+		labelKey: "bathModelBathroomAccessory",
+		icon: "mdi:paper-roll-outline",
+		rooms: ["bathroom"],
+		keywords: [
+			"toilet paper holder",
+			"soap holder",
+			"soap dish",
+			"towel hooks",
+		],
+	},
+	{
+		type: "furniture-laundry-basket",
+		furnitureType: "laundry-basket",
+		category: "other",
+		labelKey: "bathModelLaundryBasket",
+		icon: "mdi:basket-outline",
+		rooms: ["bathroom"],
+		keywords: ["laundry basket", "hamper"],
+	},
+	{
+		type: "furniture-bathroom-stool",
+		furnitureType: "bathroom-stool",
+		category: "other",
+		labelKey: "bathModelBathroomStool",
+		icon: "mdi:stool-outline",
+		rooms: ["bathroom"],
+		keywords: ["bathroom stool", "stool"],
+	},
+	{
+		type: "furniture-bath-mat",
+		furnitureType: "bath-mat",
+		category: "other",
+		labelKey: "bathModelBathMat",
+		icon: "mdi:rug",
+		rooms: ["bathroom"],
+		keywords: ["bath mat", "bathmat", "bathroom rug"],
+	},
 ];
 
 export function furnitureTypeFromMeshType(type: string): FurnitureType | null {
@@ -344,7 +479,7 @@ export function createFurnitureObject(
 	color?: number,
 ): FurnitureObject | null {
 	const type = furnitureTypeFromMeshType(meshType);
-	const factory = type ? LIVING_FURNITURE_FACTORIES[type] : undefined;
+	const factory = type ? CUSTOM_FURNITURE_FACTORIES[type] : undefined;
 	if (factory) return new factory(parameters, color);
 	switch (type) {
 		case "standing-desk":
@@ -374,7 +509,7 @@ export function createFurnitureObject(
 	}
 }
 
-const LIVING_FURNITURE_FACTORIES: Partial<
+const CUSTOM_FURNITURE_FACTORIES: Partial<
 	Record<
 		FurnitureType,
 		new (
@@ -400,4 +535,13 @@ const LIVING_FURNITURE_FACTORIES: Partial<
 	"wall-clock": WallClockObject,
 	fireplace: FireplaceObject,
 	curtains: CurtainsObject,
+	"sanitary-fixture": SanitaryFixtureObject,
+	washbasin: WashbasinObject,
+	shower: ShowerObject,
+	"bathroom-storage": BathroomStorageObject,
+	"towel-rail": TowelRailObject,
+	"bathroom-accessory": BathroomAccessoryObject,
+	"laundry-basket": LaundryBasketObject,
+	"bathroom-stool": BathroomStoolObject,
+	"bath-mat": BathMatObject,
 };

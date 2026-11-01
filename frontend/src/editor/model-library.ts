@@ -25,10 +25,41 @@ export type ModelLibraryEntry = {
 	icon: string;
 	keywords?: string[];
 	rooms?: string[];
+	roomCategories?: Partial<Record<string, ModelCategoryId>>;
 };
 
 /** Add categories here and assign furniture in furniture-registry.ts as the library grows. */
-export const MODEL_ROOMS = [{id: "living-room", labelKey: "livingRoom"}];
+export type ModelRoom = {
+	id: string;
+	labelKey: string;
+	categories: ModelCategoryId[];
+};
+export const MODEL_ROOMS: ModelRoom[] = [
+	{
+		id: "living-room",
+		labelKey: "livingRoom",
+		categories: [
+			"seating",
+			"tables-desks",
+			"storage",
+			"entertainment",
+			"lighting",
+			"decoration",
+		],
+	},
+	{
+		id: "bathroom",
+		labelKey: "bathroomRoom",
+		categories: [
+			"sanitary-fixtures",
+			"washbasins",
+			"bathing",
+			"storage",
+			"accessories",
+			"other",
+		],
+	},
+];
 
 export const MODEL_CATEGORIES: ModelCategory[] = [
 	{id: "seating", labelKey: "modelCategorySeating", icon: "mdi:sofa-outline"},
@@ -53,6 +84,23 @@ export const MODEL_CATEGORIES: ModelCategory[] = [
 		labelKey: "modelCategoryBathroom",
 		icon: "mdi:bathtub-outline",
 	},
+	{
+		id: "sanitary-fixtures",
+		labelKey: "bathCategorySanitary",
+		icon: "mdi:toilet",
+	},
+	{
+		id: "washbasins",
+		labelKey: "bathCategoryWashbasins",
+		icon: "mdi:hand-wash-outline",
+	},
+	{id: "bathing", labelKey: "bathCategoryBathing", icon: "mdi:shower"},
+	{
+		id: "accessories",
+		labelKey: "bathCategoryAccessories",
+		icon: "mdi:paper-roll-outline",
+	},
+	{id: "other", labelKey: "bathCategoryOther", icon: "mdi:dots-horizontal"},
 	{
 		id: "entertainment",
 		labelKey: "modelCategoryEntertainment",
@@ -170,7 +218,11 @@ export function filterModels(
 	room = "all",
 ): ModelLibraryEntry[] {
 	const words = normalizeSearch(query).trim().split(/\s+/).filter(Boolean);
-	return MODEL_LIBRARY.filter((entry) => {
+	return MODEL_LIBRARY.map((entry) =>
+		room !== "all" && entry.roomCategories?.[room]
+			? {...entry, category: entry.roomCategories[room]!}
+			: entry,
+	).filter((entry) => {
 		if (category !== "all" && entry.category !== category) return false;
 		if (room !== "all" && !entry.rooms?.includes(room)) return false;
 		const categoryLabel = localManager.get(
@@ -182,6 +234,11 @@ export function filterModels(
 				categoryLabel,
 				entry.type.replace(/-/g, " "),
 				...(entry.keywords ?? []),
+				...Object.values(entry.roomCategories ?? {}).map((category) =>
+					localManager.get(
+						MODEL_CATEGORIES.find((item) => item.id === category)!.labelKey,
+					),
+				),
 				...(entry.rooms ?? []).map((id) =>
 					localManager.get(
 						MODEL_ROOMS.find((item) => item.id === id)?.labelKey ?? id,

@@ -12,6 +12,7 @@
 		"test:materials": "node --test tests/material-library.test.mjs",
 		"test:furniture": "node --test tests/furniture.test.mjs",
 		"test:living-room": "node --test tests/living-room.test.mjs",
+		"test:bathroom": "node --test tests/bathroom.test.mjs",
 		"test:object-placement": "node --test tests/object-placement.test.mjs",
 		"test:model-library": "node --test tests/model-library.test.mjs",
 		"test:model-library-ui": "playwright test --config playwright.model-library.config.mjs",

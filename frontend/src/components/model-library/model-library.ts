@@ -164,14 +164,13 @@ export class DT3DModelLibrary extends LitElement {
 	public override render() {
 		const results = filterModels(this.query, this.category, this.room);
 		const matching = filterModels(this.query, "all", this.room);
+		const roomModels = filterModels("", "all", this.room);
+		const order = MODEL_ROOMS.find((room) => room.id === this.room)?.categories;
 		const categories = MODEL_CATEGORIES.filter(
 			(category) =>
 				this.room === "all" ||
-				MODEL_LIBRARY.some(
-					(entry) =>
-						entry.category === category.id && entry.rooms?.includes(this.room),
-				),
-		);
+				roomModels.some((entry) => entry.category === category.id),
+		).sort((a, b) => (order ? order.indexOf(a.id) - order.indexOf(b.id) : 0));
 		return html`
 			<div class="overlay" @click=${this.close}></div>
 			<section
@@ -271,7 +270,7 @@ export class DT3DModelLibrary extends LitElement {
 								.replace("{total}", String(MODEL_LIBRARY.length))}
 						</p>
 						${results.length
-							? MODEL_CATEGORIES.map((category) => {
+							? categories.map((category) => {
 									const models = results.filter(
 										(entry) => entry.category === category.id,
 									);
