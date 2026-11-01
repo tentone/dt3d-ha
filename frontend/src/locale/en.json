@@ -234,6 +234,7 @@
 	"livingOption_mantel-fireplace": "Mantel surround",
 	"livingOption_linear-fireplace": "Linear / glazed",
 	"retry": "Retry",
+	"hintPlaceObject": "Double click on the space to place the object",
 	"cancel": "Cancel",
 	"confirm": "Confirm",
 	"save": "Save",

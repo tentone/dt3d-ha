@@ -16,6 +16,9 @@ export class DT3DHintBox extends LitElement {
 	@property({type: String})
 	public message = "";
 
+	/** Keep placement instructions below the space toolbar. */
+	@property({type: Boolean, reflect: true}) public placement = false;
+
 	protected render() {
 		if (!this.message) {
 			return html``;

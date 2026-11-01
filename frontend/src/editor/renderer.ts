@@ -157,6 +157,7 @@ export class RendererManager {
 	private selectionOutline: SelectionOutlinePass;
 
 	private selectedObjects: Object3D[] = [];
+	private placementPreview: Object3D | null = null;
 
 	private selectionOutlineExclusions: Object3D[] = [];
 
@@ -641,6 +642,15 @@ export class RendererManager {
 		this.selectedObjects = [...objects];
 		this.selectionOutline.selectedObjects = this.selectedObjects;
 		this.selectionOutline.enabled = this.selectedObjects.length > 0;
+		const color = this.placementPreview ? 0x63d8ff : SELECTION_OUTLINE_COLOR;
+		this.selectionOutline.visibleEdgeColor.setHex(color);
+		this.selectionOutline.hiddenEdgeColor.setHex(color);
+	}
+
+	/** Use the normal silhouette pass for placement, with geometry outlines as its fallback. */
+	public setPlacementPreview(object: Object3D | null): void {
+		this.placementPreview = object;
+		this.setSelectedObjects(object ? [object] : []);
 	}
 
 	/**

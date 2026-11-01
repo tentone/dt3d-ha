@@ -48,6 +48,232 @@ async function openLibrary(page) {
 	).toBeVisible();
 }
 
+async function preparePlacementView(page) {
+	await page.evaluate(() => {
+		const card = window.testCard;
+		card.camera.position.set(5, 5, 7);
+		card.controls.target?.set(0, 0, 0);
+		card.controls.update(0);
+		card.camera.updateMatrixWorld(true);
+	});
+}
+
+async function placeSelectedModel(page) {
+	await expect(page.locator("dt3d-hint-box")).toContainText(
+		"Double click on the space to place the object",
+	);
+	await preparePlacementView(page);
+	await page
+		.locator("dt3d-card > div > div > canvas")
+		.dblclick({ position: { x: 590, y: 430 } });
+	await expect(page.locator("dt3d-hint-box")).not.toContainText(
+		"Double click on the space to place the object",
+	);
+}
+
+test("model placement previews follow the pointer and save only once after a double-click", async ({
+	page,
+}) => {
+	const creates = [];
+	page.on("request", (request) => {
+		if (
+			request.method() === "POST" &&
+			new URL(request.url()).pathname.endsWith("/objects")
+		)
+			creates.push(request.postDataJSON());
+	});
+	await openLibrary(page);
+	await page.locator("dt3d-model-library").getByRole("searchbox").fill("sofa");
+	await page.getByRole("button", { name: "Add Couch", exact: true }).click();
+	await expect(page.locator("dt3d-hint-box")).toContainText(
+		"Double click on the space to place the object",
+	);
+	const id = await page.evaluate(
+		() => window.testCard.objectPlacement.object.uuid,
+	);
+	await expect(
+		page.locator("dt3d-tree").getByText("Couch", { exact: true }),
+	).toHaveCount(0);
+	await preparePlacementView(page);
+	// Placement outlines also render when the post-processing pipeline is disabled.
+	await page.evaluate(() => {
+		window.testCard.rendererManager.renderingConfig.postProcessingEnabled = false;
+	});
+	await page.mouse.move(350, 440);
+	await expect
+		.poll(() =>
+			page.evaluate(() => window.testCard.objectPlacement.root.visible),
+		)
+		.toBe(true);
+	const first = await page.evaluate(() =>
+		window.testCard.objectPlacement.object.position.toArray(),
+	);
+	await page.mouse.move(740, 470);
+	await expect
+		.poll(() =>
+			page.evaluate(() =>
+				window.testCard.objectPlacement.object.position.toArray(),
+			),
+		)
+		.not.toEqual(first);
+	const preview = await page.evaluate(() => {
+		const card = window.testCard;
+		let outlines = 0;
+		card.objectPlacement.object.traverse((child) => {
+			if (child.isLineSegments && child.material.color.getHex() === 0x63d8ff)
+				outlines++;
+		});
+		return {
+			outsideSpace: !card.space.getObjectByProperty(
+				"uuid",
+				card.objectPlacement.object.uuid,
+			),
+			outlines,
+		};
+	});
+	expect(preview.outsideSpace).toBe(true);
+	expect(preview.outlines).toBeGreaterThan(0);
+	await page.mouse.click(740, 470);
+	expect(
+		creates.filter((item) => item.data?.meshType === "furniture-couch"),
+	).toHaveLength(0);
+	await page.mouse.dblclick(740, 470);
+	await expect
+		.poll(
+			() =>
+				creates.filter((item) => item.data?.meshType === "furniture-couch")
+					.length,
+		)
+		.toBe(1);
+	await expect
+		.poll(() =>
+			page.evaluate(
+				(uuid) => window.testCard.space.getObjectByProperty("uuid", uuid)?.uuid,
+				id,
+			),
+		)
+		.toBe(id);
+	await expect
+		.poll(() => page.evaluate(() => window.testCard.objectPlacement))
+		.toBe(null);
+	await page.keyboard.press("Control+z");
+	await expect
+		.poll(() =>
+			page.evaluate(
+				(uuid) =>
+					Boolean(window.testCard.space.getObjectByProperty("uuid", uuid)),
+				id,
+			),
+		)
+		.toBe(false);
+	await page.keyboard.press("Control+Shift+z");
+	await expect
+		.poll(() =>
+			page.evaluate(
+				(uuid) =>
+					Boolean(window.testCard.space.getObjectByProperty("uuid", uuid)),
+				id,
+			),
+		)
+		.toBe(true);
+});
+
+test("escape, tool changes and read-only mode cancel unsaved placement", async ({
+	page,
+}) => {
+	const creates = [];
+	page.on("request", (request) => {
+		if (request.method() === "POST" && request.url().endsWith("/objects"))
+			creates.push(request.postDataJSON());
+	});
+	for (const cancel of ["escape", "tool", "read-only"]) {
+		await openLibrary(page);
+		await page
+			.locator("dt3d-model-library")
+			.getByRole("searchbox")
+			.fill("sofa");
+		await page.getByRole("button", { name: "Add Couch", exact: true }).click();
+		await preparePlacementView(page);
+		await page.mouse.move(500, 460);
+		if (cancel === "escape") await page.keyboard.press("Escape");
+		else if (cancel === "tool")
+			await page
+				.getByRole("button", { name: "Draw wall", exact: true })
+				.click();
+		else
+			await page.evaluate(() =>
+				window.testCard.setConfig({
+					...window.testCard.config,
+					visualization_only: true,
+				}),
+			);
+		await expect
+			.poll(() => page.evaluate(() => window.testCard.objectPlacement))
+			.toBe(null);
+		await expect
+			.poll(() =>
+				page.evaluate(
+					() =>
+						window.testCard.scene.getObjectByProperty(
+							"name",
+							"Object placement preview",
+						) === undefined,
+				),
+			)
+			.toBe(true);
+	}
+	expect(
+		creates.filter((item) => item.data?.meshType === "furniture-couch"),
+	).toHaveLength(0);
+});
+
+test("multiple imported files wait for placement one at a time", async ({
+	page,
+}) => {
+	const creates = [];
+	page.on("request", (request) => {
+		if (request.method() === "POST" && request.url().endsWith("/objects"))
+			creates.push(request.postDataJSON());
+	});
+	await openLibrary(page);
+	const chooser = page.waitForEvent("filechooser");
+	await page.getByRole("button", { name: "Select model files" }).click();
+	const buffer = Buffer.from(
+		"o Test\nv -0.5 0 0\nv 0.5 0 0\nv 0 1 0\nf 1 2 3\n",
+	);
+	await (
+		await chooser
+	).setFiles([
+		{ name: "one.obj", mimeType: "text/plain", buffer },
+		{ name: "two.obj", mimeType: "text/plain", buffer },
+	]);
+	await expect
+		.poll(() =>
+			page.evaluate(() => window.testCard.objectPlacementQueue.length),
+		)
+		.toBe(1);
+	expect(creates.filter((item) => item.name?.endsWith(".obj"))).toHaveLength(0);
+	await preparePlacementView(page);
+	await page
+		.locator("dt3d-card > div > div > canvas")
+		.dblclick({ position: { x: 590, y: 430 } });
+	await expect
+		.poll(() => creates.filter((item) => item.name?.endsWith(".obj")).length)
+		.toBe(1);
+	await expect(page.locator("dt3d-hint-box")).toContainText(
+		"Double click on the space to place the object",
+	);
+	await page
+		.locator("dt3d-card > div > div > canvas")
+		.dblclick({ position: { x: 700, y: 450 } });
+	await expect
+		.poll(() => creates.filter((item) => item.name?.endsWith(".obj")).length)
+		.toBe(2);
+	await expect
+		.poll(() => page.evaluate(() => window.testCard.objectPlacement))
+		.toBe(null);
+});
+
 test("renders library thumbnails offscreen, filters categories, searches, and creates models", async ({
 	page,
 }) => {
@@ -88,6 +314,7 @@ test("renders library thumbnails offscreen, filters categories, searches, and cr
 	await library
 		.getByRole("button", { name: "Add Sphere", exact: true })
 		.click();
+	await placeSelectedModel(page);
 	await expect(library).toHaveCount(0);
 	await expect
 		.poll(() =>
@@ -102,6 +329,7 @@ test("renders library thumbnails offscreen, filters categories, searches, and cr
 	await library.getByRole("searchbox").fill("sofa");
 	await expect(library.locator(".model")).toHaveCount(1);
 	await library.getByRole("button", { name: "Add Couch", exact: true }).click();
+	await placeSelectedModel(page);
 	await page.locator("dt3d-tree").getByText("Couch", { exact: true }).click();
 	await expect
 		.poll(() =>
@@ -127,6 +355,7 @@ test("living room filtering exposes every family and sofa controls change the sc
 	await library.getByRole("searchbox").fill("U-shaped sofa");
 	await expect(library.locator(".model")).toHaveCount(1);
 	await library.getByRole("button", { name: "Add Couch", exact: true }).click();
+	await placeSelectedModel(page);
 	await page.locator("dt3d-tree").getByText("Couch", { exact: true }).click();
 	const inspector = page.locator("dt3d-object-inspector");
 	await inspector
@@ -185,6 +414,7 @@ test("table preset edits save string parameters and undo restores the complete c
 	await library
 		.getByRole("button", { name: "Add Living room tables", exact: true })
 		.click();
+	await placeSelectedModel(page);
 	await page
 		.locator("dt3d-tree")
 		.getByText("Living room table", { exact: true })
@@ -254,6 +484,7 @@ test("supports empty searches, opening placement, lighting, closing, and keyboar
 	await library
 		.getByRole("button", { name: "Add Point Light", exact: true })
 		.click();
+	await placeSelectedModel(page);
 	await expect
 		.poll(() =>
 			page.evaluate(() =>
@@ -318,6 +549,7 @@ test("keeps model selection usable when thumbnail WebGL is unavailable", async (
 	await expect(library.locator(".model")).toHaveCount(1);
 	await expect(library.locator(".preview > ha-icon")).toHaveCount(1);
 	await library.getByRole("button", { name: "Add Cube", exact: true }).click();
+	await placeSelectedModel(page);
 	await expect(library).toHaveCount(0);
 	await expect
 		.poll(() =>

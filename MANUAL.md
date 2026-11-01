@@ -72,7 +72,11 @@ The left sidebar organizes creation tools into **Model Library**, **Scene tools*
   - Use the file or folder upload buttons at the bottom of **Model Library**. Select or drop companion material and texture files with the model, or upload a folder to preserve their relative paths.
   - Prefer a self-contained `.glb` when possible for reliable results.
 
-After adding a mesh or furniture object, select it to edit its dimensions, transform, material properties, or apply an image texture. Keep imported geometry and texture sizes modest because they are downloaded and uploaded by each client.
+Selecting a model starts placement mode and displays **Double click on the space to place the object**. Move the pointer over the scene to see the model with a cyan outline, then double-click to confirm its position. The bottom of the model rests on the surface under the pointer, with the ground plane used in empty areas. Grid snapping also applies when enabled. Press **Escape** or right-click to cancel. The preview is added to the object tree and saved only after confirmation.
+
+The same placement flow applies to selected Home Assistant entities and models imported through the file picker. When importing several models, place them one at a time. Dragging files directly onto the canvas uses the drop position.
+
+After placement, edit dimensions, transform, material properties, or apply an image texture in the inspector. Keep imported geometry and texture sizes modest because they are downloaded and uploaded by each client.
 
 The material library retains created materials even when no object uses them. Materials, textures, and image sources are stored separately in the database; objects reference materials by UUID. Removing an object or replacing a texture does not delete these assets. Use the material library's delete action to remove a material explicitly; its textures remain stored. Existing scenes migrate automatically when the updated add-on starts.
 
@@ -80,7 +84,7 @@ The material library retains created materials even when no object uses them. Ma
 
 ### Use the built-in furniture models
 
-Open **Model Library**, select a furniture category, and choose a model. DT3D creates a lightweight procedural object at the scene origin; move it into place with the transform control or its inspector. All dimensions are in meters.
+Open **Model Library**, select a furniture category, and choose a model. Move the outlined preview to the desired surface and double-click to place it. The transform controls and inspector can adjust it afterwards. All dimensions are in meters.
 
 | Model   | Default size (W × D × H) | Model-specific controls                                            |
 | ------- | ------------------------ | ------------------------------------------------------------------ |
@@ -104,7 +108,7 @@ Raise upper kitchen cabinets to the desired wall-mounting height using the posit
 
 Open **Model Library**, choose **Living Room** in the room filter, and browse **Seating**, **Tables & Desks**, **Storage**, **Entertainment**, **Lighting**, and **Decoration**. Search also recognizes variant names such as “U-shaped sofa”, “bean bag”, “nesting tables”, and “wall shelves”.
 
-Each library entry represents a customizable family. Add the model, select it, and open its furniture configuration in the inspector. Named presets load suitable starting dimensions; dimensions and construction details can then be edited independently. Undo restores the complete configuration, including dimensions changed by a preset. Variant choices are saved with the space and retained when cloning.
+Each library entry represents a customizable family. Choose the model, double-click its position in the scene, and open its furniture configuration in the inspector. Named presets load suitable starting dimensions; dimensions and construction details can then be edited independently. Undo restores the complete configuration, including dimensions changed by a preset. Variant choices are saved with the space and retained when cloning.
 
 | Family | Variants and controls |
 | --- | --- |
@@ -131,7 +135,7 @@ Lamp and fireplace light sources illuminate the scene. Primary material edits ch
 
 ### Add Home Assistant entities
 
-Select **Add entity**, search by entity ID or friendly name, and choose the entity. Position it with the transform controls. Entity visuals update from the Home Assistant state supplied to the card.
+Select **Add entity**, search by entity ID or friendly name, and choose the entity. Move its preview to the desired position and double-click to place it. Adjust it afterwards with the transform controls. Entity visuals update from the Home Assistant state supplied to the card.
 
 | Entity domain    | Specialized visualization                                                                                 | Toggle action |
 | ---------------- | --------------------------------------------------------------------------------------------------------- | ------------- |

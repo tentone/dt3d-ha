@@ -102,6 +102,7 @@ import {applyImageTextureToMesh} from "../editor/material-texture.js";
 import {MeasurementManager} from "../editor/measurements.js";
 import {mergeFloors} from "../editor/merge-floors.js";
 import {createMeshObject, resolveMeshType} from "../editor/mesh-handler.js";
+import {disposeUnplacedObject, ObjectPlacementPreview, pickObjectPlacementPoint} from "../editor/object-placement.js";
 import {
 	isWallOpeningObject,
 	snapOpeningToNearestWall,
@@ -419,6 +420,12 @@ export class DT3DCard extends LitElement {
 	 */
 	private moveToPointObject: Object3D | null = null;
 
+	/** Unsaved creation preview, separate from move-to-point for existing objects. */
+	private objectPlacement: ObjectPlacementPreview | null = null;
+	private placementPointer: MouseEvent | null = null;
+	private objectPlacementQueue: Object3D[] = [];
+	private importPlacementGeneration = 0;
+
 	/**
 	 * Raycaster for interaction with the scene.
 	 */
@@ -481,7 +488,7 @@ export class DT3DCard extends LitElement {
 			return;
 		}
 
-		if (event.key === "Escape" && this.moveToPointObject) {
+		if (event.key === "Escape" && (this.objectPlacement || this.moveToPointObject)) {
 			event.preventDefault();
 			this.cancelMoveToPoint();
 			return;
@@ -496,6 +503,11 @@ export class DT3DCard extends LitElement {
 		const modifier = event.ctrlKey || event.metaKey;
 		const key = event.key.toLowerCase();
 		if (modifier && !event.altKey && (key === "z" || key === "y")) {
+			if (this.objectPlacement) {
+				this.cancelObjectPlacement();
+				event.preventDefault();
+				return;
+			}
 			const redo = key === "y" || event.shiftKey;
 			const changed = redo ? this.actionStack.redo() : this.actionStack.undo();
 			if (changed) this.floorManager?.resetWallBaseline();
@@ -674,9 +686,21 @@ export class DT3DCard extends LitElement {
 			return Promise.resolve();
 		}
 
+		this.cancelMoveToPoint();
+		const generation = this.importPlacementGeneration;
 		return loadModelsFromFiles(files, (object, file) => {
-			if (position) object.position.copy(position);
-			this.addToScene(object, file.name);
+			if (generation !== this.importPlacementGeneration || this.isEditingDisabled() || !this.isConnected) {
+				disposeUnplacedObject(object);
+				return;
+			}
+			if (position) {
+				object.position.copy(position);
+				this.addToScene(object, file.name);
+			} else {
+				object.name = file.name;
+				if (this.objectPlacement) this.objectPlacementQueue.push(object);
+				else this.startObjectPlacement(object);
+			}
 		});
 	}
 
@@ -2489,6 +2513,7 @@ export class DT3DCard extends LitElement {
 
 	/** Store and display a complete object selection. */
 	private setSelectedObjects(objects: Object3D[]): void {
+		if (this.objectPlacement) this.cancelObjectPlacement();
 		if (this.selectedMaterial) this.setSelectedMaterial(null);
 		const uniqueObjects = [
 			...new Set(
@@ -2903,6 +2928,7 @@ export class DT3DCard extends LitElement {
 			return;
 		}
 
+		this.cancelObjectPlacement();
 		this.measurementManager?.setMode("none");
 		this.wallManager?.setMode("none");
 		this.floorManager?.setActive(false);
@@ -2927,9 +2953,80 @@ export class DT3DCard extends LitElement {
 	 * Leave move-to-point mode without changing the object.
 	 */
 	private cancelMoveToPoint(): void {
+		this.cancelObjectPlacement();
 		this.moveToPointObject = null;
 		this.updateCanvasCursor(this.hoveredObject);
 		this.updateHintMessage();
+	}
+
+	/** Start a preview without inserting, registering, or saving the new object. */
+	private startObjectPlacement(object: Object3D): void {
+		this.measurementManager?.setMode("none");
+		this.wallManager?.setMode("none");
+		this.floorManager?.setActive(false);
+		this.moveToPointObject = null;
+		this.bottomBar.measurementTool = "none";
+		this.objectSidebar.wallTool = "none";
+		this.clearPendingEntityClickAction();
+		this.clearSceneLongPress();
+		this.endCollisionDrag();
+		this.wallEndpointManager?.setSelectedWall(null);
+		this.transform?.detach();
+		this.objectPlacement = new ObjectPlacementPreview(object);
+		this.scene.add(this.objectPlacement.root);
+		this.rendererManager?.setPlacementPreview(object);
+		this.placementPointer = null;
+		this.updateCanvasCursor(null);
+		this.updateHintMessage();
+	}
+
+	private cancelObjectPlacement(): void {
+		this.importPlacementGeneration++;
+		this.objectPlacementQueue.forEach(disposeUnplacedObject);
+		this.objectPlacementQueue = [];
+		const preview = this.objectPlacement;
+		this.objectPlacement = null;
+		this.placementPointer = null;
+		if (!preview) return;
+		preview.cancel();
+		this.rendererManager?.setPlacementPreview(null);
+		this.rendererManager?.setSelectedObjects(this.isVisualizationOnly() ? [] : this.selectedObjects);
+		this.attachTransformToSelection();
+		this.wallEndpointManager?.setSelectedWall(this.lastSelectedObject instanceof WallObject ? this.lastSelectedObject : null);
+		this.updateCanvasCursor(this.hoveredObject);
+		this.updateHintMessage();
+	}
+
+	private updateObjectPlacement(event: MouseEvent): void {
+		const preview = this.objectPlacement;
+		if (!preview) return;
+		const rect = this.canvas.getBoundingClientRect();
+		if (this.isEditingDisabled() || this.hasOpenDialog() || event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom || rect.width === 0 || rect.height === 0) {
+			preview.move(null);
+			return;
+		}
+		this.pointer.set(((event.clientX - rect.left) / rect.width) * 2 - 1, -((event.clientY - rect.top) / rect.height) * 2 + 1);
+		this.raycaster.setFromCamera(this.pointer, this.camera);
+		preview.move(pickObjectPlacementPoint(this.raycaster, this.space), this.bottomBar.gridSnapEnabled ? this.sceneManager.getGridSnapSize() : 0);
+	}
+
+	private handleObjectPlacementDoubleClick(event: MouseEvent): boolean {
+		const preview = this.objectPlacement;
+		if (!preview) return false;
+		event.preventDefault();
+		this.updateObjectPlacement(event);
+		if (!preview.root.visible) return true;
+		const object = preview.release();
+		this.objectPlacement = null;
+		this.placementPointer = null;
+		this.rendererManager?.setPlacementPreview(null);
+		this.addToScene(object);
+		this.tree.selectObject(object.uuid);
+		this.setSelectedObject(object);
+		this.updateCanvasCursor(null);
+		const next = this.objectPlacementQueue.shift();
+		if (next) this.startObjectPlacement(next);
+		return true;
 	}
 
 	/**
@@ -3151,7 +3248,7 @@ export class DT3DCard extends LitElement {
 		this.tree?.closeContextMenu();
 
 		// Keep the pending object selected while waiting for the placement double-click. Browsers emit click events before dblclick.
-		if (this.moveToPointObject) {
+		if (this.objectPlacement || this.moveToPointObject) {
 			return;
 		}
 
@@ -3249,6 +3346,12 @@ export class DT3DCard extends LitElement {
 	 * @param event - Mouse or pointer event
 	 */
 	private handlePointerMove(event: MouseEvent): void {
+		if (this.objectPlacement) {
+			this.placementPointer = event;
+			this.updateObjectPlacement(event);
+			this.updateCanvasCursor(null);
+			return;
+		}
 		if (!this.isEditingDisabled()) {
 			this.wallManager?.handlePointerMove(event);
 			this.floorManager?.handlePointerMove(event);
@@ -3291,7 +3394,7 @@ export class DT3DCard extends LitElement {
 			return;
 		}
 
-		if (this.moveToPointObject) {
+		if (this.objectPlacement || this.moveToPointObject) {
 			this.canvas.style.cursor = "crosshair";
 			return;
 		}
@@ -3646,9 +3749,12 @@ export class DT3DCard extends LitElement {
 		if (!this.hintBox) {
 			return;
 		}
+		this.hintBox.placement = this.objectPlacement !== null;
 
 		if (this.isEditingDisabled()) {
 			this.hintBox.message = "";
+		} else if (this.objectPlacement) {
+			this.hintBox.message = localManager.get("hintPlaceObject");
 		} else if (this.bottomBar?.measurementTool === "distance") {
 			this.hintBox.message = localManager.get("hintMeasureDistance");
 		} else if (this.bottomBar?.measurementTool === "angle") {
@@ -3905,6 +4011,7 @@ export class DT3DCard extends LitElement {
 			this.closeObjectMenus();
 			return;
 		}
+		this.cancelMoveToPoint();
 		const rect = this.content.getBoundingClientRect();
 		const menu = document.createElement("dt3d-model-library");
 		const width = Math.min(680, Math.max(0, rect.width - 16));
@@ -4545,6 +4652,7 @@ export class DT3DCard extends LitElement {
 		if (this.isEditingDisabled()) {
 			return;
 		}
+		this.cancelObjectPlacement();
 
 		this.wallManager?.setMode(mode === "floor" ? "none" : mode);
 		this.floorManager?.setActive(mode === "floor");
@@ -4567,6 +4675,7 @@ export class DT3DCard extends LitElement {
 		if (this.isEditingDisabled()) {
 			return;
 		}
+		this.cancelMoveToPoint();
 
 		let object: Object3D = null;
 		const material = new MeshStandardMaterial({
@@ -4578,12 +4687,16 @@ export class DT3DCard extends LitElement {
 
 		if (object) {
 			object.userData.meshType = type;
-			this.addToScene(object);
+			if (!object.getObjectByProperty("material", material)) material.dispose();
+			this.startObjectPlacement(object);
 		} else if (type === "viewport") {
+			material.dispose();
 			this.addViewportFromCurrentCamera();
 		} else if (type === "entity") {
+			material.dispose();
 			this.addEntityModal();
 		} else if (type === "static-light" || type.startsWith("light-")) {
+			material.dispose();
 			const sourceTypes: Partial<Record<string, LightSourceType>> = {
 				"light-ambient": "ambient",
 				"light-directional": "directional",
@@ -4613,8 +4726,9 @@ export class DT3DCard extends LitElement {
 			};
 			const nameKey = nameKeys[sourceType];
 			light.name = `${localManager.get(nameKey)} ${lightCount + 1}`;
-			this.addToScene(light);
+			this.startObjectPlacement(light);
 		} else if (type === "group") {
+			material.dispose();
 			const group = new Group();
 			let groupCount = 0;
 			this.space.traverse((child) => {
@@ -4624,6 +4738,8 @@ export class DT3DCard extends LitElement {
 			});
 			group.name = `${localManager.get("group")} ${groupCount + 1}`;
 			this.addToScene(group);
+		} else {
+			material.dispose();
 		}
 	}
 
@@ -5732,6 +5848,7 @@ export class DT3DCard extends LitElement {
 			this.clearPendingEntityClickAction();
 
 			if (!this.isEditingDisabled()) {
+				if (this.handleObjectPlacementDoubleClick(event)) return;
 				if (this.handleMoveToPointDoubleClick(event)) {
 					return;
 				}
@@ -5806,12 +5923,17 @@ export class DT3DCard extends LitElement {
 
 		this.canvas.addEventListener("contextmenu", (event: MouseEvent) => {
 			this.clearSceneLongPress();
+			if (this.objectPlacement) {
+				event.preventDefault();
+				this.cancelObjectPlacement();
+				return;
+			}
 			this.openSceneContextMenu(event);
 		});
 
 		this.canvas.addEventListener("pointerdown", (event: PointerEvent) => {
 			this.handlePointerMove(event);
-			this.startSceneLongPress(event);
+			if (!this.objectPlacement) this.startSceneLongPress(event);
 		});
 
 		this.canvas.addEventListener("pointermove", (event: PointerEvent) => {
@@ -5825,6 +5947,8 @@ export class DT3DCard extends LitElement {
 
 		this.canvas.addEventListener("pointercancel", () => {
 			this.clearSceneLongPress();
+			this.placementPointer = null;
+			this.objectPlacement?.move(null);
 		});
 
 		this.canvas.addEventListener("dragover", (event: DragEvent) => {
@@ -5840,6 +5964,8 @@ export class DT3DCard extends LitElement {
 
 		this.canvas.addEventListener("mouseleave", (event: MouseEvent) => {
 			this.clearSceneLongPress();
+			this.placementPointer = null;
+			this.objectPlacement?.move(null);
 			this.wallEndpointManager?.clearHover();
 			this.updateCanvasCursor(null);
 
@@ -5856,6 +5982,7 @@ export class DT3DCard extends LitElement {
 		});
 
 		this.rendererManager.start((time: number) => {
+			if (this.objectPlacement && this.placementPointer) this.updateObjectPlacement(this.placementPointer);
 			this.wallConnectionManager.update(
 				this.space,
 				this.floorplanConfig.connection.shape,
@@ -5969,7 +6096,9 @@ export class DT3DCard extends LitElement {
 		object.position.set(0, 0, 0);
 		const entityName =
 			this.hassInstance?.states?.[id]?.attributes?.friendly_name;
-		this.addToScene(object, entityName || id);
+		object.name = entityName || id;
+		this.cancelMoveToPoint();
+		this.startObjectPlacement(object);
 	}
 
 	/**

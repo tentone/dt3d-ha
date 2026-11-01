@@ -11,6 +11,13 @@
 	display: none;
 }
 
+:host([placement]) {
+	top: 78px;
+	left: 50%;
+	max-width: calc(100% - 32px);
+	transform: translateX(-50%);
+}
+
 .hint-box {
 	background: color-mix(in srgb, var(--card-background-color) 90%, transparent);
 	color: var(--primary-text-color);
