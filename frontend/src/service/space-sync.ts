@@ -1022,7 +1022,7 @@ export class SpaceSync {
 				materialTarget = mesh;
 			} else if (isFurnitureMeshType(meshType)) {
 				const furnitureParameters = data.furniture as
-					| Record<string, number | boolean>
+					| Record<string, number | boolean | string>
 					| undefined;
 				const furniture = createFurnitureObject(
 					meshType,
@@ -1397,8 +1397,8 @@ export class SpaceSync {
 		const data: Record<string, any> = {
 			sortOrder: object.parent
 				? object.parent.children
-						.filter((child) => child.internal !== true)
-						.indexOf(object)
+					.filter((child) => child.internal !== true)
+					.indexOf(object)
 				: 0,
 			position: {
 				x: position.x,

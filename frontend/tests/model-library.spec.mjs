@@ -1,0 +1,331 @@
+import { expect, test } from "@playwright/test";
+
+const space = {
+	id: "test-space",
+	name: "Preview tests",
+	description: "",
+	is_default: true,
+	cache_version: 1,
+	config: {},
+	object_instances: [],
+	created_at: 1,
+	updated_at: 1,
+};
+
+test.beforeEach(async ({ page }) => {
+	await page.route("**/api/**", async (route) => {
+		const request = route.request();
+		const path = new URL(request.url()).pathname;
+		let data =
+			path === "/api/spaces" && request.method() === "GET"
+				? [space]
+				: path.endsWith("/version")
+					? { cache_version: 1 }
+					: space;
+		if (request.method() === "POST" && path.endsWith("/objects"))
+			data = {
+				...request.postDataJSON(),
+				id: crypto.randomUUID(),
+				space_id: space.id,
+			};
+		await route.fulfill({ json: data });
+	});
+	await page.goto("/tests/model-library.html");
+	await expect(
+		page.getByRole("button", { name: "Model Library", exact: true }),
+	).toBeVisible();
+	await expect
+		.poll(() => page.evaluate(() => window.testCard.spaceSync?.editingBlocked))
+		.toBe(false);
+});
+
+async function openLibrary(page) {
+	await page
+		.getByRole("button", { name: "Model Library", exact: true })
+		.click();
+	await expect(
+		page.getByRole("dialog", { name: "Model Library" }),
+	).toBeVisible();
+}
+
+test("renders library thumbnails offscreen, filters categories, searches, and creates models", async ({
+	page,
+}) => {
+	const errors = [];
+	page.on("pageerror", (error) => errors.push(error.message));
+	await openLibrary(page);
+	const library = page.locator("dt3d-model-library");
+	const total = await page.evaluate(
+		async () =>
+			(await import("/src/editor/model-library.ts")).MODEL_LIBRARY.length,
+	);
+	await expect(library.locator(".model")).toHaveCount(total);
+	await expect(library.locator(".preview img")).toHaveCount(total);
+	// Thumbnails contain visible pixels and no preview canvas is attached to the page.
+	const imageChecks = await library
+		.locator(".preview img")
+		.evaluateAll(async (images) => {
+			return Promise.all(
+				images.map(async (image) => {
+					await image.decode();
+					const canvas = document.createElement("canvas");
+					canvas.width = image.naturalWidth;
+					canvas.height = image.naturalHeight;
+					const context = canvas.getContext("2d");
+					context.drawImage(image, 0, 0);
+					return context
+						.getImageData(0, 0, canvas.width, canvas.height)
+						.data.some((value, index) => index % 4 === 3 && value > 0);
+				}),
+			);
+		});
+	expect(imageChecks.every(Boolean)).toBe(true);
+	await expect(library.locator("canvas")).toHaveCount(0);
+	await library.getByRole("button", { name: "Geometric Shapes" }).click();
+	await expect(library.locator(".model")).toHaveCount(14);
+	await library.getByRole("searchbox").fill("sphere");
+	await expect(library.locator(".model")).toHaveCount(1);
+	await library
+		.getByRole("button", { name: "Add Sphere", exact: true })
+		.click();
+	await expect(library).toHaveCount(0);
+	await expect
+		.poll(() =>
+			page.evaluate(() =>
+				window.testCard.space.children.some(
+					(object) => object.userData.meshType === "sphere",
+				),
+			),
+		)
+		.toBe(true);
+	await openLibrary(page);
+	await library.getByRole("searchbox").fill("sofa");
+	await expect(library.locator(".model")).toHaveCount(1);
+	await library.getByRole("button", { name: "Add Couch", exact: true }).click();
+	await page.locator("dt3d-tree").getByText("Couch", { exact: true }).click();
+	await expect
+		.poll(() =>
+			page.evaluate(() =>
+				window.testCard.space.children.some(
+					(object) => object.userData.meshType === "furniture-couch",
+				),
+			),
+		)
+		.toBe(true);
+	expect(errors).toEqual([]);
+});
+
+test("living room filtering exposes every family and sofa controls change the scene", async ({
+	page,
+}) => {
+	await openLibrary(page);
+	const library = page.locator("dt3d-model-library");
+	await library
+		.getByRole("combobox", { name: "Filter by room" })
+		.selectOption("living-room");
+	await expect(library.locator(".model")).toHaveCount(18);
+	await library.getByRole("searchbox").fill("U-shaped sofa");
+	await expect(library.locator(".model")).toHaveCount(1);
+	await library.getByRole("button", { name: "Add Couch", exact: true }).click();
+	await page.locator("dt3d-tree").getByText("Couch", { exact: true }).click();
+	const inspector = page.locator("dt3d-object-inspector");
+	await inspector
+		.locator("summary")
+		.filter({ hasText: "Couch dimensions" })
+		.click();
+	await expect(
+		inspector.getByRole("combobox", { name: "Layout", exact: true }),
+	).toBeVisible();
+	await inspector
+		.getByRole("combobox", { name: "Layout", exact: true })
+		.selectOption("u-shaped");
+	await expect
+		.poll(() =>
+			page.evaluate(() => {
+				const sofa = window.testCard.space.children.find(
+					(item) => item.userData.meshType === "furniture-couch",
+				);
+				let returns = 0;
+				sofa?.traverse((part) => {
+					if (part.name === "Sofa Return Base") returns++;
+				});
+				return returns;
+			}),
+		)
+		.toBe(2);
+	await inspector
+		.getByRole("spinbutton", { name: "Main seats", exact: true })
+		.fill("4");
+	await inspector
+		.getByRole("spinbutton", { name: "Main seats", exact: true })
+		.blur();
+	await expect
+		.poll(() =>
+			page.evaluate(
+				() =>
+					window.testCard.space.children.find(
+						(item) => item.userData.meshType === "furniture-couch",
+					)?.parameters.seatCount,
+			),
+		)
+		.toBe(4);
+});
+
+test("table preset edits save string parameters and undo restores the complete configuration", async ({
+	page,
+}) => {
+	const saved = [];
+	page.on("request", (request) => {
+		if (request.method() === "PUT" && request.url().includes("/objects/"))
+			saved.push(request.postDataJSON());
+	});
+	await openLibrary(page);
+	const library = page.locator("dt3d-model-library");
+	await library.getByRole("searchbox").fill("nesting tables");
+	await library
+		.getByRole("button", { name: "Add Living room tables", exact: true })
+		.click();
+	await page
+		.locator("dt3d-tree")
+		.getByText("Living room table", { exact: true })
+		.click();
+	const inspector = page.locator("dt3d-object-inspector");
+	await inspector
+		.locator("summary")
+		.filter({ hasText: "Table dimensions" })
+		.click();
+	const original = await page.evaluate(() =>
+		window.testCard.space.children
+			.find((item) => item.userData.meshType === "furniture-living-table")
+			.getParameters(),
+	);
+	await inspector
+		.getByRole("combobox", { name: "Table preset", exact: true })
+		.selectOption("nesting-tables");
+	await expect
+		.poll(() =>
+			page.evaluate(
+				() =>
+					window.testCard.space.children.find(
+						(item) => item.userData.meshType === "furniture-living-table",
+					)?.parameters.tableCount,
+			),
+		)
+		.toBe(3);
+	await expect
+		.poll(() =>
+			saved.some((item) => item.data?.furniture?.style === "nesting-tables"),
+		)
+		.toBe(true);
+	await inspector
+		.getByRole("combobox", { name: "Table preset", exact: true })
+		.blur();
+	await page.keyboard.press("Control+z");
+	await expect
+		.poll(() =>
+			page.evaluate(() =>
+				window.testCard.space.children
+					.find((item) => item.userData.meshType === "furniture-living-table")
+					?.getParameters(),
+			),
+		)
+		.toEqual(original);
+});
+
+test("supports empty searches, opening placement, lighting, closing, and keyboard focus", async ({
+	page,
+}) => {
+	await openLibrary(page);
+	let library = page.locator("dt3d-model-library");
+	await expect(library.getByRole("searchbox")).toBeFocused();
+	await library.getByRole("searchbox").fill("missing item");
+	await expect(library.locator(".model")).toHaveCount(0);
+	await library.getByRole("button", { name: "Clear filters" }).click();
+	await library
+		.getByRole("button", { name: "Doors, windows and gates" })
+		.click();
+	await library.getByRole("button", { name: "Add Door", exact: true }).click();
+	await expect
+		.poll(() => page.evaluate(() => window.testCard.objectSidebar.wallTool))
+		.toBe("door");
+	await openLibrary(page);
+	library = page.locator("dt3d-model-library");
+	await library.getByRole("button", { name: "Lighting" }).click();
+	await library
+		.getByRole("button", { name: "Add Point Light", exact: true })
+		.click();
+	await expect
+		.poll(() =>
+			page.evaluate(() =>
+				window.testCard.space.children.some(
+					(object) => object.sourceType === "point",
+				),
+			),
+		)
+		.toBe(true);
+	await openLibrary(page);
+	await page.keyboard.press("Escape");
+	await expect(library).toHaveCount(0);
+	await expect(
+		page.getByRole("button", { name: "Model Library", exact: true }),
+	).toBeFocused();
+	await openLibrary(page);
+	await library.getByRole("button", { name: "Close model library" }).focus();
+	await page.keyboard.press("Shift+Tab");
+	await expect(
+		library.getByRole("button", { name: "Select model folder" }),
+	).toBeFocused();
+});
+
+test("fits a small card and keeps imports reachable", async ({ page }) => {
+	await openLibrary(page);
+	await page.setViewportSize({ width: 390, height: 740 });
+	await page.evaluate(() => {
+		document.querySelector("#editor").style.height = "620px";
+	});
+	const library = page.locator("dt3d-model-library");
+	const bounds = await library.getByRole("dialog").boundingBox();
+	expect(bounds.x).toBeGreaterThanOrEqual(0);
+	expect(bounds.x + bounds.width).toBeLessThanOrEqual(390);
+	await expect(
+		library.getByRole("button", { name: "Select model files" }),
+	).toBeVisible();
+	await expect(
+		library.getByRole("button", { name: "Select model folder" }),
+	).toBeVisible();
+	await library.getByRole("button", { name: "Geometric Shapes" }).click();
+	await expect(library.locator(".model")).toHaveCount(14);
+	const chooserPromise = page.waitForEvent("filechooser");
+	await library.getByRole("button", { name: "Select model files" }).click();
+	const chooser = await chooserPromise;
+	expect(chooser.isMultiple()).toBe(true);
+	await expect(library).toHaveCount(0);
+});
+
+test("keeps model selection usable when thumbnail WebGL is unavailable", async ({
+	page,
+}) => {
+	await page.evaluate(() => {
+		const original = HTMLCanvasElement.prototype.getContext;
+		HTMLCanvasElement.prototype.getContext = function (type, ...args) {
+			if (!this.isConnected && type.startsWith("webgl")) return null;
+			return original.call(this, type, ...args);
+		};
+	});
+	await openLibrary(page);
+	const library = page.locator("dt3d-model-library");
+	await library.getByRole("searchbox").fill("cube");
+	await expect(library.locator(".model")).toHaveCount(1);
+	await expect(library.locator(".preview > ha-icon")).toHaveCount(1);
+	await library.getByRole("button", { name: "Add Cube", exact: true }).click();
+	await expect(library).toHaveCount(0);
+	await expect
+		.poll(() =>
+			page.evaluate(() =>
+				window.testCard.space.children.some(
+					(object) => object.userData.meshType === "cube",
+				),
+			),
+		)
+		.toBe(true);
+});

@@ -4,6 +4,7 @@
 	display: flex;
 	flex-direction: column;
 	width: 120px;
+	border-right: 1px solid var(--divider-color);
 	height: 100%;
 	padding: 16px 0;
 	overflow: visible;
@@ -44,8 +45,8 @@
 }
 
 .object-sidebar-section {
-	margin-bottom: 24px;
-	padding: 0 16px;
+	margin-bottom: 16px;
+	padding: 0 10px;
 	transition: opacity 0.2s;
 }
 
@@ -58,25 +59,30 @@
 }
 
 .object-sidebar-title {
-	margin-bottom: 8px;
-	color: var(--primary-color);
-	font-size: 1.1em;
-	font-weight: bold;
-	letter-spacing: 1px;
+	margin: 0 0 8px;
+	color: var(--secondary-text-color);
+	font-size: 10px;
+	font-weight: 600;
+	letter-spacing: 0.6px;
+	text-transform: uppercase;
 }
 
 button {
-	display: block;
+	display: flex;
+	align-items: center;
+	gap: 7px;
 	width: 100%;
-	margin-bottom: 8px;
-	padding: 10px 0;
+	margin-bottom: 5px;
+	padding: 9px 7px;
 	border: none;
-	border-radius: 4px;
-	background: var(--primary-color);
-	box-shadow: 0 2px 4px var(--shadow-color);
-	color: var(--text-primary-color);
+	border-radius: 7px;
+	background: transparent;
+	color: var(--primary-text-color);
 	cursor: pointer;
-	font-size: 1em;
+	font: inherit;
+	font-size: 11px;
+	text-align: left;
+	line-height: 1.35;
 	transition:
 		background 0.2s,
 		transform 0.2s;
@@ -84,26 +90,41 @@ button {
 
 button:hover,
 button.selected {
-	background: var(--dark-primary-color);
+	background: color-mix(in srgb, var(--primary-color) 16%, transparent);
+	color: var(--primary-color);
 }
 
 button:active {
-	background: var(--darker-primary-color);
+	background: color-mix(in srgb, var(--primary-color) 24%, transparent);
 }
 
-button.has-submenu {
+button:focus-visible {
+	outline: 2px solid var(--primary-color);
+	outline-offset: -2px;
+}
+
+button ha-icon {
+	flex: 0 0 auto;
+	--mdc-icon-size: 20px;
+}
+
+.library-button {
+	flex-direction: column;
+	justify-content: center;
+	gap: 7px;
+	padding: 14px 8px;
+	background: color-mix(in srgb, var(--primary-color) 16%, transparent);
+	color: var(--primary-color);
+	font-weight: 600;
+	text-align: center;
+}
+
+.collapse-btn {
 	display: grid;
-	grid-template-columns: 1fr 18px;
-	align-items: center;
+	place-items: center;
+	padding: 0;
 }
 
-button.has-submenu > ha-icon:first-child {
-	justify-self: center;
-	transform: translateX(9px);
-}
-
-.submenu-indicator {
-	justify-self: end;
-	font-size: 0.8em;
-	opacity: 0.8;
+:host([collapsed]) {
+	border-right: 0;
 }

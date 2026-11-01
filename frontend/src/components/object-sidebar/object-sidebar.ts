@@ -1,15 +1,13 @@
 import "../tooltip/tooltip.js";
 
-import {html, LitElement, unsafeCSS} from "lit";
+import {html, LitElement, nothing, unsafeCSS} from "lit";
 import {customElement} from "lit/decorators.js";
 
 import {localManager} from "../../locale/locale.js";
 import {LocalStorage} from "../../utils/local-storage.js";
 import componentStyles from "./object-sidebar.css?inline";
 
-/**
- * Wall placement options.
- */
+/** Wall placement options. Openings are selected from the Model Library. */
 export type WallOptions =
 	| "wall"
 	| "floor"
@@ -20,136 +18,71 @@ export type WallOptions =
 
 const OBJECT_SIDEBAR_COLLAPSED_STORAGE_KEY = "sidebar-collapsed";
 
-/**
- * Sidebar containing object creation and wall editing tools.
- */
 @customElement("dt3d-object-sidebar")
 export class DT3DObjectSidebar extends LitElement {
 	static styles = unsafeCSS(componentStyles);
-
 	static properties = {
 		collapsed: {type: Boolean, reflect: true},
 		wallTool: {type: String},
+		libraryOpen: {type: Boolean},
 	};
 
 	public collapsed =
 		LocalStorage.read(OBJECT_SIDEBAR_COLLAPSED_STORAGE_KEY, true) ?? true;
-
 	public wallTool: WallOptions = "none";
+	public libraryOpen = false;
+
+	private emit(name: string, detail?: unknown): void {
+		this.dispatchEvent(
+			new CustomEvent(name, {detail, bubbles: true, composed: true}),
+		);
+	}
 
 	private toggleCollapse(): void {
 		this.collapsed = !this.collapsed;
 		LocalStorage.write(OBJECT_SIDEBAR_COLLAPSED_STORAGE_KEY, this.collapsed);
-		this.dispatchEvent(
-			new CustomEvent("object-sidebar-collapse-changed", {
-				detail: {collapsed: this.collapsed},
-				bubbles: true,
-				composed: true,
-			}),
-		);
+		this.emit("object-sidebar-collapse-changed", {collapsed: this.collapsed});
 	}
 
-	private handleAddObject(type: string): void {
-		this.dispatchEvent(
-			new CustomEvent("add-object", {
-				detail: {type},
-				bubbles: true,
-				composed: true,
-			}),
-		);
-	}
-
-	private handleWallSelect(mode: WallOptions): void {
+	private selectWall(mode: WallOptions): void {
 		this.wallTool = mode;
-		this.dispatchEvent(
-			new CustomEvent("wall-tool-selected", {
-				detail: {mode},
-				bubbles: true,
-				composed: true,
-			}),
-		);
+		this.emit("wall-tool-selected", {mode});
 	}
 
-	private handleWallSettingsOpen(): void {
-		this.dispatchEvent(
-			new CustomEvent("wall-settings-open", {
-				bubbles: true,
-				composed: true,
-			}),
-		);
+	private openLibrary(event: MouseEvent): void {
+		const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
+		this.emit("model-library-open", {left: rect.right + 8, top: rect.top});
 	}
 
-	private handleMeshMenuOpen(event: MouseEvent): void {
-		const target = event.currentTarget as HTMLElement | null;
-		const rect = target?.getBoundingClientRect();
-
-		this.dispatchEvent(
-			new CustomEvent("mesh-menu-open", {
-				detail: rect
-					? {
-						left: rect.right + 8,
-						top: rect.top,
-					}
-					: null,
-				bubbles: true,
-				composed: true,
-			}),
-		);
+	public focusLibraryButton(): void {
+		this.renderRoot
+			.querySelector<HTMLButtonElement>(".library-button")
+			?.focus();
 	}
 
-	private handleUploadMenuOpen(event: MouseEvent): void {
-		const target = event.currentTarget as HTMLElement | null;
-		const rect = target?.getBoundingClientRect();
-
-		this.dispatchEvent(
-			new CustomEvent("upload-menu-open", {
-				detail: rect ? {left: rect.right + 8, top: rect.top} : null,
-				bubbles: true,
-				composed: true,
-			}),
-		);
+	private action(
+		labelKey: string,
+		icon: string,
+		action: () => void,
+		selected?: boolean,
+	) {
+		return html`<dt3d-tooltip
+			.content=${localManager.get(labelKey)}
+			placement="right"
+		>
+			<button
+				@click=${action}
+				class=${selected ? "selected" : ""}
+				aria-label=${localManager.get(labelKey)}
+				aria-pressed=${selected ?? nothing}
+			>
+				<ha-icon icon=${icon}></ha-icon
+				><span>${localManager.get(labelKey)}</span>
+			</button>
+		</dt3d-tooltip>`;
 	}
 
-	private handleLightMenuOpen(event: MouseEvent): void {
-		const target = event.currentTarget as HTMLElement | null;
-		const rect = target?.getBoundingClientRect();
-
-		this.dispatchEvent(
-			new CustomEvent("light-menu-open", {
-				detail: rect ? {left: rect.right + 8, top: rect.top} : null,
-				bubbles: true,
-				composed: true,
-			}),
-		);
-	}
-
-	private handleFurnitureMenuOpen(event: MouseEvent): void {
-		const target = event.currentTarget as HTMLElement | null;
-		const rect = target?.getBoundingClientRect();
-
-		this.dispatchEvent(
-			new CustomEvent("furniture-menu-open", {
-				detail: rect ? {left: rect.right + 8, top: rect.top} : null,
-				bubbles: true,
-				composed: true,
-			}),
-		);
-	}
-
-	private handleOpeningMenuOpen(event: MouseEvent): void {
-		const target = event.currentTarget as HTMLElement | null;
-		const rect = target?.getBoundingClientRect();
-
-		this.dispatchEvent(
-			new CustomEvent("opening-menu-open", {
-				detail: rect ? {left: rect.right + 8, top: rect.top} : null,
-				bubbles: true,
-				composed: true,
-			}),
-		);
-	}
-
-	render() {
+	public render() {
 		return html`
 			<dt3d-tooltip
 				.content=${localManager.get("collapseSidebar")}
@@ -159,169 +92,68 @@ export class DT3DObjectSidebar extends LitElement {
 					class="collapse-btn"
 					@click=${this.toggleCollapse}
 					aria-label=${localManager.get("collapseSidebar")}
+					aria-expanded=${!this.collapsed}
 				>
-					${this.collapsed
-						? html`<ha-icon
-								icon="mdi:arrow-right-drop-circle-outline"
-							></ha-icon>`
-						: html`<ha-icon
-								icon="mdi:arrow-left-drop-circle-outline"
-							></ha-icon>`}
+					<ha-icon
+						icon=${this.collapsed
+							? "mdi:arrow-right-drop-circle-outline"
+							: "mdi:arrow-left-drop-circle-outline"}
+					></ha-icon>
 				</button>
 			</dt3d-tooltip>
-			<div class="object-sidebar-content">
-				<section class="object-sidebar-section primary-actions">
-					<dt3d-tooltip
-						.content=${localManager.get("uploadModel")}
-						placement="right"
+			<div class="object-sidebar-content" ?inert=${this.collapsed}>
+				<section class="object-sidebar-section">
+					<button
+						class="library-button"
+						@click=${this.openLibrary}
+						aria-label=${localManager.get("modelLibrary")}
+						aria-haspopup="dialog"
+						aria-expanded=${this.libraryOpen}
 					>
-						<button
-							class="has-submenu"
-							@click=${(event: MouseEvent) => this.handleUploadMenuOpen(event)}
-							aria-label=${localManager.get("uploadModel")}
-						>
-							<ha-icon icon="mdi:upload-box-outline"></ha-icon>
-							<ha-icon class="submenu-indicator" icon="mdi:chevron-right"></ha-icon>
-						</button>
-					</dt3d-tooltip>
-					<dt3d-tooltip
-						.content=${localManager.get("addEntity")}
-						placement="right"
-					>
-						<button
-							@click=${() => this.handleAddObject("entity")}
-							aria-label=${localManager.get("addEntity")}
-						>
-							<ha-icon icon="mdi:state-machine"></ha-icon>
-						</button>
-					</dt3d-tooltip>
-					<dt3d-tooltip
-						.content=${localManager.get("addGroup")}
-						placement="right"
-					>
-						<button
-							@click=${() => this.handleAddObject("group")}
-							aria-label=${localManager.get("addGroup")}
-						>
-							<ha-icon icon="mdi:folder-plus-outline"></ha-icon>
-						</button>
-					</dt3d-tooltip>
-					<dt3d-tooltip
-						.content=${localManager.get("addViewport")}
-						placement="right"
-					>
-						<button
-							@click=${() => this.handleAddObject("viewport")}
-							aria-label=${localManager.get("addViewport")}
-						>
-							<ha-icon icon="mdi:camera-plus-outline"></ha-icon>
-						</button>
-					</dt3d-tooltip>
+						<ha-icon icon="mdi:view-grid-plus-outline"></ha-icon
+						><span>${localManager.get("modelLibrary")}</span>
+					</button>
+				</section>
+				<section class="object-sidebar-section">
+					<div class="object-sidebar-title">
+						${localManager.get("sceneTools")}
+					</div>
+					${this.action("addEntity", "mdi:state-machine", () =>
+						this.emit("add-object", {type: "entity"}),
+					)}
+					${this.action("addGroup", "mdi:folder-plus-outline", () =>
+						this.emit("add-object", {type: "group"}),
+					)}
+					${this.action("addViewport", "mdi:camera-plus-outline", () =>
+						this.emit("add-object", {type: "viewport"}),
+					)}
 				</section>
 				<section class="object-sidebar-section">
 					<div class="object-sidebar-title">${localManager.get("walls")}</div>
-					<dt3d-tooltip
-						.content=${localManager.get("drawWall")}
-						placement="right"
-					>
-						<button
-							@click=${() => this.handleWallSelect("wall")}
-							class=${this.wallTool === "wall" ? "selected" : ""}
-							aria-label=${localManager.get("drawWall")}
-						>
-							<ha-icon icon="mdi:vector-line"></ha-icon>
-						</button>
-					</dt3d-tooltip>
-					<dt3d-tooltip
-						.content=${localManager.get("drawFloor")}
-						placement="right"
-					>
-						<button
-							@click=${() => this.handleWallSelect("floor")}
-							class=${this.wallTool === "floor" ? "selected" : ""}
-							aria-label=${localManager.get("drawFloor")}
-						>
-							<ha-icon icon="mdi:floor-plan"></ha-icon>
-						</button>
-					</dt3d-tooltip>
-					<dt3d-tooltip
-						.content=${localManager.get("wallCreationDefaults")}
-						placement="right"
-					>
-						<button
-							@click=${() => this.handleWallSettingsOpen()}
-							aria-label=${localManager.get("wallCreationDefaults")}
-						>
-							<ha-icon icon="mdi:tune-variant"></ha-icon>
-						</button>
-					</dt3d-tooltip>
-					<dt3d-tooltip
-						.content=${localManager.get("floorplanOpenings")}
-						placement="right"
-					>
-						<button
-							@click=${(event: MouseEvent) => this.handleOpeningMenuOpen(event)}
-							class=${`has-submenu ${["door", "window", "gate"].includes(this.wallTool) ? "selected" : ""}`}
-							aria-label=${localManager.get("floorplanOpenings")}
-						>
-							<ha-icon icon="mdi:door-open"></ha-icon>
-							<ha-icon class="submenu-indicator" icon="mdi:chevron-right"></ha-icon>
-						</button>
-					</dt3d-tooltip>
-					<dt3d-tooltip
-						.content=${localManager.get("exitWallTools")}
-						placement="right"
-					>
-						<button
-							@click=${() => this.handleWallSelect("none")}
-							class=${this.wallTool === "none" ? "selected" : ""}
-							aria-label=${localManager.get("exitWallTools")}
-						>
-							<ha-icon icon="mdi:cancel"></ha-icon>
-						</button>
-					</dt3d-tooltip>
-				</section>
-				<section class="object-sidebar-section">
-					<div class="object-sidebar-title">${localManager.get("objects")}</div>
-					<dt3d-tooltip
-						.content=${localManager.get("addMesh")}
-						placement="right"
-					>
-						<button
-							class="has-submenu"
-							@click=${(event: MouseEvent) => this.handleMeshMenuOpen(event)}
-							aria-label=${localManager.get("addMesh")}
-						>
-							<ha-icon icon="mdi:shape-outline"></ha-icon>
-							<ha-icon class="submenu-indicator" icon="mdi:chevron-right"></ha-icon>
-						</button>
-					</dt3d-tooltip>
-					<dt3d-tooltip
-						.content=${localManager.get("addStaticLight")}
-						placement="right"
-					>
-						<button
-							class="has-submenu"
-							@click=${(event: MouseEvent) => this.handleLightMenuOpen(event)}
-							aria-label=${localManager.get("addStaticLight")}
-						>
-							<ha-icon icon="mdi:lightbulb-on-outline"></ha-icon>
-							<ha-icon class="submenu-indicator" icon="mdi:chevron-right"></ha-icon>
-						</button>
-					</dt3d-tooltip>
-					<dt3d-tooltip
-						.content=${localManager.get("furniture")}
-						placement="right"
-					>
-						<button
-							class="has-submenu"
-							@click=${(event: MouseEvent) => this.handleFurnitureMenuOpen(event)}
-							aria-label=${localManager.get("furniture")}
-						>
-							<ha-icon icon="mdi:sofa-outline"></ha-icon>
-							<ha-icon class="submenu-indicator" icon="mdi:chevron-right"></ha-icon>
-						</button>
-					</dt3d-tooltip>
+					${this.action(
+						"drawWall",
+						"mdi:vector-line",
+						() => this.selectWall("wall"),
+						this.wallTool === "wall",
+					)}
+					${this.action(
+						"drawFloor",
+						"mdi:floor-plan",
+						() => this.selectWall("floor"),
+						this.wallTool === "floor",
+					)}
+					${this.action("wallCreationDefaults", "mdi:tune-variant", () =>
+						this.emit("wall-settings-open"),
+					)}
+					${this.action("uploadFloorplan", "mdi:image-plus-outline", () =>
+						this.emit("floorplan-upload"),
+					)}
+					${this.action(
+						"exitWallTools",
+						"mdi:cancel",
+						() => this.selectWall("none"),
+						this.wallTool === "none",
+					)}
 				</section>
 			</div>
 		`;

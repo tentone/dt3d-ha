@@ -556,8 +556,8 @@ export class DT3DObjectInspector extends LitElement {
 		}
 
 		if (this.isFurnitureConfigurationAttribute(object, attribute)) {
-			const value = object.parameters[attribute];
-			return () => object.setConfiguration(attribute, value);
+			const parameters = object.getParameters();
+			return () => object.setParameters(parameters);
 		}
 
 		if (attribute === "color" && object instanceof StaticLightObject) {
@@ -1910,7 +1910,8 @@ export class DT3DObjectInspector extends LitElement {
 		return this.selectedObject.parameterDefinitions.map((definition) => ({
 			label: localManager.get(definition.labelKey),
 			attribute: definition.name,
-			type: definition.type === "boolean" ? "boolean" : "number",
+			type: definition.type === "boolean" ? "boolean" : definition.type === "select" ? "select" : "number",
+			options: definition.options?.map((option) => ({label: localManager.get(option.labelKey), value: option.value})),
 			tooltip: localManager.get(definition.tooltipKey),
 			editable: !locked,
 			enabled: true,

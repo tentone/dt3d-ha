@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1" />
+	<title>Model Library browser tests</title>
+	<style>
+		:root {
+			font:
+				14px system-ui,
+				sans-serif;
+			--card-background-color: #202630;
+			--primary-text-color: #e8edf4;
+			--secondary-text-color: #a1adbc;
+			--primary-color: #69afff;
+			--text-primary-color: #102039;
+			--divider-color: #374151;
+			--shadow-color: #0004;
+		}
+		body {
+			margin: 0;
+			background: #131820;
+			color: var(--primary-text-color);
+		}
+		#editor {
+			position: relative;
+			width: 100%;
+			height: 760px;
+		}
+	</style>
+	<div id="editor"></div>
+	<script type="module">
+		import * as icons from "@mdi/js";
+		import "../src/components/card.ts";
+		class HAIcon extends HTMLElement {
+			static observedAttributes = ["icon"];
+			constructor() {
+				super();
+				this.attachShadow({ mode: "open" });
+			}
+			connectedCallback() {
+				this.attributeChangedCallback();
+			}
+			attributeChangedCallback() {
+				const name = (this.getAttribute("icon") ?? "mdi:cube-outline")
+					.replace("mdi:", "mdi-")
+					.replace(/-([a-z])/g, (_, char) => char.toUpperCase());
+				this.shadowRoot.innerHTML = `<style>:host{display:inline-flex;width:var(--mdc-icon-size,24px);height:var(--mdc-icon-size,24px)}svg{width:100%;height:100%;fill:currentColor}</style><svg viewBox="0 0 24 24" aria-hidden="true"><path d="${icons[name] ?? icons.mdiCubeOutline}" /></svg>`;
+			}
+		}
+		customElements.define("ha-icon", HAIcon);
+		localStorage.setItem("dt3d-ha-sidebar-collapsed", "false");
+		const card = document.createElement("dt3d-card");
+		card.setConfig({
+			address: "http://127.0.0.1",
+			port: 4173,
+			service_key: "test-only",
+			general: { developmentMode: { enabled: true } },
+		});
+		card.hass = {
+			states: {},
+			config: { latitude: 0, longitude: 0 },
+			callService: async () => {},
+		};
+		document.querySelector("#editor").appendChild(card);
+		window.testCard = card;
+	</script>
+</html>

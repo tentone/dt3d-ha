@@ -60,15 +60,16 @@ Space creation, cloning, import/export, switching, and deletion are hidden when 
 
 ### Add 3D elements
 
-The left sidebar organizes creation tools into primary actions, **Floorplan**, and **Objects**:
+The left sidebar organizes creation tools into **Model Library**, **Scene tools**, and **Floorplan**:
 
-- Primary actions upload assets, add a Home Assistant entity, create a group, or save a viewport.
-- **Floorplan** contains wall, floor, door, window, and gate tools.
-- **Objects > Mesh** contains cube, sphere, plane, capsule, circle, cone, cylinder, dodecahedron, icosahedron, octahedron, ring, tetrahedron, torus, and torus knot.
-- **Objects > Static lights** contains ambient, directional, point, spot, and rectangular area lights.
-- **Objects > Furniture** contains the built-in furniture models described below.
+- **Model Library** is a searchable explorer with 3D preview thumbnails. Browse all models or select a category. Search matches model names, categories, and aliases such as “sofa” for Couch.
+- Furniture is organized into **Seating**, **Tables & Desks**, **Storage**, **Bedroom**, **Kitchen**, and **Bathroom**.
+- **Geometric Shapes** contains cube, sphere, plane, capsule, circle, cone, cylinder, dodecahedron, icosahedron, octahedron, ring, tetrahedron, torus, and torus knot.
+- **Lighting** contains ambient, directional, point, spot, and rectangular area lights.
+- **Doors, windows and gates** selects an opening placement tool; double-click a wall to place the chosen opening.
+- **Scene tools** adds a Home Assistant entity, creates a group, or saves a viewport. **Floorplan** contains wall and floor drawing tools, wall creation settings, and the floorplan reference upload.
 - Uploaded models: `.gltf`, `.glb`, `.obj`, `.fbx`, `.dae` (Collada), `.stl`, and `.3ds`. Models can also be dragged onto the canvas.
-  - Select or drop companion material and texture files with the model, or choose the folder option in the upload menu to preserve their relative paths.
+  - Use the file or folder upload buttons at the bottom of **Model Library**. Select or drop companion material and texture files with the model, or upload a folder to preserve their relative paths.
   - Prefer a self-contained `.glb` when possible for reliable results.
 
 After adding a mesh or furniture object, select it to edit its dimensions, transform, material properties, or apply an image texture. Keep imported geometry and texture sizes modest because they are downloaded and uploaded by each client.
@@ -79,7 +80,7 @@ The material library retains created materials even when no object uses them. Ma
 
 ### Use the built-in furniture models
 
-Open **Objects > Furniture** and choose a model. DT3D creates a lightweight procedural object at the scene origin; move it into place with the transform control or its inspector. All dimensions are in meters.
+Open **Model Library**, select a furniture category, and choose a model. DT3D creates a lightweight procedural object at the scene origin; move it into place with the transform control or its inspector. All dimensions are in meters.
 
 | Model   | Default size (W × D × H) | Model-specific controls                                            |
 | ------- | ------------------------ | ------------------------------------------------------------------ |
@@ -98,6 +99,35 @@ Open **Objects > Furniture** and choose a model. DT3D creates a lightweight proc
 Expand the furniture-specific inspector section to change these construction parameters. The object rebuilds immediately while keeping its transform and material, so it can be resized without scaling every part manually.
 
 Raise upper kitchen cabinets to the desired wall-mounting height using the position controls. Wardrobe and kitchen cabinet doors are modeled closed. Standing desk height can be changed for sitting or standing use.
+
+### Living room collection
+
+Open **Model Library**, choose **Living Room** in the room filter, and browse **Seating**, **Tables & Desks**, **Storage**, **Entertainment**, **Lighting**, and **Decoration**. Search also recognizes variant names such as “U-shaped sofa”, “bean bag”, “nesting tables”, and “wall shelves”.
+
+Each library entry represents a customizable family. Add the model, select it, and open its furniture configuration in the inspector. Named presets load suitable starting dimensions; dimensions and construction details can then be edited independently. Undo restores the complete configuration, including dimensions changed by a preset. Variant choices are saved with the space and retained when cloning.
+
+| Family | Variants and controls |
+| --- | --- |
+| Couch | Straight, left or right L-shaped, U-shaped sectional, or sofa bed; 2–8 main seats, return length and seats, arms, cushion dimensions, and extendable bed platform |
+| Accent chairs | Armchair, recliner with optional extended footrest, lounge chair, or rocking chair; dimensions, seat height, arms, and recline angle |
+| Ottoman / pouf / bean bag | Ottoman, pouf, or bean bag; dimensions, cushion shape, and tufting |
+| Living room tables | Coffee, side, nesting, console, or corner presets; rectangular, rounded, round, oval, or triangular corner tops; square, tapered, pedestal, or trestle supports; leg count, inset, thickness, and 1–3 nested tables |
+| Living room storage | TV cabinet, media console, bookshelf, display cabinet, sideboard, shelving unit, or wall shelves; dimensions, columns, shelves, doors, board thickness, back panel, and feet |
+| TV | Dimensions, 16:9 / 21:9 / 4:3 screen, stand or wall mounting, and decorative screen state |
+| Projector | Dimensions and tabletop or ceiling mounting with adjustable ceiling drop |
+| Projection screen | Fixed, pull-down, or tripod construction with adjustable screen extension |
+| Speakers / soundbar / cinema | Single speaker, soundbar, or 5.1 home cinema arrangement; cabinet dimensions, drivers, system spacing, and subwoofer |
+| Living room lamps | Floor lamp, table lamp, pendant, or wall light; dimensions, tapered / drum / globe shade, on/off, brightness, and warm / neutral / cool white |
+| Rug | Rectangular, rounded, round, or oval; dimensions, border, and optional fringe |
+| Mirror | Rectangular, round, oval, or arched frame; dimensions, frame width, and optional floor stand |
+| Indoor plant | Leafy plant, palm, or succulent; size, leaf count, and pot proportion |
+| Vase | Bottle, cylinder, or bowl; dimensions and bottle neck proportion |
+| Artwork | Abstract, landscape, or triptych; dimensions and frame width |
+| Wall clock | Dimensions and displayed hour/minute |
+| Fireplace | Mantel surround or glazed linear model; dimensions, decorative fire, and warm light intensity |
+| Curtains | Dimensions, opening amount, pleats, one or two panels, and optional rod |
+
+Lamp and fireplace light sources illuminate the scene. Primary material edits change the main finish while preserving detail finishes such as glass, metal feet, foliage, and screens. Nesting table dimensions describe the largest table; cinema spacing describes the complete arrangement. Position wall shelves, mirrors, artwork, curtains, screens, and mounted lighting at the desired installation height with the transform controls.
 
 ### Add Home Assistant entities
 
@@ -140,7 +170,7 @@ Add as many rules as needed. Each rule can use the same entity or a different on
 
 #### Add and calibrate a reference image
 
-1. Open **Upload assets** and choose **Floorplan reference**.
+1. Open **Floorplan > Floorplan reference** in the sidebar.
 2. Select a 2D floorplan image. In the calibration dialog, click two points whose real separation is known, enter that distance in meters, and choose **Add floorplan**.
 3. DT3D creates a horizontal textured plane at the calibrated real-world size. Switch to an orthographic top view if that makes the image easier to trace. You can instead add or import a plane manually. When a wall point does not hit a visible scene object, it is placed on the ground grid plane instead.
 4. Optionally enable grid snapping and set a suitable snap size. Grid snapping and the smart wall guides below are separate features.
@@ -182,7 +212,7 @@ Shared wall endpoints use a separate connection mesh. Each connected wall body s
 
 ### Add and customize doors, windows, and gates
 
-1. Select the target wall, then open **Floorplan > Doors, windows and gates** and choose **Door**, **Window**, or **Gate**.
+1. Select the target wall, then open **Model Library > Doors, windows and gates** and choose **Door**, **Window**, or **Gate**.
 2. Double-click the desired position on the wall. A direct hit selects that wall, creates the opening as its child, and cuts the wall geometry around it. The tool remains active for additional openings; choose **Exit wall and floor tools** when finished.
 3. Select the opening in the scene or object tree. Use **Move** to reposition it along the wall. Moved openings align with and attach to the nearest finite wall segment and remain within that wall's bounds.
 

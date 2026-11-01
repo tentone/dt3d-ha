@@ -6,7 +6,7 @@ npm run build
 if ($LASTEXITCODE -eq 0) {
     # Define source and destination paths
     $sourcePath = "../dt3d-card.js"
-    $destinationPath = "W:\www"
+    $destinationPath = "U:\www"
 
     # Copy the file to the destination
     if (Test-Path $sourcePath) {

@@ -1,4 +1,5 @@
-import {BoxGeometry, Group, Mesh, MeshStandardMaterial} from "three";
+import type {BufferGeometry} from "three";
+import {BoxGeometry, Group, Light, Mesh, MeshStandardMaterial} from "three";
 
 import {markObjectInternal} from "../../utils/internal-object.js";
 import {DTObject} from "../dt-object.js";
@@ -14,16 +15,38 @@ export type FurnitureType =
 	| "wardrobe"
 	| "bed"
 	| "kitchen-cabinet-top"
-	| "kitchen-cabinet-bottom";
+	| "kitchen-cabinet-bottom"
+	| "living-table"
+	| "accent-chair"
+	| "ottoman"
+	| "living-storage"
+	| "television"
+	| "projector"
+	| "projection-screen"
+	| "speaker-system"
+	| "lamp"
+	| "rug"
+	| "mirror"
+	| "indoor-plant"
+	| "vase"
+	| "artwork"
+	| "wall-clock"
+	| "fireplace"
+	| "curtains";
 
-export type FurnitureParameters = Record<string, number | boolean>;
+export type FurnitureParameters = Record<string, number | boolean | string>;
 
 export type FurnitureParameterDefinition = {
 	name: string;
 	labelKey: string;
 	tooltipKey: string;
-	type: "number" | "integer" | "boolean";
-	defaultValue: number | boolean;
+	type: "number" | "integer" | "boolean" | "select";
+	defaultValue: number | boolean | string;
+	options?: {
+		value: string;
+		labelKey: string;
+		parameters?: Partial<FurnitureParameters>;
+	}[];
 	min?: number;
 	max?: number;
 	step?: number;
@@ -79,13 +102,50 @@ export const furnitureBoolean = (
 	defaultValue,
 });
 
+export const furnitureSelect = (
+	name: string,
+	labelKey: string,
+	tooltipKey: string,
+	defaultValue: string,
+	options: NonNullable<FurnitureParameterDefinition["options"]>,
+): FurnitureParameterDefinition => ({
+	name,
+	labelKey,
+	tooltipKey,
+	type: "select",
+	defaultValue,
+	options,
+});
+
 function normalizeParameters(
 	definitions: FurnitureParameterDefinition[],
 	parameters: Partial<FurnitureParameters>,
 ): FurnitureParameters {
+	const presets = Object.assign(
+		{},
+		...definitions
+			.filter((item) => item.type === "select")
+			.map(
+				(definition) =>
+					definition.options?.find(
+						(option) =>
+							option.value ===
+							(parameters[definition.name] ?? definition.defaultValue),
+					)?.parameters ?? {},
+			),
+	);
+	const values = {...presets, ...parameters};
 	return Object.fromEntries(
 		definitions.map((definition) => {
-			const value = parameters[definition.name] ?? definition.defaultValue;
+			const value = values[definition.name] ?? definition.defaultValue;
+			if (definition.type === "select") {
+				return [
+					definition.name,
+					definition.options?.some((option) => option.value === value)
+						? value
+						: definition.defaultValue,
+				];
+			}
 			if (definition.type === "boolean") {
 				return [definition.name, Boolean(value)];
 			}
@@ -113,6 +173,7 @@ function disposeGroupGeometry(group: Group): void {
 			if (object instanceof Mesh) {
 				object.geometry.dispose();
 			}
+			if (object instanceof Light) object.dispose();
 		});
 		group.remove(child);
 	}
@@ -130,7 +191,9 @@ export abstract class FurnitureObject extends DTObject {
 
 	public furnitureMesh: Mesh;
 
-	private partsGroup: Group;
+	protected partsGroup: Group;
+	private bodyMaterial: Mesh["material"];
+	private accentMaterials = new Map<string, MeshStandardMaterial>();
 
 	protected constructor(
 		type: FurnitureType,
@@ -167,23 +230,43 @@ export abstract class FurnitureObject extends DTObject {
 	}
 
 	public setConfiguration(attribute: string, value: unknown): boolean {
-		if (!this.parameterDefinitions.some((item) => item.name === attribute)) {
+		const definition = this.parameterDefinitions.find(
+			(item) => item.name === attribute,
+		);
+		if (!definition) {
 			return false;
 		}
 
 		this.parameters = normalizeParameters(this.parameterDefinitions, {
 			...this.parameters,
-			[attribute]: value as number | boolean,
+			...(this.parameters[attribute] !== value
+				? definition.options?.find((option) => option.value === value)
+					?.parameters
+				: {}),
+			[attribute]: value as number | boolean | string,
 		});
 		this.rebuild(this.furnitureMesh.material);
 		return true;
+	}
+
+	/** Restore a full configuration, including dimensions changed by a variant preset. */
+	public setParameters(parameters: Partial<FurnitureParameters>): void {
+		this.parameters = normalizeParameters(
+			this.parameterDefinitions,
+			parameters,
+		);
+		this.rebuild(this.furnitureMesh.material);
 	}
 
 	public override update(_time: number): void {
 		const material = this.furnitureMesh?.material;
 		if (!material) return;
 		this.partsGroup.traverse((object) => {
-			if (object instanceof Mesh && object.material !== material) {
+			if (
+				object instanceof Mesh &&
+				!object.userData.furnitureAccent &&
+				object.material !== material
+			) {
 				object.material = material;
 			}
 		});
@@ -217,6 +300,7 @@ export abstract class FurnitureObject extends DTObject {
 
 	public override dispose(): void {
 		disposeGroupGeometry(this.partsGroup);
+		this.disposeAccents();
 	}
 
 	protected abstract buildFurniture(material: Mesh["material"]): void;
@@ -227,18 +311,61 @@ export abstract class FurnitureObject extends DTObject {
 		position: [number, number, number],
 		material: Mesh["material"],
 	): Mesh {
-		const mesh = markObjectInternal(
-			new Mesh(new BoxGeometry(...size), material),
-		);
+		return this.addGeometry(name, new BoxGeometry(...size), position, material);
+	}
+
+	protected addGeometry(
+		name: string,
+		geometry: BufferGeometry,
+		position: [number, number, number],
+		material: Mesh["material"],
+	): Mesh {
+		const mesh = markObjectInternal(new Mesh(geometry, material));
 		mesh.name = name;
 		mesh.position.set(...position);
 		this.partsGroup.add(mesh);
-		this.furnitureMesh ??= mesh;
+		mesh.userData.furnitureAccent = material !== this.bodyMaterial;
+		if (!mesh.userData.furnitureAccent) this.furnitureMesh ??= mesh;
 		return mesh;
+	}
+
+	/** Detail finishes belong to this model and survive primary material edits. */
+	protected accent(
+		color: number,
+		roughness = 0.65,
+		metalness = 0,
+		opacity = 1,
+		emissive = false,
+	): MeshStandardMaterial {
+		const key = `${color}:${roughness}:${metalness}:${opacity}:${emissive}`;
+		let material = this.accentMaterials.get(key);
+		if (!material) {
+			material = new MeshStandardMaterial({
+				color,
+				roughness,
+				metalness,
+				opacity,
+				transparent: opacity < 1,
+				depthWrite: opacity >= 1,
+			});
+			if (emissive) {
+				material.emissive.setHex(color);
+				material.emissiveIntensity = 0.7;
+			}
+			this.accentMaterials.set(key, material);
+		}
+		return material;
+	}
+
+	private disposeAccents(): void {
+		this.accentMaterials.forEach((material) => material.dispose());
+		this.accentMaterials.clear();
 	}
 
 	private rebuild(material: Mesh["material"]): void {
 		disposeGroupGeometry(this.partsGroup);
+		this.disposeAccents();
+		this.bodyMaterial = material;
 		this.furnitureMesh = null;
 		this.buildFurniture(material);
 		markObjectInternal(this.partsGroup, true);

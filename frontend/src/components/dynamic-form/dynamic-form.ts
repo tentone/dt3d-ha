@@ -1010,6 +1010,7 @@ export class DynamicForm extends LitElement {
 					<div class=${field.mixed ? "field mixed" : "field"}>
 						<label title=${field.tooltip ?? ""}>${field.label}</label>
 						<select
+							aria-label=${field.label}
 							?disabled=${!field.editable}
 							.value=${field.mixed
 								? ""
@@ -1081,6 +1082,7 @@ export class DynamicForm extends LitElement {
 						<label title=${field.tooltip ?? ""}>${field.label}</label>
 						<input
 							type="number"
+							aria-label=${field.label}
 							step=${String(step)}
 							min=${field.min == null ? undefined : String(field.min)}
 							max=${field.max == null ? undefined : String(field.max)}
