@@ -70,6 +70,23 @@ import {
 import {LampObject} from "./living-room/lighting.js";
 import {AccentChairObject, OttomanObject} from "./living-room/seating.js";
 import {LivingStorageObject} from "./living-room/storage.js";
+import {NurseryBedObject} from "./nursery/beds.js";
+import {
+	ChangingTableObject,
+	KidsChairObject,
+	KidsTableObject,
+	NurseryChairObject,
+	NurseryWallShelvesObject,
+} from "./nursery/furniture.js";
+import {NightLightObject} from "./nursery/lighting.js";
+import {
+	ClimbingFrameObject,
+	IndoorTentObject,
+	PlayMatObject,
+	PlaypenObject,
+} from "./nursery/play.js";
+import {NurseryStorageObject} from "./nursery/storage.js";
+import {ToyKitchenObject} from "./nursery/toy-kitchen.js";
 import {ShelfObject} from "./shelf.js";
 import {StandingDeskObject} from "./standing-desk.js";
 import {
@@ -103,7 +120,9 @@ export type FurnitureCategory =
 	| "kitchen-furniture"
 	| "beds"
 	| "bedside"
-	| "bedroom-furniture";
+	| "bedroom-furniture"
+	| "nursery-furniture"
+	| "play";
 
 export type FurnitureOption = {
 	type: `furniture-${FurnitureType}`;
@@ -364,7 +383,12 @@ export const FURNITURE_OPTIONS: FurnitureOption[] = [
 		category: "decoration",
 		labelKey: "livingModelRug",
 		icon: "mdi:rug",
-		rooms: ["living-room", "dining-room", "master-bedroom"],
+		rooms: [
+			"living-room",
+			"dining-room",
+			"master-bedroom",
+			"childrens-bedroom",
+		],
 		keywords: ["rug", "carpet"],
 	},
 	{
@@ -811,6 +835,145 @@ export const FURNITURE_OPTIONS: FurnitureOption[] = [
 		rooms: ["master-bedroom"],
 		keywords: ["dressing table", "vanity", "desk", "bedroom desk"],
 	},
+	{
+		type: "furniture-nursery-bed",
+		furnitureType: "nursery-bed",
+		category: "beds",
+		labelKey: "nurseryModelBed",
+		icon: "mdi:bed-outline",
+		rooms: ["childrens-bedroom"],
+		keywords: [
+			"crib",
+			"cot",
+			"toddler bed",
+			"single bed",
+			"bunk bed",
+			"loft bed",
+			"trundle bed",
+			"cabin bed",
+		],
+	},
+	{
+		type: "furniture-nursery-storage",
+		furnitureType: "nursery-storage",
+		category: "storage",
+		labelKey: "nurseryModelStorage",
+		icon: "mdi:toy-brick-outline",
+		rooms: ["childrens-bedroom"],
+		keywords: [
+			"children's wardrobe",
+			"childrens wardrobe",
+			"children wardrobe",
+			"toy chest",
+			"toy storage unit",
+			"bookshelf",
+			"chest of drawers",
+		],
+	},
+	{
+		type: "furniture-changing-table",
+		furnitureType: "changing-table",
+		category: "nursery-furniture",
+		labelKey: "nurseryModelChanging",
+		icon: "mdi:baby-carriage",
+		rooms: ["childrens-bedroom"],
+		keywords: ["changing table", "baby changing"],
+	},
+	{
+		type: "furniture-nursery-chair",
+		furnitureType: "nursery-chair",
+		category: "nursery-furniture",
+		labelKey: "nurseryModelChair",
+		icon: "mdi:seat-outline",
+		rooms: ["childrens-bedroom"],
+		keywords: ["nursing chair", "rocking chair"],
+	},
+	{
+		type: "furniture-kids-table",
+		furnitureType: "kids-table",
+		category: "nursery-furniture",
+		labelKey: "nurseryModelTable",
+		icon: "mdi:table-furniture",
+		rooms: ["childrens-bedroom"],
+		keywords: ["kids' desk", "kids desk", "children's desk", "play table"],
+	},
+	{
+		type: "furniture-kids-chair",
+		furnitureType: "kids-chair",
+		category: "nursery-furniture",
+		labelKey: "nurseryModelKidsChair",
+		icon: "mdi:chair-school",
+		rooms: ["childrens-bedroom"],
+		keywords: ["kids' chair", "kids chair", "children's chair"],
+	},
+	{
+		type: "furniture-play-mat",
+		furnitureType: "play-mat",
+		category: "play",
+		labelKey: "nurseryModelMat",
+		icon: "mdi:puzzle-outline",
+		rooms: ["childrens-bedroom"],
+		keywords: ["play mat", "puzzle mat", "foam mat"],
+	},
+	{
+		type: "furniture-playpen",
+		furnitureType: "playpen",
+		category: "play",
+		labelKey: "nurseryModelPlaypen",
+		icon: "mdi:fence",
+		rooms: ["childrens-bedroom"],
+		keywords: ["playpen", "play pen"],
+	},
+	{
+		type: "furniture-indoor-tent",
+		furnitureType: "indoor-tent",
+		category: "play",
+		labelKey: "nurseryModelTent",
+		icon: "mdi:tent",
+		rooms: ["childrens-bedroom"],
+		keywords: ["indoor tent", "teepee", "tipi"],
+	},
+	{
+		type: "furniture-toy-kitchen",
+		furnitureType: "toy-kitchen",
+		category: "play",
+		labelKey: "nurseryModelToyKitchen",
+		icon: "mdi:stove",
+		rooms: ["childrens-bedroom"],
+		keywords: ["toy kitchen", "play kitchen"],
+	},
+	{
+		type: "furniture-climbing-frame",
+		furnitureType: "climbing-frame",
+		category: "play",
+		labelKey: "nurseryModelClimbing",
+		icon: "mdi:ladder",
+		rooms: ["childrens-bedroom"],
+		keywords: [
+			"climbing structure",
+			"climbing frame",
+			"triangle ladder",
+			"climbing arch",
+		],
+	},
+	{
+		type: "furniture-night-light",
+		furnitureType: "night-light",
+		category: "decoration",
+		labelKey: "nurseryModelNightLight",
+		icon: "mdi:weather-night",
+		rooms: ["childrens-bedroom"],
+		keywords: ["night light", "nightlight", "star light", "cloud light"],
+	},
+	{
+		type: "furniture-nursery-wall-shelves",
+		furnitureType: "nursery-wall-shelves",
+		category: "decoration",
+		labelKey: "nurseryModelShelves",
+		icon: "mdi:bookshelf",
+		rooms: ["childrens-bedroom"],
+		keywords: ["wall shelves", "children's shelves", "nursery shelves"],
+	},
 ];
 
 export function furnitureTypeFromMeshType(type: string): FurnitureType | null {
@@ -920,4 +1083,17 @@ const CUSTOM_FURNITURE_FACTORIES: Partial<
 	"bedroom-storage": BedroomStorageObject,
 	"bedroom-bench": BedroomBenchObject,
 	"bedroom-vanity": BedroomVanityObject,
+	"nursery-bed": NurseryBedObject,
+	"nursery-storage": NurseryStorageObject,
+	"changing-table": ChangingTableObject,
+	"nursery-chair": NurseryChairObject,
+	"kids-table": KidsTableObject,
+	"kids-chair": KidsChairObject,
+	"play-mat": PlayMatObject,
+	playpen: PlaypenObject,
+	"indoor-tent": IndoorTentObject,
+	"toy-kitchen": ToyKitchenObject,
+	"climbing-frame": ClimbingFrameObject,
+	"night-light": NightLightObject,
+	"nursery-wall-shelves": NurseryWallShelvesObject,
 };

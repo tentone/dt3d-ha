@@ -71,6 +71,243 @@ async function placeSelectedModel(page) {
 	);
 }
 
+test("nursery collection shows five categories and saves bunk and trundle beds with undo", async ({
+	page,
+}) => {
+	const saved = [];
+	page.on("request", (request) => {
+		if (request.method() === "PUT" && request.url().includes("/objects/"))
+			saved.push(request.postDataJSON());
+	});
+	await openLibrary(page);
+	const library = page.locator("dt3d-model-library");
+	await library
+		.getByRole("combobox", { name: "Filter by room" })
+		.selectOption("childrens-bedroom");
+	await expect(library.locator(".model")).toHaveCount(14);
+	await expect(library.locator(".preview img")).toHaveCount(14);
+	await expect(library.locator(".model-section h3")).toHaveText([
+		"Beds",
+		"Storage",
+		"Furniture",
+		"Play",
+		"Decoration",
+	]);
+	await library.getByRole("searchbox").fill("bunk bed");
+	await library
+		.getByRole("button", { name: "Add Children's beds / cribs", exact: true })
+		.click();
+	await placeSelectedModel(page);
+	const inspector = page.locator("dt3d-object-inspector");
+	await inspector
+		.locator("summary")
+		.filter({ hasText: "Children's bed configuration" })
+		.click();
+	await inspector
+		.getByRole("combobox", { name: "Children's bed preset", exact: true })
+		.selectOption("bunk-bed");
+	await expect
+		.poll(() =>
+			page.evaluate(() => {
+				let count = 0;
+				window.testCard.space.children
+					.find((item) => item.userData.meshType === "furniture-nursery-bed")
+					.traverse((item) => {
+						if (item.name === "Child Mattress") count++;
+					});
+				return count;
+			}),
+		)
+		.toBe(2);
+	await inspector
+		.getByRole("combobox", { name: "Children's bed preset", exact: true })
+		.selectOption("trundle-bed");
+	const original = await page.evaluate(() =>
+		window.testCard.space.children
+			.find((item) => item.userData.meshType === "furniture-nursery-bed")
+			.getParameters(),
+	);
+	await inspector
+		.getByRole("spinbutton", { name: "Trundle extension", exact: true })
+		.fill("1");
+	await inspector
+		.getByRole("spinbutton", { name: "Trundle extension", exact: true })
+		.blur();
+	await expect
+		.poll(() =>
+			saved.some(
+				(item) =>
+					item.data?.furniture?.style === "trundle-bed" &&
+					item.data.furniture.trundleOpen === 1,
+			),
+		)
+		.toBe(true);
+	await page.keyboard.press("Control+z");
+	await expect
+		.poll(() =>
+			page.evaluate(() =>
+				window.testCard.space.children
+					.find((item) => item.userData.meshType === "furniture-nursery-bed")
+					.getParameters(),
+			),
+		)
+		.toEqual(original);
+});
+
+test("nursery storage lids and playpen gates expose working controls after placement", async ({
+	page,
+}) => {
+	await openLibrary(page);
+	let library = page.locator("dt3d-model-library");
+	await library
+		.getByRole("combobox", { name: "Filter by room" })
+		.selectOption("childrens-bedroom");
+	await library.getByRole("searchbox").fill("toy chest");
+	await library
+		.getByRole("button", { name: "Add Children's storage", exact: true })
+		.click();
+	await placeSelectedModel(page);
+	const inspector = page.locator("dt3d-object-inspector");
+	await inspector
+		.locator("summary")
+		.filter({ hasText: "Children's storage configuration" })
+		.click();
+	await inspector
+		.getByRole("combobox", { name: "Children's storage preset", exact: true })
+		.selectOption("toy-chest");
+	await inspector
+		.getByRole("checkbox", { name: "Open toy chest", exact: true })
+		.check();
+	await expect
+		.poll(() =>
+			page.evaluate(
+				() =>
+					window.testCard.space.children
+						.find(
+							(item) => item.userData.meshType === "furniture-nursery-storage",
+						)
+						.getObjectByName("Toy Chest Lid Hinge").rotation.x,
+			),
+		)
+		.toBeLessThan(-1);
+	await openLibrary(page);
+	library = page.locator("dt3d-model-library");
+	await library
+		.getByRole("combobox", { name: "Filter by room" })
+		.selectOption("childrens-bedroom");
+	await library.getByRole("searchbox").fill("playpen");
+	await library
+		.getByRole("button", { name: "Add Playpen", exact: true })
+		.click();
+	await placeSelectedModel(page);
+	const summary = inspector
+		.locator("summary")
+		.filter({ hasText: "Playpen configuration" });
+	if (!(await summary.evaluate((element) => element.parentElement.open)))
+		await summary.click();
+	await inspector
+		.getByRole("checkbox", { name: "Open playpen gate", exact: true })
+		.check();
+	await inspector
+		.getByRole("checkbox", { name: "Padded floor", exact: true })
+		.uncheck();
+	await expect
+		.poll(() =>
+			page.evaluate(() => {
+				const object = window.testCard.space.children.find(
+					(item) => item.userData.meshType === "furniture-playpen",
+				);
+				return {
+					open: object.getObjectByName("Playpen Gate Hinge").rotation.y < 0,
+					pad: Boolean(object.getObjectByName("Playpen Pad")),
+				};
+			}),
+		)
+		.toEqual({ open: true, pad: false });
+});
+
+test("night lights save shape, color and power state and kids' play tables load their size", async ({
+	page,
+}) => {
+	const saved = [];
+	page.on("request", (request) => {
+		if (request.method() === "PUT" && request.url().includes("/objects/"))
+			saved.push(request.postDataJSON());
+	});
+	await openLibrary(page);
+	let library = page.locator("dt3d-model-library");
+	await library
+		.getByRole("combobox", { name: "Filter by room" })
+		.selectOption("childrens-bedroom");
+	await library.getByRole("searchbox").fill("night light");
+	await library
+		.getByRole("button", { name: "Add Night lights", exact: true })
+		.click();
+	await placeSelectedModel(page);
+	const inspector = page.locator("dt3d-object-inspector");
+	await inspector
+		.locator("summary")
+		.filter({ hasText: "Night light configuration" })
+		.click();
+	await inspector
+		.getByRole("combobox", { name: "Night light shape", exact: true })
+		.selectOption("cloud-light");
+	await inspector
+		.getByRole("combobox", { name: "Night light color", exact: true })
+		.selectOption("soft-blue");
+	await inspector
+		.getByRole("checkbox", { name: "Night light on", exact: true })
+		.uncheck();
+	await expect
+		.poll(() =>
+			saved.some(
+				(item) =>
+					item.data?.furniture?.style === "cloud-light" &&
+					item.data.furniture.lightColor === "soft-blue" &&
+					item.data.furniture.enabled === false,
+			),
+		)
+		.toBe(true);
+	await expect
+		.poll(() =>
+			page.evaluate(
+				() =>
+					window.testCard.space.children
+						.find((item) => item.userData.meshType === "furniture-night-light")
+						.getObjectByName("Night Light Source").intensity,
+			),
+		)
+		.toBe(0);
+	await openLibrary(page);
+	library = page.locator("dt3d-model-library");
+	await library
+		.getByRole("combobox", { name: "Filter by room" })
+		.selectOption("childrens-bedroom");
+	await library.getByRole("searchbox").fill("play table");
+	await library
+		.getByRole("button", { name: "Add Kids' desks / play tables", exact: true })
+		.click();
+	await placeSelectedModel(page);
+	const summary = inspector
+		.locator("summary")
+		.filter({ hasText: "Kids' table configuration" });
+	if (!(await summary.evaluate((element) => element.parentElement.open)))
+		await summary.click();
+	await inspector
+		.getByRole("combobox", { name: "Kids' table preset", exact: true })
+		.selectOption("play-table");
+	await expect
+		.poll(() =>
+			page.evaluate(
+				() =>
+					window.testCard.space.children.find(
+						(item) => item.userData.meshType === "furniture-kids-table",
+					).parameters.height,
+			),
+		)
+		.toBe(0.48);
+});
+
 test("master bedroom shows six categories and saves independent bed size and articulation with undo", async ({
 	page,
 }) => {

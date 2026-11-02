@@ -1,7 +1,10 @@
 import type {Mesh} from "three";
 import {CatmullRomCurve3, TubeGeometry, Vector3} from "three";
 
-import type {FurnitureParameters} from "../furniture.js";
+import type {
+	FurnitureParameterDefinition,
+	FurnitureParameters,
+} from "../furniture.js";
 import {
 	boolean,
 	choice,
@@ -11,35 +14,43 @@ import {
 } from "./primitives.js";
 
 export class AccentChairObject extends LivingRoomObject {
-	constructor(parameters: Partial<FurnitureParameters> = {}, color = 0xb58969) {
+	constructor(
+		parameters: Partial<FurnitureParameters> = {},
+		color = 0xb58969,
+		type: "accent-chair" | "nursery-chair" = "accent-chair",
+		styleDefinition?: FurnitureParameterDefinition,
+	) {
 		super(
-			"accent-chair",
-			"Accent chair",
-			"livingChairControls",
+			type,
+			type === "nursery-chair" ? "Nursing / rocking chair" : "Accent chair",
+			type === "nursery-chair" ? "nurseryChairControls" : "livingChairControls",
 			[
-				choice("style", "ChairStyle", "armchair", [
-					{
-						value: "armchair",
-						parameters: {width: 0.85, depth: 0.85, height: 0.95},
-					},
-					{
-						value: "recliner",
-						parameters: {width: 0.9, depth: 0.95, height: 1.05},
-					},
-					{
-						value: "lounge-chair",
-						parameters: {width: 0.8, depth: 1.05, height: 0.8},
-					},
-					{
-						value: "rocking-chair",
-						parameters: {width: 0.75, depth: 0.95, height: 1.05},
-					},
-				]),
+				styleDefinition ??
+					choice("style", "ChairStyle", "armchair", [
+						{
+							value: "armchair",
+							parameters: {width: 0.85, depth: 0.85, height: 0.95},
+						},
+						{
+							value: "recliner",
+							parameters: {width: 0.9, depth: 0.95, height: 1.05},
+						},
+						{
+							value: "lounge-chair",
+							parameters: {width: 0.8, depth: 1.05, height: 0.8},
+						},
+						{
+							value: "rocking-chair",
+							parameters: {width: 0.75, depth: 0.95, height: 1.05},
+						},
+					]),
 				...dimensions(0.85, 0.85, 0.95),
 				number("seatHeight", "SeatHeight", 0.43, 0.15, 0.8),
 				number("recline", "Recline", 15, 0, 55, 1),
 				boolean("armsEnabled", "ArmsEnabled", true),
-				boolean("footrestExtended", "FootrestExtended", false),
+				...(type === "nursery-chair"
+					? []
+					: [boolean("footrestExtended", "FootrestExtended", false)]),
 			],
 			parameters,
 			color,
@@ -73,7 +84,9 @@ export class AccentChairObject extends LivingRoomObject {
 			p.style === "recliner" ? metal : frame,
 		);
 		const angle =
-			p.style === "recliner" || p.style === "lounge-chair"
+			this.furnitureType === "nursery-chair" ||
+			p.style === "recliner" ||
+			p.style === "lounge-chair"
 				? (Number(p.recline) * Math.PI) / 180
 				: 0.06;
 		const bh = Math.max(0.03, h - y);

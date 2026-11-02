@@ -63,7 +63,7 @@ Space creation, cloning, import/export, switching, and deletion are hidden when 
 The left sidebar organizes creation tools into **Model Library**, **Scene tools**, and **Floorplan**:
 
 - **Model Library** is a searchable explorer with 3D preview thumbnails. Browse all models or select a category. Search matches model names, categories, and aliases such as “sofa” for Couch.
-- Filter furniture by **Living Room**, **Dining Room**, **Kitchen**, **Bathroom**, or **Master Bedroom**, then browse the categories for that room. All models also includes desks and other general models.
+- Filter furniture by **Living Room**, **Dining Room**, **Kitchen**, **Bathroom**, **Master Bedroom**, or **Children's Bedroom / Nursery**, then browse the categories for that room. All models also includes desks and other general models.
 - **Geometric Shapes** contains cube, sphere, plane, capsule, circle, cone, cylinder, dodecahedron, icosahedron, octahedron, ring, tetrahedron, torus, and torus knot.
 - **Lighting** contains ambient, directional, point, spot, and rectangular area lights.
 - **Doors, windows and gates** selects an opening placement tool; double-click a wall to place the chosen opening.
@@ -215,6 +215,30 @@ Choose a family, move its outlined preview, and double-click to place it. Select
 | Decoration | Shared rug, curtains, wall art, and floor lamp with their existing controls |
 
 Bed sizes are editable starting dimensions and describe the outer frame. Bed height describes the headboard; mattress surface height has its own control. Raised adjustable sections can extend above the headboard. Dressing furniture height describes the tabletop, with the mirror extending above it. Open drawers and doors extend beyond closed body dimensions. Position floating bedside shelves, mirrors, artwork, curtains, and mounted lamps at the desired installation height using the position controls.
+
+### Children's bedroom / nursery collection
+
+Open **Model Library**, select **Children's Bedroom / Nursery**, and browse **Beds**, **Storage**, **Furniture**, **Play**, and **Decoration**. Fourteen customizable families cover all 27 requested objects. Search recognizes names such as “cot”, “loft bed”, “toy chest”, “nursing chair”, “kids' desk”, “indoor tent”, and “night light”.
+
+Choose a family, move its outlined preview, and double-click to place it. Use its inspector configuration section to select a preset and adjust dimensions and details. Preset edits, cloning, saving, and undo use the same workflow as the other room collections.
+
+| Family | Variants and controls |
+| --- | --- |
+| Children's beds / cribs | Crib, cot, toddler, single, bunk, loft, trundle, or cabin bed; dimensions, mattress height and thickness, side rails, crib slats, ladder rungs / side, trundle extension, and optional loft desk |
+| Children's storage | Wardrobe, toy chest, toy storage unit, bookshelf, or chest of drawers; dimensions, compartments, shelf / drawer rows, opening lid / doors / drawers, and optional books / bins / toy blocks |
+| Changing table | Dimensions, drawers and opening amount, optional changing pad, and lower storage shelf |
+| Nursing / rocking chairs | Shared padded chair construction; nursing or rocking preset, dimensions, seat height, back angle, and arms |
+| Kids' desks / play tables | Desk or play table; dimensions, round / rounded top, top thickness, drawer and opening amount, and optional lower shelf |
+| Kids' chair | Dimensions, seat height, back slats, and optional arms |
+| Play mat | Dimensions, colored puzzle tile rows / columns, and joining tabs |
+| Playpen | Dimensions, slats per panel, opening front gate, and optional padded floor |
+| Indoor tent | Dimensions, real entrance opening, floor mat, and wooden poles |
+| Toy kitchen | Dimensions, hollow sink, opening oven, faucet, and wall shelf |
+| Climbing structures | Triangle ladder or climbing arch; dimensions, rung count, colored rungs, and optional ramp |
+| Night lights | Star or cloud shape; dimensions, on/off, brightness, and warm white / soft blue / soft pink illumination |
+| Wall shelves / rug | Configurable children's shelf tiers with brackets / back rails; shared rug geometry and controls |
+
+Bed dimensions describe the frame. Mattress height controls the main sleeping level; bunk beds add a second lower mattress, loft beds can include a desk, cabin beds include storage fronts, and trundle beds slide sideways. Crib and cot models use a plain mattress without pillows or covers. Opening drawers, lids, gates, oven doors, trundles, and ramps can extend beyond the closed footprint. Position wall shelves at their installation height using the position controls. Changing pads and top rails can extend above the changing-table surface height.
 
 ### Add Home Assistant entities
 

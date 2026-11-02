@@ -64,7 +64,20 @@ export type FurnitureType =
 	| "bedside-lamp"
 	| "bedroom-storage"
 	| "bedroom-bench"
-	| "bedroom-vanity";
+	| "bedroom-vanity"
+	| "nursery-bed"
+	| "nursery-storage"
+	| "changing-table"
+	| "nursery-chair"
+	| "kids-table"
+	| "kids-chair"
+	| "play-mat"
+	| "playpen"
+	| "indoor-tent"
+	| "toy-kitchen"
+	| "climbing-frame"
+	| "night-light"
+	| "nursery-wall-shelves";
 
 export type FurnitureParameters = Record<string, number | boolean | string>;
 
