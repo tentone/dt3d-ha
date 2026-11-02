@@ -71,7 +71,7 @@ export abstract class BedroomObject extends ProceduralFurnitureObject {
 		meshes: Object3D[],
 		position: [number, number, number],
 		angle: number,
-		axis: "x" | "y" = "y",
+		axis: "x" | "y" | "z" = "y",
 	): Group {
 		const group = new Group();
 		group.name = name;

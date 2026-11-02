@@ -39,6 +39,15 @@ import type {
 	FurnitureParameters,
 	FurnitureType,
 } from "./furniture.js";
+import {
+	ArcadeMachineObject,
+	GamingConsoleObject,
+	GamingDeskObject,
+	RacingSimulatorObject,
+} from "./game-room/gaming.js";
+import {GamingChairObject} from "./game-room/seating.js";
+import {GameStorageObject} from "./game-room/storage.js";
+import {GameTableObject} from "./game-room/tables.js";
 import {EVChargerObject, GarageEquipmentObject} from "./garage/equipment.js";
 import {GarageBinsObject, GarageBoxesObject} from "./garage/other.js";
 import {GarageStorageObject} from "./garage/storage.js";
@@ -214,7 +223,8 @@ export type FurnitureCategory =
 	| "garden-furniture"
 	| "recreation"
 	| "landscaping"
-	| "structures";
+	| "structures"
+	| "gaming";
 
 export type FurnitureOption = {
 	type: `furniture-${FurnitureType}`;
@@ -433,7 +443,7 @@ export const FURNITURE_OPTIONS: FurnitureOption[] = [
 	{
 		type: "furniture-couch",
 		furnitureType: "couch",
-		rooms: ["living-room", "home-office"],
+		rooms: ["living-room", "home-office", "game-room"],
 		roomCategories: {"home-office": "other"},
 		keywords: [
 			"sofa",
@@ -498,7 +508,7 @@ export const FURNITURE_OPTIONS: FurnitureOption[] = [
 		category: "seating",
 		labelKey: "livingModelAccentChair",
 		icon: "mdi:seat-outline",
-		rooms: ["living-room", "master-bedroom", "home-office"],
+		rooms: ["living-room", "master-bedroom", "home-office", "game-room"],
 		roomCategories: {"home-office": "other"},
 		keywords: [
 			"accent chair",
@@ -514,7 +524,7 @@ export const FURNITURE_OPTIONS: FurnitureOption[] = [
 		category: "seating",
 		labelKey: "livingModelOttoman",
 		icon: "mdi:stool-outline",
-		rooms: ["living-room", "master-bedroom", "walk-in-closet"],
+		rooms: ["living-room", "master-bedroom", "walk-in-closet", "game-room"],
 		roomCategories: {"walk-in-closet": "closet-furniture"},
 		keywords: ["ottoman", "pouf", "bean bag", "beanbag", "footstool"],
 	},
@@ -541,7 +551,7 @@ export const FURNITURE_OPTIONS: FurnitureOption[] = [
 		category: "entertainment",
 		labelKey: "livingModelTelevision",
 		icon: "mdi:television",
-		rooms: ["living-room"],
+		rooms: ["living-room", "game-room"],
 		keywords: ["TV", "television", "flat screen"],
 	},
 	{
@@ -550,7 +560,7 @@ export const FURNITURE_OPTIONS: FurnitureOption[] = [
 		category: "entertainment",
 		labelKey: "livingModelProjector",
 		icon: "mdi:projector",
-		rooms: ["living-room"],
+		rooms: ["living-room", "game-room"],
 		keywords: ["projector", "cinema"],
 	},
 	{
@@ -559,7 +569,7 @@ export const FURNITURE_OPTIONS: FurnitureOption[] = [
 		category: "entertainment",
 		labelKey: "livingModelProjectionScreen",
 		icon: "mdi:projector-screen-outline",
-		rooms: ["living-room"],
+		rooms: ["living-room", "game-room"],
 		keywords: ["projection screen", "cinema screen"],
 	},
 	{
@@ -568,8 +578,14 @@ export const FURNITURE_OPTIONS: FurnitureOption[] = [
 		category: "entertainment",
 		labelKey: "livingModelSpeakerSystem",
 		icon: "mdi:speaker",
-		rooms: ["living-room"],
-		keywords: ["speaker", "soundbar", "home cinema system", "surround sound"],
+		rooms: ["living-room", "game-room"],
+		keywords: [
+			"speaker",
+			"speaker system",
+			"soundbar",
+			"home cinema system",
+			"surround sound",
+		],
 	},
 	{
 		type: "furniture-lamp",
@@ -1763,6 +1779,88 @@ export const FURNITURE_OPTIONS: FurnitureOption[] = [
 			"water butt",
 		],
 	},
+	{
+		type: "furniture-gaming-chair",
+		furnitureType: "gaming-chair",
+		category: "seating",
+		labelKey: "gameModelChair",
+		icon: "mdi:seat-outline",
+		rooms: ["game-room"],
+		keywords: ["gaming chair", "bucket seat", "racing chair"],
+	},
+	{
+		type: "furniture-gaming-desk",
+		furnitureType: "gaming-desk",
+		category: "gaming",
+		labelKey: "gameModelDesk",
+		icon: "mdi:desk",
+		rooms: ["game-room"],
+		keywords: ["gaming desk", "gaming setup", "L shaped gaming desk"],
+	},
+	{
+		type: "furniture-arcade-machine",
+		furnitureType: "arcade-machine",
+		category: "gaming",
+		labelKey: "gameModelArcade",
+		icon: "mdi:controller-classic-outline",
+		rooms: ["game-room"],
+		keywords: ["arcade machine", "arcade cabinet", "bartop arcade"],
+	},
+	{
+		type: "furniture-gaming-console",
+		furnitureType: "gaming-console",
+		category: "gaming",
+		labelKey: "gameModelConsole",
+		icon: "mdi:gamepad-variant-outline",
+		rooms: ["game-room"],
+		keywords: ["gaming console", "game console", "handheld", "controller"],
+	},
+	{
+		type: "furniture-racing-simulator",
+		furnitureType: "racing-simulator",
+		category: "gaming",
+		labelKey: "gameModelRacing",
+		icon: "mdi:steering",
+		rooms: ["game-room"],
+		keywords: [
+			"racing simulator",
+			"racing rig",
+			"sim racing",
+			"steering wheel",
+		],
+	},
+	{
+		type: "furniture-game-table",
+		furnitureType: "game-table",
+		category: "tables-desks",
+		labelKey: "gameModelTable",
+		icon: "mdi:billiards-rack",
+		rooms: ["game-room"],
+		keywords: [
+			"pool table",
+			"foosball table",
+			"ping-pong table",
+			"ping pong table",
+			"poker table",
+			"table tennis",
+			"billiards",
+			"table football",
+		],
+	},
+	{
+		type: "furniture-game-storage",
+		furnitureType: "game-storage",
+		category: "storage",
+		labelKey: "gameModelStorage",
+		icon: "mdi:bookshelf",
+		rooms: ["game-room"],
+		keywords: [
+			"media shelving",
+			"game storage cabinet",
+			"board game storage",
+			"video game storage",
+		],
+	},
 ];
 
 export function furnitureTypeFromMeshType(type: string): FurnitureType | null {
@@ -1823,6 +1921,13 @@ const CUSTOM_FURNITURE_FACTORIES: Partial<
 		) => FurnitureObject
 	>
 > = {
+	"gaming-chair": GamingChairObject,
+	"gaming-desk": GamingDeskObject,
+	"arcade-machine": ArcadeMachineObject,
+	"gaming-console": GamingConsoleObject,
+	"racing-simulator": RacingSimulatorObject,
+	"game-table": GameTableObject,
+	"game-storage": GameStorageObject,
 	"garden-furniture": GardenFurnitureObject,
 	"garden-pool": GardenPoolObject,
 	"garden-trampoline": GardenTrampolineObject,

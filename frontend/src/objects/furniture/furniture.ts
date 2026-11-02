@@ -135,7 +135,14 @@ export type FurnitureType =
 	| "garden-path"
 	| "garden-water-feature"
 	| "garden-building"
-	| "garden-equipment";
+	| "garden-equipment"
+	| "gaming-chair"
+	| "gaming-desk"
+	| "arcade-machine"
+	| "gaming-console"
+	| "racing-simulator"
+	| "game-table"
+	| "game-storage";
 
 export type FurnitureParameters = Record<string, number | boolean | string>;
 

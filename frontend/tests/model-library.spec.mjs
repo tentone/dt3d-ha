@@ -72,6 +72,351 @@ async function placeSelectedModel(page) {
 	);
 }
 
+test("game room library shows five categories and gaming chair configurations save and undo", async ({
+	page,
+}) => {
+	const saved = [];
+	page.on("request", (request) => {
+		if (request.method() === "PUT" && request.url().includes("/objects/"))
+			saved.push(request.postDataJSON());
+	});
+	await openLibrary(page);
+	const library = page.locator("dt3d-model-library");
+	await library
+		.getByRole("combobox", { name: "Filter by room" })
+		.selectOption("game-room");
+	await expect(library.locator(".model")).toHaveCount(14);
+	await expect(library.locator(".preview img")).toHaveCount(14);
+	await expect(library.locator(".model-section h3")).toHaveText([
+		"Seating",
+		"Gaming",
+		"Tables",
+		"Entertainment",
+		"Storage",
+	]);
+	await library.getByRole("searchbox").fill("gaming chair");
+	await library
+		.getByRole("button", { name: "Add Gaming chair", exact: true })
+		.click();
+	await placeSelectedModel(page);
+	const inspector = page.locator("dt3d-object-inspector");
+	await inspector
+		.locator("summary")
+		.filter({ hasText: "Gaming chair configuration" })
+		.click();
+	await inspector
+		.getByRole("combobox", { name: "Gaming accent color", exact: true })
+		.selectOption("purple");
+	const recline = inspector.getByRole("spinbutton", {
+		name: "Gaming chair recline (°)",
+		exact: true,
+	});
+	await recline.fill("30");
+	await recline.blur();
+	const original = await page.evaluate(() =>
+		window.testCard.space.children
+			.find((item) => item.userData.meshType === "furniture-gaming-chair")
+			.getParameters(),
+	);
+	const footrest = inspector.getByRole("checkbox", {
+		name: "Gaming chair footrest",
+		exact: true,
+	});
+	await footrest.check();
+	await expect
+		.poll(() =>
+			saved.some(
+				(item) =>
+					item.data?.meshType === "furniture-gaming-chair" &&
+					item.data.furniture.recline === 30 &&
+					item.data.furniture.accent === "purple" &&
+					item.data.furniture.footrest === true,
+			),
+		)
+		.toBe(true);
+	await footrest.blur();
+	await page.keyboard.press("Control+z");
+	await expect
+		.poll(() =>
+			page.evaluate(() =>
+				window.testCard.space.children
+					.find((item) => item.userData.meshType === "furniture-gaming-chair")
+					.getParameters(),
+			),
+		)
+		.toEqual(original);
+});
+
+test("arcade and console presets save their controls and handheld configuration", async ({
+	page,
+}) => {
+	const saved = [];
+	page.on("request", (request) => {
+		if (request.method() === "PUT" && request.url().includes("/objects/"))
+			saved.push(request.postDataJSON());
+	});
+	await openLibrary(page);
+	let library = page.locator("dt3d-model-library");
+	await library
+		.getByRole("combobox", { name: "Filter by room" })
+		.selectOption("game-room");
+	await library.getByRole("searchbox").fill("arcade machine");
+	await library
+		.getByRole("button", { name: "Add Arcade machine", exact: true })
+		.click();
+	await placeSelectedModel(page);
+	const inspector = page.locator("dt3d-object-inspector");
+	await inspector
+		.locator("summary")
+		.filter({ hasText: "Arcade machine configuration" })
+		.click();
+	await inspector
+		.getByRole("combobox", { name: "Arcade preset", exact: true })
+		.selectOption("bartop");
+	const buttons = inspector.getByRole("spinbutton", {
+		name: "Buttons per arcade player",
+		exact: true,
+	});
+	await buttons.fill("8");
+	await buttons.blur();
+	await inspector
+		.getByRole("checkbox", { name: "Screen / power indicator on", exact: true })
+		.uncheck();
+	await expect
+		.poll(() =>
+			saved.some(
+				(item) =>
+					item.data?.furniture?.style === "bartop" &&
+					item.data.furniture.buttons === 8 &&
+					item.data.furniture.powered === false,
+			),
+		)
+		.toBe(true);
+	await openLibrary(page);
+	library = page.locator("dt3d-model-library");
+	await library
+		.getByRole("combobox", { name: "Filter by room" })
+		.selectOption("game-room");
+	await library.getByRole("searchbox").fill("gaming console");
+	await library
+		.getByRole("button", { name: "Add Gaming console", exact: true })
+		.click();
+	await placeSelectedModel(page);
+	const summary = inspector
+		.locator("summary")
+		.filter({ hasText: "Gaming console configuration" });
+	if (!(await summary.evaluate((element) => element.parentElement.open)))
+		await summary.click();
+	await inspector
+		.getByRole("combobox", { name: "Gaming console preset", exact: true })
+		.selectOption("handheld");
+	await expect
+		.poll(() =>
+			saved.some(
+				(item) =>
+					item.data?.meshType === "furniture-gaming-console" &&
+					item.data.furniture.style === "handheld" &&
+					item.data.furniture.controllers === 0,
+			),
+		)
+		.toBe(true);
+});
+
+test("game table presets save folding and poker settings and update their geometry", async ({
+	page,
+}) => {
+	const saved = [];
+	page.on("request", (request) => {
+		if (request.method() === "PUT" && request.url().includes("/objects/"))
+			saved.push(request.postDataJSON());
+	});
+	await openLibrary(page);
+	const library = page.locator("dt3d-model-library");
+	await library
+		.getByRole("combobox", { name: "Filter by room" })
+		.selectOption("game-room");
+	await library.getByRole("searchbox").fill("ping-pong table");
+	await library
+		.getByRole("button", { name: "Add Game tables", exact: true })
+		.click();
+	await placeSelectedModel(page);
+	const inspector = page.locator("dt3d-object-inspector");
+	await inspector
+		.locator("summary")
+		.filter({ hasText: "Game table configuration" })
+		.click();
+	const preset = inspector.getByRole("combobox", {
+		name: "Game table preset",
+		exact: true,
+	});
+	await preset.selectOption("ping-pong-table");
+	await inspector
+		.getByRole("checkbox", { name: "Fold ping-pong table", exact: true })
+		.check();
+	await expect
+		.poll(() =>
+			saved.some(
+				(item) =>
+					item.data?.furniture?.style === "ping-pong-table" &&
+					item.data.furniture.folded === true,
+			),
+		)
+		.toBe(true);
+	await expect
+		.poll(() =>
+			page.evaluate(() =>
+				Boolean(
+					window.testCard.space.children
+						.find((item) => item.userData.meshType === "furniture-game-table")
+						.getObjectByName("Ping Pong Net"),
+				),
+			),
+		)
+		.toBe(false);
+	await preset.selectOption("poker-table");
+	const places = inspector.getByRole("spinbutton", {
+		name: "Poker places",
+		exact: true,
+	});
+	await places.fill("8");
+	await places.blur();
+	await expect
+		.poll(() =>
+			saved.some(
+				(item) =>
+					item.data?.furniture?.style === "poker-table" &&
+					item.data.furniture.playerCount === 8 &&
+					item.data.furniture.folded === false,
+			),
+		)
+		.toBe(true);
+	await expect
+		.poll(() =>
+			page.evaluate(() => {
+				let n = 0;
+				window.testCard.space.children
+					.find((item) => item.userData.meshType === "furniture-game-table")
+					.traverse((item) => {
+						if (item.name === "Poker Card") n++;
+					});
+				return n;
+			}),
+		)
+		.toBe(16);
+});
+
+test("gaming desks, racing rigs and game cabinets expose functioning setup controls", async ({
+	page,
+}) => {
+	const saved = [];
+	page.on("request", (request) => {
+		if (request.method() === "PUT" && request.url().includes("/objects/"))
+			saved.push(request.postDataJSON());
+	});
+	await openLibrary(page);
+	let library = page.locator("dt3d-model-library");
+	await library
+		.getByRole("combobox", { name: "Filter by room" })
+		.selectOption("game-room");
+	await library.getByRole("searchbox").fill("gaming desk");
+	await library
+		.getByRole("button", { name: "Add Gaming desk", exact: true })
+		.click();
+	await placeSelectedModel(page);
+	const inspector = page.locator("dt3d-object-inspector");
+	await inspector
+		.locator("summary")
+		.filter({ hasText: "Gaming desk configuration" })
+		.click();
+	await inspector
+		.getByRole("combobox", { name: "Gaming desk layout", exact: true })
+		.selectOption("l-shaped");
+	await inspector
+		.getByRole("combobox", { name: "Gaming desk return side", exact: true })
+		.selectOption("right-return");
+	await expect
+		.poll(() =>
+			saved.some(
+				(item) =>
+					item.data?.meshType === "furniture-gaming-desk" &&
+					item.data.furniture.layout === "l-shaped" &&
+					item.data.furniture.returnSide === "right-return",
+			),
+		)
+		.toBe(true);
+	await openLibrary(page);
+	library = page.locator("dt3d-model-library");
+	await library
+		.getByRole("combobox", { name: "Filter by room" })
+		.selectOption("game-room");
+	await library.getByRole("searchbox").fill("racing simulator");
+	await library
+		.getByRole("button", { name: "Add Racing simulator", exact: true })
+		.click();
+	await placeSelectedModel(page);
+	let summary = inspector
+		.locator("summary")
+		.filter({ hasText: "Racing simulator configuration" });
+	if (!(await summary.evaluate((element) => element.parentElement.open)))
+		await summary.click();
+	const wheel = inspector.getByRole("spinbutton", {
+		name: "Steering wheel angle (°)",
+		exact: true,
+	});
+	await wheel.fill("35");
+	await wheel.blur();
+	await inspector
+		.getByRole("checkbox", { name: "Racing gear shifter", exact: true })
+		.uncheck();
+	await expect
+		.poll(() =>
+			saved.some(
+				(item) =>
+					item.data?.meshType === "furniture-racing-simulator" &&
+					item.data.furniture.wheelAngle === 35 &&
+					item.data.furniture.shifter === false,
+			),
+		)
+		.toBe(true);
+	await openLibrary(page);
+	library = page.locator("dt3d-model-library");
+	await library
+		.getByRole("combobox", { name: "Filter by room" })
+		.selectOption("game-room");
+	await library.getByRole("searchbox").fill("game storage cabinet");
+	await library
+		.getByRole("button", {
+			name: "Add Media shelving / game cabinets",
+			exact: true,
+		})
+		.click();
+	await placeSelectedModel(page);
+	summary = inspector
+		.locator("summary")
+		.filter({ hasText: "Game storage configuration" });
+	if (!(await summary.evaluate((element) => element.parentElement.open)))
+		await summary.click();
+	await inspector
+		.getByRole("combobox", { name: "Game storage preset", exact: true })
+		.selectOption("game-storage-cabinet");
+	await inspector
+		.getByRole("checkbox", { name: "Glass game cabinet doors", exact: true })
+		.check();
+	await inspector
+		.getByRole("checkbox", { name: "Open game cabinet doors", exact: true })
+		.check();
+	await expect
+		.poll(() =>
+			saved.some(
+				(item) =>
+					item.data?.furniture?.style === "game-storage-cabinet" &&
+					item.data.furniture.glassDoors === true &&
+					item.data.furniture.doorsOpen === true,
+			),
+		)
+		.toBe(true);
+});
+
 test("garden library shows five categories and dining configurations save and undo", async ({
 	page,
 }) => {

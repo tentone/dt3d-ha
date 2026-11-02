@@ -37,6 +37,18 @@ export type ModelRoom = {
 };
 export const MODEL_ROOMS: ModelRoom[] = [
 	{
+		id: "game-room",
+		labelKey: "gameRoom",
+		categories: [
+			"seating",
+			"gaming",
+			"tables-desks",
+			"entertainment",
+			"storage",
+		],
+		categoryLabels: {"tables-desks": "diningCategoryTables"},
+	},
+	{
 		id: "garden",
 		labelKey: "gardenRoom",
 		categories: [
@@ -169,6 +181,11 @@ export const MODEL_ROOMS: ModelRoom[] = [
 ];
 
 export const MODEL_CATEGORIES: ModelCategory[] = [
+	{
+		id: "gaming",
+		labelKey: "gameCategoryGaming",
+		icon: "mdi:controller-classic-outline",
+	},
 	{
 		id: "garden-furniture",
 		labelKey: "gardenCategoryFurniture",

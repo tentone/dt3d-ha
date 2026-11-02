@@ -63,7 +63,7 @@ Space creation, cloning, import/export, switching, and deletion are hidden when 
 The left sidebar organizes creation tools into **Model Library**, **Scene tools**, and **Floorplan**:
 
 - **Model Library** is a searchable explorer with 3D preview thumbnails. Browse all models or select a category. Search matches model names, categories, and aliases such as “sofa” for Couch.
-- Filter furniture by **Living Room**, **Dining Room**, **Kitchen**, **Bathroom**, **Master Bedroom**, **Children's Bedroom / Nursery**, **Home Office / Study**, **Laundry / Utility Room**, **Walk-in Closet / Dressing Room**, **Garage**, **Balcony / Terrace / Patio**, or **Garden / Backyard**, then browse the categories for that room.
+- Filter furniture by **Living Room**, **Dining Room**, **Kitchen**, **Bathroom**, **Master Bedroom**, **Children's Bedroom / Nursery**, **Home Office / Study**, **Laundry / Utility Room**, **Walk-in Closet / Dressing Room**, **Garage**, **Balcony / Terrace / Patio**, **Garden / Backyard**, or **Entertainment / Game Room**, then browse the categories for that room.
 - **Geometric Shapes** contains cube, sphere, plane, capsule, circle, cone, cylinder, dodecahedron, icosahedron, octahedron, ring, tetrahedron, torus, and torus knot.
 - **Lighting** contains ambient, directional, point, spot, and rectangular area lights.
 - **Doors, windows and gates** selects an opening placement tool; double-click a wall to place the chosen opening.
@@ -372,6 +372,31 @@ Choose a family, move its outlined preview, and double-click to place it. Select
 | Compost / rainwater / mower storage | Slatted compost bin, hollow rainwater tank, or mower storage cabinet; dimensions, slats / tank ribs, opening lid, compost access hatch, mower doors, contents, and tank tap |
 
 Dining-set dimensions describe the table; chairs extend beyond its footprint. Pool dimensions describe the basin, with the ladder outside it. Trampoline height includes its safety net; disabling the net leaves a lower jumping frame. Plant and tree dimensions describe their procedural form, while planter dimensions describe the container with planting above it. Building height includes the roof. Porches, roof overhangs, open doors and lids, taps, downpipes, and accessories can extend beyond the main body. Use the position controls to adjust installation height where needed.
+
+### Entertainment / game room collection
+
+Open **Model Library**, select **Entertainment / Game Room**, and browse **Seating**, **Gaming**, **Tables**, **Entertainment**, and **Storage**. Fourteen customizable families cover all 18 requested objects. Search recognizes names such as “gaming chair”, “arcade machine”, “racing simulator”, “foosball table”, “ping-pong table”, and “game storage cabinet”.
+
+Choose a family, move its outlined preview, and double-click to place it. Use the inspector to select presets and adjust dimensions and accessories. Configurations support saving, cloning, and undo. Sofas, recliners, bean bags, TVs, projectors, screens, and speakers share their existing models with the other room collections. Select **Recliner** in the accent-chair family or **Bean bag** in the ottoman family for those requested variants.
+
+| Family | Variants and controls |
+| --- | --- |
+| Gaming chair | Dimensions, seat height, recline, accent color, bolsters and support pillows, armrests, caster base, and optional extended footrest |
+| Sofa | Shared couch with straight / L / U layouts, seats, return dimensions, arms, cushions, and sofa-bed options |
+| Recliner | Shared accent-chair family with a recliner preset, adjustable back, armrests, and extended footrest |
+| Bean bag | Shared ottoman family with bean-bag, pouf, and ottoman presets |
+| Gaming desk | Straight or mirrored L-shaped desktop; dimensions, return depth, cable port, 0–3 monitors, PC tower, keyboard / mouse, and edge lighting |
+| Arcade machine | Upright or bartop cabinet; dimensions, 1–2 control stations, buttons per player, screen power, and marquee light |
+| Gaming console | Flat console, tower, or handheld; dimensions, 0–4 separate gamepads, and screen / indicator power |
+| Racing simulator | Dimensions, bucket seat and slide, steering wheel angle, pedal board angle, 0–3 monitors, accent trim, and gear shifter |
+| Game tables | Pool, foosball, ping-pong, or poker table; dimensions, surface color, accessories, pool-pocket radius, foosball rod angle, ping-pong folding, and poker place count |
+| TV | Shared television with dimensions, aspect ratio, optional stand, and screen power |
+| Projector | Shared projector with dimensions, tabletop / ceiling mounting, and mount drop |
+| Projection screen | Shared fixed, pull-down, or tripod screen with dimensions and deployment |
+| Speaker system | Shared speakers, soundbar, and home-cinema arrangements |
+| Media shelving / game cabinets | Dimensions, columns and storage levels, game boxes per compartment, optional back panel, solid / glass cabinet doors, and opening state |
+
+Gaming desk height ends at the work surface. Monitors, racing displays, extended footrests, gamepads, foosball handles, cues, and open doors can extend beyond the main body. Pool pockets pass through the felt into recessed cups. The ping-pong folding control raises both playing halves and narrows the support frame; the net and loose accessories are removed while folded. Foosball rod angles rotate the handles and figures together. Poker place count controls cards and chip stacks. Screen and marquee switches adjust their display finishes independently.
 
 ### Add Home Assistant entities
 
