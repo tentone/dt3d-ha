@@ -77,7 +77,18 @@ export type FurnitureType =
 	| "toy-kitchen"
 	| "climbing-frame"
 	| "night-light"
-	| "nursery-wall-shelves";
+	| "nursery-wall-shelves"
+	| "office-desk"
+	| "office-chair"
+	| "office-storage"
+	| "desktop-computer"
+	| "office-monitor"
+	| "office-laptop"
+	| "office-printer"
+	| "office-desk-lamp"
+	| "monitor-stand"
+	| "office-board"
+	| "meeting-table";
 
 export type FurnitureParameters = Record<string, number | boolean | string>;
 

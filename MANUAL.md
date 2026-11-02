@@ -63,7 +63,7 @@ Space creation, cloning, import/export, switching, and deletion are hidden when 
 The left sidebar organizes creation tools into **Model Library**, **Scene tools**, and **Floorplan**:
 
 - **Model Library** is a searchable explorer with 3D preview thumbnails. Browse all models or select a category. Search matches model names, categories, and aliases such as “sofa” for Couch.
-- Filter furniture by **Living Room**, **Dining Room**, **Kitchen**, **Bathroom**, **Master Bedroom**, or **Children's Bedroom / Nursery**, then browse the categories for that room. All models also includes desks and other general models.
+- Filter furniture by **Living Room**, **Dining Room**, **Kitchen**, **Bathroom**, **Master Bedroom**, **Children's Bedroom / Nursery**, or **Home Office / Study**, then browse the categories for that room.
 - **Geometric Shapes** contains cube, sphere, plane, capsule, circle, cone, cylinder, dodecahedron, icosahedron, octahedron, ring, tetrahedron, torus, and torus knot.
 - **Lighting** contains ambient, directional, point, spot, and rectangular area lights.
 - **Doors, windows and gates** selects an opening placement tool; double-click a wall to place the chosen opening.
@@ -239,6 +239,29 @@ Choose a family, move its outlined preview, and double-click to place it. Use it
 | Wall shelves / rug | Configurable children's shelf tiers with brackets / back rails; shared rug geometry and controls |
 
 Bed dimensions describe the frame. Mattress height controls the main sleeping level; bunk beds add a second lower mattress, loft beds can include a desk, cabin beds include storage fronts, and trundle beds slide sideways. Crib and cot models use a plain mattress without pillows or covers. Opening drawers, lids, gates, oven doors, trundles, and ramps can extend beyond the closed footprint. Position wall shelves at their installation height using the position controls. Changing pads and top rails can extend above the changing-table surface height.
+
+### Home office / study collection
+
+Open **Model Library**, select **Home Office / Study**, and browse **Desks**, **Seating**, **Storage**, **Equipment**, **Accessories**, and **Other**. Fourteen customizable families cover all 27 requested objects. Search recognizes “L-shaped desk”, “ergonomic chair”, “filing cabinet”, “monitor”, “scanner”, “noticeboard”, and the other individual model names.
+
+Choose a family, move its outlined preview, and double-click to place it. Select presets and customize the object in its inspector configuration section. The existing standing desk keeps its identifier and saved settings. Sofa and lounge-chair models are shared with the living room collection and appear under **Other**.
+
+| Family | Variants and controls |
+| --- | --- |
+| Office desks | Writing, computer, L-shaped, corner, or executive; dimensions, top thickness, left / right return and run depth, cable opening, keyboard tray / extension, and optional drawer pedestals |
+| Standing desk | Existing height-adjustable desk with its width, depth, height, top thickness, and leg controls |
+| Office seating | Office, ergonomic, visitor, or stool; dimensions, seat height, back angle, arms, ergonomic headrest / mesh back, and optional caster base |
+| Office storage | Filing cabinet, bookshelf, drawer unit, storage cabinet, or wall shelving; dimensions, compartments, drawers / shelves, opening drawers / doors, optional binders, and casters |
+| Desktop computers | Tower or all-in-one; dimensions, screen / power state, and optional keyboard |
+| Monitors | Dimensions, 1–3 monitors, spacing, tilt, and screen state |
+| Laptops | Closed body dimensions, opening lid / angle, and screen state |
+| Printers / scanners | Printer or flatbed scanner; dimensions, opening scanner lid, optional paper, and power indicator |
+| Desk lamps | Dimensions, arm reach, head tilt, on/off, brightness, and warm / neutral / cool white illumination |
+| Monitor stands | Dimensions and optional opening drawer |
+| Whiteboards / noticeboards | Dimensions, notes / marks, optional floor stand, and whiteboard marker tray |
+| Meeting tables / sofas / lounge chairs | Configurable meeting-table top and supports, plus the existing sofa and accent-chair families |
+
+L/corner desk dimensions describe the full footprint. L desk run depth controls both arms, and the return can be mirrored. Keyboard trays, drawers, open lids, lamp arms, and board stands can extend beyond the closed body dimensions. Monitor dimensions describe each monitor; multiple monitors increase the arrangement's total width. Laptop dimensions describe the closed body; the open screen extends above it. Board dimensions describe the board itself, with any floor stand extending below it. Place equipment, lamps, and monitor stands on the desktop using the placement preview, and set wall shelving / boards to their installation height with the position controls.
 
 ### Add Home Assistant entities
 

@@ -39,19 +39,23 @@ export class TableObject extends LivingRoomObject {
 	constructor(
 		parameters: Partial<FurnitureParameters> = {},
 		color = 0x98724e,
-		type: "table" | "living-table" | "dining-table" = "table",
+		type: "table" | "living-table" | "dining-table" | "meeting-table" = "table",
 		definitions?: FurnitureParameterDefinition[],
 	) {
 		super(
 			type,
-			type === "dining-table"
-				? "Dining table"
-				: type === "table"
-					? "Table"
-					: "Living room table",
-			type === "dining-table"
-				? "diningTableControls"
-				: "furnitureTableParameters",
+			type === "meeting-table"
+				? "Meeting table"
+				: type === "dining-table"
+					? "Dining table"
+					: type === "table"
+						? "Table"
+						: "Living room table",
+			type === "meeting-table"
+				? "officeMeetingControls"
+				: type === "dining-table"
+					? "diningTableControls"
+					: "furnitureTableParameters",
 			definitions ??
 				(type === "table"
 					? TABLE_PARAMETER_DEFINITIONS

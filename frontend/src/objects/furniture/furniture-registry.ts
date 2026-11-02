@@ -87,6 +87,20 @@ import {
 } from "./nursery/play.js";
 import {NurseryStorageObject} from "./nursery/storage.js";
 import {ToyKitchenObject} from "./nursery/toy-kitchen.js";
+import {
+	MonitorStandObject,
+	OfficeBoardObject,
+	OfficeDeskLampObject,
+} from "./office/accessories.js";
+import {MeetingTableObject, OfficeDeskObject} from "./office/desks.js";
+import {
+	DesktopComputerObject,
+	OfficeLaptopObject,
+	OfficeMonitorObject,
+	OfficePrinterObject,
+} from "./office/equipment.js";
+import {OfficeChairObject} from "./office/seating.js";
+import {OfficeStorageObject} from "./office/storage.js";
 import {ShelfObject} from "./shelf.js";
 import {StandingDeskObject} from "./standing-desk.js";
 import {
@@ -122,7 +136,8 @@ export type FurnitureCategory =
 	| "bedside"
 	| "bedroom-furniture"
 	| "nursery-furniture"
-	| "play";
+	| "play"
+	| "equipment";
 
 export type FurnitureOption = {
 	type: `furniture-${FurnitureType}`;
@@ -142,6 +157,8 @@ export const FURNITURE_OPTIONS: FurnitureOption[] = [
 		category: "tables-desks",
 		labelKey: "furnitureStandingDesk",
 		icon: "mdi:desk",
+		rooms: ["home-office"],
+		keywords: ["standing desk", "height adjustable desk"],
 	},
 	{
 		type: "furniture-wardrobe",
@@ -226,7 +243,8 @@ export const FURNITURE_OPTIONS: FurnitureOption[] = [
 	{
 		type: "furniture-couch",
 		furnitureType: "couch",
-		rooms: ["living-room"],
+		rooms: ["living-room", "home-office"],
+		roomCategories: {"home-office": "other"},
 		keywords: [
 			"sofa",
 			"sectional sofa",
@@ -290,7 +308,8 @@ export const FURNITURE_OPTIONS: FurnitureOption[] = [
 		category: "seating",
 		labelKey: "livingModelAccentChair",
 		icon: "mdi:seat-outline",
-		rooms: ["living-room", "master-bedroom"],
+		rooms: ["living-room", "master-bedroom", "home-office"],
+		roomCategories: {"home-office": "other"},
 		keywords: [
 			"accent chair",
 			"armchair",
@@ -974,6 +993,118 @@ export const FURNITURE_OPTIONS: FurnitureOption[] = [
 		rooms: ["childrens-bedroom"],
 		keywords: ["wall shelves", "children's shelves", "nursery shelves"],
 	},
+	{
+		type: "furniture-office-desk",
+		furnitureType: "office-desk",
+		category: "tables-desks",
+		labelKey: "officeModelDesk",
+		icon: "mdi:desk",
+		rooms: ["home-office"],
+		keywords: [
+			"writing desk",
+			"computer desk",
+			"L-shaped desk",
+			"L shaped desk",
+			"corner desk",
+			"executive desk",
+		],
+	},
+	{
+		type: "furniture-office-chair",
+		furnitureType: "office-chair",
+		category: "seating",
+		labelKey: "officeModelChair",
+		icon: "mdi:chair-rolling",
+		rooms: ["home-office"],
+		keywords: ["office chair", "ergonomic chair", "visitor chair", "stool"],
+	},
+	{
+		type: "furniture-office-storage",
+		furnitureType: "office-storage",
+		category: "storage",
+		labelKey: "officeModelStorage",
+		icon: "mdi:file-cabinet",
+		rooms: ["home-office"],
+		keywords: [
+			"filing cabinet",
+			"bookshelf",
+			"drawer unit",
+			"storage cabinet",
+			"wall shelving",
+		],
+	},
+	{
+		type: "furniture-desktop-computer",
+		furnitureType: "desktop-computer",
+		category: "equipment",
+		labelKey: "officeModelComputer",
+		icon: "mdi:desktop-tower-monitor",
+		rooms: ["home-office"],
+		keywords: ["desktop computer", "PC", "tower", "all in one"],
+	},
+	{
+		type: "furniture-office-monitor",
+		furnitureType: "office-monitor",
+		category: "equipment",
+		labelKey: "officeModelMonitor",
+		icon: "mdi:monitor",
+		rooms: ["home-office"],
+		keywords: ["monitor", "screen", "dual monitors"],
+	},
+	{
+		type: "furniture-office-laptop",
+		furnitureType: "office-laptop",
+		category: "equipment",
+		labelKey: "officeModelLaptop",
+		icon: "mdi:laptop",
+		rooms: ["home-office"],
+		keywords: ["laptop", "notebook computer"],
+	},
+	{
+		type: "furniture-office-printer",
+		furnitureType: "office-printer",
+		category: "equipment",
+		labelKey: "officeModelPrinter",
+		icon: "mdi:printer-outline",
+		rooms: ["home-office"],
+		keywords: ["printer", "scanner", "flatbed"],
+	},
+	{
+		type: "furniture-office-desk-lamp",
+		furnitureType: "office-desk-lamp",
+		category: "accessories",
+		labelKey: "officeModelLamp",
+		icon: "mdi:desk-lamp",
+		rooms: ["home-office"],
+		keywords: ["desk lamp", "task lamp"],
+	},
+	{
+		type: "furniture-monitor-stand",
+		furnitureType: "monitor-stand",
+		category: "accessories",
+		labelKey: "officeModelStand",
+		icon: "mdi:monitor-screenshot",
+		rooms: ["home-office"],
+		keywords: ["monitor stand", "monitor riser"],
+	},
+	{
+		type: "furniture-office-board",
+		furnitureType: "office-board",
+		category: "accessories",
+		labelKey: "officeModelBoard",
+		icon: "mdi:clipboard-outline",
+		rooms: ["home-office"],
+		keywords: ["whiteboard", "noticeboard", "notice board", "bulletin board"],
+	},
+	{
+		type: "furniture-meeting-table",
+		furnitureType: "meeting-table",
+		category: "other",
+		labelKey: "officeModelMeeting",
+		icon: "mdi:table-furniture",
+		rooms: ["home-office"],
+		keywords: ["meeting table", "conference table"],
+	},
 ];
 
 export function furnitureTypeFromMeshType(type: string): FurnitureType | null {
@@ -1096,4 +1227,15 @@ const CUSTOM_FURNITURE_FACTORIES: Partial<
 	"climbing-frame": ClimbingFrameObject,
 	"night-light": NightLightObject,
 	"nursery-wall-shelves": NurseryWallShelvesObject,
+	"office-desk": OfficeDeskObject,
+	"office-chair": OfficeChairObject,
+	"office-storage": OfficeStorageObject,
+	"desktop-computer": DesktopComputerObject,
+	"office-monitor": OfficeMonitorObject,
+	"office-laptop": OfficeLaptopObject,
+	"office-printer": OfficePrinterObject,
+	"office-desk-lamp": OfficeDeskLampObject,
+	"monitor-stand": MonitorStandObject,
+	"office-board": OfficeBoardObject,
+	"meeting-table": MeetingTableObject,
 };

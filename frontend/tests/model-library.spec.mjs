@@ -71,6 +71,222 @@ async function placeSelectedModel(page) {
 	);
 }
 
+test("office library shows six categories and saves mirrored L desks with undo", async ({
+	page,
+}) => {
+	const saved = [];
+	page.on("request", (request) => {
+		if (request.method() === "PUT" && request.url().includes("/objects/"))
+			saved.push(request.postDataJSON());
+	});
+	await openLibrary(page);
+	const library = page.locator("dt3d-model-library");
+	await library
+		.getByRole("combobox", { name: "Filter by room" })
+		.selectOption("home-office");
+	await expect(library.locator(".model")).toHaveCount(14);
+	await expect(library.locator(".preview img")).toHaveCount(14);
+	await expect(library.locator(".model-section h3")).toHaveText([
+		"Desks",
+		"Seating",
+		"Storage",
+		"Equipment",
+		"Accessories",
+		"Other",
+	]);
+	await library.getByRole("searchbox").fill("L-shaped desk");
+	await library
+		.getByRole("button", { name: "Add Office desks", exact: true })
+		.click();
+	await placeSelectedModel(page);
+	const inspector = page.locator("dt3d-object-inspector");
+	await inspector
+		.locator("summary")
+		.filter({ hasText: "Office desk configuration" })
+		.click();
+	await inspector
+		.getByRole("combobox", { name: "Office desk preset", exact: true })
+		.selectOption("l-shaped-desk");
+	const original = await page.evaluate(() =>
+		window.testCard.space.children
+			.find((item) => item.userData.meshType === "furniture-office-desk")
+			.getParameters(),
+	);
+	await inspector
+		.getByRole("combobox", { name: "L desk return side", exact: true })
+		.selectOption("right-return");
+	await expect
+		.poll(() =>
+			saved.some(
+				(item) =>
+					item.data?.furniture?.style === "l-shaped-desk" &&
+					item.data.furniture.returnSide === "right-return",
+			),
+		)
+		.toBe(true);
+	await inspector
+		.getByRole("combobox", { name: "L desk return side", exact: true })
+		.blur();
+	await page.keyboard.press("Control+z");
+	await expect
+		.poll(() =>
+			page.evaluate(() =>
+				window.testCard.space.children
+					.find((item) => item.userData.meshType === "furniture-office-desk")
+					.getParameters(),
+			),
+		)
+		.toEqual(original);
+});
+
+test("office seating and storage presets expose functioning inspector controls", async ({
+	page,
+}) => {
+	await openLibrary(page);
+	let library = page.locator("dt3d-model-library");
+	await library
+		.getByRole("combobox", { name: "Filter by room" })
+		.selectOption("home-office");
+	await library.getByRole("searchbox").fill("ergonomic chair");
+	await library
+		.getByRole("button", { name: "Add Office seating", exact: true })
+		.click();
+	await placeSelectedModel(page);
+	const inspector = page.locator("dt3d-object-inspector");
+	await inspector
+		.locator("summary")
+		.filter({ hasText: "Office seating configuration" })
+		.click();
+	await inspector
+		.getByRole("combobox", { name: "Office seating preset", exact: true })
+		.selectOption("ergonomic-chair");
+	await inspector
+		.getByRole("checkbox", { name: "Chair casters", exact: true })
+		.uncheck();
+	await expect
+		.poll(() =>
+			page.evaluate(() => {
+				let count = 0;
+				window.testCard.space.children
+					.find((item) => item.userData.meshType === "furniture-office-chair")
+					.traverse((item) => {
+						if (item.name === "Office Caster") count++;
+					});
+				return count;
+			}),
+		)
+		.toBe(0);
+	await openLibrary(page);
+	library = page.locator("dt3d-model-library");
+	await library
+		.getByRole("combobox", { name: "Filter by room" })
+		.selectOption("home-office");
+	await library.getByRole("searchbox").fill("storage cabinet");
+	await library
+		.getByRole("button", { name: "Add Office storage", exact: true })
+		.click();
+	await placeSelectedModel(page);
+	const summary = inspector
+		.locator("summary")
+		.filter({ hasText: "Office storage configuration" });
+	if (!(await summary.evaluate((element) => element.parentElement.open)))
+		await summary.click();
+	await inspector
+		.getByRole("combobox", { name: "Office storage preset", exact: true })
+		.selectOption("storage-cabinet");
+	await inspector
+		.getByRole("checkbox", { name: "Open cabinet doors", exact: true })
+		.check();
+	await expect
+		.poll(() =>
+			page.evaluate(
+				() =>
+					window.testCard.space.children
+						.find(
+							(item) => item.userData.meshType === "furniture-office-storage",
+						)
+						.getObjectByName("Office Cabinet Hinge").rotation.y,
+			),
+		)
+		.toBeLessThan(-1);
+});
+
+test("office laptop and desk lamp controls save their open and power states", async ({
+	page,
+}) => {
+	const saved = [];
+	page.on("request", (request) => {
+		if (request.method() === "PUT" && request.url().includes("/objects/"))
+			saved.push(request.postDataJSON());
+	});
+	await openLibrary(page);
+	let library = page.locator("dt3d-model-library");
+	await library
+		.getByRole("combobox", { name: "Filter by room" })
+		.selectOption("home-office");
+	await library.getByRole("searchbox").fill("laptop");
+	await library
+		.getByRole("button", { name: "Add Laptops", exact: true })
+		.click();
+	await placeSelectedModel(page);
+	const inspector = page.locator("dt3d-object-inspector");
+	await inspector
+		.locator("summary")
+		.filter({ hasText: "Laptop configuration" })
+		.click();
+	await inspector
+		.getByRole("checkbox", { name: "Open laptop", exact: true })
+		.uncheck();
+	await expect
+		.poll(() =>
+			saved.some(
+				(item) =>
+					item.data?.meshType === "furniture-office-laptop" &&
+					item.data.furniture.lidOpen === false,
+			),
+		)
+		.toBe(true);
+	await openLibrary(page);
+	library = page.locator("dt3d-model-library");
+	await library
+		.getByRole("combobox", { name: "Filter by room" })
+		.selectOption("home-office");
+	await library.getByRole("searchbox").fill("desk lamp");
+	await library
+		.getByRole("button", { name: "Add Desk lamps", exact: true })
+		.click();
+	await placeSelectedModel(page);
+	const summary = inspector
+		.locator("summary")
+		.filter({ hasText: "Desk lamp configuration" });
+	if (!(await summary.evaluate((element) => element.parentElement.open)))
+		await summary.click();
+	await inspector
+		.getByRole("checkbox", { name: "Desk lamp on", exact: true })
+		.uncheck();
+	await expect
+		.poll(() =>
+			saved.some(
+				(item) =>
+					item.data?.meshType === "furniture-office-desk-lamp" &&
+					item.data.furniture.enabled === false,
+			),
+		)
+		.toBe(true);
+	await expect
+		.poll(() =>
+			page.evaluate(
+				() =>
+					window.testCard.space.children
+						.find(
+							(item) => item.userData.meshType === "furniture-office-desk-lamp",
+						)
+						.getObjectByName("Desk Lamp Light").intensity,
+			),
+		)
+		.toBe(0);
+});
+
 test("nursery collection shows five categories and saves bunk and trundle beds with undo", async ({
 	page,
 }) => {

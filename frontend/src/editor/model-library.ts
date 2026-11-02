@@ -37,6 +37,19 @@ export type ModelRoom = {
 };
 export const MODEL_ROOMS: ModelRoom[] = [
 	{
+		id: "home-office",
+		labelKey: "officeRoom",
+		categories: [
+			"tables-desks",
+			"seating",
+			"storage",
+			"equipment",
+			"accessories",
+			"other",
+		],
+		categoryLabels: {"tables-desks": "officeCategoryDesks"},
+	},
+	{
 		id: "childrens-bedroom",
 		labelKey: "nurseryRoom",
 		categories: ["beds", "storage", "nursery-furniture", "play", "decoration"],
@@ -107,6 +120,11 @@ export const MODEL_ROOMS: ModelRoom[] = [
 
 export const MODEL_CATEGORIES: ModelCategory[] = [
 	{id: "seating", labelKey: "modelCategorySeating", icon: "mdi:sofa-outline"},
+	{
+		id: "equipment",
+		labelKey: "officeCategoryEquipment",
+		icon: "mdi:desktop-tower-monitor",
+	},
 	{
 		id: "tables-desks",
 		labelKey: "modelCategoryTablesDesks",
