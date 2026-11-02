@@ -63,7 +63,7 @@ Space creation, cloning, import/export, switching, and deletion are hidden when 
 The left sidebar organizes creation tools into **Model Library**, **Scene tools**, and **Floorplan**:
 
 - **Model Library** is a searchable explorer with 3D preview thumbnails. Browse all models or select a category. Search matches model names, categories, and aliases such as “sofa” for Couch.
-- Filter furniture by **Living Room**, **Dining Room**, **Kitchen**, **Bathroom**, **Master Bedroom**, **Children's Bedroom / Nursery**, **Home Office / Study**, **Laundry / Utility Room**, **Walk-in Closet / Dressing Room**, **Garage**, or **Balcony / Terrace / Patio**, then browse the categories for that room.
+- Filter furniture by **Living Room**, **Dining Room**, **Kitchen**, **Bathroom**, **Master Bedroom**, **Children's Bedroom / Nursery**, **Home Office / Study**, **Laundry / Utility Room**, **Walk-in Closet / Dressing Room**, **Garage**, **Balcony / Terrace / Patio**, or **Garden / Backyard**, then browse the categories for that room.
 - **Geometric Shapes** contains cube, sphere, plane, capsule, circle, cone, cylinder, dodecahedron, icosahedron, octahedron, ring, tetrahedron, torus, and torus knot.
 - **Lighting** contains ambient, directional, point, spot, and rectangular area lights.
 - **Doors, windows and gates** selects an opening placement tool; double-click a wall to place the chosen opening.
@@ -346,6 +346,32 @@ Choose a family, move its outlined preview, and double-click to place it. Select
 | Outdoor heater | Mushroom reflector or pyramid; dimensions, guard rods, illuminated element, and local light brightness |
 
 Furniture dimensions describe the main frame; reclining backs, sectional returns, open lids, side shelves, steps, plants, and accessories can extend beyond it. Sectional return depth includes the main sofa depth. Planter height describes the container, with plants above it. Pizza oven height describes the body; the stand and chimney extend beyond it. Awning depth describes its fully extended fabric length; extension and pitch change its occupied space. Position wall-mounted awnings, pergolas, and suspended seats without stands at their installation height with the position controls. Closing a fire pit cover hides the flames and turns off its local light.
+
+### Garden / backyard collection
+
+Open **Model Library**, select **Garden / Backyard**, and browse **Furniture**, **Recreation**, **Landscaping**, **Structures**, and **Equipment**. Fifteen customizable families cover all 24 requested objects. Search recognizes names such as “picnic table”, “outdoor dining set”, “swing set”, “flower bed”, “garden path”, “greenhouse”, and “rainwater tank”.
+
+Choose a family, move its outlined preview, and double-click to place it. Select presets and adjust dimensions and details in the inspector. Configurations support saving, cloning, and undo. Planters, pergolas, and suspended seating share their existing models with the patio collection. For a swing chair, select the **Hanging chair** preset in the suspended seating controls.
+
+| Family | Variants and controls |
+| --- | --- |
+| Picnic tables / benches / dining sets | Integrated picnic seating, slatted garden bench, or table with chairs; dimensions, tabletop slats, bench backrest, number of side chairs, and optional end chairs |
+| Hammocks / hanging chairs | Shared suspended seat with hammock / hanging chair presets, stand, sag, ribs, and cushions |
+| Swimming pool | Rectangular or round basin; dimensions, transparent water and level, ladder, and optional internal steps in rectangular pools |
+| Trampoline | Dimensions, frame supports, springs, safety net with poles, and ladder |
+| Swing set | Dimensions, 1–4 seats, and swing angle; seats and suspension move together |
+| Garden slide | Straight or wavy chute; dimensions, ladder rungs, platform, raised edges, and optional handrails |
+| Sandbox | Dimensions, sand fill level, benches, buckets, and protective cover |
+| Garden playhouse | Dimensions, pitched roof height, opening door, windows, floor, and optional front porch |
+| Trees / shrubs | Broadleaf tree, conifer, or shrub; dimensions, trunk proportion, branch / foliage cluster count, green / autumn foliage, and bare branches |
+| Planters / garden beds | Shared planter family with a new low flower-bed preset; container dimensions, flowers / foliage / empty, plant count, soil level, and optional legs |
+| Garden path | Paving slabs, stepping stones, or gravel; dimensions, rows, columns, gaps, sideways bend, and edging |
+| Fountains / ponds | Tiered fountain or low pond; dimensions, water, pump / stream count, pond border stones, and lilies |
+| Pergola | Shared freestanding / wall-mounted structure with adjustable roof slats or fabric, and optional curtains |
+| Sheds / greenhouses / gazebos | Garden shed, transparent greenhouse, or open gazebo; dimensions, roof height, opening door, windows, floor, and gazebo side count |
+| Compost / rainwater / mower storage | Slatted compost bin, hollow rainwater tank, or mower storage cabinet; dimensions, slats / tank ribs, opening lid, compost access hatch, mower doors, contents, and tank tap |
+
+Dining-set dimensions describe the table; chairs extend beyond its footprint. Pool dimensions describe the basin, with the ladder outside it. Trampoline height includes its safety net; disabling the net leaves a lower jumping frame. Plant and tree dimensions describe their procedural form, while planter dimensions describe the container with planting above it. Building height includes the roof. Porches, roof overhangs, open doors and lids, taps, downpipes, and accessories can extend beyond the main body. Use the position controls to adjust installation height where needed.
 
 ### Add Home Assistant entities
 

@@ -48,6 +48,24 @@ import {
 	ToolPegboardObject,
 } from "./garage/work-area.js";
 import {
+	GardenBuildingObject,
+	GardenPlayhouseObject,
+} from "./garden/buildings.js";
+import {GardenEquipmentObject} from "./garden/equipment.js";
+import {GardenFurnitureObject} from "./garden/furniture.js";
+import {
+	GardenPathObject,
+	GardenVegetationObject,
+	GardenWaterFeatureObject,
+} from "./garden/landscaping.js";
+import {
+	GardenPoolObject,
+	GardenSandboxObject,
+	GardenSlideObject,
+	GardenSwingSetObject,
+	GardenTrampolineObject,
+} from "./garden/recreation.js";
+import {
 	KitchenAccessoriesObject,
 	KitchenTrolleyObject,
 } from "./kitchen/accessories.js";
@@ -192,7 +210,11 @@ export type FurnitureCategory =
 	| "vehicles"
 	| "work-area"
 	| "cooking"
-	| "shade";
+	| "shade"
+	| "garden-furniture"
+	| "recreation"
+	| "landscaping"
+	| "structures";
 
 export type FurnitureOption = {
 	type: `furniture-${FurnitureType}`;
@@ -1475,7 +1497,8 @@ export const FURNITURE_OPTIONS: FurnitureOption[] = [
 		category: "seating",
 		labelKey: "patioModelSuspended",
 		icon: "mdi:hammock",
-		rooms: ["patio"],
+		rooms: ["patio", "garden"],
+		roomCategories: {garden: "garden-furniture"},
 		keywords: ["hammock", "hanging chair", "egg chair", "swing chair"],
 	},
 	{
@@ -1552,7 +1575,8 @@ export const FURNITURE_OPTIONS: FurnitureOption[] = [
 		category: "shade",
 		labelKey: "patioModelPergola",
 		icon: "mdi:greenhouse",
-		rooms: ["patio"],
+		rooms: ["patio", "garden"],
+		roomCategories: {garden: "structures"},
 		keywords: ["pergola", "slatted roof", "louvered pergola", "garden canopy"],
 	},
 	{
@@ -1570,13 +1594,16 @@ export const FURNITURE_OPTIONS: FurnitureOption[] = [
 		category: "decoration",
 		labelKey: "patioModelPlanter",
 		icon: "mdi:flower-tulip-outline",
-		rooms: ["patio"],
+		rooms: ["patio", "garden"],
+		roomCategories: {garden: "landscaping"},
 		keywords: [
 			"planter",
 			"flower pot",
 			"raised garden bed",
 			"garden bed",
 			"planter box",
+			"flower bed",
+			"flowerbed",
 		],
 	},
 	{
@@ -1609,6 +1636,131 @@ export const FURNITURE_OPTIONS: FurnitureOption[] = [
 			"patio heater",
 			"terrace heater",
 			"pyramid heater",
+		],
+	},
+	{
+		type: "furniture-garden-furniture",
+		furnitureType: "garden-furniture",
+		category: "garden-furniture",
+		labelKey: "gardenModelFurniture",
+		icon: "mdi:table-picnic",
+		rooms: ["garden"],
+		keywords: [
+			"picnic table",
+			"garden bench",
+			"outdoor dining set",
+			"garden dining set",
+		],
+	},
+	{
+		type: "furniture-garden-pool",
+		furnitureType: "garden-pool",
+		category: "recreation",
+		labelKey: "gardenModelPool",
+		icon: "mdi:pool",
+		rooms: ["garden"],
+		keywords: ["swimming pool", "garden pool", "above ground pool"],
+	},
+	{
+		type: "furniture-garden-trampoline",
+		furnitureType: "garden-trampoline",
+		category: "recreation",
+		labelKey: "gardenModelTrampoline",
+		icon: "mdi:circle-outline",
+		rooms: ["garden"],
+		keywords: ["trampoline", "safety net"],
+	},
+	{
+		type: "furniture-garden-swing-set",
+		furnitureType: "garden-swing-set",
+		category: "recreation",
+		labelKey: "gardenModelSwing",
+		icon: "mdi:swing",
+		rooms: ["garden"],
+		keywords: ["swing set", "playground swings"],
+	},
+	{
+		type: "furniture-garden-slide",
+		furnitureType: "garden-slide",
+		category: "recreation",
+		labelKey: "gardenModelSlide",
+		icon: "mdi:slide",
+		rooms: ["garden"],
+		keywords: ["slide", "garden slide", "playground slide"],
+	},
+	{
+		type: "furniture-garden-sandbox",
+		furnitureType: "garden-sandbox",
+		category: "recreation",
+		labelKey: "gardenModelSandbox",
+		icon: "mdi:shovel",
+		rooms: ["garden"],
+		keywords: ["sandbox", "sand pit", "sandpit"],
+	},
+	{
+		type: "furniture-garden-playhouse",
+		furnitureType: "garden-playhouse",
+		category: "recreation",
+		labelKey: "gardenModelPlayhouse",
+		icon: "mdi:home-outline",
+		rooms: ["garden"],
+		keywords: ["playhouse", "children's playhouse", "kids garden house"],
+	},
+	{
+		type: "furniture-garden-vegetation",
+		furnitureType: "garden-vegetation",
+		category: "landscaping",
+		labelKey: "gardenModelVegetation",
+		icon: "mdi:tree-outline",
+		rooms: ["garden"],
+		keywords: ["tree", "shrub", "conifer", "bush", "hedge"],
+	},
+	{
+		type: "furniture-garden-path",
+		furnitureType: "garden-path",
+		category: "landscaping",
+		labelKey: "gardenModelPath",
+		icon: "mdi:wall",
+		rooms: ["garden"],
+		keywords: [
+			"garden path",
+			"paving slabs",
+			"stepping stones",
+			"gravel path",
+			"pavers",
+		],
+	},
+	{
+		type: "furniture-garden-water-feature",
+		furnitureType: "garden-water-feature",
+		category: "landscaping",
+		labelKey: "gardenModelWater",
+		icon: "mdi:fountain",
+		rooms: ["garden"],
+		keywords: ["fountain", "pond", "water feature", "lily pond"],
+	},
+	{
+		type: "furniture-garden-building",
+		furnitureType: "garden-building",
+		category: "structures",
+		labelKey: "gardenModelBuilding",
+		icon: "mdi:greenhouse",
+		rooms: ["garden"],
+		keywords: ["garden shed", "greenhouse", "gazebo", "garden building"],
+	},
+	{
+		type: "furniture-garden-equipment",
+		furnitureType: "garden-equipment",
+		category: "equipment",
+		labelKey: "gardenModelEquipment",
+		icon: "mdi:watering-can-outline",
+		rooms: ["garden"],
+		keywords: [
+			"compost bin",
+			"rainwater tank",
+			"lawn mower storage",
+			"mower shed",
+			"water butt",
 		],
 	},
 ];
@@ -1671,6 +1823,18 @@ const CUSTOM_FURNITURE_FACTORIES: Partial<
 		) => FurnitureObject
 	>
 > = {
+	"garden-furniture": GardenFurnitureObject,
+	"garden-pool": GardenPoolObject,
+	"garden-trampoline": GardenTrampolineObject,
+	"garden-swing-set": GardenSwingSetObject,
+	"garden-slide": GardenSlideObject,
+	"garden-sandbox": GardenSandboxObject,
+	"garden-playhouse": GardenPlayhouseObject,
+	"garden-vegetation": GardenVegetationObject,
+	"garden-path": GardenPathObject,
+	"garden-water-feature": GardenWaterFeatureObject,
+	"garden-building": GardenBuildingObject,
+	"garden-equipment": GardenEquipmentObject,
 	"outdoor-chair": OutdoorChairObject,
 	"outdoor-sofa": OutdoorSofaObject,
 	"suspended-seat": SuspendedSeatObject,

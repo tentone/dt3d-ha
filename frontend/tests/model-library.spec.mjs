@@ -72,6 +72,330 @@ async function placeSelectedModel(page) {
 	);
 }
 
+test("garden library shows five categories and dining configurations save and undo", async ({
+	page,
+}) => {
+	const saved = [];
+	page.on("request", (request) => {
+		if (request.method() === "PUT" && request.url().includes("/objects/"))
+			saved.push(request.postDataJSON());
+	});
+	await openLibrary(page);
+	const library = page.locator("dt3d-model-library");
+	await library
+		.getByRole("combobox", { name: "Filter by room" })
+		.selectOption("garden");
+	await expect(library.locator(".model")).toHaveCount(15);
+	await expect(library.locator(".preview img")).toHaveCount(15);
+	await expect(library.locator(".model-section h3")).toHaveText([
+		"Furniture",
+		"Recreation",
+		"Landscaping",
+		"Structures",
+		"Equipment",
+	]);
+	await library.getByRole("searchbox").fill("picnic table");
+	await library
+		.getByRole("button", {
+			name: "Add Picnic tables / benches / dining sets",
+			exact: true,
+		})
+		.click();
+	await placeSelectedModel(page);
+	const inspector = page.locator("dt3d-object-inspector");
+	await inspector
+		.locator("summary")
+		.filter({ hasText: "Garden furniture configuration" })
+		.click();
+	await inspector
+		.getByRole("combobox", { name: "Garden furniture preset", exact: true })
+		.selectOption("outdoor-dining-set");
+	const chairs = inspector.getByRole("spinbutton", {
+		name: "Chairs along table sides",
+		exact: true,
+	});
+	await chairs.fill("4");
+	await chairs.blur();
+	const original = await page.evaluate(() =>
+		window.testCard.space.children
+			.find((item) => item.userData.meshType === "furniture-garden-furniture")
+			.getParameters(),
+	);
+	const ends = inspector.getByRole("checkbox", {
+		name: "Dining set end chairs",
+		exact: true,
+	});
+	await ends.uncheck();
+	await expect
+		.poll(() =>
+			saved.some(
+				(item) =>
+					item.data?.furniture?.style === "outdoor-dining-set" &&
+					item.data.furniture.chairCount === 4 &&
+					item.data.furniture.endChairs === false,
+			),
+		)
+		.toBe(true);
+	await ends.blur();
+	await page.keyboard.press("Control+z");
+	await expect
+		.poll(() =>
+			page.evaluate(() =>
+				window.testCard.space.children
+					.find(
+						(item) => item.userData.meshType === "furniture-garden-furniture",
+					)
+					.getParameters(),
+			),
+		)
+		.toEqual(original);
+});
+
+test("garden pools and trampolines expose water and safety enclosure controls", async ({
+	page,
+}) => {
+	const saved = [];
+	page.on("request", (request) => {
+		if (request.method() === "PUT" && request.url().includes("/objects/"))
+			saved.push(request.postDataJSON());
+	});
+	await openLibrary(page);
+	let library = page.locator("dt3d-model-library");
+	await library
+		.getByRole("combobox", { name: "Filter by room" })
+		.selectOption("garden");
+	await library.getByRole("searchbox").fill("swimming pool");
+	await library
+		.getByRole("button", { name: "Add Swimming pool", exact: true })
+		.click();
+	await placeSelectedModel(page);
+	const inspector = page.locator("dt3d-object-inspector");
+	await inspector
+		.locator("summary")
+		.filter({ hasText: "Swimming pool configuration" })
+		.click();
+	await inspector
+		.getByRole("combobox", { name: "Swimming pool shape", exact: true })
+		.selectOption("round");
+	await inspector
+		.getByRole("checkbox", { name: "Include water", exact: true })
+		.uncheck();
+	await expect
+		.poll(() =>
+			saved.some(
+				(item) =>
+					item.data?.meshType === "furniture-garden-pool" &&
+					item.data.furniture.shape === "round" &&
+					item.data.furniture.waterEnabled === false,
+			),
+		)
+		.toBe(true);
+	await openLibrary(page);
+	library = page.locator("dt3d-model-library");
+	await library
+		.getByRole("combobox", { name: "Filter by room" })
+		.selectOption("garden");
+	await library.getByRole("searchbox").fill("trampoline");
+	await library
+		.getByRole("button", { name: "Add Trampoline", exact: true })
+		.click();
+	await placeSelectedModel(page);
+	const summary = inspector
+		.locator("summary")
+		.filter({ hasText: "Trampoline configuration" });
+	if (!(await summary.evaluate((element) => element.parentElement.open)))
+		await summary.click();
+	await inspector
+		.getByRole("checkbox", { name: "Trampoline safety net", exact: true })
+		.uncheck();
+	await expect
+		.poll(() =>
+			saved.some(
+				(item) =>
+					item.data?.meshType === "furniture-garden-trampoline" &&
+					item.data.furniture.netEnabled === false,
+			),
+		)
+		.toBe(true);
+	await expect
+		.poll(() =>
+			page.evaluate(() =>
+				Boolean(
+					window.testCard.space.children
+						.find(
+							(item) =>
+								item.userData.meshType === "furniture-garden-trampoline",
+						)
+						.getObjectByName("Trampoline Safety Net"),
+				),
+			),
+		)
+		.toBe(false);
+});
+
+test("garden buildings switch between glazed greenhouses and open gazebos and playhouses keep their own controls", async ({
+	page,
+}) => {
+	const saved = [];
+	page.on("request", (request) => {
+		if (request.method() === "PUT" && request.url().includes("/objects/"))
+			saved.push(request.postDataJSON());
+	});
+	await openLibrary(page);
+	let library = page.locator("dt3d-model-library");
+	await library
+		.getByRole("combobox", { name: "Filter by room" })
+		.selectOption("garden");
+	await library.getByRole("searchbox").fill("greenhouse");
+	await library
+		.getByRole("button", {
+			name: "Add Sheds / greenhouses / gazebos",
+			exact: true,
+		})
+		.click();
+	await placeSelectedModel(page);
+	const inspector = page.locator("dt3d-object-inspector");
+	await inspector
+		.locator("summary")
+		.filter({ hasText: "Garden building configuration" })
+		.click();
+	await inspector
+		.getByRole("combobox", { name: "Garden building preset", exact: true })
+		.selectOption("greenhouse");
+	await inspector
+		.getByRole("checkbox", { name: "Open building door", exact: true })
+		.check();
+	await expect
+		.poll(() =>
+			saved.some(
+				(item) =>
+					item.data?.furniture?.style === "greenhouse" &&
+					item.data.furniture.doorsOpen === true,
+			),
+		)
+		.toBe(true);
+	await inspector
+		.getByRole("combobox", { name: "Garden building preset", exact: true })
+		.selectOption("gazebo");
+	const sides = inspector.getByRole("spinbutton", {
+		name: "Gazebo sides",
+		exact: true,
+	});
+	await sides.fill("8");
+	await sides.blur();
+	await expect
+		.poll(() =>
+			saved.some(
+				(item) =>
+					item.data?.furniture?.style === "gazebo" &&
+					item.data.furniture.gazeboSides === 8,
+			),
+		)
+		.toBe(true);
+	await openLibrary(page);
+	library = page.locator("dt3d-model-library");
+	await library
+		.getByRole("combobox", { name: "Filter by room" })
+		.selectOption("garden");
+	await library.getByRole("searchbox").fill("playhouse");
+	await library
+		.getByRole("button", { name: "Add Garden playhouse", exact: true })
+		.click();
+	await placeSelectedModel(page);
+	const summary = inspector
+		.locator("summary")
+		.filter({ hasText: "Garden building configuration" });
+	if (!(await summary.evaluate((element) => element.parentElement.open)))
+		await summary.click();
+	await inspector
+		.getByRole("checkbox", { name: "Playhouse porch", exact: true })
+		.uncheck();
+	await expect
+		.poll(() =>
+			saved.some(
+				(item) =>
+					item.data?.meshType === "furniture-garden-playhouse" &&
+					item.data.furniture.porchEnabled === false,
+			),
+		)
+		.toBe(true);
+});
+
+test("garden rainwater tanks and shared flower beds save lids, taps and low planting presets", async ({
+	page,
+}) => {
+	const saved = [];
+	page.on("request", (request) => {
+		if (request.method() === "PUT" && request.url().includes("/objects/"))
+			saved.push(request.postDataJSON());
+	});
+	await openLibrary(page);
+	let library = page.locator("dt3d-model-library");
+	await library
+		.getByRole("combobox", { name: "Filter by room" })
+		.selectOption("garden");
+	await library.getByRole("searchbox").fill("rainwater tank");
+	await library
+		.getByRole("button", {
+			name: "Add Compost / rainwater / mower storage",
+			exact: true,
+		})
+		.click();
+	await placeSelectedModel(page);
+	const inspector = page.locator("dt3d-object-inspector");
+	await inspector
+		.locator("summary")
+		.filter({ hasText: "Garden equipment configuration" })
+		.click();
+	await inspector
+		.getByRole("combobox", { name: "Garden equipment preset", exact: true })
+		.selectOption("rainwater-tank");
+	await inspector
+		.getByRole("checkbox", { name: "Open equipment lid", exact: true })
+		.check();
+	await inspector
+		.getByRole("checkbox", { name: "Rainwater tank tap", exact: true })
+		.uncheck();
+	await expect
+		.poll(() =>
+			saved.some(
+				(item) =>
+					item.data?.furniture?.style === "rainwater-tank" &&
+					item.data.furniture.lidOpen === true &&
+					item.data.furniture.tapEnabled === false,
+			),
+		)
+		.toBe(true);
+	await openLibrary(page);
+	library = page.locator("dt3d-model-library");
+	await library
+		.getByRole("combobox", { name: "Filter by room" })
+		.selectOption("garden");
+	await library.getByRole("searchbox").fill("flower bed");
+	await library
+		.getByRole("button", { name: "Add Planters / garden beds", exact: true })
+		.click();
+	await placeSelectedModel(page);
+	const summary = inspector
+		.locator("summary")
+		.filter({ hasText: "Planter configuration" });
+	if (!(await summary.evaluate((element) => element.parentElement.open)))
+		await summary.click();
+	await inspector
+		.getByRole("combobox", { name: "Planter preset", exact: true })
+		.selectOption("flower-bed");
+	await expect
+		.poll(() =>
+			saved.some(
+				(item) =>
+					item.data?.meshType === "furniture-outdoor-planter" &&
+					item.data.furniture.style === "flower-bed" &&
+					item.data.furniture.height === 0.15,
+			),
+		)
+		.toBe(true);
+});
+
 test("patio library shows six categories and sectional settings save and undo", async ({
 	page,
 }) => {

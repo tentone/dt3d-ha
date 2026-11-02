@@ -30,6 +30,17 @@ export class OutdoorPlanterObject extends PatioObject {
 						value: "raised-garden-bed",
 						parameters: {width: 1.4, depth: 0.8, height: 0.6},
 					},
+					{
+						value: "flower-bed",
+						parameters: {
+							width: 1.6,
+							depth: 0.8,
+							height: 0.15,
+							plantCount: 6,
+							plants: "flowers",
+							legsEnabled: false,
+						},
+					},
 				]),
 				...dimensions(0.9, 0.35, 0.45),
 				choice("plants", "PlanterPlants", "flowers", [
@@ -125,7 +136,7 @@ export class OutdoorPlanterObject extends PatioObject {
 				z = round
 					? Math.sin(a) * d * 0.22 * ((i + 1) / n)
 					: Math.sin(a) * d * 0.2,
-				ph = h * (0.4 + (i % 3) * 0.1),
+				ph = h * (0.4 + (i % 3) * 0.1) * (p.style === "flower-bed" ? 3 : 1),
 				r = Math.min((w / n) * 0.25, d * 0.15, h * 0.15);
 			this.rail("Planter Stem", [x, y, z], [x, y + ph, z], r * 0.09, green);
 			for (const side of [-1, 1])

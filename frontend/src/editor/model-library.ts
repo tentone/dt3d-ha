@@ -37,6 +37,17 @@ export type ModelRoom = {
 };
 export const MODEL_ROOMS: ModelRoom[] = [
 	{
+		id: "garden",
+		labelKey: "gardenRoom",
+		categories: [
+			"garden-furniture",
+			"recreation",
+			"landscaping",
+			"structures",
+			"equipment",
+		],
+	},
+	{
 		id: "patio",
 		labelKey: "patioRoom",
 		categories: [
@@ -158,6 +169,22 @@ export const MODEL_ROOMS: ModelRoom[] = [
 ];
 
 export const MODEL_CATEGORIES: ModelCategory[] = [
+	{
+		id: "garden-furniture",
+		labelKey: "gardenCategoryFurniture",
+		icon: "mdi:table-picnic",
+	},
+	{id: "recreation", labelKey: "gardenCategoryRecreation", icon: "mdi:swing"},
+	{
+		id: "landscaping",
+		labelKey: "gardenCategoryLandscaping",
+		icon: "mdi:tree-outline",
+	},
+	{
+		id: "structures",
+		labelKey: "gardenCategoryStructures",
+		icon: "mdi:greenhouse",
+	},
 	{
 		id: "cooking",
 		labelKey: "patioCategoryCooking",

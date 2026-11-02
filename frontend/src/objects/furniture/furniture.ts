@@ -123,7 +123,19 @@ export type FurnitureType =
 	| "outdoor-planter"
 	| "hot-tub"
 	| "fire-pit"
-	| "outdoor-heater";
+	| "outdoor-heater"
+	| "garden-furniture"
+	| "garden-pool"
+	| "garden-trampoline"
+	| "garden-swing-set"
+	| "garden-slide"
+	| "garden-sandbox"
+	| "garden-playhouse"
+	| "garden-vegetation"
+	| "garden-path"
+	| "garden-water-feature"
+	| "garden-building"
+	| "garden-equipment";
 
 export type FurnitureParameters = Record<string, number | boolean | string>;
 
