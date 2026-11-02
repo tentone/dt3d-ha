@@ -63,7 +63,7 @@ Space creation, cloning, import/export, switching, and deletion are hidden when 
 The left sidebar organizes creation tools into **Model Library**, **Scene tools**, and **Floorplan**:
 
 - **Model Library** is a searchable explorer with 3D preview thumbnails. Browse all models or select a category. Search matches model names, categories, and aliases such as “sofa” for Couch.
-- Filter furniture by **Living Room**, **Dining Room**, **Kitchen**, **Bathroom**, **Master Bedroom**, **Children's Bedroom / Nursery**, **Home Office / Study**, or **Laundry / Utility Room**, then browse the categories for that room.
+- Filter furniture by **Living Room**, **Dining Room**, **Kitchen**, **Bathroom**, **Master Bedroom**, **Children's Bedroom / Nursery**, **Home Office / Study**, **Laundry / Utility Room**, **Walk-in Closet / Dressing Room**, **Garage**, or **Balcony / Terrace / Patio**, then browse the categories for that room.
 - **Geometric Shapes** contains cube, sphere, plane, capsule, circle, cone, cylinder, dodecahedron, icosahedron, octahedron, ring, tetrahedron, torus, and torus knot.
 - **Lighting** contains ambient, directional, point, spot, and rectangular area lights.
 - **Doors, windows and gates** selects an opening placement tool; double-click a wall to place the chosen opening.
@@ -281,6 +281,71 @@ Choose a family, move its outlined preview, and double-click to place it. Select
 | Cleaning trolleys | Dimensions, shelves, casters, hollow bucket and bottles, and optional mop |
 
 Stacked appliance dimensions describe the complete unit. Sink height includes any stand and ends at the rim; faucets can extend above it. Without a stand, basin dimensions describe the bowl body. Table height describes the unfolded surface; folding the legs lowers the model into a compact horizontal profile. Drying racks fold their panels upright and narrow their frame. Open doors, pulled-out bags, iron rests, handles, towels, and supplies can extend beyond the main body. Position wall shelves and unmounted basins at their installation height with the position controls. Appliance displays show visual power state and do not simulate laundry cycles.
+
+### Walk-in closet / dressing room collection
+
+Open **Model Library**, select **Walk-in Closet / Dressing Room**, and browse **Wardrobes**, **Storage**, **Furniture**, and **Accessories**. Eight customizable families cover all 16 requested objects. Search recognizes each object name, including “modular wardrobe”, “shoe rack”, “accessories organizer”, “vanity table”, and “illuminated mirror”.
+
+Choose a family, move its outlined preview, and double-click to place it. Use the inspector to select a preset and adjust its dimensions and details. Configurations support saving, cloning, and undo. Vanities, ottomans, and benches share their existing models with the bedroom and living room collections.
+
+| Family | Variants and controls |
+| --- | --- |
+| Dressing room wardrobes | Open, closed, modular, or corner wardrobe; dimensions, 1–6 bays, shelves, drawers and extension, hinged doors and opening state, hanging compartments, garment count, and back panel |
+| Closet storage / organizers | Shoe rack, drawer unit, hanging rail, shelving unit, or accessories organizer; shelf count and tilt, drawer rows and extension, compartment rows / columns, optional contents, and glass organizer cover |
+| Dressing island | Dimensions, drawer columns and rows, extension, drawers on one or both sides, solid or transparent glass top, and optional recessed tray dividers |
+| Dressing tables / vanities | Shared dressing table, vanity, or desk; dimensions, drawer rows and extension, optional mirror, mirror shape / height, and bulbs |
+| Ottomans | Shared ottoman, pouf, or bean bag; dimensions, shape, and tufting |
+| Benches | Shared upholstered or storage bench; dimensions, cushion, seat thickness, and opening storage lid |
+| Dressing mirrors | Full-length or illuminated mirror; dimensions, rectangular / round / oval / arched frame, frame width, stand, LED border, light switch, brightness, and light color |
+| Clothes stands | Valet stand or coat tree; dimensions, hook count, optional clothing, and valet shoe shelf |
+
+Corner wardrobe width and depth describe the full L-shaped footprint. Set the return side and cabinet run depth to fit the room; bay count applies separately to each run. Shelves occupy bays without hanging rails. Drawer extensions, open doors, handles, mirror stands, and clothing can extend beyond the main body. The island's glass top reveals a recessed accessory tray. Move wall mirrors to their installation height with the position controls. Mirror illumination provides a visible LED border and a local scene light.
+
+### Garage collection
+
+Open **Model Library**, select **Garage**, and browse **Vehicles**, **Storage**, **Work area**, **Equipment**, and **Other**. Nine customizable families cover all 18 requested objects. Search recognizes individual objects such as “motorcycle”, “wall storage rack”, “tire rack”, “tool pegboard”, “pressure washer”, and “storage boxes”.
+
+Choose a family, move its outlined preview to the desired position, and double-click to place it. Select presets and adjust dimensions and accessories in the inspector. Configurations support saving, cloning, and undo.
+
+| Family | Variants and controls |
+| --- | --- |
+| Cars | Sedan, hatchback, or SUV; dimensions, wheelbase, front wheel steering angle, illuminated light finishes, and optional roof rack |
+| Motorcycles / bicycles / scooters | Three distinct frame presets; dimensions, wheel radius, spokes, saddle / seat, and kickstand |
+| Garage storage / racks | Garage shelving, tool cabinet, wall storage rack, bike rack, or tire rack; dimensions, rack levels, drawer count and extension, rack slots / hooks, contents, and tool cabinet casters |
+| Workbenches / workshop tables | Dimensions, worktop thickness, drawer rows and extension, lower shelf, optional supported pegboard, board height, tools, and bench vice |
+| Tool pegboard | Dimensions, hole rows / columns, and hanging tool count; perforations pass through the board |
+| EV charger | Body dimensions, wall or pedestal mounting, stand height, cable loops and reach, docked / extended plug, and power indicator |
+| Compressors / pressure washers | Two equipment presets; dimensions, optional hose, coil size, gun / lance, and power indicator |
+| Recycling / waste bins | Color-coded recycling group or waste bin; overall dimensions, 1–4 bins, opening lids, hollow interiors, and optional rear wheels |
+| Storage boxes | Plastic tote, cardboard box, or wooden crate; dimensions per box, 1–4 stacked boxes, handles, lids, and opening top lid |
+
+Vehicle depth describes length along the vehicle. Wheel radii are limited to fit the selected dimensions. Workbench height ends at the work surface; pegboards and the vice extend above it. Charger height describes the body; pedestal height is added below it. Bin width describes the complete group, while storage box height applies to each box in the stack. Open lids, extended drawers, cables, handles, and accessories can extend beyond the main body. Move wall-mounted chargers, wall racks, and pegboards to their installation height with the position controls. Equipment indicators show their configured visual power state.
+
+### Balcony / terrace / patio collection
+
+Open **Model Library**, select **Balcony / Terrace / Patio**, and browse **Seating**, **Tables**, **Cooking**, **Shade**, **Decoration**, and **Other**. Fifteen customizable families cover all 24 requested objects. Search recognizes individual names such as “outdoor sectional sofa”, “hanging chair”, “bistro table”, “pizza oven”, “retractable awning”, and “raised garden bed”. The outdoor rug shares the existing rug model and its shape, border, and fringe controls.
+
+Choose a family, move its outlined preview, and double-click to place it. Select presets and adjust dimensions and details in the inspector. Configurations support saving, cloning, and undo.
+
+| Family | Variants and controls |
+| --- | --- |
+| Outdoor chairs / loungers | Outdoor chair, lounge chair, or sun lounger; dimensions, seat height, back recline, slats, cushions, and armrests |
+| Outdoor sofas / sectionals | Straight, left / right L-shaped, or U-shaped; dimensions, main seats, seats per return, total return depth, cushions, and armrests |
+| Hammocks / hanging chairs | Sagging fabric hammock or ribbed hanging chair; dimensions, optional stand, hammock sag, chair ribs, and cushions |
+| Outdoor tables | Dining, coffee, side, or bistro table; dimensions, rectangular / round / oval tops, solid or separate slats, slat count, top thickness, and four legs / trestles / pedestal |
+| Barbecue grill | Gas or kettle grill; dimensions, hinged lid, gas control knobs, side shelves, and visible fire |
+| Outdoor kitchen | Dimensions, cabinet modules and opening doors, recessed sink with faucet, and optional cooking grate |
+| Pizza oven | Arched oven with open mouth and baking stone; body dimensions, optional stand and its height, removable door, and visible fire |
+| Parasol | Center pole or cantilever; dimensions, open / folded canopy, tilt, and rib count |
+| Pergola | Freestanding or wall-mounted; dimensions, roof slats and angle, fabric roof, and optional curtains with gathering control |
+| Retractable awning | Dimensions, extension, pitch, articulated arm count, and striped or plain fabric |
+| Planters / garden beds | Rectangular planter, flower pot, or raised garden bed; container dimensions, flowers / foliage / empty, plant count, soil fill level, and optional legs |
+| Rug | Shared rug with rectangular / rounded / round / oval shape, border, and fringe |
+| Hot tub | Square or round basin; dimensions, transparent water and fill level, jets, steps, and protective cover |
+| Fire pit | Fire bowl or fire table; dimensions, visible flames, local light brightness, and protective cover |
+| Outdoor heater | Mushroom reflector or pyramid; dimensions, guard rods, illuminated element, and local light brightness |
+
+Furniture dimensions describe the main frame; reclining backs, sectional returns, open lids, side shelves, steps, plants, and accessories can extend beyond it. Sectional return depth includes the main sofa depth. Planter height describes the container, with plants above it. Pizza oven height describes the body; the stand and chimney extend beyond it. Awning depth describes its fully extended fabric length; extension and pitch change its occupied space. Position wall-mounted awnings, pergolas, and suspended seats without stands at their installation height with the position controls. Closing a fire pit cover hides the flames and turns off its local light.
 
 ### Add Home Assistant entities
 

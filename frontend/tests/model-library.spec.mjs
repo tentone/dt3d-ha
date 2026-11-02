@@ -1,3 +1,4 @@
+/* global window, document, URL, crypto, Buffer, HTMLCanvasElement */
 import { expect, test } from "@playwright/test";
 
 const space = {
@@ -70,6 +71,804 @@ async function placeSelectedModel(page) {
 		"Double click on the space to place the object",
 	);
 }
+
+test("patio library shows six categories and sectional settings save and undo", async ({
+	page,
+}) => {
+	const saved = [];
+	page.on("request", (request) => {
+		if (request.method() === "PUT" && request.url().includes("/objects/"))
+			saved.push(request.postDataJSON());
+	});
+	await openLibrary(page);
+	const library = page.locator("dt3d-model-library");
+	await library
+		.getByRole("combobox", { name: "Filter by room" })
+		.selectOption("patio");
+	await expect(library.locator(".model")).toHaveCount(15);
+	await expect(library.locator(".preview img")).toHaveCount(15);
+	await expect(library.locator(".model-section h3")).toHaveText([
+		"Seating",
+		"Tables",
+		"Cooking",
+		"Shade",
+		"Decoration",
+		"Other",
+	]);
+	await library.getByRole("searchbox").fill("outdoor sectional sofa");
+	await library
+		.getByRole("button", {
+			name: "Add Outdoor sofas / sectionals",
+			exact: true,
+		})
+		.click();
+	await placeSelectedModel(page);
+	const inspector = page.locator("dt3d-object-inspector");
+	await inspector
+		.locator("summary")
+		.filter({ hasText: "Outdoor sofa configuration" })
+		.click();
+	await inspector
+		.getByRole("combobox", { name: "Outdoor sofa layout", exact: true })
+		.selectOption("u-shaped");
+	const original = await page.evaluate(() =>
+		window.testCard.space.children
+			.find((item) => item.userData.meshType === "furniture-outdoor-sofa")
+			.getParameters(),
+	);
+	const cushions = inspector.getByRole("checkbox", {
+		name: "Include cushions",
+		exact: true,
+	});
+	await cushions.uncheck();
+	await expect
+		.poll(() =>
+			saved.some(
+				(item) =>
+					item.data?.furniture?.layout === "u-shaped" &&
+					item.data.furniture.cushions === false,
+			),
+		)
+		.toBe(true);
+	await cushions.blur();
+	await page.keyboard.press("Control+z");
+	await expect
+		.poll(() =>
+			page.evaluate(() =>
+				window.testCard.space.children
+					.find((item) => item.userData.meshType === "furniture-outdoor-sofa")
+					.getParameters(),
+			),
+		)
+		.toEqual(original);
+});
+
+test("patio awnings retract and pergola roof and curtain settings save", async ({
+	page,
+}) => {
+	const saved = [];
+	page.on("request", (request) => {
+		if (request.method() === "PUT" && request.url().includes("/objects/"))
+			saved.push(request.postDataJSON());
+	});
+	await openLibrary(page);
+	let library = page.locator("dt3d-model-library");
+	await library
+		.getByRole("combobox", { name: "Filter by room" })
+		.selectOption("patio");
+	await library.getByRole("searchbox").fill("retractable awning");
+	await library
+		.getByRole("button", { name: "Add Retractable awning", exact: true })
+		.click();
+	await placeSelectedModel(page);
+	const inspector = page.locator("dt3d-object-inspector");
+	await inspector
+		.locator("summary")
+		.filter({ hasText: "Awning configuration" })
+		.click();
+	const extension = inspector.getByRole("spinbutton", {
+		name: "Awning extension",
+		exact: true,
+	});
+	await extension.fill("0");
+	await extension.blur();
+	await expect
+		.poll(() =>
+			saved.some(
+				(item) =>
+					item.data?.meshType === "furniture-retractable-awning" &&
+					item.data.furniture.extension === 0,
+			),
+		)
+		.toBe(true);
+	await expect
+		.poll(() =>
+			page.evaluate(() =>
+				Boolean(
+					window.testCard.space.children
+						.find(
+							(item) =>
+								item.userData.meshType === "furniture-retractable-awning",
+						)
+						.getObjectByName("Awning Fabric"),
+				),
+			),
+		)
+		.toBe(false);
+	await openLibrary(page);
+	library = page.locator("dt3d-model-library");
+	await library
+		.getByRole("combobox", { name: "Filter by room" })
+		.selectOption("patio");
+	await library.getByRole("searchbox").fill("pergola");
+	await library
+		.getByRole("button", { name: "Add Pergola", exact: true })
+		.click();
+	await placeSelectedModel(page);
+	const summary = inspector
+		.locator("summary")
+		.filter({ hasText: "Pergola configuration" });
+	if (!(await summary.evaluate((element) => element.parentElement.open)))
+		await summary.click();
+	await inspector
+		.getByRole("combobox", { name: "Pergola roof", exact: true })
+		.selectOption("fabric");
+	await inspector
+		.getByRole("checkbox", { name: "Pergola curtains", exact: true })
+		.check();
+	await expect
+		.poll(() =>
+			saved.some(
+				(item) =>
+					item.data?.meshType === "furniture-pergola" &&
+					item.data.furniture.roofStyle === "fabric" &&
+					item.data.furniture.curtains === true,
+			),
+		)
+		.toBe(true);
+});
+
+test("patio barbecues and pizza ovens expose functioning lid and door controls", async ({
+	page,
+}) => {
+	const saved = [];
+	page.on("request", (request) => {
+		if (request.method() === "PUT" && request.url().includes("/objects/"))
+			saved.push(request.postDataJSON());
+	});
+	await openLibrary(page);
+	let library = page.locator("dt3d-model-library");
+	await library
+		.getByRole("combobox", { name: "Filter by room" })
+		.selectOption("patio");
+	await library.getByRole("searchbox").fill("barbecue grill");
+	await library
+		.getByRole("button", { name: "Add Barbecue grill", exact: true })
+		.click();
+	await placeSelectedModel(page);
+	const inspector = page.locator("dt3d-object-inspector");
+	await inspector
+		.locator("summary")
+		.filter({ hasText: "Barbecue configuration" })
+		.click();
+	await inspector
+		.getByRole("combobox", { name: "Barbecue preset", exact: true })
+		.selectOption("kettle-grill");
+	await inspector
+		.getByRole("checkbox", { name: "Open barbecue lid", exact: true })
+		.check();
+	await expect
+		.poll(() =>
+			saved.some(
+				(item) =>
+					item.data?.furniture?.style === "kettle-grill" &&
+					item.data.furniture.lidOpen === true,
+			),
+		)
+		.toBe(true);
+	await openLibrary(page);
+	library = page.locator("dt3d-model-library");
+	await library
+		.getByRole("combobox", { name: "Filter by room" })
+		.selectOption("patio");
+	await library.getByRole("searchbox").fill("pizza oven");
+	await library
+		.getByRole("button", { name: "Add Pizza oven", exact: true })
+		.click();
+	await placeSelectedModel(page);
+	const summary = inspector
+		.locator("summary")
+		.filter({ hasText: "Pizza oven configuration" });
+	if (!(await summary.evaluate((element) => element.parentElement.open)))
+		await summary.click();
+	await inspector
+		.getByRole("checkbox", { name: "Close pizza oven door", exact: true })
+		.check();
+	await inspector
+		.getByRole("checkbox", { name: "Pizza oven stand", exact: true })
+		.uncheck();
+	await expect
+		.poll(() =>
+			saved.some(
+				(item) =>
+					item.data?.meshType === "furniture-pizza-oven" &&
+					item.data.furniture.doorClosed === true &&
+					item.data.furniture.standEnabled === false,
+			),
+		)
+		.toBe(true);
+});
+
+test("patio hot tub and outdoor heater settings save water, cover and lighting states", async ({
+	page,
+}) => {
+	const saved = [];
+	page.on("request", (request) => {
+		if (request.method() === "PUT" && request.url().includes("/objects/"))
+			saved.push(request.postDataJSON());
+	});
+	await openLibrary(page);
+	let library = page.locator("dt3d-model-library");
+	await library
+		.getByRole("combobox", { name: "Filter by room" })
+		.selectOption("patio");
+	await library.getByRole("searchbox").fill("hot tub");
+	await library
+		.getByRole("button", { name: "Add Hot tub", exact: true })
+		.click();
+	await placeSelectedModel(page);
+	const inspector = page.locator("dt3d-object-inspector");
+	await inspector
+		.locator("summary")
+		.filter({ hasText: "Hot tub configuration" })
+		.click();
+	await inspector
+		.getByRole("combobox", { name: "Hot tub shape", exact: true })
+		.selectOption("round");
+	await inspector
+		.getByRole("checkbox", { name: "Hot tub water", exact: true })
+		.uncheck();
+	await inspector
+		.getByRole("checkbox", { name: "Close hot tub cover", exact: true })
+		.check();
+	await expect
+		.poll(() =>
+			saved.some(
+				(item) =>
+					item.data?.meshType === "furniture-hot-tub" &&
+					item.data.furniture.shape === "round" &&
+					item.data.furniture.waterEnabled === false &&
+					item.data.furniture.coverClosed === true,
+			),
+		)
+		.toBe(true);
+	await openLibrary(page);
+	library = page.locator("dt3d-model-library");
+	await library
+		.getByRole("combobox", { name: "Filter by room" })
+		.selectOption("patio");
+	await library.getByRole("searchbox").fill("outdoor heater");
+	await library
+		.getByRole("button", { name: "Add Outdoor heater", exact: true })
+		.click();
+	await placeSelectedModel(page);
+	const summary = inspector
+		.locator("summary")
+		.filter({ hasText: "Outdoor heater configuration" });
+	if (!(await summary.evaluate((element) => element.parentElement.open)))
+		await summary.click();
+	await inspector
+		.getByRole("combobox", { name: "Outdoor heater preset", exact: true })
+		.selectOption("pyramid");
+	await inspector
+		.getByRole("checkbox", { name: "Heater on", exact: true })
+		.check();
+	await expect
+		.poll(() =>
+			saved.some(
+				(item) =>
+					item.data?.meshType === "furniture-outdoor-heater" &&
+					item.data.furniture.style === "pyramid" &&
+					item.data.furniture.lit === true,
+			),
+		)
+		.toBe(true);
+	await expect
+		.poll(() =>
+			page.evaluate(() =>
+				Boolean(
+					window.testCard.space.children
+						.find(
+							(item) => item.userData.meshType === "furniture-outdoor-heater",
+						)
+						.getObjectByName("Patio Heater Light"),
+				),
+			),
+		)
+		.toBe(true);
+});
+
+test("garage library shows five categories and car customization saves and undoes", async ({
+	page,
+}) => {
+	const saved = [];
+	page.on("request", (request) => {
+		if (request.method() === "PUT" && request.url().includes("/objects/"))
+			saved.push(request.postDataJSON());
+	});
+	await openLibrary(page);
+	const library = page.locator("dt3d-model-library");
+	await library
+		.getByRole("combobox", { name: "Filter by room" })
+		.selectOption("garage");
+	await expect(library.locator(".model")).toHaveCount(9);
+	await expect(library.locator(".preview img")).toHaveCount(9);
+	await expect(library.locator(".model-section h3")).toHaveText([
+		"Vehicles",
+		"Storage",
+		"Work area",
+		"Equipment",
+		"Other",
+	]);
+	await library.getByRole("searchbox").fill("sedan");
+	await library.getByRole("button", { name: "Add Cars", exact: true }).click();
+	await placeSelectedModel(page);
+	const inspector = page.locator("dt3d-object-inspector");
+	await inspector
+		.locator("summary")
+		.filter({ hasText: "Car configuration" })
+		.click();
+	await inspector
+		.getByRole("combobox", { name: "Car preset", exact: true })
+		.selectOption("suv");
+	const steering = inspector.getByRole("spinbutton", {
+		name: "Front wheel angle (°)",
+		exact: true,
+	});
+	await steering.fill("25");
+	await steering.blur();
+	const original = await page.evaluate(() =>
+		window.testCard.space.children
+			.find((item) => item.userData.meshType === "furniture-garage-car")
+			.getParameters(),
+	);
+	const rack = inspector.getByRole("checkbox", {
+		name: "Roof rack",
+		exact: true,
+	});
+	await rack.check();
+	await expect
+		.poll(() =>
+			saved.some(
+				(item) =>
+					item.data?.furniture?.style === "suv" &&
+					item.data.furniture.steering === 25 &&
+					item.data.furniture.roofRack === true,
+			),
+		)
+		.toBe(true);
+	await rack.blur();
+	await page.keyboard.press("Control+z");
+	await expect
+		.poll(() =>
+			page.evaluate(() =>
+				window.testCard.space.children
+					.find((item) => item.userData.meshType === "furniture-garage-car")
+					.getParameters(),
+			),
+		)
+		.toEqual(original);
+});
+
+test("garage racks and workshop tables expose functioning preset and drawer controls", async ({
+	page,
+}) => {
+	const saved = [];
+	page.on("request", (request) => {
+		if (request.method() === "PUT" && request.url().includes("/objects/"))
+			saved.push(request.postDataJSON());
+	});
+	await openLibrary(page);
+	let library = page.locator("dt3d-model-library");
+	await library
+		.getByRole("combobox", { name: "Filter by room" })
+		.selectOption("garage");
+	await library.getByRole("searchbox").fill("tool cabinet");
+	await library
+		.getByRole("button", { name: "Add Garage storage / racks", exact: true })
+		.click();
+	await placeSelectedModel(page);
+	const inspector = page.locator("dt3d-object-inspector");
+	await inspector
+		.locator("summary")
+		.filter({ hasText: "Garage storage configuration" })
+		.click();
+	await inspector
+		.getByRole("combobox", { name: "Garage storage preset", exact: true })
+		.selectOption("tool-cabinet");
+	const extension = inspector.getByRole("spinbutton", {
+		name: "Drawer extension",
+		exact: true,
+	});
+	await extension.fill("1");
+	await extension.blur();
+	await expect
+		.poll(() =>
+			saved.some(
+				(item) =>
+					item.data?.furniture?.style === "tool-cabinet" &&
+					item.data.furniture.drawerOpen === 1,
+			),
+		)
+		.toBe(true);
+	await inspector
+		.getByRole("combobox", { name: "Garage storage preset", exact: true })
+		.selectOption("tire-rack");
+	await expect
+		.poll(() =>
+			page.evaluate(() => {
+				let n = 0;
+				window.testCard.space.children
+					.find((item) => item.userData.meshType === "furniture-garage-storage")
+					.traverse((item) => {
+						if (item.name === "Stored Tire") n++;
+					});
+				return n;
+			}),
+		)
+		.toBe(6);
+	await openLibrary(page);
+	library = page.locator("dt3d-model-library");
+	await library
+		.getByRole("combobox", { name: "Filter by room" })
+		.selectOption("garage");
+	await library.getByRole("searchbox").fill("workshop table");
+	await library
+		.getByRole("button", {
+			name: "Add Workbenches / workshop tables",
+			exact: true,
+		})
+		.click();
+	await placeSelectedModel(page);
+	const summary = inspector
+		.locator("summary")
+		.filter({ hasText: "Workbench configuration" });
+	if (!(await summary.evaluate((element) => element.parentElement.open)))
+		await summary.click();
+	await inspector
+		.getByRole("combobox", { name: "Workbench preset", exact: true })
+		.selectOption("workshop-table");
+	await expect
+		.poll(() =>
+			saved.some(
+				(item) =>
+					item.data?.furniture?.style === "workshop-table" &&
+					item.data.furniture.pegboardEnabled === false &&
+					item.data.furniture.drawerRows === 0,
+			),
+		)
+		.toBe(true);
+});
+
+test("garage charger and bin configurations save mounting, cable, count and opening states", async ({
+	page,
+}) => {
+	const saved = [];
+	page.on("request", (request) => {
+		if (request.method() === "PUT" && request.url().includes("/objects/"))
+			saved.push(request.postDataJSON());
+	});
+	await openLibrary(page);
+	let library = page.locator("dt3d-model-library");
+	await library
+		.getByRole("combobox", { name: "Filter by room" })
+		.selectOption("garage");
+	await library.getByRole("searchbox").fill("EV charger");
+	await library
+		.getByRole("button", { name: "Add EV charger", exact: true })
+		.click();
+	await placeSelectedModel(page);
+	const inspector = page.locator("dt3d-object-inspector");
+	await inspector
+		.locator("summary")
+		.filter({ hasText: "EV charger configuration" })
+		.click();
+	await inspector
+		.getByRole("combobox", { name: "Charger mounting", exact: true })
+		.selectOption("pedestal");
+	await inspector
+		.getByRole("checkbox", { name: "Plug docked", exact: true })
+		.uncheck();
+	await inspector
+		.getByRole("checkbox", { name: "Power indicator on", exact: true })
+		.uncheck();
+	await expect
+		.poll(() =>
+			saved.some(
+				(item) =>
+					item.data?.meshType === "furniture-ev-charger" &&
+					item.data.furniture.mount === "pedestal" &&
+					item.data.furniture.plugDocked === false &&
+					item.data.furniture.powered === false,
+			),
+		)
+		.toBe(true);
+	await openLibrary(page);
+	library = page.locator("dt3d-model-library");
+	await library
+		.getByRole("combobox", { name: "Filter by room" })
+		.selectOption("garage");
+	await library.getByRole("searchbox").fill("waste bins");
+	await library
+		.getByRole("button", { name: "Add Recycling / waste bins", exact: true })
+		.click();
+	await placeSelectedModel(page);
+	const summary = inspector
+		.locator("summary")
+		.filter({ hasText: "Garage bin configuration" });
+	if (!(await summary.evaluate((element) => element.parentElement.open)))
+		await summary.click();
+	await inspector
+		.getByRole("combobox", { name: "Bin preset", exact: true })
+		.selectOption("waste-bins");
+	const count = inspector.getByRole("spinbutton", {
+		name: "Number of bins",
+		exact: true,
+	});
+	await count.fill("2");
+	await count.blur();
+	await inspector
+		.getByRole("checkbox", { name: "Open bin lids", exact: true })
+		.check();
+	await expect
+		.poll(() =>
+			saved.some(
+				(item) =>
+					item.data?.furniture?.style === "waste-bins" &&
+					item.data.furniture.binCount === 2 &&
+					item.data.furniture.lidsOpen === true,
+			),
+		)
+		.toBe(true);
+});
+
+test("closet library shows four categories and wardrobe changes save and undo", async ({
+	page,
+}) => {
+	const saved = [];
+	page.on("request", (request) => {
+		if (request.method() === "PUT" && request.url().includes("/objects/"))
+			saved.push(request.postDataJSON());
+	});
+	await openLibrary(page);
+	const library = page.locator("dt3d-model-library");
+	await library
+		.getByRole("combobox", { name: "Filter by room" })
+		.selectOption("walk-in-closet");
+	await expect(library.locator(".model")).toHaveCount(8);
+	await expect(library.locator(".preview img")).toHaveCount(8);
+	await expect(library.locator(".model-section h3")).toHaveText([
+		"Wardrobes",
+		"Storage",
+		"Furniture",
+		"Accessories",
+	]);
+	await library.getByRole("searchbox").fill("corner wardrobe");
+	await library
+		.getByRole("button", { name: "Add Dressing room wardrobes", exact: true })
+		.click();
+	await placeSelectedModel(page);
+	const inspector = page.locator("dt3d-object-inspector");
+	await inspector
+		.locator("summary")
+		.filter({ hasText: "Dressing room wardrobe configuration" })
+		.click();
+	const preset = inspector.getByRole("combobox", {
+		name: "Wardrobe preset",
+		exact: true,
+	});
+	await preset.selectOption("corner-wardrobe");
+	await inspector
+		.getByRole("combobox", { name: "Corner return side", exact: true })
+		.selectOption("right-return");
+	await expect
+		.poll(() =>
+			saved.some(
+				(item) =>
+					item.data?.furniture?.style === "corner-wardrobe" &&
+					item.data.furniture.returnSide === "right-return",
+			),
+		)
+		.toBe(true);
+	await preset.selectOption("closed-wardrobe");
+	const original = await page.evaluate(() =>
+		window.testCard.space.children
+			.find((item) => item.userData.meshType === "furniture-closet-wardrobe")
+			.getParameters(),
+	);
+	const doors = inspector.getByRole("checkbox", {
+		name: "Open wardrobe doors",
+		exact: true,
+	});
+	await doors.check();
+	await expect
+		.poll(() =>
+			saved.some(
+				(item) =>
+					item.data?.furniture?.style === "closed-wardrobe" &&
+					item.data.furniture.doorsOpen === true,
+			),
+		)
+		.toBe(true);
+	await doors.blur();
+	await page.keyboard.press("Control+z");
+	await expect
+		.poll(() =>
+			page.evaluate(() =>
+				window.testCard.space.children
+					.find(
+						(item) => item.userData.meshType === "furniture-closet-wardrobe",
+					)
+					.getParameters(),
+			),
+		)
+		.toEqual(original);
+});
+
+test("closet organizers and dressing islands expose their configurable compartments and drawers", async ({
+	page,
+}) => {
+	const saved = [];
+	page.on("request", (request) => {
+		if (request.method() === "PUT" && request.url().includes("/objects/"))
+			saved.push(request.postDataJSON());
+	});
+	await openLibrary(page);
+	let library = page.locator("dt3d-model-library");
+	await library
+		.getByRole("combobox", { name: "Filter by room" })
+		.selectOption("walk-in-closet");
+	await library.getByRole("searchbox").fill("accessories organizer");
+	await library
+		.getByRole("button", {
+			name: "Add Closet storage / organizers",
+			exact: true,
+		})
+		.click();
+	await placeSelectedModel(page);
+	const inspector = page.locator("dt3d-object-inspector");
+	await inspector
+		.locator("summary")
+		.filter({ hasText: "Closet storage configuration" })
+		.click();
+	await inspector
+		.getByRole("combobox", { name: "Storage preset", exact: true })
+		.selectOption("accessories-organizer");
+	const columns = inspector.getByRole("spinbutton", {
+		name: "Organizer columns",
+		exact: true,
+	});
+	await columns.fill("4");
+	await columns.blur();
+	await inspector
+		.getByRole("checkbox", { name: "Glass organizer cover", exact: true })
+		.check();
+	await expect
+		.poll(() =>
+			saved.some(
+				(item) =>
+					item.data?.furniture?.style === "accessories-organizer" &&
+					item.data.furniture.columns === 4 &&
+					item.data.furniture.coverEnabled === true,
+			),
+		)
+		.toBe(true);
+	await openLibrary(page);
+	library = page.locator("dt3d-model-library");
+	await library
+		.getByRole("combobox", { name: "Filter by room" })
+		.selectOption("walk-in-closet");
+	await library.getByRole("searchbox").fill("dressing island");
+	await library
+		.getByRole("button", { name: "Add Dressing island", exact: true })
+		.click();
+	await placeSelectedModel(page);
+	const summary = inspector
+		.locator("summary")
+		.filter({ hasText: "Dressing island configuration" });
+	if (!(await summary.evaluate((element) => element.parentElement.open)))
+		await summary.click();
+	await inspector
+		.getByRole("checkbox", { name: "Drawers on both sides", exact: true })
+		.uncheck();
+	await inspector
+		.getByRole("combobox", { name: "Island top", exact: true })
+		.selectOption("solid-top");
+	await expect
+		.poll(() =>
+			saved.some(
+				(item) =>
+					item.data?.meshType === "furniture-dressing-island" &&
+					item.data.furniture.bothSides === false &&
+					item.data.furniture.topStyle === "solid-top",
+			),
+		)
+		.toBe(true);
+});
+
+test("dressing mirrors save illumination settings and shared vanities remain available", async ({
+	page,
+}) => {
+	const saved = [];
+	page.on("request", (request) => {
+		if (request.method() === "PUT" && request.url().includes("/objects/"))
+			saved.push(request.postDataJSON());
+	});
+	await openLibrary(page);
+	let library = page.locator("dt3d-model-library");
+	await library
+		.getByRole("combobox", { name: "Filter by room" })
+		.selectOption("walk-in-closet");
+	await library.getByRole("searchbox").fill("illuminated mirror");
+	await library
+		.getByRole("button", { name: "Add Dressing mirrors", exact: true })
+		.click();
+	await placeSelectedModel(page);
+	const inspector = page.locator("dt3d-object-inspector");
+	await inspector
+		.locator("summary")
+		.filter({ hasText: "Dressing mirror configuration" })
+		.click();
+	await inspector
+		.getByRole("combobox", { name: "Dressing mirror preset", exact: true })
+		.selectOption("illuminated-mirror");
+	await inspector
+		.getByRole("combobox", { name: "Mirror light color", exact: true })
+		.selectOption("cool");
+	await inspector
+		.getByRole("checkbox", { name: "Mirror light on", exact: true })
+		.uncheck();
+	await expect
+		.poll(() =>
+			saved.some(
+				(item) =>
+					item.data?.furniture?.style === "illuminated-mirror" &&
+					item.data.furniture.temperature === "cool" &&
+					item.data.furniture.enabled === false,
+			),
+		)
+		.toBe(true);
+	await expect
+		.poll(() =>
+			page.evaluate(
+				() =>
+					window.testCard.space.children
+						.find(
+							(item) => item.userData.meshType === "furniture-dressing-mirror",
+						)
+						.getObjectByName("Dressing Mirror Light").intensity,
+			),
+		)
+		.toBe(0);
+	await openLibrary(page);
+	library = page.locator("dt3d-model-library");
+	await library
+		.getByRole("combobox", { name: "Filter by room" })
+		.selectOption("walk-in-closet");
+	await library.getByRole("searchbox").fill("vanity table");
+	await expect(library.locator(".model")).toHaveCount(1);
+	await library.locator(".model").click();
+	await placeSelectedModel(page);
+	await expect
+		.poll(() =>
+			page.evaluate(() =>
+				window.testCard.space.children.some(
+					(item) => item.userData.meshType === "furniture-bedroom-vanity",
+				),
+			),
+		)
+		.toBe(true);
+});
 
 test("laundry library shows five categories and saves stacked appliances with undo", async ({
 	page,
@@ -1834,7 +2633,13 @@ test("renders library thumbnails offscreen, filters categories, searches, and cr
 		.toBe(true);
 	await openLibrary(page);
 	await library.getByRole("searchbox").fill("sofa");
-	await expect(library.locator(".model")).toHaveCount(1);
+	await expect(library.locator(".model")).toHaveCount(2);
+	await expect(
+		library.getByRole("button", {
+			name: "Add Outdoor sofas / sectionals",
+			exact: true,
+		}),
+	).toBeVisible();
 	await library.getByRole("button", { name: "Add Couch", exact: true }).click();
 	await placeSelectedModel(page);
 	await page.locator("dt3d-tree").getByText("Couch", { exact: true }).click();

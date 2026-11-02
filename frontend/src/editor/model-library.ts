@@ -37,6 +37,34 @@ export type ModelRoom = {
 };
 export const MODEL_ROOMS: ModelRoom[] = [
 	{
+		id: "patio",
+		labelKey: "patioRoom",
+		categories: [
+			"seating",
+			"tables-desks",
+			"cooking",
+			"shade",
+			"decoration",
+			"other",
+		],
+		categoryLabels: {"tables-desks": "diningCategoryTables"},
+	},
+	{
+		id: "garage",
+		labelKey: "garageRoom",
+		categories: ["vehicles", "storage", "work-area", "equipment", "other"],
+	},
+	{
+		id: "walk-in-closet",
+		labelKey: "closetRoom",
+		categories: [
+			"closet-wardrobes",
+			"storage",
+			"closet-furniture",
+			"accessories",
+		],
+	},
+	{
 		id: "laundry-room",
 		labelKey: "laundryRoom",
 		categories: [
@@ -130,6 +158,28 @@ export const MODEL_ROOMS: ModelRoom[] = [
 ];
 
 export const MODEL_CATEGORIES: ModelCategory[] = [
+	{
+		id: "cooking",
+		labelKey: "patioCategoryCooking",
+		icon: "mdi:grill-outline",
+	},
+	{id: "shade", labelKey: "patioCategoryShade", icon: "mdi:umbrella-outline"},
+	{
+		id: "vehicles",
+		labelKey: "garageCategoryVehicles",
+		icon: "mdi:car-outline",
+	},
+	{id: "work-area", labelKey: "garageCategoryWork", icon: "mdi:tools"},
+	{
+		id: "closet-wardrobes",
+		labelKey: "closetCategoryWardrobes",
+		icon: "mdi:wardrobe-outline",
+	},
+	{
+		id: "closet-furniture",
+		labelKey: "closetCategoryFurniture",
+		icon: "mdi:dresser-outline",
+	},
 	{id: "seating", labelKey: "modelCategorySeating", icon: "mdi:sofa-outline"},
 	{
 		id: "laundry-furniture",

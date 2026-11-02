@@ -9,7 +9,10 @@ import {
 	TorusGeometry,
 } from "three";
 
-import type {FurnitureParameters} from "../furniture.js";
+import type {
+	FurnitureParameterDefinition,
+	FurnitureParameters,
+} from "../furniture.js";
 import {
 	boolean,
 	choice,
@@ -131,22 +134,33 @@ export class RugObject extends LivingRoomObject {
 }
 
 export class MirrorObject extends LivingRoomObject {
-	constructor(parameters: Partial<FurnitureParameters> = {}, color = 0xa08a56) {
+	constructor(
+		parameters: Partial<FurnitureParameters> = {},
+		color = 0xa08a56,
+		type: "mirror" | "dressing-mirror" = "mirror",
+		extraDefinitions: FurnitureParameterDefinition[] = [],
+	) {
 		super(
-			"mirror",
-			"Mirror",
-			"livingMirrorControls",
+			type,
+			type === "dressing-mirror" ? "Dressing mirror" : "Mirror",
+			type === "dressing-mirror"
+				? "closetMirrorControls"
+				: "livingMirrorControls",
 			[
-				choice("sizePreset", "MirrorSize", "standard-mirror", [
-					{
-						value: "standard-mirror",
-						parameters: {width: 0.7, depth: 0.035, height: 1.1},
-					},
-					{
-						value: "full-length-mirror",
-						parameters: {width: 0.65, depth: 0.04, height: 1.8},
-					},
-				]),
+				...(type === "mirror"
+					? [
+						choice("sizePreset", "MirrorSize", "standard-mirror", [
+							{
+								value: "standard-mirror",
+								parameters: {width: 0.7, depth: 0.035, height: 1.1},
+							},
+							{
+								value: "full-length-mirror",
+								parameters: {width: 0.65, depth: 0.04, height: 1.8},
+							},
+						]),
+					]
+					: []),
 				...dimensions(0.7, 0.035, 1.1),
 				choice("shape", "MirrorShape", "arched", [
 					"rectangle",
@@ -156,6 +170,7 @@ export class MirrorObject extends LivingRoomObject {
 				]),
 				number("frameWidth", "FrameWidth", 0.035, 0.005, 0.15),
 				boolean("standEnabled", "StandEnabled", false),
+				...extraDefinitions,
 			],
 			parameters,
 			color,

@@ -21,6 +21,13 @@ import {
 import {BedroomStorageObject} from "./bedroom/storage.js";
 import {CabinetObject} from "./cabinet.js";
 import {ChairObject} from "./chair.js";
+import {
+	ClothesStandObject,
+	DressingMirrorObject,
+} from "./closet/accessories.js";
+import {DressingIslandObject} from "./closet/furniture.js";
+import {ClosetStorageObject} from "./closet/storage.js";
+import {ClosetWardrobeObject} from "./closet/wardrobes.js";
 import {CouchObject} from "./couch.js";
 import {CenterpieceObject} from "./dining-room/decoration.js";
 import {DiningLightObject} from "./dining-room/lighting.js";
@@ -32,6 +39,14 @@ import type {
 	FurnitureParameters,
 	FurnitureType,
 } from "./furniture.js";
+import {EVChargerObject, GarageEquipmentObject} from "./garage/equipment.js";
+import {GarageBinsObject, GarageBoxesObject} from "./garage/other.js";
+import {GarageStorageObject} from "./garage/storage.js";
+import {GarageCarObject, GarageCycleObject} from "./garage/vehicles.js";
+import {
+	GarageWorkbenchObject,
+	ToolPegboardObject,
+} from "./garage/work-area.js";
 import {
 	KitchenAccessoriesObject,
 	KitchenTrolleyObject,
@@ -112,6 +127,28 @@ import {
 } from "./office/equipment.js";
 import {OfficeChairObject} from "./office/seating.js";
 import {OfficeStorageObject} from "./office/storage.js";
+import {
+	OutdoorGrillObject,
+	OutdoorKitchenObject,
+	PizzaOvenObject,
+} from "./patio/cooking.js";
+import {OutdoorPlanterObject} from "./patio/decoration.js";
+import {
+	FirePitObject,
+	HotTubObject,
+	OutdoorHeaterObject,
+} from "./patio/other.js";
+import {
+	OutdoorChairObject,
+	OutdoorSofaObject,
+	SuspendedSeatObject,
+} from "./patio/seating.js";
+import {
+	ParasolObject,
+	PergolaObject,
+	RetractableAwningObject,
+} from "./patio/shade.js";
+import {OutdoorTableObject} from "./patio/tables.js";
 import {ShelfObject} from "./shelf.js";
 import {StandingDeskObject} from "./standing-desk.js";
 import {
@@ -149,7 +186,13 @@ export type FurnitureCategory =
 	| "nursery-furniture"
 	| "play"
 	| "equipment"
-	| "laundry-furniture";
+	| "laundry-furniture"
+	| "closet-wardrobes"
+	| "closet-furniture"
+	| "vehicles"
+	| "work-area"
+	| "cooking"
+	| "shade";
 
 export type FurnitureOption = {
 	type: `furniture-${FurnitureType}`;
@@ -163,6 +206,119 @@ export type FurnitureOption = {
 };
 
 export const FURNITURE_OPTIONS: FurnitureOption[] = [
+	{
+		type: "furniture-garage-car",
+		furnitureType: "garage-car",
+		category: "vehicles",
+		labelKey: "garageModelCar",
+		icon: "mdi:car-outline",
+		rooms: ["garage"],
+		keywords: ["car", "sedan", "hatchback", "SUV", "vehicle", "automobile"],
+	},
+	{
+		type: "furniture-garage-cycle",
+		furnitureType: "garage-cycle",
+		category: "vehicles",
+		labelKey: "garageModelCycle",
+		icon: "mdi:motorbike",
+		rooms: ["garage"],
+		keywords: ["motorcycle", "bicycle", "scooter", "bike", "motorbike"],
+	},
+	{
+		type: "furniture-garage-storage",
+		furnitureType: "garage-storage",
+		category: "storage",
+		labelKey: "garageModelStorage",
+		icon: "mdi:garage-variant",
+		rooms: ["garage"],
+		keywords: [
+			"garage shelving",
+			"tool cabinet",
+			"wall storage rack",
+			"bike rack",
+			"tire rack",
+			"tyre rack",
+			"workshop storage",
+		],
+	},
+	{
+		type: "furniture-garage-workbench",
+		furnitureType: "garage-workbench",
+		category: "work-area",
+		labelKey: "garageModelWorkbench",
+		icon: "mdi:table-furniture",
+		rooms: ["garage"],
+		keywords: [
+			"workbench",
+			"workshop table",
+			"work bench",
+			"bench vice",
+			"vise",
+		],
+	},
+	{
+		type: "furniture-tool-pegboard",
+		furnitureType: "tool-pegboard",
+		category: "work-area",
+		labelKey: "garageModelPegboard",
+		icon: "mdi:tools",
+		rooms: ["garage"],
+		keywords: ["tool pegboard", "peg board", "tool board", "workshop tools"],
+	},
+	{
+		type: "furniture-ev-charger",
+		furnitureType: "ev-charger",
+		category: "equipment",
+		labelKey: "garageModelCharger",
+		icon: "mdi:ev-station",
+		rooms: ["garage"],
+		keywords: [
+			"EV charger",
+			"electric vehicle charger",
+			"charging station",
+			"wallbox",
+		],
+	},
+	{
+		type: "furniture-garage-equipment",
+		furnitureType: "garage-equipment",
+		category: "equipment",
+		labelKey: "garageModelEquipment",
+		icon: "mdi:air-filter",
+		rooms: ["garage"],
+		keywords: ["air compressor", "pressure washer", "workshop equipment"],
+	},
+	{
+		type: "furniture-garage-bins",
+		furnitureType: "garage-bins",
+		category: "other",
+		labelKey: "garageModelBins",
+		icon: "mdi:recycle",
+		rooms: ["garage"],
+		keywords: [
+			"recycling bins",
+			"waste bins",
+			"wheelie bin",
+			"trash can",
+			"rubbish bin",
+		],
+	},
+	{
+		type: "furniture-garage-boxes",
+		furnitureType: "garage-boxes",
+		category: "other",
+		labelKey: "garageModelBoxes",
+		icon: "mdi:archive-outline",
+		rooms: ["garage"],
+		keywords: [
+			"storage boxes",
+			"storage box",
+			"plastic tote",
+			"cardboard box",
+			"wood crate",
+			"stackable boxes",
+		],
+	},
 	{
 		type: "furniture-standing-desk",
 		furnitureType: "standing-desk",
@@ -336,7 +492,8 @@ export const FURNITURE_OPTIONS: FurnitureOption[] = [
 		category: "seating",
 		labelKey: "livingModelOttoman",
 		icon: "mdi:stool-outline",
-		rooms: ["living-room", "master-bedroom"],
+		rooms: ["living-room", "master-bedroom", "walk-in-closet"],
+		roomCategories: {"walk-in-closet": "closet-furniture"},
 		keywords: ["ottoman", "pouf", "bean bag", "beanbag", "footstool"],
 	},
 	{
@@ -419,8 +576,9 @@ export const FURNITURE_OPTIONS: FurnitureOption[] = [
 			"dining-room",
 			"master-bedroom",
 			"childrens-bedroom",
+			"patio",
 		],
-		keywords: ["rug", "carpet"],
+		keywords: ["rug", "carpet", "outdoor rug"],
 	},
 	{
 		type: "furniture-mirror",
@@ -855,7 +1013,8 @@ export const FURNITURE_OPTIONS: FurnitureOption[] = [
 		category: "seating",
 		labelKey: "bedroomModelBench",
 		icon: "mdi:bench",
-		rooms: ["master-bedroom"],
+		rooms: ["master-bedroom", "walk-in-closet"],
+		roomCategories: {"walk-in-closet": "closet-furniture"},
 		keywords: ["bedroom bench", "bed end bench", "storage bench"],
 	},
 	{
@@ -864,8 +1023,15 @@ export const FURNITURE_OPTIONS: FurnitureOption[] = [
 		category: "bedroom-furniture",
 		labelKey: "bedroomModelVanity",
 		icon: "mdi:vanity-light",
-		rooms: ["master-bedroom"],
-		keywords: ["dressing table", "vanity", "desk", "bedroom desk"],
+		rooms: ["master-bedroom", "walk-in-closet"],
+		roomCategories: {"walk-in-closet": "closet-furniture"},
+		keywords: [
+			"dressing table",
+			"vanity table",
+			"vanity",
+			"desk",
+			"bedroom desk",
+		],
 	},
 	{
 		type: "furniture-nursery-bed",
@@ -1199,6 +1365,252 @@ export const FURNITURE_OPTIONS: FurnitureOption[] = [
 		rooms: ["laundry-room"],
 		keywords: ["cleaning trolley", "cleaning cart", "utility cart"],
 	},
+	{
+		type: "furniture-closet-wardrobe",
+		furnitureType: "closet-wardrobe",
+		category: "closet-wardrobes",
+		labelKey: "closetModelWardrobe",
+		icon: "mdi:wardrobe-outline",
+		rooms: ["walk-in-closet"],
+		keywords: [
+			"open wardrobe",
+			"closed wardrobe",
+			"modular wardrobe",
+			"corner wardrobe",
+			"walk-in closet",
+			"dressing room",
+			"closet modules",
+			"hanging clothes",
+		],
+	},
+	{
+		type: "furniture-closet-storage",
+		furnitureType: "closet-storage",
+		category: "storage",
+		labelKey: "closetModelStorage",
+		icon: "mdi:shoe-sneaker",
+		rooms: ["walk-in-closet"],
+		keywords: [
+			"shoe rack",
+			"drawer unit",
+			"hanging rail",
+			"shelving unit",
+			"accessories organizer",
+			"jewelry tray",
+			"jewellery organizer",
+		],
+	},
+	{
+		type: "furniture-dressing-island",
+		furnitureType: "dressing-island",
+		category: "closet-furniture",
+		labelKey: "closetModelIsland",
+		icon: "mdi:dresser-outline",
+		rooms: ["walk-in-closet"],
+		keywords: [
+			"dressing island",
+			"closet island",
+			"glass top",
+			"accessory drawers",
+		],
+	},
+	{
+		type: "furniture-dressing-mirror",
+		furnitureType: "dressing-mirror",
+		category: "accessories",
+		labelKey: "closetModelMirror",
+		icon: "mdi:mirror-rectangle",
+		rooms: ["walk-in-closet"],
+		keywords: [
+			"full-length mirror",
+			"full length mirror",
+			"illuminated mirror",
+			"lighted mirror",
+			"dressing mirror",
+		],
+	},
+	{
+		type: "furniture-clothes-stand",
+		furnitureType: "clothes-stand",
+		category: "accessories",
+		labelKey: "closetModelStand",
+		icon: "mdi:hanger",
+		rooms: ["walk-in-closet"],
+		keywords: ["clothes stand", "valet stand", "coat tree", "coat stand"],
+	},
+	{
+		type: "furniture-outdoor-chair",
+		furnitureType: "outdoor-chair",
+		category: "seating",
+		labelKey: "patioModelChair",
+		icon: "mdi:chair-school",
+		rooms: ["patio"],
+		keywords: [
+			"outdoor chair",
+			"lounge chair",
+			"sun lounger",
+			"deck chair",
+			"garden chair",
+		],
+	},
+	{
+		type: "furniture-outdoor-sofa",
+		furnitureType: "outdoor-sofa",
+		category: "seating",
+		labelKey: "patioModelSofa",
+		icon: "mdi:sofa-outline",
+		rooms: ["patio"],
+		keywords: [
+			"outdoor sofa",
+			"outdoor sectional sofa",
+			"patio sofa",
+			"L shaped sofa",
+			"U shaped sofa",
+			"garden sofa",
+		],
+	},
+	{
+		type: "furniture-suspended-seat",
+		furnitureType: "suspended-seat",
+		category: "seating",
+		labelKey: "patioModelSuspended",
+		icon: "mdi:hammock",
+		rooms: ["patio"],
+		keywords: ["hammock", "hanging chair", "egg chair", "swing chair"],
+	},
+	{
+		type: "furniture-outdoor-table",
+		furnitureType: "outdoor-table",
+		category: "tables-desks",
+		labelKey: "patioModelTable",
+		icon: "mdi:table-furniture",
+		rooms: ["patio"],
+		keywords: [
+			"outdoor dining table",
+			"coffee table",
+			"side table",
+			"bistro table",
+			"patio table",
+			"garden table",
+		],
+	},
+	{
+		type: "furniture-outdoor-grill",
+		furnitureType: "outdoor-grill",
+		category: "cooking",
+		labelKey: "patioModelGrill",
+		icon: "mdi:grill-outline",
+		rooms: ["patio"],
+		keywords: [
+			"barbecue grill",
+			"barbeque",
+			"BBQ",
+			"gas grill",
+			"kettle grill",
+		],
+	},
+	{
+		type: "furniture-outdoor-kitchen",
+		furnitureType: "outdoor-kitchen",
+		category: "cooking",
+		labelKey: "patioModelKitchen",
+		icon: "mdi:countertop-outline",
+		rooms: ["patio"],
+		keywords: [
+			"outdoor kitchen",
+			"garden kitchen",
+			"outdoor sink",
+			"outdoor cabinets",
+		],
+	},
+	{
+		type: "furniture-pizza-oven",
+		furnitureType: "pizza-oven",
+		category: "cooking",
+		labelKey: "patioModelPizza",
+		icon: "mdi:stove",
+		rooms: ["patio"],
+		keywords: ["pizza oven", "wood fired oven", "outdoor oven"],
+	},
+	{
+		type: "furniture-parasol",
+		furnitureType: "parasol",
+		category: "shade",
+		labelKey: "patioModelParasol",
+		icon: "mdi:umbrella-outline",
+		rooms: ["patio"],
+		keywords: [
+			"parasol",
+			"patio umbrella",
+			"cantilever umbrella",
+			"garden umbrella",
+		],
+	},
+	{
+		type: "furniture-pergola",
+		furnitureType: "pergola",
+		category: "shade",
+		labelKey: "patioModelPergola",
+		icon: "mdi:greenhouse",
+		rooms: ["patio"],
+		keywords: ["pergola", "slatted roof", "louvered pergola", "garden canopy"],
+	},
+	{
+		type: "furniture-retractable-awning",
+		furnitureType: "retractable-awning",
+		category: "shade",
+		labelKey: "patioModelAwning",
+		icon: "mdi:awning-outline",
+		rooms: ["patio"],
+		keywords: ["retractable awning", "awning", "sun shade", "folding canopy"],
+	},
+	{
+		type: "furniture-outdoor-planter",
+		furnitureType: "outdoor-planter",
+		category: "decoration",
+		labelKey: "patioModelPlanter",
+		icon: "mdi:flower-tulip-outline",
+		rooms: ["patio"],
+		keywords: [
+			"planter",
+			"flower pot",
+			"raised garden bed",
+			"garden bed",
+			"planter box",
+		],
+	},
+	{
+		type: "furniture-hot-tub",
+		furnitureType: "hot-tub",
+		category: "other",
+		labelKey: "patioModelTub",
+		icon: "mdi:hot-tub",
+		rooms: ["patio"],
+		keywords: ["hot tub", "spa", "jacuzzi"],
+	},
+	{
+		type: "furniture-fire-pit",
+		furnitureType: "fire-pit",
+		category: "other",
+		labelKey: "patioModelFirePit",
+		icon: "mdi:fire",
+		rooms: ["patio"],
+		keywords: ["fire pit", "fire bowl", "fire table", "outdoor fireplace"],
+	},
+	{
+		type: "furniture-outdoor-heater",
+		furnitureType: "outdoor-heater",
+		category: "other",
+		labelKey: "patioModelHeater",
+		icon: "mdi:radiator",
+		rooms: ["patio"],
+		keywords: [
+			"outdoor heater",
+			"patio heater",
+			"terrace heater",
+			"pyramid heater",
+		],
+	},
 ];
 
 export function furnitureTypeFromMeshType(type: string): FurnitureType | null {
@@ -1259,6 +1671,29 @@ const CUSTOM_FURNITURE_FACTORIES: Partial<
 		) => FurnitureObject
 	>
 > = {
+	"outdoor-chair": OutdoorChairObject,
+	"outdoor-sofa": OutdoorSofaObject,
+	"suspended-seat": SuspendedSeatObject,
+	"outdoor-table": OutdoorTableObject,
+	"outdoor-grill": OutdoorGrillObject,
+	"outdoor-kitchen": OutdoorKitchenObject,
+	"pizza-oven": PizzaOvenObject,
+	parasol: ParasolObject,
+	pergola: PergolaObject,
+	"retractable-awning": RetractableAwningObject,
+	"outdoor-planter": OutdoorPlanterObject,
+	"hot-tub": HotTubObject,
+	"fire-pit": FirePitObject,
+	"outdoor-heater": OutdoorHeaterObject,
+	"garage-car": GarageCarObject,
+	"garage-cycle": GarageCycleObject,
+	"garage-storage": GarageStorageObject,
+	"garage-workbench": GarageWorkbenchObject,
+	"tool-pegboard": ToolPegboardObject,
+	"ev-charger": EVChargerObject,
+	"garage-equipment": GarageEquipmentObject,
+	"garage-bins": GarageBinsObject,
+	"garage-boxes": GarageBoxesObject,
 	"living-table": LivingTableObject,
 	"accent-chair": AccentChairObject,
 	ottoman: OttomanObject,
@@ -1339,4 +1774,9 @@ const CUSTOM_FURNITURE_FACTORIES: Partial<
 	"laundry-sorting-station": LaundrySortingStationObject,
 	"clothes-drying-rack": ClothesDryingRackObject,
 	"cleaning-trolley": CleaningTrolleyObject,
+	"closet-wardrobe": ClosetWardrobeObject,
+	"closet-storage": ClosetStorageObject,
+	"dressing-island": DressingIslandObject,
+	"dressing-mirror": DressingMirrorObject,
+	"clothes-stand": ClothesStandObject,
 };
