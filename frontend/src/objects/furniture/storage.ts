@@ -7,6 +7,12 @@ import {
 	type FurnitureParameterDefinition,
 	type FurnitureParameters,
 } from "./furniture.js";
+import {
+	basePreset,
+	cabinetExtras,
+	KitchenCabinetObject,
+	wallPreset,
+} from "./kitchen/cabinets.js";
 
 function storageDefinitions(
 	width: number,
@@ -212,26 +218,37 @@ export class WardrobeObject extends StorageObject {
 	}
 }
 
-export class KitchenCabinetTopObject extends StorageObject {
+export class KitchenCabinetTopObject extends KitchenCabinetObject {
 	constructor(parameters: Partial<FurnitureParameters> = {}, color = 0xe8e2d6) {
 		super(
 			"kitchen-cabinet-top",
 			"Kitchen Cabinet (Top)",
 			"furnitureKitchenCabinetTopParameters",
-			KITCHEN_CABINET_TOP_PARAMETER_DEFINITIONS,
+			[
+				wallPreset,
+				...KITCHEN_CABINET_TOP_PARAMETER_DEFINITIONS,
+				...cabinetExtras.filter(
+					(item) =>
+						item.name !== "countertopEnabled" && item.name !== "drawerCount",
+				),
+			],
 			parameters,
 			color,
 		);
 	}
 }
 
-export class KitchenCabinetBottomObject extends StorageObject {
+export class KitchenCabinetBottomObject extends KitchenCabinetObject {
 	constructor(parameters: Partial<FurnitureParameters> = {}, color = 0xe8e2d6) {
 		super(
 			"kitchen-cabinet-bottom",
 			"Kitchen Cabinet (Bottom)",
 			"furnitureKitchenCabinetBottomParameters",
-			KITCHEN_CABINET_BOTTOM_PARAMETER_DEFINITIONS,
+			[
+				basePreset,
+				...KITCHEN_CABINET_BOTTOM_PARAMETER_DEFINITIONS,
+				...cabinetExtras,
+			],
 			parameters,
 			color,
 		);

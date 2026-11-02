@@ -63,7 +63,7 @@ Space creation, cloning, import/export, switching, and deletion are hidden when 
 The left sidebar organizes creation tools into **Model Library**, **Scene tools**, and **Floorplan**:
 
 - **Model Library** is a searchable explorer with 3D preview thumbnails. Browse all models or select a category. Search matches model names, categories, and aliases such as “sofa” for Couch.
-- Furniture is organized into **Seating**, **Tables & Desks**, **Storage**, **Bedroom**, **Kitchen**, and **Bathroom**.
+- Filter furniture by **Living Room**, **Dining Room**, **Kitchen**, or **Bathroom**, then browse the categories for that room. All models also includes bedroom furniture, desks, and other general models.
 - **Geometric Shapes** contains cube, sphere, plane, capsule, circle, cone, cylinder, dodecahedron, icosahedron, octahedron, ring, tetrahedron, torus, and torus knot.
 - **Lighting** contains ambient, directional, point, spot, and rectangular area lights.
 - **Doors, windows and gates** selects an opening placement tool; double-click a wall to place the chosen opening.
@@ -171,6 +171,29 @@ Choose a family, move its outlined preview, and double-click to place it. Select
 | Centerpieces | Fruit bowl, floral arrangement, or candles on a tray; dimensions, item count, optional contents, and candle flames |
 
 Dining light sources illuminate the scene; their brightness control describes the whole fixture. Extendable table width describes the closed table, with leaf length added while extended. Cabinet dimensions describe the closed body; opened doors and handles can extend beyond it. Move pendant/chandelier canopies, wall lights, and mirrors to their installation height with the transform controls. Place centerpieces on a tabletop using the placement preview or height control.
+
+### Kitchen collection
+
+Open **Model Library**, select **Kitchen**, and browse **Base cabinets**, **Wall cabinets**, **Tall cabinets**, **Countertops**, **Appliances**, **Fixtures**, **Furniture**, and **Accessories**. Seventeen customizable families cover all 41 requested objects. Search recognizes individual objects such as “corner wall cabinet”, “oven tower”, “U-shaped countertop”, “American-style refrigerator”, and “spice rack”.
+
+Choose a family, move its outlined preview, and double-click to place it. Select the desired preset in the inspector, then adjust dimensions and details. The existing upper and lower cabinet identifiers and saved numeric settings are preserved. Tables and seating are shared with Dining Room; choose the bar stool or dining chair preset for kitchen seating.
+
+| Family | Variants and controls |
+| --- | --- |
+| Base cabinets | Single, double, drawer, corner, or sink cabinet; dimensions, board thickness, doors, shelves, handles, plinth, optional countertop, open fronts, and drawer count |
+| Wall cabinets | Single, double, corner, or open shelving; dimensions, board thickness, doors, shelves, handles, back panel, and open doors |
+| Tall cabinets | Pantry, oven tower, fridge housing, or broom cabinet; dimensions, shelves, board thickness, open doors, and optional broom |
+| Countertops / islands / bars | Straight, L, U, island, peninsula, or breakfast bar; dimensions, top thickness, arm depth, overhang, supports, backsplash, and sink / hob openings |
+| Refrigeration | Refrigerator, American-style refrigerator, or upright freezer; dimensions, shelves, open doors, and optional dispenser |
+| Ovens / microwaves | Oven or microwave; dimensions, opening door, and power indicator |
+| Hobs / extractor hood | Induction or gas hob with 1–6 zones; chimney or box hood; dimensions and visual power / lamp indicators |
+| Cleaning appliances | Dishwasher or washing machine; dimensions, opening door, and power indicator |
+| Coffee machines | Espresso or pod machine; dimensions, optional cup, and power indicator |
+| Kitchen sinks / faucet / bin | Single or double hollow sink with optional faucet; separate gooseneck or straight faucet with reach extension; round or rectangular bin with opening lid and optional pedal |
+| Kitchen trolley | Dimensions, shelves, four optional casters, and optional handle |
+| Kitchen racks / shelves | Dish rack, spice rack, or wall shelves; dimensions, tier count, contents count, and optional plates / jars |
+
+Worktop height is the top surface; island/bar height includes the supporting furniture. L/U dimensions describe the full footprint and arm depth controls each run. Worktop cutouts are real openings. Sink height describes the bowl from its underside to its rim; raise it so the rim meets the worktop. Faucets and open doors extend beyond the closed body dimensions. Move wall cabinets, shelves, hoods, and other mounted objects to their installation height using the position controls. Appliance indicators show visual state and do not simulate appliance operation.
 
 ### Add Home Assistant entities
 

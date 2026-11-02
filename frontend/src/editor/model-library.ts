@@ -37,6 +37,20 @@ export type ModelRoom = {
 };
 export const MODEL_ROOMS: ModelRoom[] = [
 	{
+		id: "kitchen",
+		labelKey: "kitchenRoom",
+		categories: [
+			"base-cabinets",
+			"wall-cabinets",
+			"tall-cabinets",
+			"countertops",
+			"appliances",
+			"fixtures",
+			"kitchen-furniture",
+			"accessories",
+		],
+	},
+	{
 		id: "dining-room",
 		labelKey: "diningRoom",
 		categories: [
@@ -88,9 +102,35 @@ export const MODEL_CATEGORIES: ModelCategory[] = [
 	},
 	{id: "bedroom", labelKey: "modelCategoryBedroom", icon: "mdi:bed-outline"},
 	{
-		id: "kitchen",
-		labelKey: "modelCategoryKitchen",
+		id: "base-cabinets",
+		labelKey: "kitchenCategoryBase",
 		icon: "mdi:countertop-outline",
+	},
+	{
+		id: "wall-cabinets",
+		labelKey: "kitchenCategoryWall",
+		icon: "mdi:cupboard-outline",
+	},
+	{
+		id: "tall-cabinets",
+		labelKey: "kitchenCategoryTall",
+		icon: "mdi:cupboard-outline",
+	},
+	{
+		id: "countertops",
+		labelKey: "kitchenCategoryCountertops",
+		icon: "mdi:countertop-outline",
+	},
+	{
+		id: "appliances",
+		labelKey: "kitchenCategoryAppliances",
+		icon: "mdi:fridge-outline",
+	},
+	{id: "fixtures", labelKey: "kitchenCategoryFixtures", icon: "mdi:faucet"},
+	{
+		id: "kitchen-furniture",
+		labelKey: "kitchenCategoryFurniture",
+		icon: "mdi:table-furniture",
 	},
 	{
 		id: "bathroom",

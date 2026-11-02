@@ -71,6 +71,220 @@ async function placeSelectedModel(page) {
 	);
 }
 
+test("kitchen shows eight categories and saves cabinet presets with undo", async ({
+	page,
+}) => {
+	const saved = [];
+	page.on("request", (request) => {
+		if (request.method() === "PUT" && request.url().includes("/objects/"))
+			saved.push(request.postDataJSON());
+	});
+	await openLibrary(page);
+	const library = page.locator("dt3d-model-library");
+	await library
+		.getByRole("combobox", { name: "Filter by room" })
+		.selectOption("kitchen");
+	await expect(library.locator(".model")).toHaveCount(17);
+	await expect(library.locator(".preview img")).toHaveCount(17);
+	await expect(library.locator(".model-section h3")).toHaveText([
+		"Base cabinets",
+		"Wall cabinets",
+		"Tall cabinets",
+		"Countertops",
+		"Appliances",
+		"Fixtures",
+		"Furniture",
+		"Accessories",
+	]);
+	await library.getByRole("searchbox").fill("drawer cabinet");
+	await expect(library.locator(".model")).toHaveCount(1);
+	await library
+		.getByRole("button", { name: "Add Base cabinets", exact: true })
+		.click();
+	await placeSelectedModel(page);
+	const inspector = page.locator("dt3d-object-inspector");
+	await inspector
+		.locator("summary")
+		.filter({ hasText: "Lower kitchen cabinet dimensions" })
+		.click();
+	await inspector
+		.getByRole("combobox", { name: "Base cabinet preset", exact: true })
+		.selectOption("drawer-cabinet");
+	await inspector
+		.getByRole("spinbutton", { name: "Drawer rows", exact: true })
+		.fill("4");
+	await inspector
+		.getByRole("spinbutton", { name: "Drawer rows", exact: true })
+		.blur();
+	const original = await page.evaluate(() =>
+		window.testCard.space.children
+			.find(
+				(item) => item.userData.meshType === "furniture-kitchen-cabinet-bottom",
+			)
+			.getParameters(),
+	);
+	await inspector
+		.getByRole("checkbox", { name: "Open doors / drawers", exact: true })
+		.check();
+	await expect
+		.poll(() =>
+			saved.some(
+				(item) =>
+					item.data?.furniture?.style === "drawer-cabinet" &&
+					item.data.furniture.drawerCount === 4 &&
+					item.data.furniture.doorsOpen === true,
+			),
+		)
+		.toBe(true);
+	await inspector
+		.getByRole("checkbox", { name: "Open doors / drawers", exact: true })
+		.blur();
+	await page.keyboard.press("Control+z");
+	await expect
+		.poll(() =>
+			page.evaluate(() =>
+				window.testCard.space.children
+					.find(
+						(item) =>
+							item.userData.meshType === "furniture-kitchen-cabinet-bottom",
+					)
+					.getParameters(),
+			),
+		)
+		.toEqual(original);
+});
+
+test("kitchen worktop and sink presets expose functioning inspector controls", async ({
+	page,
+}) => {
+	await openLibrary(page);
+	let library = page.locator("dt3d-model-library");
+	await library
+		.getByRole("combobox", { name: "Filter by room" })
+		.selectOption("kitchen");
+	await library.getByRole("searchbox").fill("U-shaped countertop");
+	await library
+		.getByRole("button", {
+			name: "Add Countertops / islands / bars",
+			exact: true,
+		})
+		.click();
+	await placeSelectedModel(page);
+	const inspector = page.locator("dt3d-object-inspector");
+	await inspector
+		.locator("summary")
+		.filter({ hasText: "Countertop configuration" })
+		.click();
+	await inspector
+		.getByRole("combobox", { name: "Countertop preset", exact: true })
+		.selectOption("u-shaped-countertop");
+	await inspector
+		.getByRole("combobox", { name: "Worktop cutout", exact: true })
+		.selectOption("hob-cutout");
+	await expect
+		.poll(() =>
+			page.evaluate(
+				() =>
+					window.testCard.space.children.find(
+						(item) => item.userData.meshType === "furniture-kitchen-countertop",
+					).parameters.cutout,
+			),
+		)
+		.toBe("hob-cutout");
+	await openLibrary(page);
+	library = page.locator("dt3d-model-library");
+	await library
+		.getByRole("combobox", { name: "Filter by room" })
+		.selectOption("kitchen");
+	await library.getByRole("searchbox").fill("double sink");
+	await library
+		.getByRole("button", { name: "Add Kitchen sinks", exact: true })
+		.click();
+	await placeSelectedModel(page);
+	const summary = inspector
+		.locator("summary")
+		.filter({ hasText: "Kitchen sink configuration" });
+	if (!(await summary.evaluate((element) => element.parentElement.open)))
+		await summary.click();
+	await inspector
+		.getByRole("combobox", { name: "Sink preset", exact: true })
+		.selectOption("double-sink");
+	await inspector
+		.getByRole("checkbox", { name: "Include faucet", exact: true })
+		.uncheck();
+	await expect
+		.poll(() =>
+			page.evaluate(() => {
+				const object = window.testCard.space.children.find(
+					(item) => item.userData.meshType === "furniture-kitchen-sink",
+				);
+				let bowls = 0;
+				object.traverse((item) => {
+					if (item.name === "Kitchen Sink Bowl") bowls++;
+				});
+				return {
+					bowls,
+					faucet: Boolean(object.getObjectByName("Kitchen Faucet Spout")),
+				};
+			}),
+		)
+		.toEqual({ bowls: 2, faucet: false });
+});
+
+test("kitchen appliance doors and refrigerator presets save after placement", async ({
+	page,
+}) => {
+	const saved = [];
+	page.on("request", (request) => {
+		if (request.method() === "PUT" && request.url().includes("/objects/"))
+			saved.push(request.postDataJSON());
+	});
+	await openLibrary(page);
+	const library = page.locator("dt3d-model-library");
+	await library
+		.getByRole("combobox", { name: "Filter by room" })
+		.selectOption("kitchen");
+	await library.getByRole("searchbox").fill("American-style refrigerator");
+	await library
+		.getByRole("button", { name: "Add Refrigerators / freezers", exact: true })
+		.click();
+	await placeSelectedModel(page);
+	const inspector = page.locator("dt3d-object-inspector");
+	await inspector
+		.locator("summary")
+		.filter({ hasText: "Refrigerator configuration" })
+		.click();
+	await inspector
+		.getByRole("combobox", { name: "Refrigeration preset", exact: true })
+		.selectOption("american-style-refrigerator");
+	await inspector
+		.getByRole("checkbox", { name: "Open doors / drawers", exact: true })
+		.check();
+	await expect
+		.poll(() =>
+			saved.some(
+				(item) =>
+					item.data?.furniture?.style === "american-style-refrigerator" &&
+					item.data.furniture.doorsOpen === true,
+			),
+		)
+		.toBe(true);
+	await expect
+		.poll(() =>
+			page.evaluate(() =>
+				Boolean(
+					window.testCard.space.children
+						.find(
+							(item) =>
+								item.userData.meshType === "furniture-kitchen-refrigerator",
+						)
+						.getObjectByName("Ice Dispenser"),
+				),
+			),
+		)
+		.toBe(true);
+});
+
 test("dining room shows five ordered categories, renders previews and saves extendable tables with undo", async ({
 	page,
 }) => {

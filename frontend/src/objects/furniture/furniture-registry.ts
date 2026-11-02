@@ -26,6 +26,25 @@ import type {
 	FurnitureType,
 } from "./furniture.js";
 import {
+	KitchenAccessoriesObject,
+	KitchenTrolleyObject,
+} from "./kitchen/accessories.js";
+import {
+	KitchenCleaningApplianceObject,
+	KitchenCoffeeMachineObject,
+	KitchenHobObject,
+	KitchenHoodObject,
+	KitchenOvenObject,
+} from "./kitchen/appliances.js";
+import {KitchenTallCabinetObject} from "./kitchen/cabinets.js";
+import {KitchenCountertopObject} from "./kitchen/countertops.js";
+import {
+	KitchenBinObject,
+	KitchenFaucetObject,
+	KitchenSinkObject,
+} from "./kitchen/fixtures.js";
+import {KitchenRefrigeratorObject} from "./kitchen/refrigeration.js";
+import {
 	ArtworkObject,
 	CurtainsObject,
 	FireplaceObject,
@@ -67,7 +86,14 @@ export type FurnitureCategory =
 	| "washbasins"
 	| "bathing"
 	| "accessories"
-	| "other";
+	| "other"
+	| "base-cabinets"
+	| "wall-cabinets"
+	| "tall-cabinets"
+	| "countertops"
+	| "appliances"
+	| "fixtures"
+	| "kitchen-furniture";
 
 export type FurnitureOption = {
 	type: `furniture-${FurnitureType}`;
@@ -105,16 +131,31 @@ export const FURNITURE_OPTIONS: FurnitureOption[] = [
 	{
 		type: "furniture-kitchen-cabinet-top",
 		furnitureType: "kitchen-cabinet-top",
-		category: "kitchen",
-		labelKey: "furnitureKitchenCabinetTop",
+		category: "wall-cabinets",
+		labelKey: "kitchenModelWall",
 		icon: "mdi:cupboard-outline",
+		rooms: ["kitchen"],
+		keywords: [
+			"single wall cabinet",
+			"double wall cabinet",
+			"corner wall cabinet",
+			"open shelving",
+		],
 	},
 	{
 		type: "furniture-kitchen-cabinet-bottom",
 		furnitureType: "kitchen-cabinet-bottom",
-		category: "kitchen",
-		labelKey: "furnitureKitchenCabinetBottom",
+		category: "base-cabinets",
+		labelKey: "kitchenModelBase",
 		icon: "mdi:countertop-outline",
+		rooms: ["kitchen"],
+		keywords: [
+			"single base cabinet",
+			"double base cabinet",
+			"drawer cabinet",
+			"corner cabinet",
+			"sink cabinet",
+		],
 	},
 	{
 		type: "furniture-table",
@@ -475,8 +516,10 @@ export const FURNITURE_OPTIONS: FurnitureOption[] = [
 		category: "tables-desks",
 		labelKey: "diningModelTable",
 		icon: "mdi:table-furniture",
-		rooms: ["dining-room"],
+		rooms: ["dining-room", "kitchen"],
+		roomCategories: {kitchen: "kitchen-furniture"},
 		keywords: [
+			"kitchen table",
 			"rectangular dining table",
 			"round dining table",
 			"oval dining table",
@@ -491,8 +534,10 @@ export const FURNITURE_OPTIONS: FurnitureOption[] = [
 		category: "seating",
 		labelKey: "diningModelSeating",
 		icon: "mdi:chair-rolling",
-		rooms: ["dining-room"],
+		rooms: ["dining-room", "kitchen"],
+		roomCategories: {kitchen: "kitchen-furniture"},
 		keywords: [
+			"kitchen chair",
 			"dining chair",
 			"upholstered dining chair",
 			"dining bench",
@@ -539,6 +584,144 @@ export const FURNITURE_OPTIONS: FurnitureOption[] = [
 			"candle arrangement",
 			"table decoration",
 		],
+	},
+	{
+		type: "furniture-kitchen-tall-cabinet",
+		furnitureType: "kitchen-tall-cabinet",
+		category: "tall-cabinets",
+		labelKey: "kitchenModelTall",
+		icon: "mdi:cupboard-outline",
+		rooms: ["kitchen"],
+		keywords: [
+			"pantry cabinet",
+			"oven tower",
+			"fridge housing",
+			"broom cabinet",
+		],
+	},
+	{
+		type: "furniture-kitchen-countertop",
+		furnitureType: "kitchen-countertop",
+		category: "countertops",
+		labelKey: "kitchenModelCountertop",
+		icon: "mdi:countertop-outline",
+		rooms: ["kitchen"],
+		keywords: [
+			"straight countertop",
+			"L-shaped countertop",
+			"L shaped countertop",
+			"U-shaped countertop",
+			"U shaped countertop",
+			"kitchen island",
+			"peninsula",
+			"breakfast bar",
+			"worktop",
+		],
+	},
+	{
+		type: "furniture-kitchen-refrigerator",
+		furnitureType: "kitchen-refrigerator",
+		category: "appliances",
+		labelKey: "kitchenModelRefrigerator",
+		icon: "mdi:fridge-outline",
+		rooms: ["kitchen"],
+		keywords: [
+			"refrigerator",
+			"American-style refrigerator",
+			"American style refrigerator",
+			"freezer",
+			"fridge",
+		],
+	},
+	{
+		type: "furniture-kitchen-oven",
+		furnitureType: "kitchen-oven",
+		category: "appliances",
+		labelKey: "kitchenModelOven",
+		icon: "mdi:stove",
+		rooms: ["kitchen"],
+		keywords: ["oven", "microwave"],
+	},
+	{
+		type: "furniture-kitchen-hob",
+		furnitureType: "kitchen-hob",
+		category: "appliances",
+		labelKey: "kitchenModelHob",
+		icon: "mdi:stove",
+		rooms: ["kitchen"],
+		keywords: ["induction hob", "gas hob", "cooktop"],
+	},
+	{
+		type: "furniture-kitchen-hood",
+		furnitureType: "kitchen-hood",
+		category: "appliances",
+		labelKey: "kitchenModelHood",
+		icon: "mdi:hvac",
+		rooms: ["kitchen"],
+		keywords: ["extractor hood", "range hood", "cooker hood"],
+	},
+	{
+		type: "furniture-kitchen-cleaning-appliance",
+		furnitureType: "kitchen-cleaning-appliance",
+		category: "appliances",
+		labelKey: "kitchenModelCleaning",
+		icon: "mdi:dishwasher",
+		rooms: ["kitchen"],
+		keywords: ["dishwasher", "washing machine"],
+	},
+	{
+		type: "furniture-kitchen-coffee-machine",
+		furnitureType: "kitchen-coffee-machine",
+		category: "appliances",
+		labelKey: "kitchenModelCoffee",
+		icon: "mdi:coffee-maker-outline",
+		rooms: ["kitchen"],
+		keywords: ["coffee machine", "espresso machine", "pod machine"],
+	},
+	{
+		type: "furniture-kitchen-sink",
+		furnitureType: "kitchen-sink",
+		category: "fixtures",
+		labelKey: "kitchenModelSink",
+		icon: "mdi:water-pump",
+		rooms: ["kitchen"],
+		keywords: ["single sink", "double sink", "kitchen sink"],
+	},
+	{
+		type: "furniture-kitchen-faucet",
+		furnitureType: "kitchen-faucet",
+		category: "fixtures",
+		labelKey: "kitchenModelFaucet",
+		icon: "mdi:faucet",
+		rooms: ["kitchen"],
+		keywords: ["kitchen faucet", "tap", "gooseneck"],
+	},
+	{
+		type: "furniture-kitchen-bin",
+		furnitureType: "kitchen-bin",
+		category: "fixtures",
+		labelKey: "kitchenModelBin",
+		icon: "mdi:trash-can-outline",
+		rooms: ["kitchen"],
+		keywords: ["waste bin", "rubbish bin", "trash can"],
+	},
+	{
+		type: "furniture-kitchen-trolley",
+		furnitureType: "kitchen-trolley",
+		category: "kitchen-furniture",
+		labelKey: "kitchenModelTrolley",
+		icon: "mdi:cart-outline",
+		rooms: ["kitchen"],
+		keywords: ["kitchen trolley", "kitchen cart", "utility cart"],
+	},
+	{
+		type: "furniture-kitchen-accessories",
+		furnitureType: "kitchen-accessories",
+		category: "accessories",
+		labelKey: "kitchenModelAccessories",
+		icon: "mdi:shaker-outline",
+		rooms: ["kitchen"],
+		keywords: ["dish rack", "spice rack", "kitchen shelves"],
 	},
 ];
 
@@ -631,4 +814,17 @@ const CUSTOM_FURNITURE_FACTORIES: Partial<
 	"dining-storage": DiningStorageObject,
 	"dining-light": DiningLightObject,
 	centerpiece: CenterpieceObject,
+	"kitchen-tall-cabinet": KitchenTallCabinetObject,
+	"kitchen-countertop": KitchenCountertopObject,
+	"kitchen-refrigerator": KitchenRefrigeratorObject,
+	"kitchen-oven": KitchenOvenObject,
+	"kitchen-hob": KitchenHobObject,
+	"kitchen-hood": KitchenHoodObject,
+	"kitchen-cleaning-appliance": KitchenCleaningApplianceObject,
+	"kitchen-coffee-machine": KitchenCoffeeMachineObject,
+	"kitchen-sink": KitchenSinkObject,
+	"kitchen-faucet": KitchenFaucetObject,
+	"kitchen-bin": KitchenBinObject,
+	"kitchen-trolley": KitchenTrolleyObject,
+	"kitchen-accessories": KitchenAccessoriesObject,
 };

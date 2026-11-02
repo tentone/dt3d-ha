@@ -46,7 +46,20 @@ export type FurnitureType =
 	| "dining-seating"
 	| "dining-storage"
 	| "dining-light"
-	| "centerpiece";
+	| "centerpiece"
+	| "kitchen-tall-cabinet"
+	| "kitchen-countertop"
+	| "kitchen-refrigerator"
+	| "kitchen-oven"
+	| "kitchen-hob"
+	| "kitchen-hood"
+	| "kitchen-cleaning-appliance"
+	| "kitchen-coffee-machine"
+	| "kitchen-sink"
+	| "kitchen-faucet"
+	| "kitchen-bin"
+	| "kitchen-trolley"
+	| "kitchen-accessories";
 
 export type FurnitureParameters = Record<string, number | boolean | string>;
 
