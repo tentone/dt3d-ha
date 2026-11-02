@@ -59,7 +59,12 @@ export type FurnitureType =
 	| "kitchen-faucet"
 	| "kitchen-bin"
 	| "kitchen-trolley"
-	| "kitchen-accessories";
+	| "kitchen-accessories"
+	| "bedside"
+	| "bedside-lamp"
+	| "bedroom-storage"
+	| "bedroom-bench"
+	| "bedroom-vanity";
 
 export type FurnitureParameters = Record<string, number | boolean | string>;
 

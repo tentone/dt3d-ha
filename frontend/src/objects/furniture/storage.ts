@@ -1,9 +1,11 @@
-import type {Mesh} from "three";
-
+import {
+	BedroomWardrobeFrame,
+	wardrobeExtras,
+	wardrobePreset,
+} from "./bedroom/storage.js";
 import {
 	furnitureInteger,
 	furnitureNumber,
-	FurnitureObject,
 	type FurnitureParameterDefinition,
 	type FurnitureParameters,
 } from "./furniture.js";
@@ -112,106 +114,13 @@ export const KITCHEN_CABINET_BOTTOM_PARAMETER_DEFINITIONS = [
 	),
 ];
 
-/** Shared enclosed carcass and front doors for tall and kitchen storage. */
-abstract class StorageObject extends FurnitureObject {
-	protected buildFurniture(material: Mesh["material"]): void {
-		const p = this.parameters as Record<string, number>;
-		const thickness = Math.min(
-			p.thickness,
-			p.width * 0.15,
-			p.depth * 0.15,
-			p.height * 0.1,
-		);
-		const plinth = Math.min(p.plinthHeight ?? 0, p.height * 0.25);
-		const countertop = Math.min(p.countertopThickness ?? 0, p.height * 0.15);
-		const height = p.height - plinth - countertop;
-		const innerWidth = p.width - thickness * 2;
-		const innerHeight = height - thickness * 2;
-		const bodyDepth = p.depth - thickness;
-		const bodyZ = -thickness / 2;
-		const gap = Math.min(0.004, innerHeight * 0.05);
-		const doorWidth = (p.width - gap * (p.doorCount + 1)) / p.doorCount;
-		for (let index = 0; index < p.doorCount; index += 1) {
-			const x = -p.width / 2 + gap + doorWidth / 2 + index * (doorWidth + gap);
-			this.addBox(
-				"Storage Door",
-				[doorWidth, height - gap * 2, thickness],
-				[x, plinth + height / 2, p.depth / 2 - thickness / 2],
-				material,
-			);
-			const handleX = x + (index % 2 === 0 ? 1 : -1) * doorWidth * 0.3;
-			this.addBox(
-				"Storage Handle",
-				[
-					Math.min(0.02, doorWidth * 0.1),
-					Math.min(p.handleSize, innerHeight * 0.5),
-					0.025,
-				],
-				[handleX, plinth + height / 2, p.depth / 2 + 0.0125],
-				material,
-			);
-		}
-		for (const side of [-1, 1]) {
-			this.addBox(
-				"Storage Side",
-				[thickness, height, bodyDepth],
-				[side * (p.width / 2 - thickness / 2), plinth + height / 2, bodyZ],
-				material,
-			);
-		}
-		for (const y of [plinth + thickness / 2, plinth + height - thickness / 2]) {
-			this.addBox(
-				"Storage Board",
-				[innerWidth, thickness, bodyDepth],
-				[0, y, bodyZ],
-				material,
-			);
-		}
-		this.addBox(
-			"Storage Back",
-			[innerWidth, innerHeight, thickness],
-			[0, plinth + height / 2, -p.depth / 2 + thickness / 2],
-			material,
-		);
-		// Limit board thickness when many shelves share a short carcass.
-		const shelfThickness = Math.min(
-			thickness,
-			(innerHeight / (p.shelfCount + 1)) * 0.5,
-		);
-		for (let index = 1; index <= p.shelfCount; index += 1) {
-			this.addBox(
-				"Storage Shelf",
-				[innerWidth, shelfThickness, bodyDepth - thickness],
-				[0, plinth + thickness + (innerHeight * index) / (p.shelfCount + 1), 0],
-				material,
-			);
-		}
-		if (plinth > 0) {
-			this.addBox(
-				"Kitchen Plinth",
-				[p.width - thickness * 2, plinth, p.depth * 0.8],
-				[0, plinth / 2, -p.depth * 0.05],
-				material,
-			);
-		}
-		if (countertop > 0) {
-			this.addBox(
-				"Kitchen Countertop",
-				[p.width, countertop, p.depth],
-				[0, p.height - countertop / 2, 0],
-				material,
-			);
-		}
-	}
-}
-
-export class WardrobeObject extends StorageObject {
+export class WardrobeObject extends BedroomWardrobeFrame {
 	constructor(parameters: Partial<FurnitureParameters> = {}, color = 0x9c7955) {
 		super(
 			"wardrobe",
 			"Wardrobe",
 			"furnitureWardrobeParameters",
-			WARDROBE_PARAMETER_DEFINITIONS,
+			[wardrobePreset, ...WARDROBE_PARAMETER_DEFINITIONS, ...wardrobeExtras],
 			parameters,
 			color,
 		);

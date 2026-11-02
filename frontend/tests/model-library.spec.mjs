@@ -71,6 +71,229 @@ async function placeSelectedModel(page) {
 	);
 }
 
+test("master bedroom shows six categories and saves independent bed size and articulation with undo", async ({
+	page,
+}) => {
+	const saved = [];
+	page.on("request", (request) => {
+		if (request.method() === "PUT" && request.url().includes("/objects/"))
+			saved.push(request.postDataJSON());
+	});
+	await openLibrary(page);
+	const library = page.locator("dt3d-model-library");
+	await library
+		.getByRole("combobox", { name: "Filter by room" })
+		.selectOption("master-bedroom");
+	await expect(library.locator(".model")).toHaveCount(14);
+	await expect(library.locator(".preview img")).toHaveCount(14);
+	await expect(library.locator(".model-section h3")).toHaveText([
+		"Beds",
+		"Bedside",
+		"Storage",
+		"Seating",
+		"Other furniture",
+		"Decoration",
+	]);
+	await library.getByRole("searchbox").fill("adjustable bed");
+	await library.getByRole("button", { name: "Add Bed", exact: true }).click();
+	await placeSelectedModel(page);
+	const inspector = page.locator("dt3d-object-inspector");
+	await inspector
+		.locator("summary")
+		.filter({ hasText: "Bed dimensions" })
+		.click();
+	await inspector
+		.getByRole("combobox", { name: "Bed size preset", exact: true })
+		.selectOption("king-bed");
+	await inspector
+		.getByRole("combobox", { name: "Bed frame style", exact: true })
+		.selectOption("adjustable-bed");
+	const original = await page.evaluate(() =>
+		window.testCard.space.children
+			.find((item) => item.userData.meshType === "furniture-bed")
+			.getParameters(),
+	);
+	expect(original.width).toBe(1.9);
+	await inspector
+		.getByRole("spinbutton", { name: "Head section angle", exact: true })
+		.fill("45");
+	await inspector
+		.getByRole("spinbutton", { name: "Head section angle", exact: true })
+		.blur();
+	await expect
+		.poll(() =>
+			saved.some(
+				(item) =>
+					item.data?.furniture?.sizePreset === "king-bed" &&
+					item.data.furniture.headAngle === 45,
+			),
+		)
+		.toBe(true);
+	await expect
+		.poll(() =>
+			page.evaluate(
+				() =>
+					window.testCard.space.children
+						.find((item) => item.userData.meshType === "furniture-bed")
+						.getObjectByName("Adjustable Head Section").rotation.x,
+			),
+		)
+		.toBeCloseTo(Math.PI / 4);
+	await page.keyboard.press("Control+z");
+	await expect
+		.poll(() =>
+			page.evaluate(() =>
+				window.testCard.space.children
+					.find((item) => item.userData.meshType === "furniture-bed")
+					.getParameters(),
+			),
+		)
+		.toEqual(original);
+});
+
+test("master bedroom wardrobe panels slide and bedside shelves omit drawers", async ({
+	page,
+}) => {
+	await openLibrary(page);
+	let library = page.locator("dt3d-model-library");
+	await library
+		.getByRole("combobox", { name: "Filter by room" })
+		.selectOption("master-bedroom");
+	await library.getByRole("searchbox").fill("sliding doors");
+	await library
+		.getByRole("button", { name: "Add Wardrobe (with doors)", exact: true })
+		.click();
+	await placeSelectedModel(page);
+	const inspector = page.locator("dt3d-object-inspector");
+	await inspector
+		.locator("summary")
+		.filter({ hasText: "Wardrobe dimensions" })
+		.click();
+	await inspector
+		.getByRole("combobox", { name: "Wardrobe preset", exact: true })
+		.selectOption("sliding-door-wardrobe");
+	const initial = await page.evaluate(
+		() =>
+			window.testCard.space.children
+				.find((item) => item.userData.meshType === "furniture-wardrobe")
+				.getObjectByName("Storage Door").position.x,
+	);
+	await inspector
+		.getByRole("spinbutton", { name: "Sliding opening", exact: true })
+		.fill("1");
+	await inspector
+		.getByRole("spinbutton", { name: "Sliding opening", exact: true })
+		.blur();
+	await expect
+		.poll(() =>
+			page.evaluate(
+				() =>
+					window.testCard.space.children
+						.find((item) => item.userData.meshType === "furniture-wardrobe")
+						.getObjectByName("Storage Door").position.x,
+			),
+		)
+		.toBeGreaterThan(initial + 0.5);
+	await openLibrary(page);
+	library = page.locator("dt3d-model-library");
+	await library
+		.getByRole("combobox", { name: "Filter by room" })
+		.selectOption("master-bedroom");
+	await library.getByRole("searchbox").fill("bedside shelf");
+	await library
+		.getByRole("button", { name: "Add Bedside tables / shelves", exact: true })
+		.click();
+	await placeSelectedModel(page);
+	const summary = inspector
+		.locator("summary")
+		.filter({ hasText: "Bedside furniture configuration" });
+	if (!(await summary.evaluate((element) => element.parentElement.open)))
+		await summary.click();
+	await inspector
+		.getByRole("combobox", { name: "Bedside preset", exact: true })
+		.selectOption("bedside-shelf");
+	await expect
+		.poll(() =>
+			page.evaluate(
+				() =>
+					window.testCard.space.children.find(
+						(item) => item.userData.meshType === "furniture-bedside",
+					).parameters.drawerCount,
+			),
+		)
+		.toBe(0);
+});
+
+test("bedroom vanity and full-length mirror presets expose their controls and save", async ({
+	page,
+}) => {
+	const saved = [];
+	page.on("request", (request) => {
+		if (request.method() === "PUT" && request.url().includes("/objects/"))
+			saved.push(request.postDataJSON());
+	});
+	await openLibrary(page);
+	let library = page.locator("dt3d-model-library");
+	await library
+		.getByRole("combobox", { name: "Filter by room" })
+		.selectOption("master-bedroom");
+	await library.getByRole("searchbox").fill("dressing table");
+	await library
+		.getByRole("button", {
+			name: "Add Dressing tables / vanities / desks",
+			exact: true,
+		})
+		.click();
+	await placeSelectedModel(page);
+	const inspector = page.locator("dt3d-object-inspector");
+	await inspector
+		.locator("summary")
+		.filter({ hasText: "Dressing furniture configuration" })
+		.click();
+	await inspector
+		.getByRole("combobox", { name: "Dressing furniture preset", exact: true })
+		.selectOption("vanity");
+	await inspector
+		.getByRole("checkbox", { name: "Vanity lights on", exact: true })
+		.uncheck();
+	await expect
+		.poll(() =>
+			saved.some(
+				(item) =>
+					item.data?.furniture?.style === "vanity" &&
+					item.data.furniture.bulbsEnabled === false,
+			),
+		)
+		.toBe(true);
+	await openLibrary(page);
+	library = page.locator("dt3d-model-library");
+	await library
+		.getByRole("combobox", { name: "Filter by room" })
+		.selectOption("master-bedroom");
+	await library.getByRole("searchbox").fill("full-length mirror");
+	await library
+		.getByRole("button", { name: "Add Mirror", exact: true })
+		.click();
+	await placeSelectedModel(page);
+	const summary = inspector
+		.locator("summary")
+		.filter({ hasText: "Mirror configuration" });
+	if (!(await summary.evaluate((element) => element.parentElement.open)))
+		await summary.click();
+	await inspector
+		.getByRole("combobox", { name: "Mirror size preset", exact: true })
+		.selectOption("full-length-mirror");
+	await expect
+		.poll(() =>
+			saved.some(
+				(item) =>
+					item.data?.furniture?.sizePreset === "full-length-mirror" &&
+					item.data.furniture.height === 1.8,
+			),
+		)
+		.toBe(true);
+});
+
 test("kitchen shows eight categories and saves cabinet presets with undo", async ({
 	page,
 }) => {

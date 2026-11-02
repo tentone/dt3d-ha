@@ -37,6 +37,18 @@ export type ModelRoom = {
 };
 export const MODEL_ROOMS: ModelRoom[] = [
 	{
+		id: "master-bedroom",
+		labelKey: "masterBedroomRoom",
+		categories: [
+			"beds",
+			"bedside",
+			"storage",
+			"seating",
+			"bedroom-furniture",
+			"decoration",
+		],
+	},
+	{
 		id: "kitchen",
 		labelKey: "kitchenRoom",
 		categories: [
@@ -100,7 +112,17 @@ export const MODEL_CATEGORIES: ModelCategory[] = [
 		labelKey: "modelCategoryStorage",
 		icon: "mdi:wardrobe-outline",
 	},
-	{id: "bedroom", labelKey: "modelCategoryBedroom", icon: "mdi:bed-outline"},
+	{id: "beds", labelKey: "bedroomCategoryBeds", icon: "mdi:bed-outline"},
+	{
+		id: "bedside",
+		labelKey: "bedroomCategoryBedside",
+		icon: "mdi:table-furniture",
+	},
+	{
+		id: "bedroom-furniture",
+		labelKey: "bedroomCategoryOther",
+		icon: "mdi:vanity-light",
+	},
 	{
 		id: "base-cabinets",
 		labelKey: "kitchenCategoryBase",

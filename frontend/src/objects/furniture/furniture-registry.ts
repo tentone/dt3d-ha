@@ -12,6 +12,13 @@ import {
 import {BathroomStorageObject} from "./bathroom/storage.js";
 import {BathtubObject} from "./bathtub.js";
 import {BedObject} from "./bed.js";
+import {
+	BedroomBenchObject,
+	BedroomVanityObject,
+	BedsideLampObject,
+	BedsideObject,
+} from "./bedroom/furniture.js";
+import {BedroomStorageObject} from "./bedroom/storage.js";
 import {CabinetObject} from "./cabinet.js";
 import {ChairObject} from "./chair.js";
 import {CouchObject} from "./couch.js";
@@ -93,7 +100,10 @@ export type FurnitureCategory =
 	| "countertops"
 	| "appliances"
 	| "fixtures"
-	| "kitchen-furniture";
+	| "kitchen-furniture"
+	| "beds"
+	| "bedside"
+	| "bedroom-furniture";
 
 export type FurnitureOption = {
 	type: `furniture-${FurnitureType}`;
@@ -120,13 +130,36 @@ export const FURNITURE_OPTIONS: FurnitureOption[] = [
 		category: "storage",
 		labelKey: "furnitureWardrobe",
 		icon: "mdi:wardrobe-outline",
+		rooms: ["master-bedroom"],
+		keywords: [
+			"wardrobe",
+			"2-door wardrobe",
+			"2 door wardrobe",
+			"two door wardrobe",
+			"3-door wardrobe",
+			"3 door wardrobe",
+			"three door wardrobe",
+			"sliding doors",
+			"sliding wardrobe",
+		],
 	},
 	{
 		type: "furniture-bed",
 		furnitureType: "bed",
-		category: "bedroom",
+		category: "beds",
 		labelKey: "furnitureBed",
 		icon: "mdi:bed-outline",
+		rooms: ["master-bedroom"],
+		keywords: [
+			"single bed",
+			"double bed",
+			"queen bed",
+			"king bed",
+			"super king bed",
+			"platform bed",
+			"storage bed",
+			"adjustable bed",
+		],
 	},
 	{
 		type: "furniture-kitchen-cabinet-top",
@@ -238,8 +271,14 @@ export const FURNITURE_OPTIONS: FurnitureOption[] = [
 		category: "seating",
 		labelKey: "livingModelAccentChair",
 		icon: "mdi:seat-outline",
-		rooms: ["living-room"],
-		keywords: ["armchair", "recliner", "lounge chair", "rocking chair"],
+		rooms: ["living-room", "master-bedroom"],
+		keywords: [
+			"accent chair",
+			"armchair",
+			"recliner",
+			"lounge chair",
+			"rocking chair",
+		],
 	},
 	{
 		type: "furniture-ottoman",
@@ -247,7 +286,7 @@ export const FURNITURE_OPTIONS: FurnitureOption[] = [
 		category: "seating",
 		labelKey: "livingModelOttoman",
 		icon: "mdi:stool-outline",
-		rooms: ["living-room"],
+		rooms: ["living-room", "master-bedroom"],
 		keywords: ["ottoman", "pouf", "bean bag", "beanbag", "footstool"],
 	},
 	{
@@ -309,7 +348,8 @@ export const FURNITURE_OPTIONS: FurnitureOption[] = [
 		category: "lighting",
 		labelKey: "livingModelLamp",
 		icon: "mdi:floor-lamp",
-		rooms: ["living-room"],
+		rooms: ["living-room", "master-bedroom"],
+		roomCategories: {"master-bedroom": "decoration"},
 		keywords: [
 			"floor lamp",
 			"table lamp",
@@ -324,18 +364,21 @@ export const FURNITURE_OPTIONS: FurnitureOption[] = [
 		category: "decoration",
 		labelKey: "livingModelRug",
 		icon: "mdi:rug",
-		rooms: ["living-room", "dining-room"],
+		rooms: ["living-room", "dining-room", "master-bedroom"],
 		keywords: ["rug", "carpet"],
 	},
 	{
 		type: "furniture-mirror",
 		furnitureType: "mirror",
-		roomCategories: {bathroom: "accessories"},
+		roomCategories: {
+			bathroom: "accessories",
+			"master-bedroom": "bedroom-furniture",
+		},
 		category: "decoration",
 		labelKey: "livingModelMirror",
 		icon: "mdi:mirror",
-		rooms: ["living-room", "bathroom", "dining-room"],
-		keywords: ["mirror"],
+		rooms: ["living-room", "bathroom", "dining-room", "master-bedroom"],
+		keywords: ["mirror", "full-length mirror", "full length mirror"],
 	},
 	{
 		type: "furniture-indoor-plant",
@@ -367,8 +410,8 @@ export const FURNITURE_OPTIONS: FurnitureOption[] = [
 		category: "decoration",
 		labelKey: "livingModelArtwork",
 		icon: "mdi:image-frame",
-		rooms: ["living-room"],
-		keywords: ["artwork", "art", "painting", "triptych"],
+		rooms: ["living-room", "master-bedroom"],
+		keywords: ["artwork", "wall art", "art", "painting", "triptych"],
 	},
 	{
 		type: "furniture-wall-clock",
@@ -394,7 +437,7 @@ export const FURNITURE_OPTIONS: FurnitureOption[] = [
 		category: "decoration",
 		labelKey: "livingModelCurtains",
 		icon: "mdi:curtains",
-		rooms: ["living-room"],
+		rooms: ["living-room", "master-bedroom"],
 		keywords: ["curtains", "drapes", "drapery"],
 	},
 	{
@@ -723,6 +766,51 @@ export const FURNITURE_OPTIONS: FurnitureOption[] = [
 		rooms: ["kitchen"],
 		keywords: ["dish rack", "spice rack", "kitchen shelves"],
 	},
+	{
+		type: "furniture-bedside",
+		furnitureType: "bedside",
+		category: "bedside",
+		labelKey: "bedroomModelBedside",
+		icon: "mdi:table-furniture",
+		rooms: ["master-bedroom"],
+		keywords: ["bedside table", "bedside shelf", "nightstand"],
+	},
+	{
+		type: "furniture-bedside-lamp",
+		furnitureType: "bedside-lamp",
+		category: "bedside",
+		labelKey: "bedroomModelBedsideLamp",
+		icon: "mdi:lamp",
+		rooms: ["master-bedroom"],
+		keywords: ["bedside lamp", "night light"],
+	},
+	{
+		type: "furniture-bedroom-storage",
+		furnitureType: "bedroom-storage",
+		category: "storage",
+		labelKey: "bedroomModelStorage",
+		icon: "mdi:dresser-outline",
+		rooms: ["master-bedroom"],
+		keywords: ["chest of drawers", "dresser", "tallboy", "clothes rack"],
+	},
+	{
+		type: "furniture-bedroom-bench",
+		furnitureType: "bedroom-bench",
+		category: "seating",
+		labelKey: "bedroomModelBench",
+		icon: "mdi:bench",
+		rooms: ["master-bedroom"],
+		keywords: ["bedroom bench", "bed end bench", "storage bench"],
+	},
+	{
+		type: "furniture-bedroom-vanity",
+		furnitureType: "bedroom-vanity",
+		category: "bedroom-furniture",
+		labelKey: "bedroomModelVanity",
+		icon: "mdi:vanity-light",
+		rooms: ["master-bedroom"],
+		keywords: ["dressing table", "vanity", "desk", "bedroom desk"],
+	},
 ];
 
 export function furnitureTypeFromMeshType(type: string): FurnitureType | null {
@@ -827,4 +915,9 @@ const CUSTOM_FURNITURE_FACTORIES: Partial<
 	"kitchen-bin": KitchenBinObject,
 	"kitchen-trolley": KitchenTrolleyObject,
 	"kitchen-accessories": KitchenAccessoriesObject,
+	bedside: BedsideObject,
+	"bedside-lamp": BedsideLampObject,
+	"bedroom-storage": BedroomStorageObject,
+	"bedroom-bench": BedroomBenchObject,
+	"bedroom-vanity": BedroomVanityObject,
 };

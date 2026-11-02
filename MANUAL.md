@@ -63,7 +63,7 @@ Space creation, cloning, import/export, switching, and deletion are hidden when 
 The left sidebar organizes creation tools into **Model Library**, **Scene tools**, and **Floorplan**:
 
 - **Model Library** is a searchable explorer with 3D preview thumbnails. Browse all models or select a category. Search matches model names, categories, and aliases such as “sofa” for Couch.
-- Filter furniture by **Living Room**, **Dining Room**, **Kitchen**, or **Bathroom**, then browse the categories for that room. All models also includes bedroom furniture, desks, and other general models.
+- Filter furniture by **Living Room**, **Dining Room**, **Kitchen**, **Bathroom**, or **Master Bedroom**, then browse the categories for that room. All models also includes desks and other general models.
 - **Geometric Shapes** contains cube, sphere, plane, capsule, circle, cone, cylinder, dodecahedron, icosahedron, octahedron, ring, tetrahedron, torus, and torus knot.
 - **Lighting** contains ambient, directional, point, spot, and rectangular area lights.
 - **Doors, windows and gates** selects an opening placement tool; double-click a wall to place the chosen opening.
@@ -194,6 +194,27 @@ Choose a family, move its outlined preview, and double-click to place it. Select
 | Kitchen racks / shelves | Dish rack, spice rack, or wall shelves; dimensions, tier count, contents count, and optional plates / jars |
 
 Worktop height is the top surface; island/bar height includes the supporting furniture. L/U dimensions describe the full footprint and arm depth controls each run. Worktop cutouts are real openings. Sink height describes the bowl from its underside to its rim; raise it so the rim meets the worktop. Faucets and open doors extend beyond the closed body dimensions. Move wall cabinets, shelves, hoods, and other mounted objects to their installation height using the position controls. Appliance indicators show visual state and do not simulate appliance operation.
+
+### Master bedroom collection
+
+Open **Model Library**, select **Master Bedroom**, and browse **Beds**, **Bedside**, **Storage**, **Seating**, **Other furniture**, and **Decoration**. Fourteen customizable families cover all 29 requested objects. Search recognizes individual items such as “super king bed”, “sliding doors”, “tallboy”, “full-length mirror”, and “floor lamp”.
+
+Choose a family, move its outlined preview, and double-click to place it. Select presets and customize the model in the inspector. Existing bed and wardrobe creation identifiers and saved numeric settings are preserved. Seating, rugs, curtains, artwork, floor lamps, and mirrors use the existing shared models.
+
+| Family | Variants and controls |
+| --- | --- |
+| Beds | Single, double, queen, king, or super king starting dimensions, independently combined with standard, platform, storage, or adjustable frames; mattress and frame dimensions, headboard, padding, bedding, storage drawers, and head / foot angles |
+| Bedside tables / shelves | Standing table or floating shelf; dimensions, drawers, opening amount, feet, and open cubby |
+| Bedside lamp | Shared lamp construction with table-lamp defaults; dimensions, shade style, on/off, brightness, and light color |
+| Wardrobe | 2-door, 3-door, or sliding presets; dimensions, doors, shelves, board and handle size, hinged door opening, sliding opening, hanging compartment, and mirrored doors |
+| Chests / dressers / clothes racks | Chest of drawers, wide dresser, tallboy, or clothes rack; dimensions, drawer columns / rows / extension, handles, legs, hangers, and shoe shelf |
+| Bedroom bench | Dimensions, padded seat, optional hollow storage, and lifting seat |
+| Accent chairs / ottomans | Shared configurable seating from the living room collection |
+| Dressing tables / vanities / desks | Dressing table, vanity, or desk; dimensions, drawers, opening amount, optional oval / rectangular mirror, mirror height, and illuminated vanity bulbs |
+| Full-length mirror | Shared mirror with a full-length size preset, shape, frame width, dimensions, and optional stand |
+| Decoration | Shared rug, curtains, wall art, and floor lamp with their existing controls |
+
+Bed sizes are editable starting dimensions and describe the outer frame. Bed height describes the headboard; mattress surface height has its own control. Raised adjustable sections can extend above the headboard. Dressing furniture height describes the tabletop, with the mirror extending above it. Open drawers and doors extend beyond closed body dimensions. Position floating bedside shelves, mirrors, artwork, curtains, and mounted lamps at the desired installation height using the position controls.
 
 ### Add Home Assistant entities
 

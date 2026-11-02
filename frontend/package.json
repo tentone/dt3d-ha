@@ -15,6 +15,7 @@
 		"test:bathroom": "node --test tests/bathroom.test.mjs",
 		"test:dining-room": "node --test tests/dining-room.test.mjs",
 		"test:kitchen": "node --test tests/kitchen.test.mjs",
+		"test:bedroom": "node --test tests/bedroom.test.mjs",
 		"test:object-placement": "node --test tests/object-placement.test.mjs",
 		"test:model-library": "node --test tests/model-library.test.mjs",
 		"test:model-library-ui": "playwright test --config playwright.model-library.config.mjs",

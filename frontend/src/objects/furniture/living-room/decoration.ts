@@ -137,6 +137,16 @@ export class MirrorObject extends LivingRoomObject {
 			"Mirror",
 			"livingMirrorControls",
 			[
+				choice("sizePreset", "MirrorSize", "standard-mirror", [
+					{
+						value: "standard-mirror",
+						parameters: {width: 0.7, depth: 0.035, height: 1.1},
+					},
+					{
+						value: "full-length-mirror",
+						parameters: {width: 0.65, depth: 0.04, height: 1.8},
+					},
+				]),
 				...dimensions(0.7, 0.035, 1.1),
 				choice("shape", "MirrorShape", "arched", [
 					"rectangle",

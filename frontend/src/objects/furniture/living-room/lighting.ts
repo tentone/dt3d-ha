@@ -11,10 +11,14 @@ import {
 } from "./primitives.js";
 
 export class LampObject extends LivingRoomObject {
-	constructor(parameters: Partial<FurnitureParameters> = {}, color = 0xd5c6aa) {
+	constructor(
+		parameters: Partial<FurnitureParameters> = {},
+		color = 0xd5c6aa,
+		type: "lamp" | "bedside-lamp" = "lamp",
+	) {
 		super(
-			"lamp",
-			"Living room lamp",
+			type,
+			type === "bedside-lamp" ? "Bedside lamp" : "Living room lamp",
 			"livingLampControls",
 			[
 				choice("style", "LampStyle", "floor-lamp", [
