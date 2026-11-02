@@ -71,6 +71,261 @@ async function placeSelectedModel(page) {
 	);
 }
 
+test("laundry library shows five categories and saves stacked appliances with undo", async ({
+	page,
+}) => {
+	const saved = [];
+	page.on("request", (request) => {
+		if (request.method() === "PUT" && request.url().includes("/objects/"))
+			saved.push(request.postDataJSON());
+	});
+	await openLibrary(page);
+	const library = page.locator("dt3d-model-library");
+	await library
+		.getByRole("combobox", { name: "Filter by room" })
+		.selectOption("laundry-room");
+	await expect(library.locator(".model")).toHaveCount(8);
+	await expect(library.locator(".preview img")).toHaveCount(8);
+	await expect(library.locator(".model-section h3")).toHaveText([
+		"Appliances",
+		"Fixtures",
+		"Storage",
+		"Furniture",
+		"Accessories",
+	]);
+	await library.getByRole("searchbox").fill("stacked laundry unit");
+	await library
+		.getByRole("button", { name: "Add Laundry appliances", exact: true })
+		.click();
+	await placeSelectedModel(page);
+	const inspector = page.locator("dt3d-object-inspector");
+	await inspector
+		.locator("summary")
+		.filter({ hasText: "Laundry appliance configuration" })
+		.click();
+	await inspector
+		.getByRole("combobox", { name: "Laundry appliance preset", exact: true })
+		.selectOption("stacked-laundry-unit");
+	await expect
+		.poll(() =>
+			page.evaluate(() => {
+				let count = 0;
+				window.testCard.space.children
+					.find(
+						(item) => item.userData.meshType === "furniture-laundry-appliance",
+					)
+					.traverse((item) => {
+						if (item.name === "Laundry Appliance Body") count++;
+					});
+				return count;
+			}),
+		)
+		.toBe(2);
+	const original = await page.evaluate(() =>
+		window.testCard.space.children
+			.find((item) => item.userData.meshType === "furniture-laundry-appliance")
+			.getParameters(),
+	);
+	await inspector
+		.getByRole("checkbox", { name: "Open appliance doors", exact: true })
+		.check();
+	await expect
+		.poll(() =>
+			saved.some(
+				(item) =>
+					item.data?.furniture?.style === "stacked-laundry-unit" &&
+					item.data.furniture.doorOpen === true,
+			),
+		)
+		.toBe(true);
+	await inspector
+		.getByRole("checkbox", { name: "Open appliance doors", exact: true })
+		.blur();
+	await page.keyboard.press("Control+z");
+	await expect
+		.poll(() =>
+			page.evaluate(() =>
+				window.testCard.space.children
+					.find(
+						(item) => item.userData.meshType === "furniture-laundry-appliance",
+					)
+					.getParameters(),
+			),
+		)
+		.toEqual(original);
+});
+
+test("laundry basins and broom cupboards expose functioning inspector controls", async ({
+	page,
+}) => {
+	await openLibrary(page);
+	let library = page.locator("dt3d-model-library");
+	await library
+		.getByRole("combobox", { name: "Filter by room" })
+		.selectOption("laundry-room");
+	await library.getByRole("searchbox").fill("laundry basin");
+	await library
+		.getByRole("button", {
+			name: "Add Utility sinks / laundry basins",
+			exact: true,
+		})
+		.click();
+	await placeSelectedModel(page);
+	const inspector = page.locator("dt3d-object-inspector");
+	await inspector
+		.locator("summary")
+		.filter({ hasText: "Utility sink configuration" })
+		.click();
+	await inspector
+		.getByRole("combobox", { name: "Utility sink preset", exact: true })
+		.selectOption("laundry-basin");
+	await inspector
+		.getByRole("checkbox", { name: "Include faucet", exact: true })
+		.uncheck();
+	await expect
+		.poll(() =>
+			page.evaluate(() => {
+				const object = window.testCard.space.children.find(
+					(item) => item.userData.meshType === "furniture-utility-sink",
+				);
+				return {
+					stand: object.parameters.standEnabled,
+					faucet: Boolean(object.getObjectByName("Kitchen Faucet Spout")),
+				};
+			}),
+		)
+		.toEqual({ stand: false, faucet: false });
+	await openLibrary(page);
+	library = page.locator("dt3d-model-library");
+	await library
+		.getByRole("combobox", { name: "Filter by room" })
+		.selectOption("laundry-room");
+	await library.getByRole("searchbox").fill("broom cupboard");
+	await library
+		.getByRole("button", { name: "Add Laundry storage", exact: true })
+		.click();
+	await placeSelectedModel(page);
+	const summary = inspector
+		.locator("summary")
+		.filter({ hasText: "Laundry storage configuration" });
+	if (!(await summary.evaluate((element) => element.parentElement.open)))
+		await summary.click();
+	await inspector
+		.getByRole("combobox", { name: "Laundry storage preset", exact: true })
+		.selectOption("broom-cupboard");
+	await inspector
+		.getByRole("checkbox", { name: "Open cabinet doors", exact: true })
+		.check();
+	await expect
+		.poll(() =>
+			page.evaluate(
+				() =>
+					window.testCard.space.children
+						.find(
+							(item) => item.userData.meshType === "furniture-laundry-storage",
+						)
+						.getObjectByName("Laundry Cabinet Hinge").rotation.y,
+			),
+		)
+		.toBeLessThan(-1);
+});
+
+test("ironing boards and drying racks fold and save their configuration", async ({
+	page,
+}) => {
+	const saved = [];
+	page.on("request", (request) => {
+		if (request.method() === "PUT" && request.url().includes("/objects/"))
+			saved.push(request.postDataJSON());
+	});
+	await openLibrary(page);
+	let library = page.locator("dt3d-model-library");
+	await library
+		.getByRole("combobox", { name: "Filter by room" })
+		.selectOption("laundry-room");
+	await library.getByRole("searchbox").fill("ironing board");
+	await library
+		.getByRole("button", {
+			name: "Add Folding tables / ironing boards",
+			exact: true,
+		})
+		.click();
+	await placeSelectedModel(page);
+	const inspector = page.locator("dt3d-object-inspector");
+	await inspector
+		.locator("summary")
+		.filter({ hasText: "Folding / ironing table configuration" })
+		.click();
+	await inspector
+		.getByRole("combobox", { name: "Folding / ironing preset", exact: true })
+		.selectOption("ironing-board");
+	await inspector
+		.getByRole("checkbox", { name: "Fold legs", exact: true })
+		.check();
+	await expect
+		.poll(() =>
+			saved.some(
+				(item) =>
+					item.data?.furniture?.style === "ironing-board" &&
+					item.data.furniture.folded === true,
+			),
+		)
+		.toBe(true);
+	await openLibrary(page);
+	library = page.locator("dt3d-model-library");
+	await library
+		.getByRole("combobox", { name: "Filter by room" })
+		.selectOption("laundry-room");
+	await library.getByRole("searchbox").fill("clothes drying rack");
+	await library
+		.getByRole("button", { name: "Add Clothes drying racks", exact: true })
+		.click();
+	await placeSelectedModel(page);
+	const summary = inspector
+		.locator("summary")
+		.filter({ hasText: "Drying rack configuration" });
+	if (!(await summary.evaluate((element) => element.parentElement.open)))
+		await summary.click();
+	await inspector
+		.getByRole("combobox", { name: "Drying rack preset", exact: true })
+		.selectOption("tower-airer");
+	await inspector
+		.getByRole("spinbutton", { name: "Tower tiers", exact: true })
+		.fill("4");
+	await inspector
+		.getByRole("spinbutton", { name: "Tower tiers", exact: true })
+		.blur();
+	await inspector
+		.getByRole("checkbox", { name: "Fold drying rack", exact: true })
+		.check();
+	await expect
+		.poll(() =>
+			saved.some(
+				(item) =>
+					item.data?.furniture?.style === "tower-airer" &&
+					item.data.furniture.tiers === 4 &&
+					item.data.furniture.folded === true,
+			),
+		)
+		.toBe(true);
+	await expect
+		.poll(() =>
+			page.evaluate(() => {
+				let count = 0;
+				window.testCard.space.children
+					.find(
+						(item) =>
+							item.userData.meshType === "furniture-clothes-drying-rack",
+					)
+					.traverse((item) => {
+						if (item.name === "Clothes Drying Rod") count++;
+					});
+				return count;
+			}),
+		)
+		.toBe(32);
+});
+
 test("office library shows six categories and saves mirrored L desks with undo", async ({
 	page,
 }) => {

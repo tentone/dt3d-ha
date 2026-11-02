@@ -88,7 +88,14 @@ export type FurnitureType =
 	| "office-desk-lamp"
 	| "monitor-stand"
 	| "office-board"
-	| "meeting-table";
+	| "meeting-table"
+	| "laundry-appliance"
+	| "utility-sink"
+	| "laundry-storage"
+	| "laundry-worktable"
+	| "laundry-sorting-station"
+	| "clothes-drying-rack"
+	| "cleaning-trolley";
 
 export type FurnitureParameters = Record<string, number | boolean | string>;
 

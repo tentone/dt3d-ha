@@ -52,6 +52,17 @@ import {
 } from "./kitchen/fixtures.js";
 import {KitchenRefrigeratorObject} from "./kitchen/refrigeration.js";
 import {
+	CleaningTrolleyObject,
+	ClothesDryingRackObject,
+} from "./laundry/accessories.js";
+import {LaundryApplianceObject} from "./laundry/appliances.js";
+import {UtilitySinkObject} from "./laundry/fixtures.js";
+import {
+	LaundrySortingStationObject,
+	LaundryWorktableObject,
+} from "./laundry/furniture.js";
+import {LaundryStorageObject} from "./laundry/storage.js";
+import {
 	ArtworkObject,
 	CurtainsObject,
 	FireplaceObject,
@@ -137,7 +148,8 @@ export type FurnitureCategory =
 	| "bedroom-furniture"
 	| "nursery-furniture"
 	| "play"
-	| "equipment";
+	| "equipment"
+	| "laundry-furniture";
 
 export type FurnitureOption = {
 	type: `furniture-${FurnitureType}`;
@@ -575,7 +587,8 @@ export const FURNITURE_OPTIONS: FurnitureOption[] = [
 		category: "other",
 		labelKey: "bathModelLaundryBasket",
 		icon: "mdi:basket-outline",
-		rooms: ["bathroom"],
+		rooms: ["bathroom", "laundry-room"],
+		roomCategories: {"laundry-room": "accessories"},
 		keywords: ["laundry basket", "hamper"],
 	},
 	{
@@ -1105,6 +1118,87 @@ export const FURNITURE_OPTIONS: FurnitureOption[] = [
 		rooms: ["home-office"],
 		keywords: ["meeting table", "conference table"],
 	},
+	{
+		type: "furniture-laundry-appliance",
+		furnitureType: "laundry-appliance",
+		category: "appliances",
+		labelKey: "laundryModelAppliance",
+		icon: "mdi:washing-machine",
+		rooms: ["laundry-room"],
+		keywords: [
+			"washing machine",
+			"tumble dryer",
+			"washer-dryer",
+			"washer dryer",
+			"stacked laundry unit",
+			"stacked washer dryer",
+		],
+	},
+	{
+		type: "furniture-utility-sink",
+		furnitureType: "utility-sink",
+		category: "fixtures",
+		labelKey: "laundryModelSink",
+		icon: "mdi:water-pump",
+		rooms: ["laundry-room"],
+		keywords: ["utility sink", "laundry basin", "laundry sink"],
+	},
+	{
+		type: "furniture-laundry-storage",
+		furnitureType: "laundry-storage",
+		category: "storage",
+		labelKey: "laundryModelStorage",
+		icon: "mdi:cupboard-outline",
+		rooms: ["laundry-room"],
+		keywords: [
+			"laundry cabinet",
+			"broom cupboard",
+			"broom cabinet",
+			"wall shelves",
+			"storage rack",
+		],
+	},
+	{
+		type: "furniture-laundry-worktable",
+		furnitureType: "laundry-worktable",
+		category: "laundry-furniture",
+		labelKey: "laundryModelWorktable",
+		icon: "mdi:ironing-board",
+		rooms: ["laundry-room"],
+		keywords: ["folding table", "ironing board", "laundry worktable"],
+	},
+	{
+		type: "furniture-laundry-sorting-station",
+		furnitureType: "laundry-sorting-station",
+		category: "laundry-furniture",
+		labelKey: "laundryModelSorting",
+		icon: "mdi:basket-outline",
+		rooms: ["laundry-room"],
+		keywords: ["laundry sorting station", "laundry sorter", "sorting bags"],
+	},
+	{
+		type: "furniture-clothes-drying-rack",
+		furnitureType: "clothes-drying-rack",
+		category: "accessories",
+		labelKey: "laundryModelDrying",
+		icon: "mdi:tumble-dryer",
+		rooms: ["laundry-room"],
+		keywords: [
+			"clothes drying rack",
+			"clothes airer",
+			"drying rack",
+			"tower airer",
+		],
+	},
+	{
+		type: "furniture-cleaning-trolley",
+		furnitureType: "cleaning-trolley",
+		category: "accessories",
+		labelKey: "laundryModelTrolley",
+		icon: "mdi:cart-outline",
+		rooms: ["laundry-room"],
+		keywords: ["cleaning trolley", "cleaning cart", "utility cart"],
+	},
 ];
 
 export function furnitureTypeFromMeshType(type: string): FurnitureType | null {
@@ -1238,4 +1332,11 @@ const CUSTOM_FURNITURE_FACTORIES: Partial<
 	"monitor-stand": MonitorStandObject,
 	"office-board": OfficeBoardObject,
 	"meeting-table": MeetingTableObject,
+	"laundry-appliance": LaundryApplianceObject,
+	"utility-sink": UtilitySinkObject,
+	"laundry-storage": LaundryStorageObject,
+	"laundry-worktable": LaundryWorktableObject,
+	"laundry-sorting-station": LaundrySortingStationObject,
+	"clothes-drying-rack": ClothesDryingRackObject,
+	"cleaning-trolley": CleaningTrolleyObject,
 };

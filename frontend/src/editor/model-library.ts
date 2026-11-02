@@ -37,6 +37,17 @@ export type ModelRoom = {
 };
 export const MODEL_ROOMS: ModelRoom[] = [
 	{
+		id: "laundry-room",
+		labelKey: "laundryRoom",
+		categories: [
+			"appliances",
+			"fixtures",
+			"storage",
+			"laundry-furniture",
+			"accessories",
+		],
+	},
+	{
 		id: "home-office",
 		labelKey: "officeRoom",
 		categories: [
@@ -120,6 +131,11 @@ export const MODEL_ROOMS: ModelRoom[] = [
 
 export const MODEL_CATEGORIES: ModelCategory[] = [
 	{id: "seating", labelKey: "modelCategorySeating", icon: "mdi:sofa-outline"},
+	{
+		id: "laundry-furniture",
+		labelKey: "laundryCategoryFurniture",
+		icon: "mdi:ironing-board",
+	},
 	{
 		id: "equipment",
 		labelKey: "officeCategoryEquipment",

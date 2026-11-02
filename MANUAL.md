@@ -63,7 +63,7 @@ Space creation, cloning, import/export, switching, and deletion are hidden when 
 The left sidebar organizes creation tools into **Model Library**, **Scene tools**, and **Floorplan**:
 
 - **Model Library** is a searchable explorer with 3D preview thumbnails. Browse all models or select a category. Search matches model names, categories, and aliases such as “sofa” for Couch.
-- Filter furniture by **Living Room**, **Dining Room**, **Kitchen**, **Bathroom**, **Master Bedroom**, **Children's Bedroom / Nursery**, or **Home Office / Study**, then browse the categories for that room.
+- Filter furniture by **Living Room**, **Dining Room**, **Kitchen**, **Bathroom**, **Master Bedroom**, **Children's Bedroom / Nursery**, **Home Office / Study**, or **Laundry / Utility Room**, then browse the categories for that room.
 - **Geometric Shapes** contains cube, sphere, plane, capsule, circle, cone, cylinder, dodecahedron, icosahedron, octahedron, ring, tetrahedron, torus, and torus knot.
 - **Lighting** contains ambient, directional, point, spot, and rectangular area lights.
 - **Doors, windows and gates** selects an opening placement tool; double-click a wall to place the chosen opening.
@@ -262,6 +262,25 @@ Choose a family, move its outlined preview, and double-click to place it. Select
 | Meeting tables / sofas / lounge chairs | Configurable meeting-table top and supports, plus the existing sofa and accent-chair families |
 
 L/corner desk dimensions describe the full footprint. L desk run depth controls both arms, and the return can be mirrored. Keyboard trays, drawers, open lids, lamp arms, and board stands can extend beyond the closed body dimensions. Monitor dimensions describe each monitor; multiple monitors increase the arrangement's total width. Laptop dimensions describe the closed body; the open screen extends above it. Board dimensions describe the board itself, with any floor stand extending below it. Place equipment, lamps, and monitor stands on the desktop using the placement preview, and set wall shelving / boards to their installation height with the position controls.
+
+### Laundry / utility room collection
+
+Open **Model Library**, select **Laundry / Utility Room**, and browse **Appliances**, **Fixtures**, **Storage**, **Furniture**, and **Accessories**. Eight customizable families cover all 16 requested objects. Search recognizes names such as “washer-dryer”, “stacked laundry unit”, “laundry basin”, “broom cupboard”, “ironing board”, and “clothes drying rack”.
+
+Choose a family, move its outlined preview, and double-click to place it. Select presets and adjust dimensions and details in the inspector. Preset changes, cloning, saving, and undo use the same workflow as other collections. The laundry basket is shared with Bathroom and appears under **Accessories** in this room.
+
+| Family | Variants and controls |
+| --- | --- |
+| Laundry appliances | Washing machine, tumble dryer, washer-dryer, or stacked unit; dimensions, opening doors, left / right hinges, drum contents, and power indicators |
+| Utility sinks / laundry basins | Freestanding utility sink or unmounted laundry basin; dimensions, bowl depth, optional stand, drainpipe / trap, and faucet |
+| Laundry storage | Laundry cabinet, broom cupboard, wall shelves, or storage rack; dimensions, shelves, doors and opening state, back panel, and optional broom / storage boxes |
+| Folding tables / ironing boards | Laundry folding surface or tapered ironing board; dimensions, top thickness, collapsing legs, and optional iron rest |
+| Sorting stations | Dimensions, 1–4 separate bags, pull-out amount, optional folding top, contents, and casters |
+| Clothes drying racks | Winged airer or tower rack; dimensions, rods per panel, tower tiers, folding state, optional wings, and towels |
+| Laundry basket | Shared oval / rectangular basket with woven / slatted sides, optional lid, and laundry contents |
+| Cleaning trolleys | Dimensions, shelves, casters, hollow bucket and bottles, and optional mop |
+
+Stacked appliance dimensions describe the complete unit. Sink height includes any stand and ends at the rim; faucets can extend above it. Without a stand, basin dimensions describe the bowl body. Table height describes the unfolded surface; folding the legs lowers the model into a compact horizontal profile. Drying racks fold their panels upright and narrow their frame. Open doors, pulled-out bags, iron rests, handles, towels, and supplies can extend beyond the main body. Position wall shelves and unmounted basins at their installation height with the position controls. Appliance displays show visual power state and do not simulate laundry cycles.
 
 ### Add Home Assistant entities
 
