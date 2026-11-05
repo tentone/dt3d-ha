@@ -145,8 +145,8 @@ export class DT3DConfigEditor extends LitElement {
 		]);
 	}
 
-	private scheduleSpacesReload(): void {
-		this._spaces = [];
+	private scheduleSpacesReload(clearSpaces = true): void {
+		if (clearSpaces) this._spaces = [];
 		this.spacesRequestSequence += 1;
 		const requestSequence = this.spacesRequestSequence;
 
@@ -174,10 +174,14 @@ export class DT3DConfigEditor extends LitElement {
 				String(this._config?.service_key ?? ""),
 			);
 			const spaces = await apiClient.listSpaces(false);
+			if (requestSequence !== this.spacesRequestSequence) return;
+			this._spaces = spaces;
 			const configuredSpaceId =
 				this._config?.default_space ?? this._config?.defaultSpace;
 			const selectedSpace =
-				spaces.find((space) => space.id === configuredSpaceId) ?? spaces[0];
+				spaces.find((space) => space.id === configuredSpaceId) ??
+				spaces.find((space) => space.is_default) ??
+				spaces[0];
 			if (selectedSpace) {
 				Object.assign(
 					selectedSpace,
@@ -185,12 +189,10 @@ export class DT3DConfigEditor extends LitElement {
 				);
 			}
 			if (requestSequence === this.spacesRequestSequence) {
-				this._spaces = spaces;
+				this._spaces = [...spaces];
 			}
 		} catch {
-			if (requestSequence === this.spacesRequestSequence) {
-				this._spaces = [];
-			}
+			// Keep the space choices available if loading viewport data fails.
 		}
 	}
 
@@ -266,7 +268,7 @@ export class DT3DConfigEditor extends LitElement {
 			default_space: target.value,
 			default_viewport: "",
 		});
-		this.scheduleSpacesReload();
+		this.scheduleSpacesReload(false);
 	}
 
 	private getLocationEntities(): { entityId: string; label: string }[] {
@@ -296,6 +298,16 @@ export class DT3DConfigEditor extends LitElement {
 			.sort((left, right) => left.label.localeCompare(right.label));
 	}
 
+	protected updated(): void {
+		// These selects can acquire their options after the configuration is set.
+		for (const key of ["default_space", "default_viewport"]) {
+			const select = this.renderRoot.querySelector<HTMLSelectElement>(
+				`select[data-key="${key}"]`,
+			);
+			if (select) select.value = this._config?.[key] ?? "";
+		}
+	}
+
 	/**
 	 * Presented to the user to configure the card.
 	 */
@@ -311,7 +323,9 @@ export class DT3DConfigEditor extends LitElement {
 		const defaultViewport =
 			this._config.default_viewport ?? this._config.defaultViewport ?? "";
 		const selectedSpace =
-			this._spaces.find((space) => space.id === defaultSpace) ?? this._spaces[0];
+			this._spaces.find((space) => space.id === defaultSpace) ??
+			this._spaces.find((space) => space.is_default) ??
+			this._spaces[0];
 		const viewports = (selectedSpace?.object_instances ?? []).filter(
 			(instance) => instance.type === "viewport",
 		);

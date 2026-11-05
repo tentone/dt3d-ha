@@ -18,6 +18,9 @@ export class DT3DSpaceSelector extends LitElement {
 	@property({type: Boolean})
 	public loading = false;
 
+	@property({type: Boolean})
+	public editingBlocked = false;
+
 	private handleChange(event: Event): void {
 		const spaceId = (event.target as HTMLSelectElement).value;
 		this.selectedSpaceId = spaceId;
@@ -118,6 +121,12 @@ export class DT3DSpaceSelector extends LitElement {
 		);
 	}
 
+	protected updated(): void {
+		// Updating the options can reset the browser's selection after Lit sets .value.
+		const select = this.renderRoot.querySelector("select");
+		if (select) select.value = this.selectedSpaceId;
+	}
+
 	protected render() {
 		return html`
 			<div class="selector" aria-busy=${this.loading ? "true" : "false"}>
@@ -135,7 +144,7 @@ export class DT3DSpaceSelector extends LitElement {
 				<select
 					id="active-space"
 					.value=${this.selectedSpaceId}
-					?disabled=${this.loading || this.spaces.length === 0}
+					?disabled=${this.spaces.length === 0}
 					@change=${this.handleChange}
 				>
 					${this.spaces.length === 0
@@ -147,7 +156,7 @@ export class DT3DSpaceSelector extends LitElement {
 				</select>
 				<button
 					type="button"
-					?disabled=${this.loading || !this.selectedSpaceId}
+					?disabled=${this.loading || this.editingBlocked || !this.selectedSpaceId}
 					@click=${this.requestConfigure}
 					title=${localManager.get("spaceConfiguration")}
 					aria-label=${localManager.get("spaceConfiguration")}
@@ -156,7 +165,7 @@ export class DT3DSpaceSelector extends LitElement {
 				</button>
 				<button
 					type="button"
-					?disabled=${this.loading}
+					?disabled=${this.loading || this.editingBlocked}
 					@click=${this.requestCreate}
 					title=${localManager.get("createSpace")}
 					aria-label=${localManager.get("createSpace")}
@@ -165,7 +174,7 @@ export class DT3DSpaceSelector extends LitElement {
 				</button>
 				<button
 					type="button"
-					?disabled=${this.loading || !this.selectedSpaceId}
+					?disabled=${this.loading || this.editingBlocked || !this.selectedSpaceId}
 					@click=${this.requestClone}
 					title=${localManager.get("cloneSpace")}
 					aria-label=${localManager.get("cloneSpace")}
@@ -174,7 +183,7 @@ export class DT3DSpaceSelector extends LitElement {
 				</button>
 				<button
 					type="button"
-					?disabled=${this.loading || !this.selectedSpaceId}
+					?disabled=${this.loading || this.editingBlocked || !this.selectedSpaceId}
 					@click=${this.requestExport}
 					title=${localManager.get("exportSpace")}
 					aria-label=${localManager.get("exportSpace")}
@@ -183,7 +192,7 @@ export class DT3DSpaceSelector extends LitElement {
 				</button>
 				<button
 					type="button"
-					?disabled=${this.loading}
+					?disabled=${this.loading || this.editingBlocked}
 					@click=${this.requestImport}
 					title=${localManager.get("importSpace")}
 					aria-label=${localManager.get("importSpace")}
@@ -193,7 +202,7 @@ export class DT3DSpaceSelector extends LitElement {
 				<button
 					type="button"
 					class="delete-button"
-					?disabled=${this.loading || !this.selectedSpaceId}
+					?disabled=${this.loading || this.editingBlocked || !this.selectedSpaceId}
 					@click=${this.requestDelete}
 					title=${localManager.get("deleteSpace")}
 					aria-label=${localManager.get("deleteSpace")}

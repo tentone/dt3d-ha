@@ -330,6 +330,7 @@ export class SpaceSync {
 	private isSyncingFromApi = false;
 	private loadGeneration = 0;
 	private requestedSpaceId: string | null = null;
+	private refreshing = false;
 	private stagingSpace: Group | null = null;
 	private onLoadStateChanged?: SpaceSyncDependencies["onLoadStateChanged"];
 	private onSpaceApplied?: SpaceSyncDependencies["onSpaceApplied"];
@@ -341,6 +342,10 @@ export class SpaceSync {
 	public activeSpace: SpaceResponse | null = null;
 
 	public availableSpaces: SpaceResponse[] = [];
+
+	public get targetSpaceId(): string | null {
+		return this.refreshing ? this.requestedSpaceId : this.activeSpaceId;
+	}
 
 	constructor({
 		apiClient,
@@ -418,6 +423,8 @@ export class SpaceSync {
 	public async initializeSpaceFromApi(
 		preferredSpaceId?: string,
 	): Promise<SpaceResponse | null> {
+		const generation = ++this.loadGeneration;
+		this.resourceLoadGeneration += 1;
 		this.setLoadState(true);
 
 		try {
@@ -425,10 +432,12 @@ export class SpaceSync {
 				"Load spaces",
 				"Available spaces",
 				() =>
-					this.apiClient.listSpaces(true, (spaces) =>
-						this.setAvailableSpaces(spaces),
-					),
+					this.apiClient.listSpaces(true, (spaces) => {
+						if (generation === this.loadGeneration)
+							this.setAvailableSpaces(spaces);
+					}),
 			);
+			if (generation !== this.loadGeneration) return null;
 			this.setAvailableSpaces(spaces);
 			let space = preferredSpaceId
 				? spaces.find((candidate) => candidate.id === preferredSpaceId)
@@ -439,6 +448,7 @@ export class SpaceSync {
 			if (!space) {
 				// Confirm an empty cached list before creating anything.
 				const current = await this.apiClient.listSpaces(false);
+				if (generation !== this.loadGeneration) return null;
 				this.setAvailableSpaces(current);
 				space =
 					current.find((candidate) => candidate.id === preferredSpaceId) ??
@@ -461,17 +471,18 @@ export class SpaceSync {
 					"Default Space",
 					"Auto-created space",
 				);
+				if (generation !== this.loadGeneration) return null;
 				this.availableSpaces = [space];
 			}
 
-			return await this.loadSpace(space);
+			return await this.loadSpace(space, generation);
 		} catch (error) {
+			if (generation !== this.loadGeneration) return null;
 			console.error("DT3D: Failed to load spaces from API", error);
 			this.setLoadState(
 				false,
 				"Unable to load the space. Retry to enable editing.",
 			);
-			this.availableSpaces = [];
 			this.activeSpaceId = null;
 			this.activeSpace = null;
 			this.clearSpace();
@@ -502,6 +513,7 @@ export class SpaceSync {
 	}
 
 	private setLoadState(refreshing: boolean, error: string | null = null): void {
+		this.refreshing = refreshing;
 		this.editingBlocked = refreshing || error !== null;
 		this.isSyncingFromApi = this.editingBlocked;
 		this.onLoadStateChanged?.({
@@ -599,9 +611,9 @@ export class SpaceSync {
 
 	private async loadSpace(
 		spaceOrId: SpaceResponse | string,
+		generation = ++this.loadGeneration,
 	): Promise<SpaceResponse> {
 		const spaceId = typeof spaceOrId === "string" ? spaceOrId : spaceOrId.id;
-		const generation = ++this.loadGeneration;
 		this.requestedSpaceId = spaceId;
 		this.resourceLoadGeneration += 1;
 		this.setLoadState(true);
@@ -629,6 +641,7 @@ export class SpaceSync {
 					await this.applySnapshot(cached, false);
 					cacheReady = true;
 				} catch (error) {
+					if (generation !== this.loadGeneration) throw error;
 					console.warn(
 						"DT3D: Cached scene resources could not be loaded",
 						error,
@@ -690,6 +703,8 @@ export class SpaceSync {
 				staged,
 			);
 			if (staged) await ready;
+			if (generation !== this.loadGeneration)
+				throw new Error("Space load superseded");
 			committed = true;
 			if (snapshot.object_instances.length === 0)
 				this.sceneManager.createDefaultScene();

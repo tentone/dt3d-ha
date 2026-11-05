@@ -440,6 +440,8 @@ export class DT3DCard extends LitElement {
 	 * API sync helper for spaces and objects.
 	 */
 	private spaceSync: SpaceSync | null = null;
+	private spaceChangeSequence = 0;
+	private pendingSpaceChangeId: string | null = null;
 
 	/**
 	 * Normalized pointer position.
@@ -770,6 +772,7 @@ export class DT3DCard extends LitElement {
 		if (!config) {
 			throw new Error("Invalid configuration");
 		}
+		const previousDefaultSpaceId = this.getDefaultSpaceId();
 
 		const visualizationOnly = booleanConfig(
 			config.visualization_only ?? config.visualizationOnly,
@@ -843,6 +846,15 @@ export class DT3DCard extends LitElement {
 		this.applyVisualizationMode();
 		this.applyXrConfiguration();
 
+		if (this.spaceSync && previousDefaultSpaceId !== this.getDefaultSpaceId()) {
+			const spaceId =
+				this.getDefaultSpaceId() ??
+				this.spaceSync.availableSpaces.find((space) => space.is_default)?.id ??
+				this.spaceSync.availableSpaces[0]?.id;
+			if (spaceId) void this.changeActiveSpace(spaceId, true);
+			else void this.spaceSync.initializeSpaceFromApi();
+		}
+
 		console.log("DT3D: Config set:", this.config);
 	}
 
@@ -862,9 +874,14 @@ export class DT3DCard extends LitElement {
 			this.tree,
 			this.bottomBar,
 			this.materialManager,
-			this.spaceSelector,
 		]) {
 			if (panel) panel.inert = state.blocked;
+		}
+		if (this.spaceSelector) {
+			this.spaceSelector.loading = state.refreshing;
+			this.spaceSelector.editingBlocked = state.blocked;
+			const spaceId = this.pendingSpaceChangeId ?? this.spaceSync?.targetSpaceId;
+			if (spaceId) this.spaceSelector.selectedSpaceId = spaceId;
 		}
 
 		if (state.blocked) {
@@ -4491,15 +4508,20 @@ export class DT3DCard extends LitElement {
 		this.updateEntityObjects();
 	}
 
-	private async changeActiveSpace(spaceId: string): Promise<void> {
+	private async changeActiveSpace(
+		spaceId: string,
+		fromConfig = false,
+	): Promise<void> {
 		if (
-			this.isEditingDisabled() ||
+			(!fromConfig && this.isVisualizationOnly()) ||
 			!this.spaceSync ||
 			!spaceId ||
-			spaceId === this.spaceSync.activeSpaceId
+			spaceId === (this.pendingSpaceChangeId ?? this.spaceSync.targetSpaceId)
 		) {
 			return;
 		}
+		const sequence = ++this.spaceChangeSequence;
+		this.pendingSpaceChangeId = spaceId;
 
 		if (this.persistSpaceConfigTimer !== null) {
 			window.clearTimeout(this.persistSpaceConfigTimer);
@@ -4509,27 +4531,32 @@ export class DT3DCard extends LitElement {
 
 		if (this.spaceSelector) {
 			this.spaceSelector.loading = true;
+			this.spaceSelector.selectedSpaceId = spaceId;
 		}
 
 		try {
 			await this.actionStack.flush();
+			if (sequence !== this.spaceChangeSequence) return;
 			this.attachTransform(null);
 			this.setSelectedObject(null);
 			this.resetMaterialLibrary();
 			const space = await this.spaceSync.loadSpaceFromApi(spaceId);
+			if (sequence !== this.spaceChangeSequence) return;
 			this.actionStack.clear();
 			if (!space) this.applySpaceConfigFromApi(null);
 			if (this.spaceSelector) {
 				this.spaceSelector.selectedSpaceId = space.id;
 			}
 		} catch (error) {
+			if (sequence !== this.spaceChangeSequence) return;
 			console.error("DT3D: Failed to change active space", error);
 			if (this.spaceSelector) {
 				this.spaceSelector.selectedSpaceId = this.spaceSync.activeSpaceId ?? "";
 			}
 		} finally {
-			if (this.spaceSelector) {
-				this.spaceSelector.loading = false;
+			if (sequence === this.spaceChangeSequence) {
+				this.pendingSpaceChangeId = null;
+				if (this.spaceSelector) this.spaceSelector.loading = false;
 			}
 		}
 	}
@@ -5449,7 +5476,8 @@ export class DT3DCard extends LitElement {
 				this.applySpaceConfigFromApi(space);
 				this.applyDefaultViewportOnLoad();
 				this.updateEntityObjects();
-				if (this.spaceSelector) this.spaceSelector.selectedSpaceId = space.id;
+				if (this.spaceSelector)
+					this.spaceSelector.selectedSpaceId = this.pendingSpaceChangeId ?? space.id;
 				await this.materialLibraryReady;
 			},
 			sceneManager: this.sceneManager,
@@ -5468,13 +5496,8 @@ export class DT3DCard extends LitElement {
 		void this.spaceSync
 			.initializeSpaceFromApi(this.getDefaultSpaceId())
 			.then((space) => {
-				this.actionStack.clear();
-				if (this.spaceSelector) {
-					this.spaceSelector.spaces = this.spaceSync?.availableSpaces ?? [];
-					this.spaceSelector.selectedSpaceId = space?.id ?? "";
-					this.spaceSelector.loading = false;
-				}
-				if (!space) this.applySpaceConfigFromApi(null);
+				if (!space && !this.spaceSync?.targetSpaceId)
+					this.applySpaceConfigFromApi(null);
 			});
 
 		// Listen for selection events from the tree
