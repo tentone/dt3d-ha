@@ -1,7 +1,7 @@
 :host {
 	position: absolute;
 	inset: 0;
-	z-index: 20;
+	z-index: 1000;
 	color: var(--primary-text-color);
 }
 

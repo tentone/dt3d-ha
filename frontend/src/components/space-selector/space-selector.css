@@ -1,34 +1,63 @@
 :host {
 	position: absolute;
-	top: 16px;
-	left: 50%;
-	width: min(500px, calc(100% - 160px));
+	inset: 0 0 auto;
+	height: var(--editor-header-height, 56px);
+	z-index: 130;
+	color: var(--primary-text-color);
 }
 
 .selector {
 	display: flex;
 	align-items: center;
-	gap: 8px;
-	padding: 8px 10px;
-	border-radius: 8px;
-	background: color-mix(in srgb, var(--card-background-color) 92%, transparent);
-	color: var(--primary-text-color);
-	border: 1px solid var(--divider-color);
-	box-shadow: 0 4px 12px var(--shadow-color);
-	transform: translateX(-50%);
+	gap: 12px;
+	height: 100%;
+	padding: 8px 12px;
 	box-sizing: border-box;
+	border-bottom: 1px solid var(--divider-color);
+	background: var(--card-background-color);
+}
+
+label { display: flex; align-items: center; color: var(--secondary-text-color); }
+label span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+.space-field { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; }
+.space-actions { display: flex; flex: 0 0 auto; gap: 4px; padding-left: 12px; border-left: 1px solid var(--divider-color); }
+
+select {
 	width: 100%;
-}
-
-select option {
-	background-color: var(--card-background-color, #fff);
-	color: var(--primary-text-color, #212121);
-}
-
-label {
-	font-size: 12px;
+	max-width: 320px;
+	min-width: 0;
+	height: 36px;
+	padding: 0 8px;
+	border: 1px solid var(--divider-color);
+	border-radius: 7px;
+	background: var(--card-background-color);
+	color: var(--primary-text-color);
+	font: inherit;
 	font-weight: 600;
+	cursor: pointer;
 }
+select option { background: var(--card-background-color); color: var(--primary-text-color); }
+
+button {
+	display: grid;
+	place-items: center;
+	width: 36px;
+	height: 36px;
+	padding: 0;
+	border: 0;
+	border-radius: 7px;
+	background: transparent;
+	color: var(--primary-text-color);
+	cursor: pointer;
+}
+
+button:hover:not(:disabled) { background: color-mix(in srgb, var(--primary-color) 16%, transparent); }
+button.delete-button:hover:not(:disabled) { color: var(--error-color); }
+button:disabled { cursor: not-allowed; opacity: 0.35; }
+select:disabled { cursor: wait; opacity: 0.5; }
+button:focus-visible, select:focus-visible { outline: 2px solid var(--primary-color); outline-offset: 1px; }
+ha-icon { --mdc-icon-size: 20px; }
+input[type="file"] { display: none; }
 
 .loading-indicator {
 	width: 14px;
@@ -38,75 +67,13 @@ label {
 	border-top-color: var(--primary-color);
 	border-radius: 50%;
 	animation: loading-spin 0.75s linear infinite;
-	box-sizing: border-box;
+}
+@keyframes loading-spin { to { transform: rotate(360deg); } }
+
+@container dt3d-editor (max-width: 599px) {
+	.selector { display: grid; grid-template-columns: 24px minmax(0, 1fr); gap: 4px 8px; }
+	.space-actions { grid-column: 1 / -1; justify-content: flex-end; border: 0; padding: 0; }
+	select { max-width: none; }
 }
 
-@keyframes loading-spin {
-	to {
-		transform: rotate(360deg);
-	}
-}
-
-select {
-	flex: 1;
-	min-width: 0;
-	max-width: 260px;
-	padding: 5px 28px 5px 8px;
-	border: 1px solid var(--divider-color);
-	border-radius: 5px;
-	background: var(--input-fill-color);
-	color: var(--input-ink-color);
-	font: inherit;
-	cursor: pointer;
-}
-
-button {
-	display: inline-flex;
-	align-items: center;
-	justify-content: center;
-	width: 30px;
-	height: 30px;
-	padding: 0;
-	border: 1px solid var(--divider-color);
-	border-radius: 5px;
-	background: var(--input-fill-color);
-	color: var(--primary-text-color);
-	cursor: pointer;
-}
-
-button:hover:not(:disabled) {
-	background: var(--secondary-background-color);
-}
-
-button.delete-button:hover:not(:disabled) {
-	background: var(--error-color);
-	color: var(--ha-color-on-danger-loud);
-}
-
-button:disabled {
-	cursor: not-allowed;
-	opacity: 0.45;
-}
-
-button:focus-visible {
-	outline: 2px solid var(--primary-color);
-	outline-offset: 2px;
-}
-
-ha-icon {
-	--mdc-icon-size: 18px;
-}
-
-input[type="file"] {
-	display: none;
-}
-
-select:disabled {
-	cursor: wait;
-	opacity: 0.65;
-}
-
-select:focus-visible {
-	outline: 2px solid var(--primary-color);
-	outline-offset: 2px;
-}
+@media (prefers-reduced-motion: reduce) { .loading-indicator { animation: none; } }

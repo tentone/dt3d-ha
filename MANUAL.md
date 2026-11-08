@@ -16,6 +16,9 @@ Keep one editing card for maintaining the digital twin and create separate read-
 
 ### Navigate and edit objects
 
+- The top bar manages spaces, the left icon rail contains creation tools and materials, and the right dock contains **Objects** and **Inspector**. Hover over an icon or focus it with the keyboard to see its label. Use the chevrons to hide or show either side panel.
+- The bottom toolbar groups transform, measurement, grid, and collision controls. It wraps within the available workspace as the editor narrows. On small screens, close the object dock to return to the scene tools.
+- Editing controls are dimmed and blocked while a space loads. The object dock explains the loading state; if loading fails, use **Retry loading space**. You can still switch spaces and open or close the side panels.
 - Orbit, pan, and zoom with the usual mouse or touch gestures. Use the camera button to switch between perspective and orthographic projection.
 - Select an object with one click in the object tree or by double-clicking it in the scene. Use **Move**, **Rotate**, **Scale**, **Disable transform controls**, or **Focus selected objects** on the bottom toolbar. The inspector can edit the object's name, lock state, transform, geometry, material, shadows, and type-specific properties.
 - In the object tree or while double-clicking objects in the scene, hold **Ctrl** (**Cmd** on macOS) to add or remove individual objects from the selection. In the tree, hold **Shift** to select a visible range. A shared transform control moves, rotates, or scales the selection together.
@@ -60,7 +63,7 @@ Space creation, cloning, import/export, switching, and deletion are hidden when 
 
 ### Add 3D elements
 
-The left sidebar organizes creation tools into **Model Library**, **Scene tools**, and **Floorplan**:
+The left icon rail groups the model and material libraries, scene creation tools, and floorplan tools. Hover over an icon to find a tool by name:
 
 - **Model Library** is a searchable explorer with 3D preview thumbnails. Browse all models or select a category. Search matches model names, categories, and aliases such as “sofa” for Couch.
 - Filter furniture by **Living Room**, **Dining Room**, **Kitchen**, **Bathroom**, **Master Bedroom**, **Children's Bedroom / Nursery**, **Home Office / Study**, **Laundry / Utility Room**, **Walk-in Closet / Dressing Room**, **Garage**, **Balcony / Terrace / Patio**, **Garden / Backyard**, **Entertainment / Game Room**, or **Home Gym / Fitness Room**, then browse the categories for that room.
@@ -464,7 +467,7 @@ Add as many rules as needed. Each rule can use the same entity or a different on
 
 #### Add and calibrate a reference image
 
-1. Open **Floorplan > Floorplan reference** in the sidebar.
+1. Open **Floorplan reference** (image-plus icon) in the left rail.
 2. Select a 2D floorplan image. In the calibration dialog, click two points whose real separation is known, enter that distance in meters, and choose **Add floorplan**.
 3. DT3D creates a horizontal textured plane at the calibrated real-world size. Switch to an orthographic top view if that makes the image easier to trace. You can instead add or import a plane manually. When a wall point does not hit a visible scene object, it is placed on the ground grid plane instead.
 4. Optionally enable grid snapping and set a suitable snap size. Grid snapping and the smart wall guides below are separate features.
@@ -488,9 +491,9 @@ While a wall is previewed without **Ctrl**, DT3D automatically looks for useful 
 
 Point snaps to existing wall joints activate within `0.40 m`; endpoint-alignment snaps activate within `0.20 m`; parallel alignment activates within `5°`. Before the first point is placed, a translucent rectangular or circular joint follows the pointer and the point/alignment guidelines show the position that will be used. The lines and preview joint are temporary editor guides and are not saved or rendered in visualization cards. A direct pointer hit on an existing wall takes priority so it can form a real connection. Holding **Ctrl** uses the manual X/Z constraint instead of these smart guides.
 
-When wall centerlines form a closed loop, DT3D automatically creates a floor surface for that boundary. Moving a wall endpoint updates the matching automatic floor; opening the loop removes it. Adding more walls to the same closed room does not create duplicate floors. You can disable this behavior for the active space from **Floorplan > Wall creation > Create floors automatically** in the object sidebar.
+When wall centerlines form a closed loop, DT3D automatically creates a floor surface for that boundary. Moving a wall endpoint updates the matching automatic floor; opening the loop removes it. Adding more walls to the same closed room does not create duplicate floors. You can disable this behavior for the active space from **Wall creation > Create floors automatically** in the left rail.
 
-Shared wall endpoints use a separate connection mesh. Each connected wall body stops half its own thickness before the center of the junction, and the connection fills the corner. Open **Wall creation** from the **Floorplan** section of the object sidebar to choose a rectangular or circular connection and set the height, color, and optional baseboard decoration applied by default to newly drawn walls. These defaults do not overwrite walls that already exist.
+Shared wall endpoints use a separate connection mesh. Each connected wall body stops half its own thickness before the center of the junction, and the connection fills the corner. Open **Wall creation** (tune icon) in the left rail to choose a rectangular or circular connection and set the height, color, and optional baseboard decoration applied by default to newly drawn walls. These defaults do not overwrite walls that already exist.
 
 #### Edit walls and floors
 
@@ -682,7 +685,7 @@ WebXR immersive modes require a supported browser/device and HTTPS. During an AR
 
 ## Data synchronization
 
-- A progress indicator appears in the bottom-right corner while DT3D loads data from or stores changes on the server.
+- A progress indicator appears below the space bar while DT3D loads data from or stores changes on the server. In compact layouts, progress becomes a thin line along the space bar; the object dock also explains its loading state.
 - Wait for the indicator to clear before closing or reloading Home Assistant; unsynchronized changes can otherwise be lost.
 
 <img src="readme/synchronization_indicator.png" width="300">

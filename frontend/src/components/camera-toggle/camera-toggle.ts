@@ -1,4 +1,5 @@
 import "../floating-button/floating-button.js";
+import "../tooltip/tooltip.js";
 
 import {css, html, LitElement} from "lit";
 import {customElement, property} from "lit/decorators.js";
@@ -43,10 +44,6 @@ export class DT3DCameraToggle extends LitElement {
 		);
 	}
 
-	private getLabel(): string {
-		return this.mode === "perspective" ? "3D" : "2D";
-	}
-
 	private getAriaLabel(): string {
 		return this.mode === "perspective"
 			? localManager.get("switchToOrthographic")
@@ -59,12 +56,14 @@ export class DT3DCameraToggle extends LitElement {
 
 	protected render() {
 		return html`
+			<dt3d-tooltip .content=${this.getAriaLabel()} placement="left">
 			<dt3d-floating-button
 				@floating-button-click=${this.handleFloatingClick}
 				ariaLabel=${this.getAriaLabel()}
-				titleText=${this.getAriaLabel()}>
-				${this.getLabel()}
+				>
+				<ha-icon icon=${this.mode === "perspective" ? "mdi:cube-outline" : "mdi:view-dashboard-outline"}></ha-icon>
 			</dt3d-floating-button>
+			</dt3d-tooltip>
 		`;
 	}
 }

@@ -1,3 +1,5 @@
+import "../tooltip/tooltip.js";
+
 import {html, LitElement, unsafeCSS} from "lit";
 import {customElement, property} from "lit/decorators.js";
 
@@ -67,10 +69,10 @@ export class ConnectionStatus extends LitElement {
 
 	public render() {
 		return html`
-		<div class="connection-status-container">
-			<div style="margin: 5px;" class="${this.success ? "connection-status-success" : "connection-status-error"}">
-				${this.msg}<br>${BUILD_TIMESTAMP}
-			</div>
-		</div>`;
+		<dt3d-tooltip .content=${`${this.msg} · ${BUILD_TIMESTAMP}`} placement="right">
+			<span tabindex="0" role="status" aria-label=${this.msg} class="connection-status-container ${this.success ? "connection-status-success" : "connection-status-error"}">
+				<ha-icon icon=${this.success ? "mdi:lan-connect" : "mdi:lan-disconnect"}></ha-icon>
+			</span>
+		</dt3d-tooltip>`;
 	}
 }

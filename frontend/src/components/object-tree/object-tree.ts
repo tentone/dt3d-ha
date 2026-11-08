@@ -1,4 +1,5 @@
 import "../object-inspector/object-inspector.js";
+import "../tooltip/tooltip.js";
 
 import {html, LitElement, unsafeCSS} from "lit";
 import {customElement, property, state} from "lit/decorators.js";
@@ -142,11 +143,20 @@ const TREE_SPLIT_STORAGE_KEY = "object-tree-split";
 const DEFAULT_TREE_SPLIT = 0.55;
 const MIN_PANEL_SECTION_HEIGHT = 80;
 const MOBILE_MEDIA_QUERY = "(max-width: 768px)";
-const MOBILE_TREE_WIDTH = "calc(100% - 64px)";
+const MOBILE_TREE_WIDTH = "min(300px, calc(100% - 60px))";
 
 @customElement("dt3d-tree")
 export class DT3DTree extends LitElement {
 	static styles = unsafeCSS(componentStyles);
+
+	@property({type: Boolean, reflect: true})
+	public blocked = true;
+
+	@property({type: Boolean})
+	public loading = true;
+
+	@property({type: String})
+	public blockedReason = "";
 
 	/**
 	 * Indicates whether the object tree explorer is collapsed.
@@ -229,7 +239,7 @@ export class DT3DTree extends LitElement {
 	/**
 	 * Width of the element.
 	 */
-	private width = LocalStorage.read(TREE_WIDTH_STORAGE_KEY, 220) ?? 220;
+	private width = LocalStorage.read(TREE_WIDTH_STORAGE_KEY, 280) ?? 280;
 
 	private resizeInitialSize = 0;
 	private mobileMediaQuery: MediaQueryList | null = null;
@@ -426,6 +436,10 @@ export class DT3DTree extends LitElement {
 		super.connectedCallback();
 
 		this.mobileMediaQuery = window.matchMedia(MOBILE_MEDIA_QUERY);
+		const editorWidth = this.closest("dt3d-card")?.clientWidth ?? this.parentElement?.clientWidth ?? 0;
+		if (LocalStorage.read(TREE_COLLAPSED_STORAGE_KEY) === null && editorWidth > 0 && editorWidth < 640) {
+			this.collapsed = true;
+		}
 		this.mobileMediaQuery.addEventListener(
 			"change",
 			this.handleMobileMediaChange,
@@ -1777,24 +1791,27 @@ export class DT3DTree extends LitElement {
 		const visibleTree = this.getVisibleTree();
 
 		return html`
+			<dt3d-tooltip .content=${collapseLabel} placement="left">
 			<button
 				class="collapse-btn"
 				@click=${this.toggleCollapse}
 				aria-label=${collapseLabel}
-				title=${collapseLabel}
+				aria-expanded=${!this.collapsed}
 			>
 				<ha-icon
 					icon=${this.collapsed
-						? "mdi:arrow-left-drop-circle-outline"
-						: "mdi:arrow-right-drop-circle-outline"}
+						? "mdi:dock-right"
+						: "mdi:chevron-right"}
 				></ha-icon>
 			</button>
+			</dt3d-tooltip>
 			<div
 				class="resize-handle"
 				@mousedown=${(event: MouseEvent) => this.handleResizeStart(event)}
 			></div>
-			<div class="panel">
+			<div class="panel" ?inert=${this.blocked} aria-busy=${this.loading}>
 				<div class="tree-section">
+					<h3 class="section-heading"><ha-icon icon="mdi:file-tree-outline"></ha-icon>${localManager.get("objectExplorer")}</h3>
 					<div class="tree-search">
 						<input
 							type="search"
@@ -1822,6 +1839,7 @@ export class DT3DTree extends LitElement {
 					@mousedown=${(event: MouseEvent) =>
 						this.handleSplitResizeStart(event)}
 				></div>
+				<h3 class="section-heading"><ha-icon icon="mdi:tune-variant"></ha-icon>${localManager.get("objectProperties")}</h3>
 				<dt3d-object-inspector
 					.selectedObject=${this.selectedObject}
 					.selectedObjects=${this.getSelectedObjects()}
@@ -1833,6 +1851,16 @@ export class DT3DTree extends LitElement {
 				></dt3d-object-inspector>
 				${this.renderContextMenu()}
 			</div>
+			${this.blocked && !this.collapsed ? html`
+				<div class="blocked-state" role="status" aria-live="polite">
+					<ha-icon icon=${this.loading ? "mdi:progress-clock" : "mdi:lock-outline"}></ha-icon>
+					<strong>${localManager.get(this.loading ? "loadingSpace" : "editingUnavailable")}</strong>
+					<p>${this.blockedReason || localManager.get("loadingSpaceHint")}</p>
+					${!this.loading ? html`<button class="retry-button" @click=${() => this.dispatchEvent(new CustomEvent("space-load-retry", {bubbles: true, composed: true}))}>
+						<ha-icon icon="mdi:reload"></ha-icon>${localManager.get("retrySpaceLoad")}
+					</button>` : null}
+				</div>
+			` : null}
 		`;
 	}
 }

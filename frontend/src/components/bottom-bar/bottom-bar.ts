@@ -20,6 +20,8 @@ export class DT3DBottomBar extends LitElement {
 	static styles = unsafeCSS(componentStyles);
 
 	static properties = {
+		blocked: {type: Boolean, reflect: true},
+		blockedReason: {type: String},
 		transformTool: {type: String},
 		measurementTool: {type: String},
 		gridEnabled: {type: Boolean},
@@ -34,6 +36,8 @@ export class DT3DBottomBar extends LitElement {
 	};
 
 	public transformTool: TransformOptions = "translate";
+	public blocked = true;
+	public blockedReason = localManager.get("loadingSpace");
 	public measurementTool: MeasurementOptions = "none";
 	public gridEnabled = true;
 	public gridSnapEnabled = false;
@@ -137,13 +141,13 @@ export class DT3DBottomBar extends LitElement {
 		disabled = false,
 	) {
 		return html`
-			<dt3d-tooltip .content=${label} placement="top">
+			<dt3d-tooltip .content=${this.blocked ? this.blockedReason : label} placement="top">
 				<button
 					class=${selected ? "selected" : ""}
 					@click=${onClick}
 					aria-label=${label}
 					aria-pressed=${selected}
-					?disabled=${disabled}
+					?disabled=${disabled || this.blocked}
 				>
 					<ha-icon icon=${icon}></ha-icon>
 				</button>
@@ -153,7 +157,7 @@ export class DT3DBottomBar extends LitElement {
 
 	render() {
 		return html`
-			<nav class="editor-toolbar" aria-label="Editor tools">
+			<nav class="editor-toolbar" aria-label=${localManager.get("editorTools")}>
 				<div class="tool-group" aria-label=${localManager.get("controls")}>
 					${this.renderButton(
 						"mdi:cursor-move",
@@ -187,7 +191,6 @@ export class DT3DBottomBar extends LitElement {
 						!this.hasSelection,
 					)}
 				</div>
-				<div class="group-space" aria-hidden="true"></div>
 				<div class="tool-group" aria-label=${localManager.get("measure")}>
 					${this.renderButton(
 						"mdi:social-distance-2-meters",
@@ -208,9 +211,7 @@ export class DT3DBottomBar extends LitElement {
 						() => this.handleMeasurementsClear(),
 					)}
 				</div>
-			</nav>
-
-			<div class="settings-toolbar" aria-label="Grid and collision settings">
+			<div class="tool-group settings-toolbar" aria-label=${localManager.get("gridAndCollisionSettings")}>
 				${this.renderButton(
 					"mdi:grid",
 					localManager.get("toggleGrid"),
@@ -236,6 +237,7 @@ export class DT3DBottomBar extends LitElement {
 					() => this.handleCollisionAvoidanceToggle(),
 				)}
 			</div>
+			</nav>
 		`;
 	}
 }

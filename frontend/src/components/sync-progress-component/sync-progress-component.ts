@@ -56,7 +56,7 @@ export class SyncProgressComponent extends LitElement {
 					: "Syncing scene";
 
 		return html`
-			<div class="sync-progress" role="status" aria-live="polite">
+			<div class="sync-progress" role="status" aria-live="polite" aria-label=${title}>
 				<div class="sync-header">
 					<div class="sync-title">${title}</div>
 					<div class="sync-count">${finished}/${total}</div>

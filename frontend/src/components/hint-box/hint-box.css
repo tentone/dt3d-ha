@@ -1,7 +1,8 @@
 :host {
 	position: absolute;
-	top: 12px;
-	left: calc(50% - 130px);
+	top: calc(var(--editor-header-height, 56px) + 12px);
+	left: calc(var(--editor-left, 60px) + 60px);
+	right: calc(var(--editor-right, 0px) + 60px);
 	z-index: 10;
 	pointer-events: none;
 	transition: opacity 0.2s;
@@ -12,10 +13,7 @@
 }
 
 :host([placement]) {
-	top: 78px;
-	left: 50%;
-	max-width: calc(100% - 32px);
-	transform: translateX(-50%);
+	top: calc(var(--editor-header-height, 56px) + 12px);
 }
 
 .hint-box {
@@ -26,7 +24,7 @@
 	border-radius: 6px;
 	padding: 10px 14px;
 	font-size: 0.85em;
-	max-width: 260px;
+	max-width: 360px;
 	box-shadow: 0 4px 12px var(--shadow-color);
 	display: flex;
 	align-items: center;

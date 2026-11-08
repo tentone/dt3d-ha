@@ -869,13 +869,20 @@ export class DT3DCard extends LitElement {
 	}
 
 	private updateSpaceLoadState(state: SpaceLoadState): void {
-		for (const panel of [
-			this.objectSidebar,
-			this.tree,
-			this.bottomBar,
-			this.materialManager,
-		]) {
-			if (panel) panel.inert = state.blocked;
+		const reason = state.refreshing ? localManager.get("loadingSpace") : state.error || localManager.get("editingUnavailable");
+		for (const panel of [this.objectSidebar, this.bottomBar]) {
+			if (!panel) continue;
+			panel.blocked = state.blocked;
+			panel.blockedReason = reason;
+		}
+		if (this.tree) {
+			this.tree.blocked = state.blocked;
+			this.tree.loading = state.refreshing;
+			this.tree.blockedReason = state.error || localManager.get("loadingSpaceHint");
+		}
+		if (this.materialManager) {
+			this.materialManager.inert = state.blocked;
+			this.materialManager.toggleAttribute("blocked", state.blocked);
 		}
 		if (this.spaceSelector) {
 			this.spaceSelector.loading = state.refreshing;
@@ -1476,28 +1483,51 @@ export class DT3DCard extends LitElement {
 			this.updateViewerControlPositions();
 		});
 		this.objectTreeResizeObserver.observe(this.tree);
+		if (this.objectSidebar) this.objectTreeResizeObserver.observe(this.objectSidebar);
+		if (this.bottomBar) this.objectTreeResizeObserver.observe(this.bottomBar);
+		if (this.syncProgressComponent) this.objectTreeResizeObserver.observe(this.syncProgressComponent);
 	}
 
 	private updateViewerControlPositions(): void {
+		if (!this.content) return;
+		const width = this.content.clientWidth;
+		const height = this.content.clientHeight;
+		const headerHeight = this.isVisualizationOnly() ? 0 : width < 600 ? 96 : 56;
+		const leftWidth = this.isVisualizationOnly() ? 0 : this.objectSidebar?.getBoundingClientRect().width ?? 0;
 		const treeWidth = this.tree?.getBoundingClientRect().width ?? 0;
+		const availableWidth = width - leftWidth - treeWidth;
+		if (this.connectionStatus) this.connectionStatus.style.visibility = availableWidth < 100 ? "hidden" : "";
+		if (this.hintBox) this.hintBox.style.visibility = availableWidth < 180 ? "hidden" : "";
+		this.content.style.setProperty("--editor-header-height", `${headerHeight}px`);
+		this.content.style.setProperty("--editor-left", `${leftWidth}px`);
+		this.content.style.setProperty("--editor-right", `${treeWidth}px`);
+		const measuredToolbarHeight = this.bottomBar?.getBoundingClientRect().height ?? 0;
+		const showToolbar = availableWidth >= 180 && height - headerHeight >= measuredToolbarHeight + 24;
+		if (this.bottomBar) this.bottomBar.style.visibility = showToolbar ? "" : "hidden";
+		const toolbarHeight = this.isVisualizationOnly() || !showToolbar ? 0 : measuredToolbarHeight;
+		this.syncProgressComponent?.toggleAttribute("compact", availableWidth < 420 || height - headerHeight - toolbarHeight < 400);
+		const controlBottom = toolbarHeight + VIEWER_CONTROL_MARGIN + (toolbarHeight ? VIEWER_CONTROL_GAP : 0);
+		const showCube = availableWidth >= 180 && height - headerHeight - controlBottom > 230;
 		const right = `${treeWidth + VIEWER_CONTROL_MARGIN}px`;
 
 		if (this.orientationCube) {
 			this.orientationCube.style.left = "auto";
 			this.orientationCube.style.right = right;
-			this.orientationCube.style.bottom = `${VIEWER_CONTROL_MARGIN}px`;
+			this.orientationCube.style.bottom = `${controlBottom}px`;
+			this.orientationCube.style.visibility = showCube ? "" : "hidden";
 		}
 
 		const cubeHeight =
 			this.orientationCube?.getBoundingClientRect().height ?? 0;
-		const cameraBottom = this.orientationCube
-			? VIEWER_CONTROL_MARGIN + cubeHeight + VIEWER_CONTROL_GAP
-			: VIEWER_CONTROL_MARGIN;
+		const cameraBottom = showCube && this.orientationCube
+			? controlBottom + cubeHeight + VIEWER_CONTROL_GAP
+			: controlBottom;
 
 		if (this.cameraToggle) {
 			this.cameraToggle.style.left = "auto";
 			this.cameraToggle.style.right = right;
 			this.cameraToggle.style.bottom = `${cameraBottom}px`;
+			this.cameraToggle.style.visibility = availableWidth >= 180 && height - headerHeight - cameraBottom > 60 ? "" : "hidden";
 		}
 
 		if (this.xrControls) {
@@ -1506,6 +1536,7 @@ export class DT3DCard extends LitElement {
 			this.xrControls.style.bottom = `${
 				cameraBottom + 48 + VIEWER_CONTROL_GAP
 			}px`;
+			this.xrControls.style.visibility = availableWidth >= 180 && height - headerHeight - cameraBottom > 120 ? "" : "hidden";
 		}
 	}
 
@@ -2000,6 +2031,7 @@ export class DT3DCard extends LitElement {
 	private setMaterialManagerOpen(open: boolean): void {
 		this.materialManagerOpen = open && !this.isVisualizationOnly();
 		if (this.materialManager) this.materialManager.open = this.materialManagerOpen;
+		if (this.objectSidebar) this.objectSidebar.materialsOpen = this.materialManagerOpen;
 		this.updateEditorLayout();
 	}
 
@@ -2029,6 +2061,7 @@ export class DT3DCard extends LitElement {
 		}
 		this.sceneManager?.updateSize(containerWidth, editorHeight);
 		this.rendererManager?.resize(containerWidth, editorHeight);
+		this.updateViewerControlPositions();
 	}
 
 	private schedulePersistSpaceConfiguration(
@@ -4824,6 +4857,7 @@ export class DT3DCard extends LitElement {
 			height: 100%;
 			overflow: hidden;
 			transition: height 180ms ease;
+			container: dt3d-editor / inline-size;
 		`;
 		this.container.appendChild(this.content);
 
@@ -4844,9 +4878,9 @@ export class DT3DCard extends LitElement {
 		) as DT3DObjectSidebar;
 		this.objectSidebar.style.cssText = `
 			position: absolute;
-			top: 0;
+			top: var(--editor-header-height, 56px);
 			left: 0;
-			height: 100%;
+			bottom: 0;
 		`;
 		this.content.appendChild(this.objectSidebar);
 
@@ -4890,10 +4924,13 @@ export class DT3DCard extends LitElement {
 		this.tree.entityOptions = this.entityOptions;
 		this.tree.style.cssText = `
 			position: absolute;
-			top: 0;	
+			top: var(--editor-header-height, 56px);
 			right: 0;
-			height: 100%;
+			height: calc(100% - var(--editor-header-height, 56px));
 		`;
+		this.tree.addEventListener("space-load-retry", () => {
+			void this.spaceSync?.retrySpaceLoad();
+		});
 		this.content.appendChild(this.tree);
 		this.observeObjectTreeSize();
 
@@ -4919,9 +4956,11 @@ export class DT3DCard extends LitElement {
 					.detail;
 				this.syncProgressComponent!.objectSidebarCollapsed = collapsed;
 				this.bottomBar.objectSidebarCollapsed = collapsed;
+				this.updateViewerControlPositions();
 			},
 		);
 		this.content.appendChild(this.syncProgressComponent);
+		this.objectTreeResizeObserver?.observe(this.syncProgressComponent);
 
 		const cssElem = document.createElement("div");
 		this.cssRendererContainer = cssElem;
@@ -5449,6 +5488,9 @@ export class DT3DCard extends LitElement {
 		});
 		this.objectSidebar.addEventListener("floorplan-upload", () => {
 			if (!this.isEditingDisabled()) this.selectFloorplanImage();
+		});
+		this.objectSidebar.addEventListener("material-manager-toggle", () => {
+			this.setMaterialManagerOpen(!this.materialManagerOpen);
 		});
 
 		this.objectSidebar.addEventListener("add-object", (e: any) => {

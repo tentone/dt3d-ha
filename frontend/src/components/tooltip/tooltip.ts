@@ -44,8 +44,8 @@ export class DT3DTooltip extends LitElement {
 
 	public connectedCallback(): void {
 		super.connectedCallback();
-		this.addEventListener("mouseenter", this.handleMouseEnter);
-		this.addEventListener("mouseleave", this.handleMouseLeave);
+		this.addEventListener("pointerover", this.handleMouseEnter);
+		this.addEventListener("pointerout", this.handlePointerOut);
 		this.addEventListener("focusin", this.handleFocusIn);
 		this.addEventListener("focusout", this.handleFocusOut);
 		this.addEventListener("keydown", this.handleKeyDown);
@@ -53,8 +53,8 @@ export class DT3DTooltip extends LitElement {
 
 	public disconnectedCallback(): void {
 		this.hide(true);
-		this.removeEventListener("mouseenter", this.handleMouseEnter);
-		this.removeEventListener("mouseleave", this.handleMouseLeave);
+		this.removeEventListener("pointerover", this.handleMouseEnter);
+		this.removeEventListener("pointerout", this.handlePointerOut);
 		this.removeEventListener("focusin", this.handleFocusIn);
 		this.removeEventListener("focusout", this.handleFocusOut);
 		this.removeEventListener("keydown", this.handleKeyDown);
@@ -90,6 +90,12 @@ export class DT3DTooltip extends LitElement {
 		if (!this.matches(":focus-within")) {
 			this.hide();
 		}
+	};
+
+	private readonly handlePointerOut = (event: PointerEvent): void => {
+		// Pointer events also reach the tooltip when its native button is disabled.
+		if (event.relatedTarget instanceof Node && this.contains(event.relatedTarget)) return;
+		this.handleMouseLeave();
 	};
 
 	private readonly handleFocusIn = (): void => {

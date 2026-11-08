@@ -1,9 +1,9 @@
 :host {
 	position: absolute;
-	top: 12px;
-	left: 182px;
+	top: calc(var(--editor-header-height, 56px) + 60px);
+	left: calc(var(--editor-left, 60px) + 12px);
 	z-index: 110;
-	width: min(320px, calc(100% - 194px));
+	width: min(280px, calc(100% - var(--editor-left, 60px) - var(--editor-right, 0px) - 24px));
 	pointer-events: none;
 	transition:
 		left 0.2s ease,
@@ -11,13 +11,33 @@
 }
 
 :host([object-sidebar-collapsed]) {
-	left: 12px;
-	width: min(320px, calc(100% - 24px));
+	left: calc(var(--editor-left, 0px) + 12px);
 }
 
 :host([hidden]) {
 	display: none;
 }
+
+:host([compact]) {
+	top: max(0px, calc(var(--editor-header-height, 56px) - 3px));
+	left: 0;
+	width: 100%;
+	z-index: 131;
+	transition: none;
+}
+
+:host([compact]) .sync-progress {
+	padding: 0;
+	border: 0;
+	border-radius: 0;
+	background: transparent;
+	box-shadow: none;
+}
+
+:host([compact]) .sync-header,
+:host([compact]) .sync-list,
+:host([compact]) .sync-failed { display: none; }
+:host([compact]) .sync-bar { height: 3px; border-radius: 0; }
 
 .sync-progress {
 	background: color-mix(in srgb, var(--card-background-color) 92%, transparent);

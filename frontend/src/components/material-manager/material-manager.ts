@@ -192,9 +192,11 @@ export class DT3DMaterialManager extends LitElement {
 			this.open ? "closeMaterials" : "toggleMaterials",
 		);
 		return html`
+			<section class="manager" aria-hidden=${!this.open} ?inert=${!this.open}>
+				<header>
 			<dt3d-tooltip .content=${toggleLabel} placement="top">
 				<button
-					class="collapse-btn"
+						class="close-button"
 					@click=${this.toggleManager}
 					aria-label=${toggleLabel}
 					aria-expanded=${this.open}
@@ -206,8 +208,6 @@ export class DT3DMaterialManager extends LitElement {
 					></ha-icon>
 				</button>
 			</dt3d-tooltip>
-			<section class="manager" aria-hidden=${!this.open}>
-				<header>
 					<div class="title">
 						<ha-icon icon="mdi:palette-swatch"></ha-icon>
 						<div>

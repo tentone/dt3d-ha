@@ -22,15 +22,21 @@ const OBJECT_SIDEBAR_COLLAPSED_STORAGE_KEY = "sidebar-collapsed";
 export class DT3DObjectSidebar extends LitElement {
 	static styles = unsafeCSS(componentStyles);
 	static properties = {
+		blocked: {type: Boolean, reflect: true},
+		blockedReason: {type: String},
 		collapsed: {type: Boolean, reflect: true},
 		wallTool: {type: String},
 		libraryOpen: {type: Boolean},
+		materialsOpen: {type: Boolean},
 	};
 
 	public collapsed =
-		LocalStorage.read(OBJECT_SIDEBAR_COLLAPSED_STORAGE_KEY, true) ?? true;
+		LocalStorage.read(OBJECT_SIDEBAR_COLLAPSED_STORAGE_KEY, false) ?? false;
+	public blocked = true;
+	public blockedReason = localManager.get("loadingSpace");
 	public wallTool: WallOptions = "none";
 	public libraryOpen = false;
+	public materialsOpen = false;
 
 	private emit(name: string, detail?: unknown): void {
 		this.dispatchEvent(
@@ -67,7 +73,7 @@ export class DT3DObjectSidebar extends LitElement {
 		selected?: boolean,
 	) {
 		return html`<dt3d-tooltip
-			.content=${localManager.get(labelKey)}
+		.content=${this.blocked ? this.blockedReason : localManager.get(labelKey)}
 			placement="right"
 		>
 			<button
@@ -75,44 +81,48 @@ export class DT3DObjectSidebar extends LitElement {
 				class=${selected ? "selected" : ""}
 				aria-label=${localManager.get(labelKey)}
 				aria-pressed=${selected ?? nothing}
+				?disabled=${this.blocked}
 			>
-				<ha-icon icon=${icon}></ha-icon
-				><span>${localManager.get(labelKey)}</span>
+				<ha-icon icon=${icon}></ha-icon>
 			</button>
 		</dt3d-tooltip>`;
 	}
 
 	public render() {
+		const collapseLabel = localManager.get(this.collapsed ? "expandSidebar" : "collapseSidebar");
 		return html`
 			<dt3d-tooltip
-				.content=${localManager.get("collapseSidebar")}
+				.content=${collapseLabel}
 				placement="right"
 			>
 				<button
 					class="collapse-btn"
 					@click=${this.toggleCollapse}
-					aria-label=${localManager.get("collapseSidebar")}
+					aria-label=${collapseLabel}
 					aria-expanded=${!this.collapsed}
 				>
 					<ha-icon
 						icon=${this.collapsed
-							? "mdi:arrow-right-drop-circle-outline"
-							: "mdi:arrow-left-drop-circle-outline"}
+							? "mdi:dock-left"
+							: "mdi:chevron-left"}
 					></ha-icon>
 				</button>
 			</dt3d-tooltip>
 			<div class="object-sidebar-content" ?inert=${this.collapsed}>
 				<section class="object-sidebar-section">
+					<dt3d-tooltip .content=${this.blocked ? this.blockedReason : localManager.get("modelLibrary")} placement="right">
 					<button
 						class="library-button"
 						@click=${this.openLibrary}
 						aria-label=${localManager.get("modelLibrary")}
 						aria-haspopup="dialog"
 						aria-expanded=${this.libraryOpen}
+						?disabled=${this.blocked}
 					>
-						<ha-icon icon="mdi:view-grid-plus-outline"></ha-icon
-						><span>${localManager.get("modelLibrary")}</span>
+						<ha-icon icon="mdi:view-grid-plus-outline"></ha-icon>
 					</button>
+					</dt3d-tooltip>
+					${this.action("toggleMaterials", "mdi:palette-swatch-outline", () => this.emit("material-manager-toggle"), this.materialsOpen)}
 				</section>
 				<section class="object-sidebar-section">
 					<div class="object-sidebar-title">

@@ -1,3 +1,5 @@
+import "../tooltip/tooltip.js";
+
 import {html, LitElement, unsafeCSS} from "lit";
 import {customElement, property} from "lit/decorators.js";
 
@@ -127,94 +129,38 @@ export class DT3DSpaceSelector extends LitElement {
 		if (select) select.value = this.selectedSpaceId;
 	}
 
+	private renderAction(labelKey: string, icon: string, action: () => void, needsSpace = true) {
+		const label = localManager.get(labelKey);
+		return html`<dt3d-tooltip .content=${this.loading ? localManager.get("loadingSpace") : label} placement="bottom">
+			<button type="button" class=${labelKey === "deleteSpace" ? "delete-button" : ""}
+				?disabled=${this.loading || this.editingBlocked || (needsSpace && !this.selectedSpaceId)}
+				@click=${action} aria-label=${label}>
+				<ha-icon icon=${icon}></ha-icon>
+			</button>
+		</dt3d-tooltip>`;
+	}
+
 	protected render() {
 		return html`
-			<div class="selector" aria-busy=${this.loading ? "true" : "false"}>
-				<label for="active-space">${localManager.get("space")}</label>
-				${this.loading
-					? html`
-						<span
-							class="loading-indicator"
-							role="status"
-							aria-label=${localManager.get("loading")}
-							title=${localManager.get("loading")}
-						></span>
-					`
-					: null}
-				<select
-					id="active-space"
-					.value=${this.selectedSpaceId}
-					?disabled=${this.spaces.length === 0}
-					@change=${this.handleChange}
-				>
-					${this.spaces.length === 0
-						? html`<option value="">${localManager.get("noSpaces")}</option>`
-						: null}
-					${this.spaces.map(
-						(space) => html`<option value=${space.id}>${space.name}</option>`,
-					)}
-				</select>
-				<button
-					type="button"
-					?disabled=${this.loading || this.editingBlocked || !this.selectedSpaceId}
-					@click=${this.requestConfigure}
-					title=${localManager.get("spaceConfiguration")}
-					aria-label=${localManager.get("spaceConfiguration")}
-				>
-					<ha-icon icon="mdi:cog-outline"></ha-icon>
-				</button>
-				<button
-					type="button"
-					?disabled=${this.loading || this.editingBlocked}
-					@click=${this.requestCreate}
-					title=${localManager.get("createSpace")}
-					aria-label=${localManager.get("createSpace")}
-				>
-					<ha-icon icon="mdi:plus"></ha-icon>
-				</button>
-				<button
-					type="button"
-					?disabled=${this.loading || this.editingBlocked || !this.selectedSpaceId}
-					@click=${this.requestClone}
-					title=${localManager.get("cloneSpace")}
-					aria-label=${localManager.get("cloneSpace")}
-				>
-					<ha-icon icon="mdi:content-copy"></ha-icon>
-				</button>
-				<button
-					type="button"
-					?disabled=${this.loading || this.editingBlocked || !this.selectedSpaceId}
-					@click=${this.requestExport}
-					title=${localManager.get("exportSpace")}
-					aria-label=${localManager.get("exportSpace")}
-				>
-					<ha-icon icon="mdi:download"></ha-icon>
-				</button>
-				<button
-					type="button"
-					?disabled=${this.loading || this.editingBlocked}
-					@click=${this.requestImport}
-					title=${localManager.get("importSpace")}
-					aria-label=${localManager.get("importSpace")}
-				>
-					<ha-icon icon="mdi:upload"></ha-icon>
-				</button>
-				<button
-					type="button"
-					class="delete-button"
-					?disabled=${this.loading || this.editingBlocked || !this.selectedSpaceId}
-					@click=${this.requestDelete}
-					title=${localManager.get("deleteSpace")}
-					aria-label=${localManager.get("deleteSpace")}
-				>
-					<ha-icon icon="mdi:delete-outline"></ha-icon>
-				</button>
-				<input
-					id="space-import"
-					type="file"
-					accept=".dt3d,application/vnd.dt3d+zip"
-					@change=${this.handleImportFile}
-				/>
+			<div class="selector" aria-busy=${this.loading}>
+				<label for="active-space"><ha-icon icon="mdi:home-city-outline"></ha-icon><span>${localManager.get("space")}</span></label>
+				<div class="space-field">
+					<select id="active-space" .value=${this.selectedSpaceId}
+						?disabled=${this.spaces.length === 0} @change=${this.handleChange}>
+						${this.spaces.length === 0 ? html`<option value="">${localManager.get("noSpaces")}</option>` : null}
+						${this.spaces.map((space) => html`<option value=${space.id}>${space.name}</option>`)}
+					</select>
+					${this.loading ? html`<span class="loading-indicator" role="status" aria-label=${localManager.get("loading")}></span>` : null}
+				</div>
+				<div class="space-actions" role="group" aria-label=${localManager.get("space")}>
+					${this.renderAction("spaceConfiguration", "mdi:cog-outline", () => this.requestConfigure())}
+					${this.renderAction("createSpace", "mdi:plus", () => this.requestCreate(), false)}
+					${this.renderAction("cloneSpace", "mdi:content-copy", () => this.requestClone())}
+					${this.renderAction("exportSpace", "mdi:download", () => this.requestExport())}
+					${this.renderAction("importSpace", "mdi:upload", () => this.requestImport(), false)}
+					${this.renderAction("deleteSpace", "mdi:delete-outline", () => this.requestDelete())}
+				</div>
+				<input id="space-import" type="file" accept=".dt3d,application/vnd.dt3d+zip" @change=${this.handleImportFile} />
 			</div>
 		`;
 	}

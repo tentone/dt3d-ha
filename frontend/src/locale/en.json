@@ -1,4 +1,13 @@
 {
+	"loadingSpace": "Loading space",
+	"editingUnavailable": "Editing unavailable",
+	"loadingSpaceHint": "Object controls will be available when the space is ready.",
+	"retrySpaceLoad": "Retry loading space",
+	"expandSidebar": "Show creation tools",
+	"editorTools": "Editor tools",
+	"gridAndCollisionSettings": "Grid and collision settings",
+	"objectExplorer": "Objects",
+	"objectProperties": "Inspector",
 	"gymRoom": "Home Gym / Fitness Room",
 	"gymCategoryCardio": "Cardio",
 	"gymCategoryStrength": "Strength",
