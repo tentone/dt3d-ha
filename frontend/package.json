@@ -24,6 +24,7 @@
 		"test:patio": "node --test tests/patio.test.mjs",
 		"test:garden": "node --test tests/garden.test.mjs",
 		"test:game-room": "node --test tests/game-room.test.mjs",
+		"test:gym": "node --test tests/gym.test.mjs",
 		"test:object-placement": "node --test tests/object-placement.test.mjs",
 		"test:model-library": "node --test tests/model-library.test.mjs",
 		"test:model-library-ui": "playwright test --config playwright.model-library.config.mjs",

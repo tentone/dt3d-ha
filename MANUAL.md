@@ -63,7 +63,7 @@ Space creation, cloning, import/export, switching, and deletion are hidden when 
 The left sidebar organizes creation tools into **Model Library**, **Scene tools**, and **Floorplan**:
 
 - **Model Library** is a searchable explorer with 3D preview thumbnails. Browse all models or select a category. Search matches model names, categories, and aliases such as “sofa” for Couch.
-- Filter furniture by **Living Room**, **Dining Room**, **Kitchen**, **Bathroom**, **Master Bedroom**, **Children's Bedroom / Nursery**, **Home Office / Study**, **Laundry / Utility Room**, **Walk-in Closet / Dressing Room**, **Garage**, **Balcony / Terrace / Patio**, **Garden / Backyard**, or **Entertainment / Game Room**, then browse the categories for that room.
+- Filter furniture by **Living Room**, **Dining Room**, **Kitchen**, **Bathroom**, **Master Bedroom**, **Children's Bedroom / Nursery**, **Home Office / Study**, **Laundry / Utility Room**, **Walk-in Closet / Dressing Room**, **Garage**, **Balcony / Terrace / Patio**, **Garden / Backyard**, **Entertainment / Game Room**, or **Home Gym / Fitness Room**, then browse the categories for that room.
 - **Geometric Shapes** contains cube, sphere, plane, capsule, circle, cone, cylinder, dodecahedron, icosahedron, octahedron, ring, tetrahedron, torus, and torus knot.
 - **Lighting** contains ambient, directional, point, spot, and rectangular area lights.
 - **Doors, windows and gates** selects an opening placement tool; double-click a wall to place the chosen opening.
@@ -397,6 +397,31 @@ Choose a family, move its outlined preview, and double-click to place it. Use th
 | Media shelving / game cabinets | Dimensions, columns and storage levels, game boxes per compartment, optional back panel, solid / glass cabinet doors, and opening state |
 
 Gaming desk height ends at the work surface. Monitors, racing displays, extended footrests, gamepads, foosball handles, cues, and open doors can extend beyond the main body. Pool pockets pass through the felt into recessed cups. The ping-pong folding control raises both playing halves and narrows the support frame; the net and loose accessories are removed while folded. Foosball rod angles rotate the handles and figures together. Poker place count controls cards and chip stacks. Screen and marquee switches adjust their display finishes independently.
+
+### Home gym / fitness room collection
+
+Open **Model Library**, select **Home Gym / Fitness Room**, and browse **Cardio**, **Strength**, **Accessories**, and **Other**. Fourteen customizable families cover all 16 requested objects. Search recognizes names such as “treadmill”, “rowing machine”, “squat rack”, “multi-gym”, “yoga mat”, “kettlebell rack”, and “exercise equipment rack”.
+
+Select a family, move its outlined preview, and double-click to place it. Adjust dimensions, presets, and equipment poses in the inspector. Configurations support saving, cloning, and undo. Wall mirrors and storage shelving share their existing models with the rest of the library.
+
+| Family | Variants and controls |
+| --- | --- |
+| Treadmill | Dimensions, running-deck incline, folded storage position, side handrails, and display power |
+| Exercise bike | Upright, spin, or recumbent presets; dimensions, saddle height, opposed pedal position, optional console, and display power |
+| Rowing machine | Dimensions, sliding seat, handle pull with its cable, optional console, and display power |
+| Elliptical trainer | Dimensions, opposed pedal stride, moving / upright handles, optional console, and display power |
+| Weight bench | Dimensions, backrest and seat angles, and optional front leg rollers |
+| Dumbbell rack | Dimensions, storage levels, dumbbells per tray, and optional stored weights |
+| Squat rack | Power-rack or half-rack presets; dimensions, barbell and J-hook height, safety height, optional barbell, plate pairs, and pull-up bar |
+| Cable machine / multi-gym | Dimensions, pulley height, handle reach, weight-stack plate count, outer guards, optional padded seat, and multi-gym press-arm pose |
+| Yoga / exercise mat | Thin yoga or padded exercise presets; width, unrolled length, material thickness, rolled storage, and alignment markings |
+| Medicine ball | Diameter and optional panel seams |
+| Kettlebell rack | Dimensions, storage levels, kettlebells per tray, and optional stored weights |
+| Wall mirror | Shared mirror with size presets, dimensions, shape, frame width, and optional stand |
+| Storage shelving | Shared shelf with dimensions, board thickness, shelf count, and optional back panel |
+| Exercise equipment rack | Dimensions, levels, balls per tray, rolled mats in an open side bay, hanging resistance bands, and optional stored contents |
+
+Equipment poses are static configurations. Treadmill incline is ignored while folded, and the rear base retracts for storage. Bench height describes the flat pad surface; inclined pads, rack barbells, and extended cable handles can extend beyond the main body. Bike pedals and elliptical footplates remain level while changing their stride position. The multi-gym preset adds press arms, a lat bar, and a seated leg station. Mat depth describes its unrolled length and height describes its thickness, including when it is rolled up.
 
 ### Add Home Assistant entities
 

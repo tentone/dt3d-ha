@@ -74,6 +74,23 @@ import {
 	GardenSwingSetObject,
 	GardenTrampolineObject,
 } from "./garden/recreation.js";
+import {ExerciseMatObject, MedicineBallObject} from "./gym/accessories.js";
+import {
+	EllipticalTrainerObject,
+	ExerciseBikeObject,
+	RowingMachineObject,
+	TreadmillObject,
+} from "./gym/cardio.js";
+import {
+	DumbbellRackObject,
+	ExerciseEquipmentRackObject,
+	KettlebellRackObject,
+} from "./gym/storage.js";
+import {
+	CableMachineObject,
+	SquatRackObject,
+	WeightBenchObject,
+} from "./gym/strength.js";
 import {
 	KitchenAccessoriesObject,
 	KitchenTrolleyObject,
@@ -224,7 +241,9 @@ export type FurnitureCategory =
 	| "recreation"
 	| "landscaping"
 	| "structures"
-	| "gaming";
+	| "gaming"
+	| "cardio"
+	| "strength";
 
 export type FurnitureOption = {
 	type: `furniture-${FurnitureType}`;
@@ -479,6 +498,9 @@ export const FURNITURE_OPTIONS: FurnitureOption[] = [
 		category: "storage",
 		labelKey: "furnitureShelf",
 		icon: "mdi:bookshelf",
+		rooms: ["home-gym"],
+		roomCategories: {"home-gym": "other"},
+		keywords: ["storage shelving", "gym shelving", "storage shelves"],
 	},
 	{
 		type: "furniture-cabinet",
@@ -624,12 +646,24 @@ export const FURNITURE_OPTIONS: FurnitureOption[] = [
 		roomCategories: {
 			bathroom: "accessories",
 			"master-bedroom": "bedroom-furniture",
+			"home-gym": "other",
 		},
 		category: "decoration",
 		labelKey: "livingModelMirror",
 		icon: "mdi:mirror",
-		rooms: ["living-room", "bathroom", "dining-room", "master-bedroom"],
-		keywords: ["mirror", "full-length mirror", "full length mirror"],
+		rooms: [
+			"living-room",
+			"bathroom",
+			"dining-room",
+			"master-bedroom",
+			"home-gym",
+		],
+		keywords: [
+			"mirror",
+			"wall mirror",
+			"full-length mirror",
+			"full length mirror",
+		],
 	},
 	{
 		type: "furniture-indoor-plant",
@@ -1861,6 +1895,150 @@ export const FURNITURE_OPTIONS: FurnitureOption[] = [
 			"video game storage",
 		],
 	},
+	{
+		type: "furniture-treadmill",
+		furnitureType: "treadmill",
+		category: "cardio",
+		labelKey: "gymModelTreadmill",
+		icon: "mdi:run",
+		rooms: ["home-gym"],
+		keywords: ["treadmill", "running machine", "walking pad", "cardio"],
+	},
+	{
+		type: "furniture-exercise-bike",
+		furnitureType: "exercise-bike",
+		category: "cardio",
+		labelKey: "gymModelBike",
+		icon: "mdi:bike",
+		rooms: ["home-gym"],
+		keywords: [
+			"exercise bike",
+			"stationary bike",
+			"spin bike",
+			"recumbent bike",
+			"indoor cycling",
+		],
+	},
+	{
+		type: "furniture-rowing-machine",
+		furnitureType: "rowing-machine",
+		category: "cardio",
+		labelKey: "gymModelRower",
+		icon: "mdi:rowing",
+		rooms: ["home-gym"],
+		keywords: ["rowing machine", "rower", "ergometer"],
+	},
+	{
+		type: "furniture-elliptical-trainer",
+		furnitureType: "elliptical-trainer",
+		category: "cardio",
+		labelKey: "gymModelElliptical",
+		icon: "mdi:walk",
+		rooms: ["home-gym"],
+		keywords: ["elliptical trainer", "cross trainer", "cross-trainer"],
+	},
+	{
+		type: "furniture-weight-bench",
+		furnitureType: "weight-bench",
+		category: "strength",
+		labelKey: "gymModelBench",
+		icon: "mdi:weight-lifter",
+		rooms: ["home-gym"],
+		keywords: [
+			"weight bench",
+			"adjustable bench",
+			"incline bench",
+			"flat bench",
+			"workout bench",
+		],
+	},
+	{
+		type: "furniture-dumbbell-rack",
+		furnitureType: "dumbbell-rack",
+		category: "strength",
+		labelKey: "gymModelDumbbells",
+		icon: "mdi:dumbbell",
+		rooms: ["home-gym"],
+		keywords: ["dumbbell rack", "dumbbells", "free weights"],
+	},
+	{
+		type: "furniture-squat-rack",
+		furnitureType: "squat-rack",
+		category: "strength",
+		labelKey: "gymModelSquat",
+		icon: "mdi:weight-lifter",
+		rooms: ["home-gym"],
+		keywords: [
+			"squat rack",
+			"power rack",
+			"half rack",
+			"barbell",
+			"power cage",
+		],
+	},
+	{
+		type: "furniture-cable-machine",
+		furnitureType: "cable-machine",
+		category: "strength",
+		labelKey: "gymModelCable",
+		icon: "mdi:weight-lifter",
+		rooms: ["home-gym"],
+		keywords: [
+			"cable machine",
+			"multi-gym",
+			"multi gym",
+			"multigym",
+			"functional trainer",
+			"weight stack",
+		],
+	},
+	{
+		type: "furniture-exercise-mat",
+		furnitureType: "exercise-mat",
+		category: "accessories",
+		labelKey: "gymModelMat",
+		icon: "mdi:yoga",
+		rooms: ["home-gym"],
+		keywords: [
+			"yoga mat",
+			"exercise mat",
+			"fitness mat",
+			"workout mat",
+			"rolled mat",
+		],
+	},
+	{
+		type: "furniture-medicine-ball",
+		furnitureType: "medicine-ball",
+		category: "accessories",
+		labelKey: "gymModelBall",
+		icon: "mdi:basketball",
+		rooms: ["home-gym"],
+		keywords: ["medicine ball", "weighted ball", "exercise ball"],
+	},
+	{
+		type: "furniture-kettlebell-rack",
+		furnitureType: "kettlebell-rack",
+		category: "accessories",
+		labelKey: "gymModelKettlebells",
+		icon: "mdi:kettlebell",
+		rooms: ["home-gym"],
+		keywords: ["kettlebell rack", "kettlebells", "kettle bell"],
+	},
+	{
+		type: "furniture-exercise-equipment-rack",
+		furnitureType: "exercise-equipment-rack",
+		category: "other",
+		labelKey: "gymModelEquipmentRack",
+		icon: "mdi:weight",
+		rooms: ["home-gym"],
+		keywords: [
+			"exercise equipment rack",
+			"fitness storage",
+			"resistance bands",
+			"gym equipment rack",
+		],
+	},
 ];
 
 export function furnitureTypeFromMeshType(type: string): FurnitureType | null {
@@ -1921,6 +2099,18 @@ const CUSTOM_FURNITURE_FACTORIES: Partial<
 		) => FurnitureObject
 	>
 > = {
+	treadmill: TreadmillObject,
+	"exercise-bike": ExerciseBikeObject,
+	"rowing-machine": RowingMachineObject,
+	"elliptical-trainer": EllipticalTrainerObject,
+	"weight-bench": WeightBenchObject,
+	"dumbbell-rack": DumbbellRackObject,
+	"squat-rack": SquatRackObject,
+	"cable-machine": CableMachineObject,
+	"exercise-mat": ExerciseMatObject,
+	"medicine-ball": MedicineBallObject,
+	"kettlebell-rack": KettlebellRackObject,
+	"exercise-equipment-rack": ExerciseEquipmentRackObject,
 	"gaming-chair": GamingChairObject,
 	"gaming-desk": GamingDeskObject,
 	"arcade-machine": ArcadeMachineObject,

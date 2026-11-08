@@ -142,7 +142,19 @@ export type FurnitureType =
 	| "gaming-console"
 	| "racing-simulator"
 	| "game-table"
-	| "game-storage";
+	| "game-storage"
+	| "treadmill"
+	| "exercise-bike"
+	| "rowing-machine"
+	| "elliptical-trainer"
+	| "weight-bench"
+	| "dumbbell-rack"
+	| "squat-rack"
+	| "cable-machine"
+	| "exercise-mat"
+	| "medicine-ball"
+	| "kettlebell-rack"
+	| "exercise-equipment-rack";
 
 export type FurnitureParameters = Record<string, number | boolean | string>;
 

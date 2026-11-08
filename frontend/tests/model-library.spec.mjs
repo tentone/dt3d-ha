@@ -72,6 +72,279 @@ async function placeSelectedModel(page) {
 	);
 }
 
+test("home gym shows all four categories and treadmill controls save and undo after placement", async ({
+	page,
+}) => {
+	const saved = [];
+	page.on("request", (request) => {
+		if (request.method() === "PUT" && request.url().includes("/objects/"))
+			saved.push(request.postDataJSON());
+	});
+	await openLibrary(page);
+	const library = page.locator("dt3d-model-library");
+	await library
+		.getByRole("combobox", { name: "Filter by room" })
+		.selectOption("home-gym");
+	await expect(library.locator(".model")).toHaveCount(14);
+	await expect(library.locator(".preview img")).toHaveCount(14);
+	await expect(library.locator(".model-section h3")).toHaveText([
+		"Cardio",
+		"Strength",
+		"Accessories",
+		"Other",
+	]);
+	await library.getByRole("searchbox").fill("treadmill");
+	await library
+		.getByRole("button", { name: "Add Treadmill", exact: true })
+		.click();
+	await expect
+		.poll(() =>
+			page.evaluate(() =>
+				window.testCard.space.children.some(
+					(item) => item.userData.meshType === "furniture-treadmill",
+				),
+			),
+		)
+		.toBe(false);
+	await placeSelectedModel(page);
+	const inspector = page.locator("dt3d-object-inspector");
+	await inspector
+		.locator("summary")
+		.filter({ hasText: "Treadmill configuration" })
+		.click();
+	const incline = inspector.getByRole("spinbutton", {
+		name: "Treadmill incline (°)",
+		exact: true,
+	});
+	await incline.fill("12");
+	await incline.blur();
+	const original = await page.evaluate(() =>
+		window.testCard.space.children
+			.find((item) => item.userData.meshType === "furniture-treadmill")
+			.getParameters(),
+	);
+	const folded = inspector.getByRole("checkbox", {
+		name: "Fold treadmill deck",
+		exact: true,
+	});
+	await folded.check();
+	await expect
+		.poll(() =>
+			saved.some(
+				(item) =>
+					item.data?.meshType === "furniture-treadmill" &&
+					item.data.furniture.incline === 12 &&
+					item.data.furniture.folded === true,
+			),
+		)
+		.toBe(true);
+	await folded.blur();
+	await page.keyboard.press("Control+z");
+	await expect
+		.poll(() =>
+			page.evaluate(() =>
+				window.testCard.space.children
+					.find((item) => item.userData.meshType === "furniture-treadmill")
+					.getParameters(),
+			),
+		)
+		.toEqual(original);
+});
+
+test("gym cable and mat presets rebuild their variants and persist their configurations", async ({
+	page,
+}) => {
+	const saved = [];
+	page.on("request", (request) => {
+		if (request.method() === "PUT" && request.url().includes("/objects/"))
+			saved.push(request.postDataJSON());
+	});
+	await openLibrary(page);
+	let library = page.locator("dt3d-model-library");
+	await library
+		.getByRole("combobox", { name: "Filter by room" })
+		.selectOption("home-gym");
+	await library.getByRole("searchbox").fill("multi-gym");
+	await library
+		.getByRole("button", { name: "Add Cable machine / multi-gym", exact: true })
+		.click();
+	await placeSelectedModel(page);
+	const inspector = page.locator("dt3d-object-inspector");
+	await inspector
+		.locator("summary")
+		.filter({ hasText: "Cable machine configuration" })
+		.click();
+	await inspector
+		.getByRole("combobox", { name: "Cable machine preset", exact: true })
+		.selectOption("multi-gym");
+	const angle = inspector.getByRole("spinbutton", {
+		name: "Multi-gym press angle (°)",
+		exact: true,
+	});
+	await angle.fill("40");
+	await angle.blur();
+	await expect
+		.poll(() =>
+			saved.some(
+				(item) =>
+					item.data?.furniture?.style === "multi-gym" &&
+					item.data.furniture.seatEnabled === true &&
+					item.data.furniture.pressAngle === 40,
+			),
+		)
+		.toBe(true);
+	await expect
+		.poll(() =>
+			page.evaluate(() =>
+				Boolean(
+					window.testCard.space.children
+						.find(
+							(item) => item.userData.meshType === "furniture-cable-machine",
+						)
+						.getObjectByName("Gym Seat Pad"),
+				),
+			),
+		)
+		.toBe(true);
+	await openLibrary(page);
+	library = page.locator("dt3d-model-library");
+	await library
+		.getByRole("combobox", { name: "Filter by room" })
+		.selectOption("home-gym");
+	await library.getByRole("searchbox").fill("yoga mat");
+	await library
+		.getByRole("button", { name: "Add Yoga / exercise mat", exact: true })
+		.click();
+	await placeSelectedModel(page);
+	const summary = inspector
+		.locator("summary")
+		.filter({ hasText: "Exercise mat configuration" });
+	if (!(await summary.evaluate((element) => element.parentElement.open)))
+		await summary.click();
+	await inspector
+		.getByRole("combobox", { name: "Exercise mat preset", exact: true })
+		.selectOption("exercise-mat");
+	await inspector
+		.getByRole("checkbox", { name: "Roll up mat", exact: true })
+		.check();
+	await expect
+		.poll(() =>
+			saved.some(
+				(item) =>
+					item.data?.meshType === "furniture-exercise-mat" &&
+					item.data.furniture.style === "exercise-mat" &&
+					item.data.furniture.height === 0.03 &&
+					item.data.furniture.rolled === true,
+			),
+		)
+		.toBe(true);
+});
+
+test("gym rack searches stay in their categories and stored contents can be edited", async ({
+	page,
+}) => {
+	await openLibrary(page);
+	const library = page.locator("dt3d-model-library");
+	await library
+		.getByRole("combobox", { name: "Filter by room" })
+		.selectOption("home-gym");
+	await library
+		.locator("nav")
+		.getByRole("button", { name: /^Strength\b/ })
+		.click();
+	await expect(library.locator(".model")).toHaveCount(4);
+	await library.getByRole("searchbox").fill("dumbbell rack");
+	await library
+		.getByRole("button", { name: "Add Dumbbell rack", exact: true })
+		.click();
+	await placeSelectedModel(page);
+	const inspector = page.locator("dt3d-object-inspector");
+	await inspector
+		.locator("summary")
+		.filter({ hasText: "Gym rack configuration" })
+		.click();
+	const levels = inspector.getByRole("spinbutton", {
+		name: "Equipment rack levels",
+		exact: true,
+	});
+	await levels.fill("3");
+	await levels.blur();
+	await inspector
+		.getByRole("checkbox", { name: "Stored gym equipment", exact: true })
+		.uncheck();
+	await expect
+		.poll(() =>
+			page.evaluate(() => {
+				const rack = window.testCard.space.children.find(
+					(item) => item.userData.meshType === "furniture-dumbbell-rack",
+				);
+				let trays = 0,
+					weights = 0;
+				rack.traverse((part) => {
+					if (part.name === "Gym Rack Tray") trays++;
+					if (part.name === "Dumbbell Weight") weights++;
+				});
+				return { trays, weights };
+			}),
+		)
+		.toEqual({ trays: 3, weights: 0 });
+	await openLibrary(page);
+	await library
+		.getByRole("combobox", { name: "Filter by room" })
+		.selectOption("home-gym");
+	await library
+		.locator("nav")
+		.getByRole("button", { name: /^Accessories\b/ })
+		.click();
+	await library.getByRole("searchbox").fill("kettlebell rack");
+	await expect(
+		library.getByRole("button", { name: "Add Kettlebell rack", exact: true }),
+	).toBeVisible();
+});
+
+test("gym bike presets update dimensions and retain level opposed pedals", async ({
+	page,
+}) => {
+	await openLibrary(page);
+	const library = page.locator("dt3d-model-library");
+	await library
+		.getByRole("combobox", { name: "Filter by room" })
+		.selectOption("home-gym");
+	await library.getByRole("searchbox").fill("exercise bike");
+	await library
+		.getByRole("button", { name: "Add Exercise bike", exact: true })
+		.click();
+	await placeSelectedModel(page);
+	const inspector = page.locator("dt3d-object-inspector");
+	await inspector
+		.locator("summary")
+		.filter({ hasText: "Exercise bike configuration" })
+		.click();
+	await inspector
+		.getByRole("combobox", { name: "Exercise bike preset", exact: true })
+		.selectOption("recumbent-bike");
+	const angle = inspector.getByRole("spinbutton", {
+		name: "Bike pedal position (°)",
+		exact: true,
+	});
+	await angle.fill("90");
+	await angle.blur();
+	await expect
+		.poll(() =>
+			page.evaluate(() => {
+				const bike = window.testCard.space.children.find(
+					(item) => item.userData.meshType === "furniture-exercise-bike",
+				);
+				return {
+					depth: bike.parameters.depth,
+					angle: bike.parameters.pedalAngle,
+					back: Boolean(bike.getObjectByName("Bike Seat Back")),
+				};
+			}),
+		)
+		.toEqual({ depth: 1.65, angle: 90, back: true });
+});
+
 test("game room library shows five categories and gaming chair configurations save and undo", async ({
 	page,
 }) => {

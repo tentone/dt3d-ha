@@ -37,6 +37,11 @@ export type ModelRoom = {
 };
 export const MODEL_ROOMS: ModelRoom[] = [
 	{
+		id: "home-gym",
+		labelKey: "gymRoom",
+		categories: ["cardio", "strength", "accessories", "other"],
+	},
+	{
 		id: "game-room",
 		labelKey: "gameRoom",
 		categories: [
@@ -181,6 +186,12 @@ export const MODEL_ROOMS: ModelRoom[] = [
 ];
 
 export const MODEL_CATEGORIES: ModelCategory[] = [
+	{id: "cardio", labelKey: "gymCategoryCardio", icon: "mdi:run"},
+	{
+		id: "strength",
+		labelKey: "gymCategoryStrength",
+		icon: "mdi:weight-lifter",
+	},
 	{
 		id: "gaming",
 		labelKey: "gameCategoryGaming",
