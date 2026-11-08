@@ -3667,7 +3667,7 @@ const mde = "dt3d-ha-", a1 = class a1 {
 };
 a1.storage = () => typeof window > "u" || !window.localStorage ? null : window.localStorage, a1.prefix = (e) => `${mde}${e}`;
 let Pi = a1;
-const gde = ":host{position:absolute;left:calc(var(--editor-left, 60px) + 12px);right:calc(var(--editor-right, 0px) + 12px);bottom:12px;z-index:105;display:flex;justify-content:center;pointer-events:none}.editor-toolbar{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;max-width:100%;padding:6px;box-sizing:border-box;border:1px solid var(--divider-color);border-radius:12px;background:var(--card-background-color);box-shadow:0 6px 18px var(--shadow-color);pointer-events:auto}.tool-group{display:flex;flex-wrap:wrap;justify-content:center;gap:2px;padding:2px;border-radius:8px;background:color-mix(in srgb,var(--primary-text-color) 4%,transparent)}button{display:inline-grid;width:36px;height:36px;padding:0;place-items:center;border:0;border-radius:6px;background:transparent;color:var(--primary-text-color);cursor:pointer;font:inherit}ha-icon{--mdc-icon-size: 20px}button:not(:disabled):hover{background:color-mix(in srgb,var(--primary-color) 16%,transparent)}button:focus-visible{outline:2px solid var(--primary-color);outline-offset:1px}button:disabled{opacity:.35;cursor:not-allowed}button.selected{background:var(--primary-color);color:var(--text-primary-color)}";
+const gde = ":host{position:absolute;left:calc(var(--editor-left, 60px) + 12px);right:calc(var(--editor-right, 0px) + 12px);bottom:12px;z-index:105;display:flex;justify-content:center;pointer-events:none}.editor-toolbar{display:flex;flex-wrap:wrap;justify-content:center;gap:12px;max-width:100%;box-sizing:border-box;pointer-events:none}.tool-group{display:flex;flex-wrap:wrap;justify-content:center;gap:2px;padding:2px;border-radius:8px;background:var(--card-background-color);pointer-events:auto}button{display:inline-grid;width:36px;height:36px;padding:0;place-items:center;border:0;border-radius:6px;background:transparent;color:var(--primary-text-color);cursor:pointer;font:inherit}ha-icon{--mdc-icon-size: 20px}button:not(:disabled):hover{background:color-mix(in srgb,var(--primary-color) 16%,transparent)}button:focus-visible{outline:2px solid var(--primary-color);outline-offset:1px}button:disabled{opacity:.35;cursor:not-allowed}button.selected{background:var(--primary-color);color:var(--text-primary-color)}";
 var bde = Object.getOwnPropertyDescriptor, yde = (o, e, t, n) => {
   for (var i = n > 1 ? void 0 : n ? bde(e, t) : e, r = o.length - 1, s; r >= 0; r--)
     (s = o[r]) && (i = s(i) || i);
@@ -4748,7 +4748,7 @@ let yc = class extends Mn {
   }
   render() {
     return Me`
-		<dt3d-tooltip .content=${`${this.msg} · 2026-11-08T12:32:38.647Z`} placement="right">
+		<dt3d-tooltip .content=${`${this.msg} · 2026-11-08T18:30:22.713Z`} placement="right">
 			<span tabindex="0" role="status" aria-label=${this.msg} class="connection-status-container ${this.success ? "connection-status-success" : "connection-status-error"}">
 				<ha-icon icon=${this.success ? "mdi:lan-connect" : "mdi:lan-disconnect"}></ha-icon>
 			</span>

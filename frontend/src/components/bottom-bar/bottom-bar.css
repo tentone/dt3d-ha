@@ -13,15 +13,10 @@
 	display: flex;
 	flex-wrap: wrap;
 	justify-content: center;
-	gap: 6px;
+	gap: 12px;
 	max-width: 100%;
-	padding: 6px;
 	box-sizing: border-box;
-	border: 1px solid var(--divider-color);
-	border-radius: 12px;
-	background: var(--card-background-color);
-	box-shadow: 0 6px 18px var(--shadow-color);
-	pointer-events: auto;
+	pointer-events: none;
 }
 
 .tool-group {
@@ -31,7 +26,8 @@
 	gap: 2px;
 	padding: 2px;
 	border-radius: 8px;
-	background: color-mix(in srgb, var(--primary-text-color) 4%, transparent);
+	background: var(--card-background-color);
+	pointer-events: auto;
 }
 
 button {

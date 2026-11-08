@@ -83,7 +83,7 @@ for (const [name, theme] of Object.entries({
 		await applyTheme(page, theme);
 		await expect(page.locator("dt3d-tree")).toHaveCSS("background-color", rgb(theme.surface));
 		await expect(page.locator("dt3d-space-selector .selector")).toHaveCSS("background-color", rgb(theme.surface));
-		await expect(page.locator("dt3d-bottom-bar .editor-toolbar")).toHaveCSS("background-color", rgb(theme.surface));
+		await expect(page.locator("dt3d-bottom-bar .tool-group").first()).toHaveCSS("background-color", rgb(theme.surface));
 		await expect(page.locator("dt3d-tree .section-heading").first()).toHaveCSS("color", rgb(theme.text));
 		const selected = page.locator("dt3d-bottom-bar button.selected").first();
 		await expect(selected).toHaveCSS("background-color", rgb(theme.accent));
