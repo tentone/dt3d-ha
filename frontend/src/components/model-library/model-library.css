@@ -102,6 +102,11 @@ ha-icon {
 .room-filter:focus-visible {
 	outline: 2px solid var(--primary-color, #5aa6ff);
 }
+
+.room-filter option {
+	background: var(--card-background-color, Canvas);
+	color: var(--primary-text-color, CanvasText);
+}
 .search {
 	display: flex;
 	align-items: center;
@@ -129,6 +134,8 @@ input {
 input:focus-visible {
 	outline: none;
 }
+
+input::placeholder { color: var(--secondary-text-color); opacity: 1; }
 .search:focus-within {
 	border-color: var(--primary-color, #5aa6ff);
 	outline: 1px solid var(--primary-color, #5aa6ff);
@@ -230,8 +237,8 @@ h3 {
 	aspect-ratio: 4 / 3;
 	background: radial-gradient(
 		ellipse at 50% 70%,
-		rgb(140 157 184 / 19%),
-		rgb(140 157 184 / 5%) 75%
+		color-mix(in srgb, var(--primary-text-color) 12%, transparent),
+		color-mix(in srgb, var(--primary-text-color) 3%, transparent) 75%
 	);
 }
 .preview img {

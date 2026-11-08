@@ -80,11 +80,11 @@
 }
 
 .collapse-btn:hover {
-	background: var(--dark-primary-color);
+	background: color-mix(in srgb, var(--primary-color) 16%, var(--card-background-color));
 }
 
 .collapse-btn:active {
-	background: var(--darker-primary-color);
+	background: color-mix(in srgb, var(--primary-color) 24%, var(--card-background-color));
 }
 
 :host([collapsed]) .panel,
@@ -232,9 +232,11 @@
 	padding: 6px 8px;
 	border: 1px solid var(--divider-color);
 	border-radius: 6px;
-	background: var(--input-fill-color);
-	color: var(--input-ink-color);
+	background: var(--input-fill-color, var(--card-background-color));
+	color: var(--input-ink-color, var(--primary-text-color));
 }
+
+input::placeholder { color: var(--secondary-text-color); opacity: 1; }
 
 .no-search-results {
 	padding: 8px 12px;

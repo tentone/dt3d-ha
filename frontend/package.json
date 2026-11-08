@@ -29,6 +29,7 @@
 		"test:model-library": "node --test tests/model-library.test.mjs",
 		"test:model-library-ui": "playwright test --config playwright.model-library.config.mjs",
 		"test:spaces": "playwright test --config playwright.spaces.config.mjs",
+		"test:themes": "playwright test --config playwright.themes.config.mjs",
 		"format": "prettier --write --use-tabs .",
 		"lint": "eslint .",
 		"lint-fix": "eslint . --fix"

@@ -1,8 +1,11 @@
 :host {
+	accent-color: var(--primary-color);
 	display: block;
 	color: var(--primary-text-color);
 	font-family: var(--paper-font-body1_-_font-family, "Roboto", sans-serif);
 }
+
+input::placeholder { color: var(--secondary-text-color); opacity: 1; }
 
 .config-sections {
 	display: flex;
@@ -89,8 +92,8 @@ select {
 	border: 1px solid var(--divider-color);
 	border-radius: 6px;
 	box-sizing: border-box;
-	background: var(--input-fill-color);
-	color: var(--input-ink-color);
+	background: var(--input-fill-color, var(--card-background-color));
+	color: var(--input-ink-color, var(--primary-text-color));
 	font: inherit;
 }
 

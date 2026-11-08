@@ -131,17 +131,13 @@ export class DT3DMaterialManager extends LitElement {
 			this.disposePreviewRenderer();
 			return;
 		}
-		const background =
-			getComputedStyle(this)
-				.getPropertyValue("--secondary-background-color")
-				.trim() || "#f1f1f1";
 		try {
 			for (const material of this.materials) {
 				if (!(await this.yieldForPreview(generation))) return;
-				const key = materialPreviewKey(material, background);
+				const key = materialPreviewKey(material);
 				if (this.previewKeys.get(material.uuid) === key) continue;
 				this.previewRenderer ??= new MaterialPreviewRenderer();
-				const url = this.previewRenderer.render(material, background);
+				const url = this.previewRenderer.render(material);
 				this.previewKeys.set(material.uuid, key);
 				this.previewUrls = new Map(this.previewUrls).set(material.uuid, url);
 			}

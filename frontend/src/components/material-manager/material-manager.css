@@ -18,7 +18,7 @@
 	flex-direction: column;
 	border-top: 1px solid var(--divider-color);
 	box-sizing: border-box;
-	background: color-mix(in srgb, var(--card-background-color) 90%, transparent);
+	background: var(--card-background-color);
 	box-shadow: 0 -8px 22px var(--shadow-color);
 	opacity: 0;
 	transform: translateY(18px);
@@ -52,7 +52,7 @@ header {
 	padding: 8px 12px;
 	box-sizing: border-box;
 	border-bottom: 1px solid var(--divider-color);
-	background: color-mix(in srgb, var(--card-background-color) 90%, transparent);
+	background: var(--card-background-color);
 }
 
 .title {
@@ -92,7 +92,7 @@ input {
 	border: 1px solid var(--divider-color);
 	border-radius: 7px;
 	box-sizing: border-box;
-	background: var(--input-fill-color, transparent);
+	background: var(--input-fill-color, var(--card-background-color));
 	color: var(--input-ink-color, var(--primary-text-color));
 	font: inherit;
 }
@@ -102,6 +102,8 @@ input:focus {
 	outline: none;
 	box-shadow: 0 0 0 1px var(--primary-color);
 }
+
+input::placeholder { color: var(--secondary-text-color); opacity: 1; }
 
 button {
 	display: inline-flex;
@@ -154,11 +156,11 @@ button:focus-visible,
 }
 
 .create-button:hover {
-	background: var(--dark-primary-color);
+	box-shadow: 0 0 0 2px var(--primary-color);
 }
 
 .create-button:active {
-	background: var(--darker-primary-color);
+	box-shadow: inset 0 0 0 2px var(--text-primary-color);
 }
 
 .material-grid {
@@ -221,7 +223,7 @@ button:focus-visible,
 
 .preview > ha-icon {
 	--mdc-icon-size: 42px;
-	color: #9aa2ad;
+	color: var(--secondary-text-color);
 }
 
 .delete-button {
@@ -231,9 +233,9 @@ button:focus-visible,
 	width: 30px;
 	min-height: 30px;
 	padding: 0;
-	border: 1px solid color-mix(in srgb, #fff 26%, transparent);
-	background: color-mix(in srgb, #111 72%, transparent);
-	color: #fff;
+	border: 1px solid var(--divider-color);
+	background: var(--card-background-color);
+	color: var(--primary-text-color);
 	opacity: 0;
 	transition: opacity 120ms ease;
 }
@@ -245,7 +247,8 @@ button:focus-visible,
 }
 
 .delete-button:hover {
-	background: var(--error-color, #db4437);
+	background: var(--error-color);
+	color: var(--ha-color-on-danger-loud, var(--text-primary-color));
 }
 
 .delete-button ha-icon {

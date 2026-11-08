@@ -1,7 +1,6 @@
 import type {Material, Texture} from "three";
 import {
 	AmbientLight,
-	Color,
 	DirectionalLight,
 	Mesh,
 	MeshBasicMaterial,
@@ -14,10 +13,7 @@ import {
 } from "three";
 
 /** Snapshot appearance without serializing texture pixels or editor metadata. */
-export function materialPreviewKey(
-	material: Material,
-	background: string,
-): string {
+export function materialPreviewKey(material: Material): string {
 	const snapshot = (value: any): any => {
 		if (value?.isTexture) {
 			const texture = value as Texture;
@@ -49,7 +45,7 @@ export function materialPreviewKey(
 		}
 		return value;
 	};
-	return JSON.stringify([background, snapshot(material)]);
+	return JSON.stringify(snapshot(material));
 }
 
 /** One context for all preview jobs; only preview-owned resources are disposed. */
@@ -76,6 +72,7 @@ export class MaterialPreviewRenderer {
 		try {
 			this.renderer.setPixelRatio(1);
 			this.renderer.setSize(160, 120, false);
+			this.renderer.setClearColor(0, 0);
 			this.renderer.outputColorSpace = SRGBColorSpace;
 			this.camera.position.set(0, 0.1, 3.8);
 			this.camera.lookAt(0, 0, 0);
@@ -91,7 +88,7 @@ export class MaterialPreviewRenderer {
 		}
 	}
 
-	render(material: Material, background: string): string {
+	render(material: Material): string {
 		const preview = material.clone();
 		const textures = new Map<Texture, Texture>();
 		try {
@@ -108,7 +105,8 @@ export class MaterialPreviewRenderer {
 				(preview as any)[key] = textures.get(source);
 			}
 			this.sphere.material = preview;
-			this.scene.background = new Color(background);
+			// Let the preview's CSS surface follow live Home Assistant theme changes.
+			this.scene.background = null;
 			this.renderer.clear();
 			this.renderer.render(this.scene, this.camera);
 			return this.renderer.domElement.toDataURL("image/png");

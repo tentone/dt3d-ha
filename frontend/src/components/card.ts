@@ -4838,6 +4838,8 @@ export class DT3DCard extends LitElement {
 			display: block;
 			position: relative;
 			border-radius: 10px;
+			color: var(--primary-text-color);
+			accent-color: var(--primary-color);
 		`;
 
 		this.container = document.createElement("div");
