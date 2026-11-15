@@ -11,8 +11,8 @@
 - For installation and connection instructions, see the [setup guide](SETUP_GUIDE.md).
 - For the illustrated walkthrough and detailed settings, see the [user manual](MANUAL.md).
 
-<img src="readme/0_screenshot.png" width="400">
-<img src="readme/3_add_objects.png" width="400">
+<img src="readme/manual/20-studio-active.png" width="400" alt="Finished DT3D studio">
+<img src="readme/manual/08-furniture-library.png" width="400" alt="DT3D Model Library">
 
 ## System architecture
 
