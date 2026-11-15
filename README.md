@@ -22,7 +22,6 @@
 - Frontend card: renders the scene, provides the editor, consumes Home Assistant entity states, opens entity dialogs, and calls Home Assistant services in the same way as any other custom frontend card.
 - Backend app/add-on provides the 3D space API and persists spaces, object hierarchies, transforms, materials, viewports, space configuration and uploaded geometry.
 - The optional [MCP server](SETUP_GUIDE.md#connect-an-mcp-client) lets MCP clients manage those spaces and build or edit floorplans.
-- The frontend stores editor preferences and caches the space list, each space's object hierarchy, and geometry in IndexedDB. Cards and the configuration editor share this cache for the same backend and service key, including pending list/object requests. The list is reused for up to one minute; the next load after that checks the backend, and object trees are reused while their backend cache version matches. Older backends without cache versions also cache trees for up to one minute. Successful edits invalidate the relevant cached data immediately. Browser reloads retain the cache, and unavailable browser storage falls back to network loading.
 - Persistent spaces and objects are synchronized to the backend.
 - Home Assistant entity state is consumed live and is not copied into the DT3D database as an alternative entity registry.
 
@@ -112,25 +111,6 @@ use_self_signed_certificate: false
 - Imported binary geometry lives under `/data/dt3d-geometries`.
 - Certificates mounted from Home Assistant are available under `/ssl`.
 - The frontend can download and upload spaces as portable `.dt3d` ZIP archives. Each archive contains a versioned `space.json` database snapshot and the space's persisted assets under `assets/`.
-
-### Browser scene cache
-
-- IndexedDB database `dt3d-ha-space-cache` stores the lightweight space list, complete snapshots of spaces opened by the client, and their binary geometry. Snapshots include configuration, every object record and parent ID, sibling ordering, transforms, materials, embedded textures, entity rules, and other stored attributes. Cache namespaces separate backend addresses and service keys.
-- `GET /api/spaces` (also `?include_objects=false`) returns metadata with empty `object_instances` arrays. The client displays the cached list immediately and refreshes it in the background. `?include_objects=true` remains available for callers that need all objects.
-- `GET /api/spaces/:spaceID/version` returns only `id` and `cache_version`. Versions increase transactionally for object creation, updates and subtree deletion, space metadata/configuration changes, and changes to the default space. Geometry uploads use immutable IDs; linking a new geometry to an object increments the scene version.
-- `GET /api/spaces/:spaceID` reads configuration, objects and version in one database transaction. `SpaceApi.loadSpaceState()` checks the version directly on the server and downloads this snapshot only when the cached version differs or is missing.
-- A loaded cached scene stays visible while a changed scene and its resources are prepared in a detached object tree. The replacement is applied after its resources finish loading. Editor controls and saves remain disabled until validation and resource loading complete. A failed refresh preserves the displayed scene and offers Retry; offline scenes remain viewable with editing disabled.
-- Cached lists and snapshots do not expire after one minute. Local edits retain the previous snapshot for display while invalidating its version; deleting a space removes its cached snapshot, list entry and geometry. Browsers can still evict storage, and a missing or unavailable IndexedDB cache falls back to network loading. Older object-only cache records are replaced by complete snapshots on the next successful load.
-- Update the frontend and backend together to enable the version endpoint. Run `npm run test:space-cache` in `frontend` and `go test ./...` in `addon/backend` to verify the cache and API contract.
-
-### Automatic asset compression
-
-- Imported meshes already used Draco (`DT3DGEO2`) on upload. Loading a space now also detects older raw binary (`DT3DGEO1`) and inline geometry, prepares compressed replacements, and saves them automatically when editing is allowed. Material groups, attribute types, UVs and draw ranges are retained. Unsupported geometry and morph targets use the lossless raw fallback. Procedural walls, floors and furniture continue to store compact construction parameters.
-- Static material images are automatically encoded to KTX2/Basis UASTC in a background worker, with mipmaps when requested by the original texture. Images larger than 2048 pixels on either side are resized proportionally. Color maps use sRGB; data and normal maps retain linear sampling. The loader selects a GPU format supported by the device (such as BC7, ASTC or ETC2); devices without compressed-texture support fall back to RGBA. Video, dynamic canvas, HDR, cube and other special textures are kept unchanged, as are images that cannot be read because of cross-origin restrictions or codec failures.
-- Geometry and textures carry versioned `userData.dt3dCompression` metadata. Saved mesh records also carry `geometryCompression`; textures distinguish portable compression from actual `gpuCompressed` storage. The binary format and image container determine compression status, rather than trusting a flag alone. Unchanged Draco data and KTX2 textures are reused; editing a geometry buffer invalidates its saved revision.
-- KTX2 bytes are embedded in material image records, so existing space snapshots, material libraries and `.dt3d` archives retain portable textures across different GPUs. IndexedDB caches these snapshots, uploaded geometry immediately, and derived compression results by content. The optional derived cache is bounded to 64 entries of at most 16 MiB each and is isolated by backend/service key. Read-only and offline views can optimize locally without writing to the server. Browser eviction or storage failures may require a download or recompression.
-- Both import decoders and texture codecs ship inside `dt3d-card.js`, including their WASM; no codec CDN is needed. Draco reduces geometry download/storage size, not its decoded GPU memory. GPU texture compression reduces texture memory; it does not reduce polygon counts or draw calls.
-
 
 ## Repository structure
 
