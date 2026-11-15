@@ -1,6 +1,6 @@
 # DT3D setup guide
 
-This guide explains how to install and connect Digital Twin 3D for Home Assistant (DT3D). After setup is complete, use the [user manual](MANUAL.md) to create and manage the digital twin.
+This guide explains how to install and connect Digital Twin 3D for Home Assistant (DT3D). After setup is complete, use the [user manual](USER_MANUAL.md) to build your first digital twin.
 
 DT3D has two parts:
 
@@ -161,7 +161,7 @@ The visual card editor exposes the same settings. After the connection fields ar
 4. Add a cube and refresh the page.
 5. Confirm that the space and cube reload from the backend.
 
-After verification, continue with the [DT3D user manual](MANUAL.md). To add read-only dashboard views, see [Configure visualization cards](MANUAL.md#configure-visualization-cards).
+After verification, continue with the [DT3D user manual](USER_MANUAL.md). To add read-only dashboard views, see [Configure visualization cards](MANUAL.md#configure-visualization-cards).
 
 ## Setup troubleshooting
 

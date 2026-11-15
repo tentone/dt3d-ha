@@ -9,7 +9,7 @@
 - The project is split into a HA frontend card and a Home Assistant app/add-on that stores 3D scene data.
 - The system allows to create multiple spaces (environments) in the same deployment.
 - For installation and connection instructions, see the [setup guide](SETUP_GUIDE.md).
-- For end-user instructions, see the [user manual](MANUAL.md).
+- For an illustrated walkthrough, see the [user manual](USER_MANUAL.md). For detailed settings and model options, see the [feature reference](MANUAL.md).
 
 <img src="readme/0_screenshot.png" width="400">
 <img src="readme/3_add_objects.png" width="400">
@@ -35,7 +35,8 @@
 
 - Setup node.js and npm on your development machine.
 - Install dependencies and build the frontend card using `npm install` and `npm run build` in the `frontend` directory.
-- The build writes `dt3d-card.js` to the repository root. Keep it there when publishing a release. The `content_in_root` setting in `hacs.json` lets Marketplace detect the card alongside the backend app repository.
+- The build writes `dt3d-card.js` to the repository root. The `content_in_root` setting in `hacs.json` lets Marketplace detect the card alongside the backend app repository.
+- Include both files in each GitHub release tag. Marketplace uses the latest published release to detect and install the card.
 - To test, copy the bundle to Home Assistant's `/config/www` directory and register it as a JavaScript module resource in **Settings → Dashboards → three-dot menu → Resources**.
 - Hard-refresh the browser after replacing the bundle to ensure the new version is loaded.
 
@@ -149,7 +150,8 @@ use_self_signed_certificate: false
 │   │   └── locale/         UI strings
 │   └── vite.config.js      Single-module production build
 ├── sample/                 Sample 3D assets
-├── MANUAL.md               End-user documentation
+├── USER_MANUAL.md          Illustrated user manual
+├── MANUAL.md               Feature reference
 ├── SETUP_GUIDE.md          Installation and connection documentation
 └── README.md               Architecture and development documentation
 ```
@@ -157,6 +159,7 @@ use_self_signed_certificate: false
 ## Documentation
 
 - [Setup guide](SETUP_GUIDE.md)
-- [User manual](MANUAL.md)
+- [User manual](USER_MANUAL.md)
+- [Feature reference](MANUAL.md)
 - [Home Assistant custom app repositories](https://developers.home-assistant.io/docs/apps/repository/)
 - [Home Assistant dashboard views](https://www.home-assistant.io/dashboards/views/)

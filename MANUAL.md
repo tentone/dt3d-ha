@@ -1,6 +1,8 @@
-# DT3D user manual
+# DT3D feature reference
 
-This manual explains how to create, edit, and view a Digital Twin 3D for Home Assistant (DT3D). It covers spaces, 3D objects, Home Assistant entities, floor-plan tools, measurements, grid configuration, viewports, visualization cards, and performance.
+For a step-by-step example with screenshots, start with the [illustrated user manual](USER_MANUAL.md).
+
+This reference covers spaces, 3D objects, Home Assistant entities, floorplan tools, measurements, grid configuration, viewports, visualization cards, and performance.
 
 Complete the [setup guide](SETUP_GUIDE.md) before using this manual. For system architecture, source layout, and development instructions, see the [project README](README.md).
 
