@@ -195,7 +195,7 @@ func (h *SpaceHandler) deleteSpace(c *gin.Context) {
 		return
 	}
 
-	if err := h.spaces.DeleteSpace(spaceID); err != nil {
+	if err := h.DeleteSpace(spaceID); err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "space not found"})
 			return
@@ -204,11 +204,21 @@ func (h *SpaceHandler) deleteSpace(c *gin.Context) {
 		return
 	}
 
+	c.Status(http.StatusNoContent)
+}
+
+func (h *SpaceHandler) DeleteSpace(spaceID string) error {
+	if _, err := uuid.Parse(spaceID); err != nil {
+		return errors.New("invalid space id")
+	}
+	if err := h.spaces.DeleteSpace(spaceID); err != nil {
+		return err
+	}
 	if err := os.RemoveAll(filepath.Join(h.geometryDir, spaceID)); err != nil {
 		log.Printf("Failed to remove geometry files for deleted space %s: %v", spaceID, err)
 	}
 
-	c.Status(http.StatusNoContent)
+	return nil
 }
 
 func (h *SpaceHandler) listObjectInstances(c *gin.Context) {

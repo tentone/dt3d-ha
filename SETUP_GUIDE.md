@@ -72,6 +72,7 @@ use_self_signed_certificate: false
 | Option | Description |
 | --- | --- |
 | `port` | TCP port exposed by the backend API. |
+| `mcp_enabled` | Starts the optional MCP server. Defaults to `false`. |
 | `service_key` | Shared secret that must exactly match the card configuration. |
 | `ssl_certificate` | Certificate path, PEM certificate content, or empty for HTTP. |
 | `ssl_key` | Private-key path, PEM private-key content, or empty for HTTP. |
@@ -109,6 +110,27 @@ DT3D backend:      https://home.example.com:8080
 The different ports make these separate browser origins, but the backend provides CORS support. Make sure TCP port `8080`, or the selected alternative, is reachable from all dashboard clients.
 
 If no trusted certificate is available, set `use_self_signed_certificate: true`. DT3D generates and reuses a certificate in `/data`. Every client must trust that certificate before it can connect. A trusted certificate is preferable because it avoids per-device certificate warnings.
+
+## Connect an MCP client
+
+1. Open **Settings → Apps → DT3D → Configuration** and turn on **Enable MCP server**.
+2. Under **Network**, enter the host port for **DT3D MCP server port** (`8081/tcp`). You can use `8081` or any available host port. Save and restart the add-on.
+3. In your MCP client, select **Streamable HTTP** and enter `https://homeassistant.local:8081/mcp`, substituting your host and selected port. Use `http://` when the add-on's TLS is off. Configure the DT3D `service_key` as a bearer token or send it in the `X-DT3D-Service-Key` request header.
+
+To disable MCP, turn off **Enable MCP server**, clear the Network field, and restart the add-on. The MCP and dashboard API use the same space database and TLS settings.
+
+| Task | MCP tools |
+| --- | --- |
+| Find, create, rename, configure or delete a space | `list_spaces`, `get_space`, `create_space`, `edit_space`, `delete_space` |
+| Build rooms, walls, floor polygons, doors, windows, gates and furniture | `build_floorplan`, `list_furniture` |
+| Add a calibrated floorplan image | `add_floorplan_reference` |
+| Edit, move, group or delete scene objects and create lights, viewports or entity bindings | `list_objects`, `create_object`, `edit_object`, `delete_object` |
+| Create or replace a material, including textures | `list_materials`, `save_material`, `delete_material`. Assign the material with `build_floorplan` or `edit_object`. |
+| Import an editable group of static meshes | `import_model` accepts GLB, glTF, OBJ, FBX, DAE, STL and 3DS files. Send the base64 model and any companion files, such as textures, glTF buffers and OBJ material libraries. The decoded upload limit is 32 MiB in total. |
+
+Coordinates are in meters with Y up. Wall endpoints and floor outlines use X and Z. Positions in a hierarchy are relative to the parent, and rotations are in radians. A `build_floorplan` request can create a floor and its perimeter walls from a room boundary or add individual elements to an existing plan. For shared walls, define and reference each wall once. Use `add_floorplan_reference` to scale a PNG, JPEG or GIF between two known image points.
+
+Reload or reopen the space in the dashboard after making MCP edits.
 
 ## Create the fullscreen editor
 

@@ -21,6 +21,7 @@
   - It is required that the addon is reachable from the Home Assistant frontend, and complies with the CORS policy.
 - Frontend card: renders the scene, provides the editor, consumes Home Assistant entity states, opens entity dialogs, and calls Home Assistant services in the same way as any other custom frontend card.
 - Backend app/add-on provides the 3D space API and persists spaces, object hierarchies, transforms, materials, viewports, space configuration and uploaded geometry.
+- The optional [MCP server](SETUP_GUIDE.md#connect-an-mcp-client) lets MCP clients manage those spaces and build or edit floorplans.
 - The frontend stores editor preferences and caches the space list, each space's object hierarchy, and geometry in IndexedDB. Cards and the configuration editor share this cache for the same backend and service key, including pending list/object requests. The list is reused for up to one minute; the next load after that checks the backend, and object trees are reused while their backend cache version matches. Older backends without cache versions also cache trees for up to one minute. Successful edits invalidate the relevant cached data immediately. Browser reloads retain the cache, and unavailable browser storage falls back to network loading.
 - Persistent spaces and objects are synchronized to the backend.
 - Home Assistant entity state is consumed live and is not copied into the DT3D database as an alternative entity registry.
@@ -79,6 +80,8 @@ VR and AR require a browser/device with immersive WebXR support and a secure Hom
 
 - Go with the version supported by `addon/backend/go.mod`.
 - Can run directly from the development machine with `go run main.go` or using docker.
+- To exercise MCP model imports in the backend tests, install the converter dependencies with `npm ci` in `addon/model-import` before running `go test ./...` in `addon/backend`.
+- Run `npm run export:mcp-furniture` in `frontend` after changing the editor's furniture options so MCP clients can discover the updated presets.
 - Alternatively copy the content from `addon/*` to a Home Assistant `/addons/dt3d` directory and install as a local app/add-on.
 - Open **Settings → Apps** (or **Settings → Add-ons** on older versions), open the store, and reload it from the three-dot menu.
 - Open the local **DT3D** entry and select **Install** or **Rebuild**.
@@ -94,6 +97,7 @@ VR and AR require a browser/device with immersive WebXR support and a secure Hom
 
 ```yaml
 port: 8080
+mcp_enabled: false
 service_key: <secret> # Can be anything, used for header-based authentication
 ssl_certificate: ""
 ssl_key: ""

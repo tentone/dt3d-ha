@@ -6,6 +6,7 @@
 	"scripts": {
 		"dev": "vite",
 		"build": "vite build",
+		"export:mcp-furniture": "node scripts/export-furniture-catalog.mjs",
 		"test:compression": "playwright test",
 		"test:space-cache": "node --test tests/space-cache.test.mjs",
 		"test:center-origin": "node --test tests/center-origin.test.mjs",

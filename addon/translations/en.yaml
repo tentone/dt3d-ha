@@ -1,0 +1,6 @@
+configuration:
+  mcp_enabled:
+    name: Enable MCP server
+    description: Allow MCP clients authenticated with the DT3D service key to edit spaces and floorplans. Set the host port below under Network.
+network:
+  8081/tcp: DT3D MCP server port

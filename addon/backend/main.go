@@ -20,6 +20,7 @@ import (
 	"unicode"
 
 	"dt3d-ha/backend/handlers"
+	"dt3d-ha/backend/mcpserver"
 	"dt3d-ha/backend/models"
 	"dt3d-ha/backend/repository"
 	"dt3d-ha/backend/service"
@@ -31,6 +32,8 @@ import (
 
 const (
 	defaultPort               = 8080
+	mcpContainerPort          = 8081
+	modelImporterScript       = "/app/model-import/import.mjs"
 	optionsFilePath           = "/data/options.json"
 	databaseFilePath          = "/data/data.db"
 	configuredCertificateFile = "/data/dt3d-configured.crt"
@@ -44,6 +47,7 @@ var inlinePEMBlockPattern = regexp.MustCompile(`(?s)-----BEGIN ([A-Z0-9 ]+)-----
 
 type options struct {
 	Port                     int    `json:"port"`
+	MCPEnabled               bool   `json:"mcp_enabled"`
 	ServiceKey               string `json:"service_key"`
 	SSLCertificate           string `json:"ssl_certificate"`
 	SSLKey                   string `json:"ssl_key"`
@@ -123,19 +127,40 @@ func resolveTLSCertificatePathsWithDefaults(opt options, selfSignedCertificateFi
 	return "", "", false, nil
 }
 
-func runServer(router http.Handler, addr string, opt options) error {
+func runServer(router, mcpHandler http.Handler, opt options) error {
 	certFile, keyFile, useTLS, err := resolveTLSCertificatePaths(opt)
 	if err != nil {
 		return err
 	}
 
-	if useTLS {
-		log.Printf("Listening with HTTPS on %s", addr)
-		return http.ListenAndServeTLS(addr, certFile, keyFile, router)
+	api := &http.Server{Addr: fmt.Sprintf("0.0.0.0:%d", opt.Port), Handler: router}
+	if mcpHandler == nil {
+		return serveHTTP(api, certFile, keyFile, useTLS)
 	}
 
-	log.Printf("Listening with HTTP on %s", addr)
-	return http.ListenAndServe(addr, router)
+	if opt.Port == mcpContainerPort {
+		return fmt.Errorf("port %d is reserved for MCP while mcp_enabled is true", mcpContainerPort)
+	}
+	mcpHTTP := &http.Server{
+		Addr:              fmt.Sprintf("0.0.0.0:%d", mcpContainerPort),
+		Handler:           mcpHandler,
+		ReadHeaderTimeout: 10 * time.Second,
+		ReadTimeout:       2 * time.Minute,
+		IdleTimeout:       time.Minute,
+	}
+	failures := make(chan error, 2)
+	go func() { failures <- serveHTTP(mcpHTTP, certFile, keyFile, useTLS) }()
+	go func() { failures <- serveHTTP(api, certFile, keyFile, useTLS) }()
+	return <-failures
+}
+
+func serveHTTP(server *http.Server, certFile, keyFile string, useTLS bool) error {
+	if useTLS {
+		log.Printf("Listening with HTTPS on %s", server.Addr)
+		return server.ListenAndServeTLS(certFile, keyFile)
+	}
+	log.Printf("Listening with HTTP on %s", server.Addr)
+	return server.ListenAndServe()
 }
 
 func main() {
@@ -169,7 +194,11 @@ func main() {
 	handlers.RegisterRoutes(api, spaceHandler)
 	handlers.RegisterMaterialRoutes(api, db)
 
-	if err := runServer(router, fmt.Sprintf("0.0.0.0:%d", opt.Port), opt); err != nil {
+	var mcpHandler http.Handler
+	if opt.MCPEnabled {
+		mcpHandler = mcpserver.NewHandler(db, spaceHandler.DeleteSpace, geometryFilesDir, modelImporterScript, opt.ServiceKey)
+	}
+	if err := runServer(router, mcpHandler, opt); err != nil {
 		log.Fatalf("failed to start server: %v", err)
 	}
 }

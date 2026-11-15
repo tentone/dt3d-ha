@@ -11,16 +11,21 @@ boot: auto
 init: false
 ports:
   8080/tcp: 8080
+  8081/tcp: null
+ports_description:
+  8081/tcp: DT3D MCP server (Streamable HTTP)
 map:
   - ssl
 options:
   port: 8080
+  mcp_enabled: false
   service_key: ""
   ssl_certificate: ""
   ssl_key: ""
   use_self_signed_certificate: false
 schema:
   port: int?
+  mcp_enabled: bool
   service_key: password
   ssl_certificate: str?
   ssl_key: str?

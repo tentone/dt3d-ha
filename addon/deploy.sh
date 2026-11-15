@@ -75,7 +75,7 @@ addon_is_installed() {
 
 echo "Copying ${ADDON_DIR} to ${SSH_USER}@${HA_HOST}:${REMOTE_ADDON_DIR}"
 remote "rm -rf '${REMOTE_ADDON_DIR}' && mkdir -p '${REMOTE_ADDON_DIR}'"
-tar -C "${ADDON_DIR}" -cf - . \
+tar -C "${ADDON_DIR}" --exclude='./model-import/node_modules' -cf - . \
   | sshpass -p "${SSH_PASSWORD}" ssh "${SSH_OPTS[@]}" "${SSH_USER}@${HA_HOST}" "tar -C '${REMOTE_ADDON_DIR}' -xf -"
 
 echo "Reloading Home Assistant add-on store"

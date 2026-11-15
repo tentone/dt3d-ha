@@ -1,0 +1,10 @@
+{
+  "name": "dt3d-model-import",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "linkedom": "0.18.12",
+    "three": "0.185.1"
+  }
+}
