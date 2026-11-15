@@ -1,6 +1,8 @@
 # <img src="addon/icon.png" width="80"> DT3D - 3D Digital Twin for Home Assistant
 
-[![Add the DT3D add-on repository to Home Assistant](https://my.home-assistant.io/badges/supervisor_add_addon_repository.svg)](https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2Ftentone%2Fdt3d-ha) [![Add the DT3D frontend to HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=tentone&repository=dt3d-ha&category=plugin)
+<!-- ha-marketplace:exclude-start -->
+[![Add the DT3D backend app repository to Home Assistant](https://my.home-assistant.io/badges/supervisor_add_addon_repository.svg)](https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2Ftentone%2Fdt3d-ha) [![Open the DT3D dashboard card in Home Assistant Marketplace](https://my.home-assistant.io/badges/marketplace_repository.svg)](https://my.home-assistant.io/redirect/marketplace_repository/?owner=tentone&repository=dt3d-ha&category=plugin)
+<!-- ha-marketplace:exclude-end -->
 
 - DT3D is a Home Assistant addon and dashboard card to create a digital twin of a home.
 - Features a integrated 3D editor to create and modify the digital twin, add 3D elements, and link them with HA entities.
@@ -33,8 +35,8 @@
 
 - Setup node.js and npm on your development machine.
 - Install dependencies and build the frontend card using `npm install` and `npm run build` in the `frontend` directory.
-- The built bundle is written to `frontend/dist/dt3d-card.js`
-- To test copy the bundle to Home Assistant's `/config/www` directory and register it as a JavaScript module resource in **Settings → Dashboards → three-dot menu → Resources**:
+- The build writes `dt3d-card.js` to the repository root. Keep it there when publishing a release. The `content_in_root` setting in `hacs.json` lets Marketplace detect the card alongside the backend app repository.
+- To test, copy the bundle to Home Assistant's `/config/www` directory and register it as a JavaScript module resource in **Settings → Dashboards → three-dot menu → Resources**.
 - Hard-refresh the browser after replacing the bundle to ensure the new version is loaded.
 
 ### Setup

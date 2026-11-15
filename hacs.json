@@ -1,4 +1,5 @@
 {
 	"name": "Digital Twin 3D",
+	"content_in_root": true,
 	"filename": "dt3d-card.js"
 }

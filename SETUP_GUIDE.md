@@ -7,12 +7,11 @@ DT3D has two parts:
 - The Home Assistant app/add-on stores spaces and objects and exposes them through an authenticated HTTP(S) API.
 - The `custom:dt3d-card` frontend provides the 3D editor and read-only visualization mode in Home Assistant dashboards.
 
-Home Assistant apps/add-ons are installed from the **Apps/Add-ons store**. The dashboard frontend is installed through HACS.
+Install the backend from the **App store** and the dashboard card from **Marketplace** on Home Assistant 2026.11 or later. On earlier versions, use HACS for the dashboard card.
 
 ## Requirements
 
 - Home Assistant OS or Home Assistant Supervised for the backend app/add-on.
-- HACS for installing the dashboard frontend.
 - A hostname that every browser used for Home Assistant can resolve.
 - A certificate valid for that hostname when Home Assistant is served over HTTPS.
 - Network access from every dashboard client to the configured DT3D backend port.
@@ -36,14 +35,27 @@ Node.js and npm are required only when building the frontend from source. See th
 8. Configure HTTP or HTTPS as described in [Configure the backend](#configure-the-backend).
 9. Start the app/add-on and enable **Start on boot**.
 
-## Install the frontend
+## Install the dashboard card
+
+### Home Assistant 2026.11 and later
+
+1. Open **Settings → Marketplace** and select **Add from link**.
+2. Enter `https://github.com/tentone/dt3d-ha` and select **Add**. Connect your GitHub account when prompted. If Marketplace asks for a type, choose **Dashboard** and select **Add** again.
+3. Open **Digital Twin 3D**, select **Install**, and confirm the version.
+4. Reload your browser after installation.
+
+Marketplace registers the dashboard resource automatically for dashboards that manage resources in the UI. If you manage resources in YAML, use the URL shown in the install dialog and set the resource type to `module`. The card is served at `/local/community/dt3d-ha/dt3d-card.js`, with a version query parameter in the install dialog.
+
+If you installed DT3D through HACS before upgrading Home Assistant, Marketplace migrates the installation automatically.
+
+### Earlier Home Assistant versions
 
 1. Open **HACS → three-dot menu → Custom repositories**.
 2. Add `https://github.com/tentone/dt3d-ha` with category **Dashboard**.
 3. Open **Digital Twin 3D** and select **Download**.
-4. Restart Home Assistant or hard-refresh the browser when prompted.
+4. Reload your browser after installation.
 
-If HACS does not register the resource automatically, open **Settings → Dashboards → three-dot menu → Resources** and add the downloaded `dt3d-card.js` file as a **JavaScript module**. HACS dashboard files are normally served below `/hacsfiles/`.
+If HACS does not register the resource automatically, add `/hacsfiles/dt3d-ha/dt3d-card.js` as a **JavaScript module** under **Settings → Dashboards → three-dot menu → Resources**.
 
 ## Configure the backend
 
