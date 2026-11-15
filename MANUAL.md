@@ -1,12 +1,189 @@
-# DT3D feature reference
+# Digital Twin 3D user manual
 
-For a step-by-step example with screenshots, start with the [illustrated user manual](USER_MANUAL.md).
+[Studio walkthrough](#studio-walkthrough) · [Feature reference](#feature-reference) · [Visualization cards](#configure-visualization-cards) · [Troubleshooting](#troubleshooting)
 
-This reference covers spaces, 3D objects, Home Assistant entities, floorplan tools, measurements, grid configuration, viewports, visualization cards, and performance.
+## Studio walkthrough
 
-Complete the [setup guide](SETUP_GUIDE.md) before using this manual. For system architecture, source layout, and development instructions, see the [project README](README.md).
+Build **Studio walkthrough**, a 6 m × 4 m room with a door, a window, furniture, and an oak-textured floor. A Home Assistant light illuminates the room, a toggle opens the door, and a number helper rotates the chair. The Stanford Bunny OBJ sits on the table.
 
-## Open the editor
+![The finished studio with the light on, the door open, the chair turned, and the Stanford Bunny on the table](readme/manual/20-studio-active.png)
+
+[Editor tour](#editor-tour) · [Create a space](#1-create-a-space) · [Draw the floorplan](#2-draw-the-floorplan) · [Add openings](#3-add-a-door-and-window) · [Furnish the room](#4-furnish-the-room) · [Connect entities](#5-import-and-connect-home-assistant-entities) · [Create a textured material](#6-create-and-assign-a-textured-material) · [Import the bunny](#7-import-a-3d-model) · [Test and save](#8-test-the-finished-space)
+
+Open the DT3D editing card on your Home Assistant dashboard. A **Panel (one card)** dashboard view gives the editor the most room. If you still need to install or connect DT3D, start with the [setup guide](SETUP_GUIDE.md#create-the-fullscreen-editor).
+
+The screenshots use the desktop editor connected to a local DT3D backend. The example Home Assistant states are simulated. Use the equivalent entities from your own dashboard when following along.
+
+### Editor tour
+
+![The DT3D editor showing the Space bar, creation rail, canvas, Objects and Inspector dock, and bottom toolbar](readme/manual/02-editor-layout.png)
+
+Hover over a button or focus it with the keyboard to see its name. The chevrons beside the left rail and right dock collapse or expand those panels.
+
+| Where | What you can do |
+| --- | --- |
+| **Space bar** across the top | Switch scenes in **Space**. The buttons open **Space configuration**, create or clone a space, download or upload a `.dt3d` archive, and delete the active space. |
+| **Left rail** | Open **Model Library** or **Open material manager**. **Scene tools** contains **Entity**, **Create group**, and **Create viewport**. **Floorplan** contains **Draw wall**, **Draw floor surface**, **Wall creation**, **Floorplan reference**, and **Exit wall and floor tools**. |
+| **Objects** and **Inspector** on the right | Search or select objects in the tree. Expand a wall to see its door or window. Use **Inspector** to edit the selected object's dimensions, transform, and other properties. Drag the divider up when you need more room for the inspector. |
+| **Bottom toolbar** | **Translate object**, **Rotate object**, **Scale object**, **Disable transform controls**, and **Focus selected objects**. **Measure distance** and **Measure angle** use points on visible surfaces. **Clear measurements** removes the measurement guides. **Toggle grid**, **Snap transforms to grid**, **Configure grid**, and **Prevent object clipping while moving** control placement. |
+| **Camera** at lower right | Switch between perspective and orthographic projection with the round camera button. Double-click a face of the orientation cube to align the view, if the cube is enabled. |
+
+With the default orbit controls, drag with the left mouse button to orbit, drag with the right button to pan, and scroll to zoom. Double-click an object on the canvas or click its name in **Objects** to select it. Right-click an object for actions such as **Move to point**, **Clone**, and **Delete**. Use **Ctrl/Cmd+Z** to undo and **Ctrl/Cmd+Shift+Z** to redo.
+
+### 1. Create a space
+
+1. Click **Create space** (the plus button in the top bar).
+2. Enter **Studio walkthrough** as the name. Add a description if you like, then confirm with **Create space**.
+3. If the new space shows a starter **Cube** and **Plane**, right-click each in **Objects**, choose **Delete**, and confirm. Start drawing on the empty grid.
+
+![The Create space form filled in for Studio walkthrough](readme/manual/01-create-space.png)
+
+The new space opens automatically. DT3D synchronizes changes to the backend while you work. The gear in the top bar opens **Space configuration**, where you can change the name, default space, background, daylight, and rendering settings.
+
+### 2. Draw the floorplan
+
+1. Switch to orthographic projection and double-click **TOP** on the orientation cube. You can also orbit to a view looking straight down.
+2. Turn on **Snap transforms to grid** (the magnet). In **Configure grid**, set **Snap size** to `0.5` m for this example.
+3. Open **Wall creation** in the left rail. Leave **Create floors automatically** checked and keep the default wall height of `2.40` m. The example also uses **Default bottom decoration** to add baseboards.
+4. Click **Draw wall**. Double-click the first corner. Move the pointer along the grid and use the length label to find a point 6 m away. Double-click to place the first wall. Hold **Ctrl** while positioning and placing a point to keep the segment on the nearest horizontal plan axis.
+5. Double-click the next points to add a 4 m side, a 6 m side, and the last 4 m side. Place the last point on the first corner to close the loop. DT3D adds **Floor** to **Objects** when the wall centerlines enclose the room. Click **Exit wall and floor tools**.
+
+![Wall creation settings with automatic floors and baseboards enabled](readme/manual/03-wall-settings.png)
+
+![Drawing the first wall with a live length preview](readme/manual/04-draw-wall.png)
+
+![The closed rectangular plan with four walls and a Floor entry in the object tree](readme/manual/05-closed-plan.png)
+
+**Trace an existing plan.** Choose **Floorplan reference** and load an image of the plan. In the calibration dialog, click two points with a known separation, enter the distance in meters, and select **Add floorplan**. Draw the walls over the scaled image.
+
+**Draw a separate floor.** Use **Draw floor surface** on a visible reference plane or other scene surface. Double-click every corner, then double-click near the first point to close the outline. The first point sets the height of the whole floor. Press **Escape** to cancel an unfinished outline. You can also select the walls of a closed room, right-click, and choose **Generate floor from selected walls** if the room has no floor.
+
+### 3. Add a door and window
+
+1. Open **Model Library** in the left rail. Under **Model categories**, select **Doors, windows and gates**, then choose **Door**.
+2. Double-click the back wall where you want the door. The example puts it to the left of center. DT3D cuts the opening and adds the door under its wall in **Objects**.
+3. Open the same category again, choose **Window**, and double-click the back wall to the right of center. Click **Exit wall and floor tools** when finished.
+4. Expand that wall in **Objects** to select **Door 1** or **Window 1**. Adjust the width and height under **Door** or **Window** in the inspector. Orbit to an angled view to check that the openings sit where you expect.
+
+![The Doors, windows and gates category with the Door, Window, and Gate entries](readme/manual/06-opening-library.png)
+
+![A closed door and selected window cut into the back wall, with both listed beneath that wall](readme/manual/07-door-and-window.png)
+
+### 4. Furnish the room
+
+1. Open **Model Library**. Use **Filter by room** to browse a collection such as **Living Room**, or set it to **All rooms** and search by name.
+2. Search for **Chair** and select the tile named **Chair**. Move the outlined preview over the floor and double-click to place it. Right-click or press **Escape** to cancel a preview.
+3. Repeat for **Table** and **Couch**. Place the chair on the left, the table near the center, and the couch along the wall under the window. Leave the door swing clear. In the example the chair starts at `0°` Y rotation.
+4. Select an item in **Objects** to adjust its **Transform**. Open its furniture-specific section, such as **Chair dimensions**, to change its physical dimensions.
+
+The library also includes **Geometric Shapes** and **Lighting**, with ambient, directional, point, spot, and rectangular area lights. For the next step, add the Home Assistant light from **Entity** in the left rail.
+
+![The Model Library filtered to Living Room, showing furniture and preview tiles](readme/manual/08-furniture-library.png)
+
+### 5. Import and connect Home Assistant entities
+
+Use a light you can toggle and two helpers. In Home Assistant, open **Settings → Devices & services → Helpers** and choose **Create helper**. Create a **Toggle** named **Entry door** and a **Number** named **Chair angle** with a minimum of `0`, a maximum of `100`, and a step of `1`. Use the actual entity IDs assigned by Home Assistant. [Toggle helper](https://www.home-assistant.io/integrations/input_boolean/#configuration) · [Number helper](https://www.home-assistant.io/integrations/input_number/#creating-a-number-helper)
+
+| Example entity | What it drives |
+| --- | --- |
+| `light.studio_light` | Turns the imported 3D light on or off and supplies its color. |
+| `input_boolean.entry_door` | Opens the door at `on` and closes it at `off`. |
+| `input_number.chair_angle` | Rotates the chair from its original angle to 90° as the value goes from 0 to 100. |
+
+#### Import the light into the scene
+
+1. Click **Entity** in the left rail. Search by friendly name or entity ID and select your light from the results.
+2. Move the preview into the room and double-click to place it. Repeat the same picker steps for any additional entity markers you want to display, such as a sensor or switch.
+3. Select the light in **Objects**. In **Transform**, set **Position Y** to `1.40` m to raise it above the floor. In **Lighting**, choose **Point Light** for **Source type**. The example uses **Intensity** `18` and **Range (m)** `6`.
+4. Toggle the light in Home Assistant to see the scene illumination switch on and off. DT3D uses the entity's supplied RGB or hue/saturation color when available. Set the 3D light's intensity in the inspector.
+
+![The entity picker filtered to the Studio light](readme/manual/09-entity-picker.png)
+
+![The imported light illuminating the room with its Lighting inspector open](readme/manual/10-light-settings.png)
+
+#### Bind the door to the toggle
+
+1. Select **Door 1** under its wall in **Objects**, then expand **Door** in the inspector.
+2. Enter or select `input_boolean.entry_door` in **Openness entity ID**. The bound entity now supplies **Opening (%)**.
+3. Toggle the helper **on** to open the door to `100%`. Toggle it **off** to close it to `0%`.
+
+A door contact sensor can use its `on` or `off` state. A compatible cover can supply `current_position`, and a numeric state from `0` to `100` can represent partial opening. Use the actual states of your entity to verify the direction. The same **Openness entity ID** control is available for windows and gates.
+
+![The open door with its entity ID and 100 percent opening visible in the inspector](readme/manual/11-door-binding.png)
+
+#### Rotate the chair from the number helper
+
+1. Set the chair to its resting pose and set the Home Assistant helper to `0`.
+2. Select **Chair**, expand **Entity rules** at the bottom of the inspector, and choose **Add rule**.
+3. Set **Entity** to `input_number.chair_angle`. Choose **Transform action** for **Action**, **Rotation (degrees)** for **Transform value**, and **Interpolate from entity value** for **Change mode**.
+4. Set **Entity value at original** to `0` and **Entity value at target** to `100`. Under **Configured transform**, set **X** to `0`, **Y** to `90`, and **Z** to `0`. Keep the rule **Enabled**.
+5. Set the helper to `50` in Home Assistant. The chair should turn to 45°. At `100` it should turn to 90°. At `0` it should return to its starting pose.
+
+DT3D uses the chair's rotation when the rule is created as the original value. Y is the vertical axis, so the chair turns in place. For other furniture, **Entity rules** also offers position, scale, color change, and visibility actions. A rule can reference any available entity ID directly.
+
+![The chair rotation rule with numeric endpoints of 0 and 100 and a target Y rotation of 90 degrees](readme/manual/12-chair-rule.png)
+
+### 6. Create and assign a textured material
+
+1. Click **Open material manager** (the palette icon in the left rail), then click **New material** (plus) in the material panel.
+2. In the inspector, change **Material Name** to **Studio oak**. Click the drop area under **Base Color Map** and choose a PNG or JPG. You can also drop the image onto the field. [Download the example oak texture](readme/manual/studio-oak.png)
+3. Leave **Mapping** at **UV**, with **Repeat X** and **Repeat Y** set to `1`, to use the whole image across this floor. To tile a seamless texture more densely, use **Repeat** for **Wrap S** and **Wrap T** and increase the repeat values. Optional maps such as **Normal Map** and **Roughness Map** have their own fields.
+4. With the material panel open, switch to a top view so the floor is easy to hit. Drag the **Studio oak** material tile from the panel and drop it onto a clear area of the floor in the canvas. The floor updates and the tile shows that the material is in use.
+
+![The new Studio oak material and the uploaded base color map in the inspector](readme/manual/13-texture-material.png)
+
+![The oak texture applied to the floor, with the material selected in the bottom panel](readme/manual/14-assigned-material.png)
+
+### 7. Import a 3D model
+
+1. Open the model's GitHub page, click **Download raw file**, and save it as `stanford-bunny.obj`. The example uses the OBJ on its own. [Stanford Bunny OBJ on GitHub](https://github.com/alecjacobson/common-3d-test-models/blob/master/data/stanford-bunny.obj)
+2. Open **Model Library** and click **Select model files** at the bottom. Choose the downloaded OBJ.
+3. When the placement preview appears, move it over the table and double-click to place it. A top view makes it easier to aim at the tabletop. You can also drag a model file onto the canvas to import it at the drop point.
+4. Select **stanford-bunny.obj** in **Objects** and expand **Transform**. The supplied model is small. Set its linked **Scale** to `4.5` on all three axes, then adjust **Position Y** until the base rests on the tabletop. The sample uses a Y position of `0.60` m with the default table.
+
+DT3D accepts `.gltf`, `.glb`, `.obj`, `.fbx`, `.dae`, `.stl`, and `.3ds`. If a model uses companion material, texture, or buffer files, select them together or use **Select model folder** to keep their relative paths.
+
+![The Select model files and Select model folder buttons at the bottom of the Model Library](readme/manual/15-model-import.png)
+
+![The imported Stanford Bunny on the table, with the model's scale visible in Transform](readme/manual/17-bunny-on-table.png)
+
+### 8. Test the finished space
+
+Use your Home Assistant dashboard to change the three example entities while the DT3D card is open.
+
+| Test | Expected result |
+| --- | --- |
+| Light off, entry toggle off, chair helper at `0` | The 3D light is off, the door is closed, and the chair is at its original angle. |
+| Chair helper at `50` | The chair is at 45°. |
+| Light on, entry toggle on, chair helper at `100` | The room is illuminated by the entity light, the door is fully open, and the chair is at 90°. |
+
+| All three at rest | All three active |
+| --- | --- |
+| ![Light off, door closed, and chair at its original angle](readme/manual/19-studio-resting.png) | ![Light on, door fully open, and chair rotated 90 degrees](readme/manual/20-studio-active.png) |
+
+The finished screenshots use a visualization card with a shallow camera angle so you can see through the nearest walls. To set one up on your dashboard, see [Configure visualization cards](#configure-visualization-cards).
+
+To change how the room looks, click **Space configuration** (gear). For example, turn **Sky enabled** off under **Appearance** and choose a **Background color** to give the room a solid background. **Daylight conditions** controls the ambient light and sun.
+
+![Space configuration showing the Details, Appearance, and Rendering sections](readme/manual/18-space-settings.png)
+
+Wait for synchronization to finish before switching spaces. Use **Download space (.dt3d)** in the top bar to keep a portable copy with the geometry and textures. **Upload space (.dt3d)** opens a new copy of an archive. Entity bindings still need their corresponding Home Assistant entities wherever you open the space.
+
+### If something looks wrong
+
+| Symptom | What to check |
+| --- | --- |
+| Closing the walls leaves the room without a floor | Check **Create floors automatically** under **Wall creation**. Check that the last point snapped to the first wall and that the wall centerlines form a closed loop. |
+| A door or window will not place | Double-click the wall surface with the corresponding opening tool active. Check whether the object appeared beneath that wall in **Objects**. |
+| An entity is missing or a binding does not respond | Check the exact entity ID and state in Home Assistant. For the chair, check that the rule is enabled and that the entity's main state is numeric. |
+| The floor texture lands on another object | Undo the assignment, switch to a top view, and drop the material onto an uncovered area of the floor. |
+| The imported model is hard to see | Select it in **Objects** and choose **Focus selected objects**. Check **Transform → Scale** and adjust its height after resizing. |
+
+## Feature reference
+
+[Editor controls](#using-the-editor) · [Furniture and model library](#use-the-built-in-furniture-models) · [Entity rules](#connect-any-object-to-entity-states) · [Space configuration](#configure-a-space) · [Synchronization](#data-synchronization) · [Performance](#performance-optimization)
+
+### Open the editor
 
 Open the Home Assistant dashboard view that contains the DT3D editing card. A fullscreen **Panel (one card)** view gives the editor the most working space. The [setup guide](SETUP_GUIDE.md#create-the-fullscreen-editor) explains how to create and connect this card.
 
@@ -14,9 +191,9 @@ Keep one editing card for maintaining the digital twin and create separate read-
 
 <img src="readme/1_editor_panel.png" width="500">
 
-## Using the editor
+### Using the editor
 
-### Navigate and edit objects
+#### Navigate and edit objects
 
 - The top bar manages spaces, the left icon rail contains creation tools and materials, and the right dock contains **Objects** and **Inspector**. Hover over an icon or focus it with the keyboard to see its label. Use the chevrons to hide or show either side panel.
 - The bottom toolbar groups transform, measurement, grid, and collision controls. It wraps within the available workspace as the editor narrows. On small screens, close the object dock to return to the scene tools.
@@ -31,7 +208,7 @@ Keep one editing card for maintaining the digital twin and create separate read-
 - **Prevent object clipping** on the bottom settings toolbar stops translated objects from passing through visible mesh geometry and lets them slide along obstacles. This setting is stored in the current browser.
 - Locked objects cannot be transformed or dragged. Unlock an object in its **Configuration** inspector section before editing it.
 
-### Configure the grid and snapping
+#### Configure the grid and snapping
 
 The bottom settings toolbar contains three grid controls:
 
@@ -48,7 +225,7 @@ The grid configuration dialog provides:
 
 Choose **Save** to apply the values. Grid size and snap size are stored in the current browser, not in the active space, so other devices can use different settings. Grid visibility and snapping are temporary toggles for the current editor.
 
-### Manage spaces
+#### Manage spaces
 
 A space is an independent scene with its own objects, saved viewports, daylight, tone mapping, and post-processing configuration. Use separate spaces for different homes, floors, or large sections of a home when one combined scene would be slow to load and render.
 
@@ -64,7 +241,7 @@ Space creation, cloning, import/export, switching, and deletion are hidden when 
 
 <img src="readme/space_options.png" width="300">
 
-### Add 3D elements
+#### Add 3D elements
 
 The left icon rail groups the model and material libraries, scene creation tools, and floorplan tools. Hover over an icon to find a tool by name:
 
@@ -88,7 +265,7 @@ The material library retains created materials even when no object uses them. Ma
 
 <img src="readme/3_add_objects.png" width="500">
 
-### Use the built-in furniture models
+#### Use the built-in furniture models
 
 Open **Model Library**, select a furniture category, and choose a model. Move the outlined preview to the desired surface and double-click to place it. The transform controls and inspector can adjust it afterwards. All dimensions are in meters.
 
@@ -110,7 +287,7 @@ Expand the furniture-specific inspector section to change these construction par
 
 Raise upper kitchen cabinets to the desired wall-mounting height using the position controls. Wardrobe and kitchen cabinet doors are modeled closed. Standing desk height can be changed for sitting or standing use.
 
-### Living room collection
+#### Living room collection
 
 Open **Model Library**, choose **Living Room** in the room filter, and browse **Seating**, **Tables & Desks**, **Storage**, **Entertainment**, **Lighting**, and **Decoration**. Search also recognizes variant names such as “U-shaped sofa”, “bean bag”, “nesting tables”, and “wall shelves”.
 
@@ -139,7 +316,7 @@ Each library entry represents a customizable family. Choose the model, double-cl
 
 Lamp and fireplace light sources illuminate the scene. Primary material edits change the main finish while preserving detail finishes such as glass, metal feet, foliage, and screens. Nesting table dimensions describe the largest table; cinema spacing describes the complete arrangement. Position wall shelves, mirrors, artwork, curtains, screens, and mounted lighting at the desired installation height with the transform controls.
 
-### Bathroom collection
+#### Bathroom collection
 
 Open **Model Library**, select **Bathroom** in the room filter, and browse **Sanitary fixtures**, **Washbasins**, **Bathing**, **Storage**, **Accessories**, and **Other**. The collection groups the requested objects into 11 customizable families. Search recognizes individual variants such as “wall-hung toilet”, “countertop basin”, “corner bathtub”, and “heated towel rail”.
 
@@ -161,7 +338,7 @@ Choose a family, position its outlined preview, and double-click to place it. Op
 
 The fixtures have open bowl geometry. Shower glass remains translucent, and under-sink cabinets include a rear pipe cutout. Cabinet presets rebuild their corresponding doors, shelves, and supports. Dimensions describe the main fixture body; taps, open lids, handles, and other fittings can extend beyond it. Position wall-hung fixtures, wall basins, medicine cabinets, mirrors, shelves, rails, and hooks at the desired installation height using the transform controls.
 
-### Dining room collection
+#### Dining room collection
 
 Open **Model Library**, select **Dining Room**, and browse **Tables**, **Seating**, **Storage**, **Lighting**, and **Decoration**. Eight customizable families cover the 22 requested dining room objects. Search recognizes individual variants such as “extendable dining table”, “upholstered dining chair”, “china cabinet”, and “wine rack”.
 
@@ -178,7 +355,7 @@ Choose a family, move its outlined preview, and double-click to place it. Select
 
 Dining light sources illuminate the scene; their brightness control describes the whole fixture. Extendable table width describes the closed table, with leaf length added while extended. Cabinet dimensions describe the closed body; opened doors and handles can extend beyond it. Move pendant/chandelier canopies, wall lights, and mirrors to their installation height with the transform controls. Place centerpieces on a tabletop using the placement preview or height control.
 
-### Kitchen collection
+#### Kitchen collection
 
 Open **Model Library**, select **Kitchen**, and browse **Base cabinets**, **Wall cabinets**, **Tall cabinets**, **Countertops**, **Appliances**, **Fixtures**, **Furniture**, and **Accessories**. Seventeen customizable families cover all 41 requested objects. Search recognizes individual objects such as “corner wall cabinet”, “oven tower”, “U-shaped countertop”, “American-style refrigerator”, and “spice rack”.
 
@@ -201,7 +378,7 @@ Choose a family, move its outlined preview, and double-click to place it. Select
 
 Worktop height is the top surface; island/bar height includes the supporting furniture. L/U dimensions describe the full footprint and arm depth controls each run. Worktop cutouts are real openings. Sink height describes the bowl from its underside to its rim; raise it so the rim meets the worktop. Faucets and open doors extend beyond the closed body dimensions. Move wall cabinets, shelves, hoods, and other mounted objects to their installation height using the position controls. Appliance indicators show visual state and do not simulate appliance operation.
 
-### Master bedroom collection
+#### Master bedroom collection
 
 Open **Model Library**, select **Master Bedroom**, and browse **Beds**, **Bedside**, **Storage**, **Seating**, **Other furniture**, and **Decoration**. Fourteen customizable families cover all 29 requested objects. Search recognizes individual items such as “super king bed”, “sliding doors”, “tallboy”, “full-length mirror”, and “floor lamp”.
 
@@ -222,7 +399,7 @@ Choose a family, move its outlined preview, and double-click to place it. Select
 
 Bed sizes are editable starting dimensions and describe the outer frame. Bed height describes the headboard; mattress surface height has its own control. Raised adjustable sections can extend above the headboard. Dressing furniture height describes the tabletop, with the mirror extending above it. Open drawers and doors extend beyond closed body dimensions. Position floating bedside shelves, mirrors, artwork, curtains, and mounted lamps at the desired installation height using the position controls.
 
-### Children's bedroom / nursery collection
+#### Children's bedroom / nursery collection
 
 Open **Model Library**, select **Children's Bedroom / Nursery**, and browse **Beds**, **Storage**, **Furniture**, **Play**, and **Decoration**. Fourteen customizable families cover all 27 requested objects. Search recognizes names such as “cot”, “loft bed”, “toy chest”, “nursing chair”, “kids' desk”, “indoor tent”, and “night light”.
 
@@ -246,7 +423,7 @@ Choose a family, move its outlined preview, and double-click to place it. Use it
 
 Bed dimensions describe the frame. Mattress height controls the main sleeping level; bunk beds add a second lower mattress, loft beds can include a desk, cabin beds include storage fronts, and trundle beds slide sideways. Crib and cot models use a plain mattress without pillows or covers. Opening drawers, lids, gates, oven doors, trundles, and ramps can extend beyond the closed footprint. Position wall shelves at their installation height using the position controls. Changing pads and top rails can extend above the changing-table surface height.
 
-### Home office / study collection
+#### Home office / study collection
 
 Open **Model Library**, select **Home Office / Study**, and browse **Desks**, **Seating**, **Storage**, **Equipment**, **Accessories**, and **Other**. Fourteen customizable families cover all 27 requested objects. Search recognizes “L-shaped desk”, “ergonomic chair”, “filing cabinet”, “monitor”, “scanner”, “noticeboard”, and the other individual model names.
 
@@ -269,7 +446,7 @@ Choose a family, move its outlined preview, and double-click to place it. Select
 
 L/corner desk dimensions describe the full footprint. L desk run depth controls both arms, and the return can be mirrored. Keyboard trays, drawers, open lids, lamp arms, and board stands can extend beyond the closed body dimensions. Monitor dimensions describe each monitor; multiple monitors increase the arrangement's total width. Laptop dimensions describe the closed body; the open screen extends above it. Board dimensions describe the board itself, with any floor stand extending below it. Place equipment, lamps, and monitor stands on the desktop using the placement preview, and set wall shelving / boards to their installation height with the position controls.
 
-### Laundry / utility room collection
+#### Laundry / utility room collection
 
 Open **Model Library**, select **Laundry / Utility Room**, and browse **Appliances**, **Fixtures**, **Storage**, **Furniture**, and **Accessories**. Eight customizable families cover all 16 requested objects. Search recognizes names such as “washer-dryer”, “stacked laundry unit”, “laundry basin”, “broom cupboard”, “ironing board”, and “clothes drying rack”.
 
@@ -288,7 +465,7 @@ Choose a family, move its outlined preview, and double-click to place it. Select
 
 Stacked appliance dimensions describe the complete unit. Sink height includes any stand and ends at the rim; faucets can extend above it. Without a stand, basin dimensions describe the bowl body. Table height describes the unfolded surface; folding the legs lowers the model into a compact horizontal profile. Drying racks fold their panels upright and narrow their frame. Open doors, pulled-out bags, iron rests, handles, towels, and supplies can extend beyond the main body. Position wall shelves and unmounted basins at their installation height with the position controls. Appliance displays show visual power state and do not simulate laundry cycles.
 
-### Walk-in closet / dressing room collection
+#### Walk-in closet / dressing room collection
 
 Open **Model Library**, select **Walk-in Closet / Dressing Room**, and browse **Wardrobes**, **Storage**, **Furniture**, and **Accessories**. Eight customizable families cover all 16 requested objects. Search recognizes each object name, including “modular wardrobe”, “shoe rack”, “accessories organizer”, “vanity table”, and “illuminated mirror”.
 
@@ -307,7 +484,7 @@ Choose a family, move its outlined preview, and double-click to place it. Use th
 
 Corner wardrobe width and depth describe the full L-shaped footprint. Set the return side and cabinet run depth to fit the room; bay count applies separately to each run. Shelves occupy bays without hanging rails. Drawer extensions, open doors, handles, mirror stands, and clothing can extend beyond the main body. The island's glass top reveals a recessed accessory tray. Move wall mirrors to their installation height with the position controls. Mirror illumination provides a visible LED border and a local scene light.
 
-### Garage collection
+#### Garage collection
 
 Open **Model Library**, select **Garage**, and browse **Vehicles**, **Storage**, **Work area**, **Equipment**, and **Other**. Nine customizable families cover all 18 requested objects. Search recognizes individual objects such as “motorcycle”, “wall storage rack”, “tire rack”, “tool pegboard”, “pressure washer”, and “storage boxes”.
 
@@ -327,7 +504,7 @@ Choose a family, move its outlined preview to the desired position, and double-c
 
 Vehicle depth describes length along the vehicle. Wheel radii are limited to fit the selected dimensions. Workbench height ends at the work surface; pegboards and the vice extend above it. Charger height describes the body; pedestal height is added below it. Bin width describes the complete group, while storage box height applies to each box in the stack. Open lids, extended drawers, cables, handles, and accessories can extend beyond the main body. Move wall-mounted chargers, wall racks, and pegboards to their installation height with the position controls. Equipment indicators show their configured visual power state.
 
-### Balcony / terrace / patio collection
+#### Balcony / terrace / patio collection
 
 Open **Model Library**, select **Balcony / Terrace / Patio**, and browse **Seating**, **Tables**, **Cooking**, **Shade**, **Decoration**, and **Other**. Fifteen customizable families cover all 24 requested objects. Search recognizes individual names such as “outdoor sectional sofa”, “hanging chair”, “bistro table”, “pizza oven”, “retractable awning”, and “raised garden bed”. The outdoor rug shares the existing rug model and its shape, border, and fringe controls.
 
@@ -353,7 +530,7 @@ Choose a family, move its outlined preview, and double-click to place it. Select
 
 Furniture dimensions describe the main frame; reclining backs, sectional returns, open lids, side shelves, steps, plants, and accessories can extend beyond it. Sectional return depth includes the main sofa depth. Planter height describes the container, with plants above it. Pizza oven height describes the body; the stand and chimney extend beyond it. Awning depth describes its fully extended fabric length; extension and pitch change its occupied space. Position wall-mounted awnings, pergolas, and suspended seats without stands at their installation height with the position controls. Closing a fire pit cover hides the flames and turns off its local light.
 
-### Garden / backyard collection
+#### Garden / backyard collection
 
 Open **Model Library**, select **Garden / Backyard**, and browse **Furniture**, **Recreation**, **Landscaping**, **Structures**, and **Equipment**. Fifteen customizable families cover all 24 requested objects. Search recognizes names such as “picnic table”, “outdoor dining set”, “swing set”, “flower bed”, “garden path”, “greenhouse”, and “rainwater tank”.
 
@@ -379,7 +556,7 @@ Choose a family, move its outlined preview, and double-click to place it. Select
 
 Dining-set dimensions describe the table; chairs extend beyond its footprint. Pool dimensions describe the basin, with the ladder outside it. Trampoline height includes its safety net; disabling the net leaves a lower jumping frame. Plant and tree dimensions describe their procedural form, while planter dimensions describe the container with planting above it. Building height includes the roof. Porches, roof overhangs, open doors and lids, taps, downpipes, and accessories can extend beyond the main body. Use the position controls to adjust installation height where needed.
 
-### Entertainment / game room collection
+#### Entertainment / game room collection
 
 Open **Model Library**, select **Entertainment / Game Room**, and browse **Seating**, **Gaming**, **Tables**, **Entertainment**, and **Storage**. Fourteen customizable families cover all 18 requested objects. Search recognizes names such as “gaming chair”, “arcade machine”, “racing simulator”, “foosball table”, “ping-pong table”, and “game storage cabinet”.
 
@@ -404,7 +581,7 @@ Choose a family, move its outlined preview, and double-click to place it. Use th
 
 Gaming desk height ends at the work surface. Monitors, racing displays, extended footrests, gamepads, foosball handles, cues, and open doors can extend beyond the main body. Pool pockets pass through the felt into recessed cups. The ping-pong folding control raises both playing halves and narrows the support frame; the net and loose accessories are removed while folded. Foosball rod angles rotate the handles and figures together. Poker place count controls cards and chip stacks. Screen and marquee switches adjust their display finishes independently.
 
-### Home gym / fitness room collection
+#### Home gym / fitness room collection
 
 Open **Model Library**, select **Home Gym / Fitness Room**, and browse **Cardio**, **Strength**, **Accessories**, and **Other**. Fourteen customizable families cover all 16 requested objects. Search recognizes names such as “treadmill”, “rowing machine”, “squat rack”, “multi-gym”, “yoga mat”, “kettlebell rack”, and “exercise equipment rack”.
 
@@ -429,7 +606,7 @@ Select a family, move its outlined preview, and double-click to place it. Adjust
 
 Equipment poses are static configurations. Treadmill incline is ignored while folded, and the rear base retracts for storage. Bench height describes the flat pad surface; inclined pads, rack barbells, and extended cable handles can extend beyond the main body. Bike pedals and elliptical footplates remain level while changing their stride position. The multi-gym preset adds press arms, a lat bar, and a seated leg station. Mat depth describes its unrolled length and height describes its thickness, including when it is rolled up.
 
-### Add Home Assistant entities
+#### Add Home Assistant entities
 
 Select **Add entity**, search by entity ID or friendly name, and choose the entity. Move its preview to the desired position and double-click to place it. Adjust it afterwards with the transform controls. Entity visuals update from the Home Assistant state supplied to the card.
 
@@ -445,7 +622,7 @@ Select **Add entity**, search by entity ID or friendly name, and choose the enti
 
 All entity domains can use **Open entity** to show Home Assistant's more-info dialog. Card-wide single- and double-click defaults can be `open`, `toggle`, or `nothing`. Each entity can inherit or override those defaults in its inspector; **Toggle** is only offered for `light` and `switch` objects.
 
-### Connect any object to entity states
+#### Connect any object to entity states
 
 Entity rules connect an existing 3D object to live Home Assistant data. They do not require a separate entity marker in the scene. A rule can move a garage model, recolor a lamp, hide an inactive appliance, or animate a group and all of its children.
 
@@ -466,16 +643,16 @@ For example, to visualize a tank level, bind its numeric `sensor` to **Transform
 
 Add as many rules as needed. Each rule can use the same entity or a different one. If multiple matching rules affect the same position, rotation, scale, color, or visibility, the last matching rule in the list takes precedence. Disable a rule to retain its configuration without applying it, or remove it to restore the saved original value. Rules are stored with the object and are reevaluated whenever Home Assistant supplies updated states.
 
-### Build your first floorplan
+#### Build your first floorplan
 
-#### Add and calibrate a reference image
+##### Add and calibrate a reference image
 
 1. Open **Floorplan reference** (image-plus icon) in the left rail.
 2. Select a 2D floorplan image. In the calibration dialog, click two points whose real separation is known, enter that distance in meters, and choose **Add floorplan**.
 3. DT3D creates a horizontal textured plane at the calibrated real-world size. Switch to an orthographic top view if that makes the image easier to trace. You can instead add or import a plane manually. When a wall point does not hit a visible scene object, it is placed on the ground grid plane instead.
 4. Optionally enable grid snapping and set a suitable snap size. Grid snapping and the smart wall guides below are separate features.
 
-#### Draw walls
+##### Draw walls
 
 1. In **Floorplan**, select **Draw wall**.
 2. Double-click the reference plane at the first corner. Move the pointer to preview the wall; its live label shows the current length.
@@ -498,7 +675,7 @@ When wall centerlines form a closed loop, DT3D automatically creates a floor sur
 
 Shared wall endpoints use a separate connection mesh. Each connected wall body stops half its own thickness before the center of the junction, and the connection fills the corner. Open **Wall creation** (tune icon) in the left rail to choose a rectangular or circular connection and set the height, color, and optional baseboard decoration applied by default to newly drawn walls. These defaults do not overwrite walls that already exist.
 
-#### Edit walls and floors
+##### Edit walls and floors
 
 - Select a wall to edit its start and end coordinates or its length under **Wall dimensions**. Moving an endpoint also moves every wall connected at that junction. Changing the length keeps the wall center fixed and moves both endpoints, including their connected walls. The inspector also lets you change corner connection shape, height, thickness, material, and optional baseboard height, depth, and color independently of the creation defaults.
 - Use Ctrl/Cmd or Shift to select multiple walls, doors, windows, or gates of the same type and edit their shared configuration together. Mixed object types keep the inspector read-only, and multi-editing does not expose names, transforms, identifiers, or other object-specific properties.
@@ -510,7 +687,7 @@ Shared wall endpoints use a separate connection mesh. Each connected wall body s
 
 <img src="readme/5_layout_editor.png" width="500">
 
-### Add and customize doors, windows, and gates
+#### Add and customize doors, windows, and gates
 
 1. Select the target wall, then open **Model Library > Doors, windows and gates** and choose **Door**, **Window**, or **Gate**.
 2. Double-click the desired position on the wall. A direct hit selects that wall, creates the opening as its child, and cuts the wall geometry around it. The tool remains active for additional openings; choose **Exit wall and floor tools** when finished.
@@ -524,7 +701,7 @@ All three opening types provide width, visible height, panel thickness, **Open**
 | Window  | Hinged or sliding operation; one or two hinged sashes; movable left/right sliding sash; inward/outward swing; frame/trim; glass tint, opacity, and roughness; pane grid rows, columns, bar width, and spacing; horizontal blinds; and louvered shutters. Sliding windows always use two framed sashes on separate tracks. |
 | Gate    | Door-style swinging or sliding operation; single or double panels; hinge/slide side; inward/outward swing; a solid panel or vertical bars; and bar width/spacing. A gate always cuts the wall to its full height, even when the visible panel is shorter.                                                                 |
 
-#### Control openings with Home Assistant entities
+##### Control openings with Home Assistant entities
 
 Use the entity selector beside an opening control to associate it with Home Assistant:
 
@@ -548,7 +725,7 @@ For blinds, choose an inside or outside mounting location, slat spacing, and col
 
 <img src="readme/windows_door.png" width="500">
 
-### Set up viewports
+#### Set up viewports
 
 A viewport saves the current camera position, target, projection mode, field of view, and zoom.
 
@@ -560,18 +737,18 @@ A viewport saves the current camera position, target, projection mode, field of 
 
 The optional orientation cube is separate from saved viewports. Double-click a cube face to align the camera to the front, back, left, right, top, or bottom.
 
-### Organize objects with groups
+#### Organize objects with groups
 
 - Create a group to organize objects into a hierarchy or tidy the object tree.
 - Groups can be nested. Moving, rotating, scaling, or hiding a group affects all of its children, which is useful for rooms, floors, and entity-driven assemblies.
 
 <img src="readme/groups_editor.png" width="500">
 
-## Configure a space
+### Configure a space
 
 Open **Space configuration** (cog icon) beside the space selector. The form contains the space name, description, default-space checkbox, appearance, daylight, tone mapping, and post-processing settings. These values are saved with the active space and affect every card that displays it.
 
-### Appearance and daylight
+#### Appearance and daylight
 
 - Enable the procedural sky for a daylight sky dome, or disable it and use a solid-color or transparent background. A transparent background allows the dashboard background to show through the card. The optional sun lens flare follows the same manual or Home Assistant-derived solar direction as the sky and is hidden whenever the sky is hidden.
 - **Follow Home Assistant date and time** updates the sun position from Home Assistant's configured location and time. The manual elevation and azimuth remain the fallback when sun data is unavailable.
@@ -579,7 +756,7 @@ Open **Space configuration** (cog icon) beside the space selector. The form cont
 
 <img src="readme/day.png" width="200"><img src="readme/night.png" width="200">
 
-### Post-processing and appearance
+#### Post-processing and appearance
 
 | Section         | Options                                                                                                  |
 | --------------- | -------------------------------------------------------------------------------------------------------- |
@@ -592,7 +769,7 @@ SSR adds view-dependent reflections using information currently on screen, so re
 
 <img src="readme/4_create_space.png" width="500">
 
-### Measurement tools
+#### Measurement tools
 
 - The **Measure** section of the toolbar provides distance and angle measurements.
 - Measurement points must be placed on a visible object surface.
@@ -604,7 +781,7 @@ SSR adds view-dependent reflections using information currently on screen, so re
 
 <img src="readme/measurements.png" width="500">
 
-## Configure visualization cards
+### Configure visualization cards
 
 Create one or more normal dashboard cards with `visualization_only: true`. Editing controls and the object tree are hidden, while camera navigation and entity interactions remain available.
 
@@ -645,7 +822,7 @@ general:
 
 Configure `default_space` in visualization mode because viewers cannot switch spaces there. Leave `default_viewport` empty to follow the space's default.
 
-### Card configuration reference
+#### Card configuration reference
 
 | Option                                                  | Default            | Description                                                                                                                                       |
 | ------------------------------------------------------- | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -686,14 +863,14 @@ WebXR immersive modes require a supported browser/device and HTTPS. During an AR
 
 <img src="readme/7_dashboard.png" width="500">
 
-## Data synchronization
+### Data synchronization
 
 - A progress indicator appears below the space bar while DT3D loads data from or stores changes on the server. In compact layouts, progress becomes a thin line along the space bar; the object dock also explains its loading state.
 - Wait for the indicator to clear before closing or reloading Home Assistant; unsynchronized changes can otherwise be lost.
 
 <img src="readme/synchronization_indicator.png" width="300">
 
-## Performance optimization
+### Performance optimization
 
 The 3D renderer is GPU-bound. Start with the following profile on phones, wall tablets, integrated GPUs, or other low-power devices:
 
@@ -724,7 +901,7 @@ Then optimize in this order:
 5. Prefer optimized `.glb` models, fewer polygons/materials, compressed textures, and fewer camera entities. Camera objects load and refresh their still images only while their pointer-hover preview is visible.
 6. Split very large homes into separate spaces or dashboard views so clients do not render everything at once.
 
-## Troubleshooting
+### Troubleshooting
 
 - **An object cannot be moved or reordered:** select it and disable its locked state in the inspector.
 - **A wall point cannot be placed:** double-click a visible surface or an empty area over the ground grid plane. A camera ray parallel to the ground plane cannot produce a fallback point.

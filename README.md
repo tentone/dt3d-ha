@@ -9,7 +9,7 @@
 - The project is split into a HA frontend card and a Home Assistant app/add-on that stores 3D scene data.
 - The system allows to create multiple spaces (environments) in the same deployment.
 - For installation and connection instructions, see the [setup guide](SETUP_GUIDE.md).
-- For an illustrated walkthrough, see the [user manual](USER_MANUAL.md). For detailed settings and model options, see the [feature reference](MANUAL.md).
+- For the illustrated walkthrough and detailed settings, see the [user manual](MANUAL.md).
 
 <img src="readme/0_screenshot.png" width="400">
 <img src="readme/3_add_objects.png" width="400">
@@ -150,8 +150,7 @@ use_self_signed_certificate: false
 │   │   └── locale/         UI strings
 │   └── vite.config.js      Single-module production build
 ├── sample/                 Sample 3D assets
-├── USER_MANUAL.md          Illustrated user manual
-├── MANUAL.md               Feature reference
+├── MANUAL.md               Illustrated walkthrough and feature reference
 ├── SETUP_GUIDE.md          Installation and connection documentation
 └── README.md               Architecture and development documentation
 ```
@@ -159,7 +158,6 @@ use_self_signed_certificate: false
 ## Documentation
 
 - [Setup guide](SETUP_GUIDE.md)
-- [User manual](USER_MANUAL.md)
-- [Feature reference](MANUAL.md)
+- [User manual](MANUAL.md)
 - [Home Assistant custom app repositories](https://developers.home-assistant.io/docs/apps/repository/)
 - [Home Assistant dashboard views](https://www.home-assistant.io/dashboards/views/)
