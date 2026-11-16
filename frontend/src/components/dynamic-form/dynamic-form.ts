@@ -1,5 +1,5 @@
 import type {TemplateResult} from "lit";
-import {html, LitElement, unsafeCSS} from "lit";
+import {html, unsafeCSS} from "lit";
 import {customElement, property} from "lit/decorators.js";
 import type {Texture} from "three";
 import {
@@ -14,6 +14,7 @@ import {
 	UVMapping,
 } from "three";
 
+import {LocalizedElement} from "../../locale/localized-element.js";
 import {getTexturePreviewDataUrl} from "../../service/texture-compression.js";
 import {downloadTextureImage} from "../../utils/texture-download.js";
 import componentStyles from "./dynamic-form.css?inline";
@@ -111,22 +112,22 @@ type VectorValue = {
 
 const INPUT_DEBOUNCE_MS = 300;
 const TEXTURE_MAPPING_OPTIONS = [
-	{label: "UV", value: UVMapping},
-	{label: "Cube reflection", value: CubeReflectionMapping},
-	{label: "Cube refraction", value: CubeRefractionMapping},
-	{label: "Equirectangular reflection", value: EquirectangularReflectionMapping},
-	{label: "Equirectangular refraction", value: EquirectangularRefractionMapping},
-	{label: "Cube UV reflection", value: CubeUVReflectionMapping},
+	{labelKey: "textureMappingUv", value: UVMapping},
+	{labelKey: "textureCubeReflection", value: CubeReflectionMapping},
+	{labelKey: "textureCubeRefraction", value: CubeRefractionMapping},
+	{labelKey: "textureEquirectangularReflection", value: EquirectangularReflectionMapping},
+	{labelKey: "textureEquirectangularRefraction", value: EquirectangularRefractionMapping},
+	{labelKey: "textureCubeUvReflection", value: CubeUVReflectionMapping},
 ];
 const TEXTURE_WRAPPING_OPTIONS = [
-	{label: "Repeat", value: RepeatWrapping},
-	{label: "Clamp to edge", value: ClampToEdgeWrapping},
-	{label: "Mirrored repeat", value: MirroredRepeatWrapping},
+	{labelKey: "textureRepeat", value: RepeatWrapping},
+	{labelKey: "textureClampToEdge", value: ClampToEdgeWrapping},
+	{labelKey: "textureMirroredRepeat", value: MirroredRepeatWrapping},
 ];
 let dynamicFormInstanceId = 0;
 
 @customElement("dt3d-dynamic-form")
-export class DynamicForm extends LitElement {
+export class DynamicForm extends LocalizedElement {
 	static styles = unsafeCSS(componentStyles);
 
 	@property({attribute: false})
@@ -326,7 +327,7 @@ export class DynamicForm extends LitElement {
 		propertyName: "mapping" | "wrapS" | "wrapT",
 		label: string,
 		value: unknown,
-		options: Array<{label: string; value: number}>,
+		options: Array<{labelKey: string; value: number}>,
 	): TemplateResult {
 		return html`
 			<label
@@ -347,7 +348,7 @@ export class DynamicForm extends LitElement {
 				>
 					${options.map(
 						(option) => html`
-							<option value=${String(option.value)}>${option.label}</option>
+							<option value=${String(option.value)}>${this.locale.get(option.labelKey)}</option>
 						`,
 					)}
 				</select>
@@ -493,7 +494,7 @@ export class DynamicForm extends LitElement {
 			console.warn("Unable to download texture", error);
 			this.textureDownloadErrors.set(
 				field.attribute,
-				"Unable to download this texture as an image.",
+				"textureDownloadFailed",
 			);
 		} finally {
 			this.textureDownloads.delete(field.attribute);
@@ -530,8 +531,8 @@ export class DynamicForm extends LitElement {
 						class=${`texture-drop-zone${dragging ? " dragging" : ""}`}
 						?disabled=${!field.editable}
 						aria-label=${hasTexture
-							? (field.replaceLabel ?? "Replace texture")
-							: (field.placeholder ?? "Choose a texture")}
+							? (field.replaceLabel ?? this.locale.get("replaceTexture"))
+							: (field.placeholder ?? this.locale.get("chooseTexture"))}
 						@click=${this.openTexturePicker}
 						@dragenter=${(event: DragEvent) => {
 							event.preventDefault();
@@ -579,8 +580,8 @@ export class DynamicForm extends LitElement {
 						<span class="texture-details">
 							<span class="texture-action">
 								${hasTexture
-									? (field.replaceLabel ?? "Drop or choose a replacement")
-									: (field.placeholder ?? "Drop an image or click to browse")}
+									? (field.replaceLabel ?? this.locale.get("materialTextureReplace"))
+									: (field.placeholder ?? this.locale.get("materialTextureDrop"))}
 							</span>
 							${textureName
 								? html`<span class="texture-name" title=${textureName}>
@@ -609,8 +610,8 @@ export class DynamicForm extends LitElement {
 									type="button"
 									class="texture-download-button"
 									?disabled=${this.textureDownloads.has(field.attribute)}
-									title=${field.downloadLabel ?? "Download texture as PNG"}
-									aria-label=${field.downloadLabel ?? "Download texture as PNG"}
+									title=${field.downloadLabel ?? this.locale.get("downloadTextureAsPng")}
+									aria-label=${field.downloadLabel ?? this.locale.get("downloadTextureAsPng")}
 									@click=${() => this.downloadTexture(field, value as Texture)}
 								>
 									<ha-icon icon="mdi:download"></ha-icon>
@@ -619,8 +620,8 @@ export class DynamicForm extends LitElement {
 									type="button"
 									class="texture-clear-button"
 									?disabled=${!field.editable}
-									title=${field.clearLabel ?? "Clear texture"}
-									aria-label=${field.clearLabel ?? "Clear texture"}
+									title=${field.clearLabel ?? this.locale.get("clearMaterialTexture")}
+									aria-label=${field.clearLabel ?? this.locale.get("clearMaterialTexture")}
 									@click=${() => this.dispatchTextureFile(field, null)}
 								>
 									<ha-icon icon="mdi:delete-outline"></ha-icon>
@@ -630,7 +631,7 @@ export class DynamicForm extends LitElement {
 				</div>
 				${this.textureDownloadErrors.has(field.attribute)
 					? html`<span class="texture-download-error" role="alert"
-							>${this.textureDownloadErrors.get(field.attribute)}</span
+							>${this.locale.get(this.textureDownloadErrors.get(field.attribute)!)}</span
 						>`
 					: null}
 				${texture
@@ -639,52 +640,52 @@ export class DynamicForm extends LitElement {
 								${this.renderTextureProperty(
 									field,
 									"mapping",
-									"Mapping",
+									this.locale.get("textureMapping"),
 									texture.mapping,
 									TEXTURE_MAPPING_OPTIONS,
 								)}
 								${this.renderTextureProperty(
 									field,
 									"wrapS",
-									"Wrap S",
+									this.locale.get("textureWrapS"),
 									texture.wrapS,
 									TEXTURE_WRAPPING_OPTIONS,
 								)}
 								${this.renderTextureProperty(
 									field,
 									"wrapT",
-									"Wrap T",
+									this.locale.get("textureWrapT"),
 									texture.wrapT,
 									TEXTURE_WRAPPING_OPTIONS,
 								)}
 								${this.renderTextureNumberProperty(
 									field,
 									"offset.x",
-									"Offset X",
+									this.locale.get("textureOffsetX"),
 									texture.offset?.x,
 								)}
 								${this.renderTextureNumberProperty(
 									field,
 									"offset.y",
-									"Offset Y",
+									this.locale.get("textureOffsetY"),
 									texture.offset?.y,
 								)}
 								${this.renderTextureNumberProperty(
 									field,
 									"repeat.x",
-									"Repeat X",
+									this.locale.get("textureRepeatX"),
 									texture.repeat?.x,
 								)}
 								${this.renderTextureNumberProperty(
 									field,
 									"repeat.y",
-									"Repeat Y",
+									this.locale.get("textureRepeatY"),
 									texture.repeat?.y,
 								)}
 								${this.renderTextureNumberProperty(
 									field,
 									"rotation",
-									"Rotation (radians)",
+									this.locale.get("textureRotation"),
 									texture.rotation,
 								)}
 							</div>
@@ -911,9 +912,9 @@ export class DynamicForm extends LitElement {
 											type="button"
 											class=${`vector-link-button${linked ? " linked" : ""}`}
 											?disabled=${!field.editable || !field.enabled}
-											aria-label=${linked ? "Unlink values" : "Link values"}
+											aria-label=${linked ? this.locale.get("unlinkValues") : this.locale.get("linkValues")}
 											aria-pressed=${linked ? "true" : "false"}
-											title=${linked ? "Unlink values" : "Link values"}
+											title=${linked ? this.locale.get("unlinkValues") : this.locale.get("linkValues")}
 											@click=${() => this.toggleVectorLinked(field)}
 										>
 											<ha-icon
@@ -1025,7 +1026,7 @@ export class DynamicForm extends LitElement {
 								)}
 						>
 							${field.mixed
-								? html`<option value="" disabled>Mixed values</option>`
+								? html`<option value="" disabled>${this.locale.get("mixedValues")}</option>`
 								: null}
 							${(field.options ?? []).map(
 								(option) => html`
@@ -1087,7 +1088,7 @@ export class DynamicForm extends LitElement {
 							min=${field.min == null ? undefined : String(field.min)}
 							max=${field.max == null ? undefined : String(field.max)}
 							.value=${field.mixed ? "" : this.formatNumber(value, decimals)}
-							placeholder=${field.mixed ? "Mixed values" : ""}
+							placeholder=${field.mixed ? this.locale.get("mixedValues") : ""}
 							?disabled=${!field.editable}
 							@change=${(event: Event) => {
 								const rawValue = parseFloat(
@@ -1108,7 +1109,7 @@ export class DynamicForm extends LitElement {
 						<input
 							type="text"
 							placeholder=${field.mixed
-								? "Mixed values"
+								? this.locale.get("mixedValues")
 								: (field.placeholder ?? "")}
 							.value=${field.mixed
 								? ""

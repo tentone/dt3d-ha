@@ -1,7 +1,7 @@
 import "../object-inspector/object-inspector.js";
 import "../tooltip/tooltip.js";
 
-import {html, LitElement, unsafeCSS} from "lit";
+import {html, unsafeCSS} from "lit";
 import {customElement, property, state} from "lit/decorators.js";
 import {repeat} from "lit/directives/repeat.js";
 import type {Material, Object3D} from "three";
@@ -19,7 +19,7 @@ import {
 
 import {canMergeFloors} from "../../editor/merge-floors.js";
 import {resolveMeshType} from "../../editor/mesh-handler.js";
-import {localManager} from "../../locale/locale.js";
+import {LocalizedElement} from "../../locale/localized-element.js";
 import {DTObject} from "../../objects/dt-object.js";
 import {EntityObject, isToggleable} from "../../objects/entity-object.js";
 import {DoorObject} from "../../objects/house/door.js";
@@ -146,7 +146,7 @@ const MOBILE_MEDIA_QUERY = "(max-width: 768px)";
 const MOBILE_TREE_WIDTH = "min(300px, calc(100% - 60px))";
 
 @customElement("dt3d-tree")
-export class DT3DTree extends LitElement {
+export class DT3DTree extends LocalizedElement {
 	static styles = unsafeCSS(componentStyles);
 
 	@property({type: Boolean, reflect: true})
@@ -1600,13 +1600,13 @@ export class DT3DTree extends LitElement {
 					? html`
 						<button
 							?disabled=${!canMergeFloors(contextObjects)}
-							title=${localManager.get("mergeFloorsHint")}
+							title=${this.locale.get("mergeFloorsHint")}
 							@click=${(event: MouseEvent) => {
 								event.stopPropagation();
 								this.dispatchMergeFloors(contextObjects.map((object) => object.uuid));
 							}}
 						>
-							${localManager.get("mergeFloors")}
+							${this.locale.get("mergeFloors")}
 						</button>
 					`
 					: null}
@@ -1620,7 +1620,7 @@ export class DT3DTree extends LitElement {
 								);
 							}}
 						>
-							${localManager.get("generateFloorFromWalls")}
+							${this.locale.get("generateFloorFromWalls")}
 						</button>
 					`
 					: null}
@@ -1631,7 +1631,7 @@ export class DT3DTree extends LitElement {
 						this.dispatchMoveToPoint(id);
 					}}
 				>
-					${localManager.get("moveToPoint")}
+					${this.locale.get("moveToPoint")}
 				</button>
 				<button
 					?disabled=${node?.locked ?? false}
@@ -1640,7 +1640,7 @@ export class DT3DTree extends LitElement {
 						this.dispatchCenterOrigin(id);
 					}}
 				>
-					${localManager.get("centerOrigin")}
+					${this.locale.get("centerOrigin")}
 				</button>
 				<button
 					@click=${(event: MouseEvent) => {
@@ -1648,7 +1648,7 @@ export class DT3DTree extends LitElement {
 						this.dispatchDelete(id);
 					}}
 				>
-					${localManager.get("delete")}
+					${this.locale.get("delete")}
 				</button>
 				<button
 					@click=${(event: MouseEvent) => {
@@ -1656,7 +1656,7 @@ export class DT3DTree extends LitElement {
 						this.dispatchClone(id);
 					}}
 				>
-					${localManager.get("clone")}
+					${this.locale.get("clone")}
 				</button>
 				${node?.entityId
 				? html`
@@ -1666,7 +1666,7 @@ export class DT3DTree extends LitElement {
 							this.dispatchOpenEntity(node.entityId!);
 						}}
 					>
-						${localManager.get("viewEntity")}
+						${this.locale.get("viewEntity")}
 					</button>`
 				: null}
 				${node?.toggleable
@@ -1677,7 +1677,7 @@ export class DT3DTree extends LitElement {
 							this.dispatchToggle(id);
 						}}
 					>
-						${localManager.get("toggleEntity")}
+						${this.locale.get("toggleEntity")}
 					</button>`
 				: null}
 				${node?.viewport
@@ -1688,7 +1688,7 @@ export class DT3DTree extends LitElement {
 							this.dispatchSetDefaultViewport(id);
 						}}
 					>
-						${localManager.get("setDefaultViewport")}
+						${this.locale.get("setDefaultViewport")}
 					</button>
 					<button
 						@click=${(event: MouseEvent) => {
@@ -1696,7 +1696,7 @@ export class DT3DTree extends LitElement {
 							this.dispatchUpdateViewport(id);
 						}}
 					>
-						${localManager.get("updateViewport")}
+						${this.locale.get("updateViewport")}
 					</button>`
 				: null}
 		</div>
@@ -1762,14 +1762,14 @@ export class DT3DTree extends LitElement {
 		? html`<ha-icon
 												class="lock-icon"
 												icon="mdi:lock"
-												title=${localManager.get("lockedTitle")}
+												title=${this.locale.get("lockedTitle")}
 											></ha-icon>`
 		: null}
 									${node.defaultViewport
 		? html`<ha-icon
 												class="default-viewport-icon"
 												icon="mdi:star"
-												title=${localManager.get("defaultViewport")}
+												title=${this.locale.get("defaultViewport")}
 											></ha-icon>`
 		: null}
 							</div>
@@ -1785,7 +1785,7 @@ export class DT3DTree extends LitElement {
 	}
 
 	public render() {
-		const collapseLabel = localManager.get(
+		const collapseLabel = this.locale.get(
 			this.collapsed ? "expandObjectTree" : "collapseObjectTree",
 		);
 		const visibleTree = this.getVisibleTree();
@@ -1811,12 +1811,12 @@ export class DT3DTree extends LitElement {
 			></div>
 			<div class="panel" ?inert=${this.blocked} aria-busy=${this.loading}>
 				<div class="tree-section">
-					<h3 class="section-heading"><ha-icon icon="mdi:file-tree-outline"></ha-icon>${localManager.get("objectExplorer")}</h3>
+					<h3 class="section-heading"><ha-icon icon="mdi:file-tree-outline"></ha-icon>${this.locale.get("objectExplorer")}</h3>
 					<div class="tree-search">
 						<input
 							type="search"
-							placeholder=${localManager.get("searchObjects")}
-							aria-label=${localManager.get("searchObjects")}
+							placeholder=${this.locale.get("searchObjects")}
+							aria-label=${this.locale.get("searchObjects")}
 							.value=${this.searchQuery}
 							@input=${this.handleSearch}
 						/>
@@ -1826,7 +1826,7 @@ export class DT3DTree extends LitElement {
 						: this.searchQuery.trim()
 							? html`
 								<div class="no-search-results">
-									${localManager.get("noMatchingObjects")}
+									${this.locale.get("noMatchingObjects")}
 								</div>
 							`
 							: null}
@@ -1835,11 +1835,11 @@ export class DT3DTree extends LitElement {
 					class="panel-resize-handle"
 					role="separator"
 					aria-orientation="horizontal"
-					aria-label="Resize object tree and inspector"
+					aria-label=${this.locale.get("resizeObjectPanels")}
 					@mousedown=${(event: MouseEvent) =>
 						this.handleSplitResizeStart(event)}
 				></div>
-				<h3 class="section-heading"><ha-icon icon="mdi:tune-variant"></ha-icon>${localManager.get("objectProperties")}</h3>
+				<h3 class="section-heading"><ha-icon icon="mdi:tune-variant"></ha-icon>${this.locale.get("objectProperties")}</h3>
 				<dt3d-object-inspector
 					.selectedObject=${this.selectedObject}
 					.selectedObjects=${this.getSelectedObjects()}
@@ -1854,10 +1854,10 @@ export class DT3DTree extends LitElement {
 			${this.blocked && !this.collapsed ? html`
 				<div class="blocked-state" role="status" aria-live="polite">
 					<ha-icon icon=${this.loading ? "mdi:progress-clock" : "mdi:lock-outline"}></ha-icon>
-					<strong>${localManager.get(this.loading ? "loadingSpace" : "editingUnavailable")}</strong>
-					<p>${this.blockedReason || localManager.get("loadingSpaceHint")}</p>
+					<strong>${this.locale.get(this.loading ? "loadingSpace" : "editingUnavailable")}</strong>
+					<p>${this.locale.get(this.blockedReason || "loadingSpaceHint")}</p>
 					${!this.loading ? html`<button class="retry-button" @click=${() => this.dispatchEvent(new CustomEvent("space-load-retry", {bubbles: true, composed: true}))}>
-						<ha-icon icon="mdi:reload"></ha-icon>${localManager.get("retrySpaceLoad")}
+						<ha-icon icon="mdi:reload"></ha-icon>${this.locale.get("retrySpaceLoad")}
 					</button>` : null}
 				</div>
 			` : null}

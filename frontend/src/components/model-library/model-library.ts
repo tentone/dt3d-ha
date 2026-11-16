@@ -1,5 +1,5 @@
 import type {PropertyValues} from "lit";
-import {html, LitElement, nothing, unsafeCSS} from "lit";
+import {html, nothing, unsafeCSS} from "lit";
 import {customElement, property, state} from "lit/decorators.js";
 
 import type {
@@ -14,11 +14,11 @@ import {
 	modelLabel,
 } from "../../editor/model-library.js";
 import {ModelPreviewRenderer} from "../../editor/model-preview.js";
-import {localManager} from "../../locale/locale.js";
+import {LocalizedElement} from "../../locale/localized-element.js";
 import componentStyles from "./model-library.css?inline";
 
 @customElement("dt3d-model-library")
-export class DT3DModelLibrary extends LitElement {
+export class DT3DModelLibrary extends LocalizedElement {
 	static styles = unsafeCSS(componentStyles);
 
 	@property({type: Number}) public x = 8;
@@ -66,7 +66,7 @@ export class DT3DModelLibrary extends LitElement {
 	/** Yield between thumbnails so search, category changes, and closing remain responsive. */
 	private generatePreviews(): void {
 		if (this.generating || !this.isConnected) return;
-		const entry = filterModels(this.query, this.category, this.room).find(
+		const entry = filterModels(this.query, this.category, this.room, this.locale).find(
 			(item) =>
 				!this.attempted.has(item.type) && !this.previews.cached(item.type),
 		);
@@ -141,13 +141,13 @@ export class DT3DModelLibrary extends LitElement {
 	}
 
 	private renderModel(entry: ModelLibraryEntry) {
-		const label = modelLabel(entry);
+		const label = modelLabel(entry, this.locale);
 		const preview = this.previews.cached(entry.type);
 		return html`
 			<button
 				class="model"
 				@click=${() => this.select(entry)}
-				aria-label=${`${localManager.get("add")} ${label}`}
+				aria-label=${`${this.locale.get("add")} ${label}`}
 				title=${label}
 			>
 				<span class="preview">
@@ -162,9 +162,9 @@ export class DT3DModelLibrary extends LitElement {
 	}
 
 	public override render() {
-		const results = filterModels(this.query, this.category, this.room);
-		const matching = filterModels(this.query, "all", this.room);
-		const roomModels = filterModels("", "all", this.room);
+		const results = filterModels(this.query, this.category, this.room, this.locale);
+		const matching = filterModels(this.query, "all", this.room, this.locale);
+		const roomModels = filterModels("", "all", this.room, this.locale);
 		const selectedRoom = MODEL_ROOMS.find((room) => room.id === this.room);
 		const order = selectedRoom?.categories;
 		const categories = MODEL_CATEGORIES.filter(
@@ -190,13 +190,13 @@ export class DT3DModelLibrary extends LitElement {
 			>
 				<header>
 					<div>
-						<h2 id="library-title">${localManager.get("modelLibrary")}</h2>
-						<p>${localManager.get("modelLibraryHint")}</p>
+						<h2 id="library-title">${this.locale.get("modelLibrary")}</h2>
+						<p>${this.locale.get("modelLibraryHint")}</p>
 					</div>
 					<button
 						class="icon-button"
 						@click=${this.close}
-						aria-label=${localManager.get("closeModelLibrary")}
+						aria-label=${this.locale.get("closeModelLibrary")}
 					>
 						<ha-icon icon="mdi:close"></ha-icon>
 					</button>
@@ -207,8 +207,8 @@ export class DT3DModelLibrary extends LitElement {
 						<input
 							type="search"
 							.value=${this.query}
-							placeholder=${localManager.get("searchModels")}
-							aria-label=${localManager.get("searchModels")}
+							placeholder=${this.locale.get("searchModels")}
+							aria-label=${this.locale.get("searchModels")}
 							@input=${(event: Event) => {
 								this.query = (event.target as HTMLInputElement).value;
 							}}
@@ -216,24 +216,24 @@ export class DT3DModelLibrary extends LitElement {
 					</label>
 					<select
 						class="room-filter"
-						aria-label=${localManager.get("filterModelRoom")}
+						aria-label=${this.locale.get("filterModelRoom")}
 						.value=${this.room}
 						@change=${(event: Event) => {
 							this.room = (event.target as HTMLSelectElement).value;
 							this.category = "all";
 						}}
 					>
-						<option value="all">${localManager.get("allModelRooms")}</option>
+						<option value="all">${this.locale.get("allModelRooms")}</option>
 						${MODEL_ROOMS.map(
 							(room) =>
 								html`<option value=${room.id}>
-									${localManager.get(room.labelKey)}
+									${this.locale.get(room.labelKey)}
 								</option>`,
 						)}
 					</select>
 				</div>
 				<div class="explorer">
-					<nav aria-label=${localManager.get("modelCategories")}>
+					<nav aria-label=${this.locale.get("modelCategories")}>
 						<button
 							class=${this.category === "all"
 								? "category selected"
@@ -244,7 +244,7 @@ export class DT3DModelLibrary extends LitElement {
 							}}
 						>
 							<ha-icon icon="mdi:view-grid-outline"></ha-icon
-							><span>${localManager.get("allModels")}</span
+							><span>${this.locale.get("allModels")}</span
 							><span class="count">${matching.length}</span>
 						</button>
 						${categories.map(
@@ -259,7 +259,7 @@ export class DT3DModelLibrary extends LitElement {
 									}}
 								>
 									<ha-icon icon=${category.icon}></ha-icon
-									><span>${localManager.get(category.labelKey)}</span
+									><span>${this.locale.get(category.labelKey)}</span
 									><span class="count"
 										>${matching.filter(
 											(entry) => entry.category === category.id,
@@ -271,7 +271,7 @@ export class DT3DModelLibrary extends LitElement {
 					</nav>
 					<div class="results">
 						<p class="results-count" role="status">
-							${localManager
+							${this.locale
 								.get("modelResultCount")
 								.replace("{count}", String(results.length))
 								.replace("{total}", String(MODEL_LIBRARY.length))}
@@ -287,11 +287,11 @@ export class DT3DModelLibrary extends LitElement {
 												aria-labelledby=${`category-${category.id}`}
 											>
 												<h3 id=${`category-${category.id}`}>
-													${localManager.get(category.labelKey)}
+													${this.locale.get(category.labelKey)}
 												</h3>
 												${category.id === "openings"
 													? html`<p class="opening-hint">
-															${localManager.get("modelOpeningsHint")}
+															${this.locale.get("modelOpeningsHint")}
 														</p>`
 													: nothing}
 												<div class="model-grid">
@@ -302,7 +302,7 @@ export class DT3DModelLibrary extends LitElement {
 								})
 							: html`<div class="empty">
 									<ha-icon icon="mdi:magnify"></ha-icon>
-									<p>${localManager.get("noMatchingModels")}</p>
+									<p>${this.locale.get("noMatchingModels")}</p>
 									<button
 										@click=${() => {
 											this.query = "";
@@ -310,7 +310,7 @@ export class DT3DModelLibrary extends LitElement {
 											this.room = "all";
 										}}
 									>
-										${localManager.get("clearModelFilters")}
+										${this.locale.get("clearModelFilters")}
 									</button>
 								</div>`}
 					</div>
@@ -318,11 +318,11 @@ export class DT3DModelLibrary extends LitElement {
 				<footer>
 					<button @click=${() => this.upload(false)}>
 						<ha-icon icon="mdi:file-upload-outline"></ha-icon
-						>${localManager.get("uploadModelFiles")}
+						>${this.locale.get("uploadModelFiles")}
 					</button>
 					<button @click=${() => this.upload(true)}>
 						<ha-icon icon="mdi:folder-upload-outline"></ha-icon
-						>${localManager.get("uploadModelDirectory")}
+						>${this.locale.get("uploadModelDirectory")}
 					</button>
 				</footer>
 			</section>

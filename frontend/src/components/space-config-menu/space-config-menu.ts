@@ -1,11 +1,11 @@
 import "../dynamic-form/dynamic-form.js";
 
-import {html, LitElement, unsafeCSS} from "lit";
+import {html, unsafeCSS} from "lit";
 import {customElement, property} from "lit/decorators.js";
 
 import type {SpaceConfiguration} from "../../editor/general-config.js";
 import {normalizeSpaceConfiguration} from "../../editor/general-config.js";
-import {localManager} from "../../locale/locale.js";
+import {LocalizedElement} from "../../locale/localized-element.js";
 import type {
 	DynamicFormChangeDetail,
 	DynamicFormField,
@@ -20,7 +20,7 @@ export type SpaceConfigUpdateDetail = {
 };
 
 @customElement("dt3d-space-config-menu")
-export class DT3DSpaceConfigMenu extends LitElement {
+export class DT3DSpaceConfigMenu extends LocalizedElement {
 	static styles = unsafeCSS(componentStyles);
 
 	@property({attribute: false})
@@ -44,10 +44,10 @@ export class DT3DSpaceConfigMenu extends LitElement {
 		tooltip?: string,
 	): DynamicFormField {
 		return {
-			label: localManager.get(label),
+			label: this.locale.get(label),
 			attribute: `general.rendering.postProcessing.${attribute}`,
 			type: "number",
-			tooltip: tooltip ? localManager.get(tooltip) : undefined,
+			tooltip: tooltip ? this.locale.get(tooltip) : undefined,
 			editable: true,
 			enabled: true,
 			step,
@@ -61,10 +61,10 @@ export class DT3DSpaceConfigMenu extends LitElement {
 		tooltip: string,
 	): DynamicFormField {
 		return {
-			label: localManager.get("enabled"),
+			label: this.locale.get("enabled"),
 			attribute: `general.rendering.postProcessing.${attribute}.enabled`,
 			type: "boolean",
-			tooltip: localManager.get(tooltip),
+			tooltip: this.locale.get(tooltip),
 			editable: true,
 			enabled: true,
 		};
@@ -76,10 +76,10 @@ export class DT3DSpaceConfigMenu extends LitElement {
 		tooltip?: string,
 	): DynamicFormField {
 		return {
-			label: localManager.get(label),
+			label: this.locale.get(label),
 			attribute: `general.rendering.postProcessing.${attribute}`,
 			type: "boolean",
-			tooltip: tooltip ? localManager.get(tooltip) : undefined,
+			tooltip: tooltip ? this.locale.get(tooltip) : undefined,
 			editable: true,
 			enabled: true,
 		};
@@ -88,7 +88,7 @@ export class DT3DSpaceConfigMenu extends LitElement {
 	private createPostProcessingFields(): DynamicFormField[] {
 		return [
 			{
-				label: localManager.get("ssr"),
+				label: this.locale.get("ssr"),
 				attribute: "post-processing-ssr",
 				type: "sub-form",
 				enabled: true,
@@ -136,7 +136,7 @@ export class DT3DSpaceConfigMenu extends LitElement {
 				],
 			},
 			{
-				label: localManager.get("bokehDepth"),
+				label: this.locale.get("bokehDepth"),
 				attribute: "post-processing-bokeh",
 				type: "sub-form",
 				enabled: true,
@@ -170,7 +170,7 @@ export class DT3DSpaceConfigMenu extends LitElement {
 				],
 			},
 			{
-				label: localManager.get("bloom"),
+				label: this.locale.get("bloom"),
 				attribute: "post-processing-bloom",
 				type: "sub-form",
 				enabled: true,
@@ -201,7 +201,7 @@ export class DT3DSpaceConfigMenu extends LitElement {
 				],
 			},
 			{
-				label: localManager.get("gtao"),
+				label: this.locale.get("gtao"),
 				attribute: "post-processing-gtao",
 				type: "sub-form",
 				enabled: true,
@@ -233,11 +233,11 @@ export class DT3DSpaceConfigMenu extends LitElement {
 					this.postProcessingNumber("scale", "gtao.scale", 0.1, 0.01, 10),
 					this.postProcessingNumber("samples", "gtao.samples", 1, 2, 32),
 					{
-						label: localManager.get("screenSpaceRadius"),
+						label: this.locale.get("screenSpaceRadius"),
 						attribute:
 							"general.rendering.postProcessing.gtao.screenSpaceRadius",
 						type: "boolean",
-						tooltip: localManager.get("screenSpaceRadiusTooltip"),
+						tooltip: this.locale.get("screenSpaceRadiusTooltip"),
 						editable: true,
 						enabled: true,
 					},
@@ -249,7 +249,7 @@ export class DT3DSpaceConfigMenu extends LitElement {
 						5,
 					),
 					{
-						label: localManager.get("denoise"),
+						label: this.locale.get("denoise"),
 						attribute: "post-processing-gtao-denoise",
 						type: "sub-form",
 						enabled: true,
@@ -309,7 +309,7 @@ export class DT3DSpaceConfigMenu extends LitElement {
 				],
 			},
 			{
-				label: localManager.get("ssao"),
+				label: this.locale.get("ssao"),
 				attribute: "post-processing-ssao",
 				type: "sub-form",
 				enabled: true,
@@ -340,7 +340,7 @@ export class DT3DSpaceConfigMenu extends LitElement {
 				],
 			},
 			{
-				label: localManager.get("halftone"),
+				label: this.locale.get("halftone"),
 				attribute: "post-processing-halftone",
 				type: "sub-form",
 				enabled: true,
@@ -348,16 +348,16 @@ export class DT3DSpaceConfigMenu extends LitElement {
 				fields: [
 					this.postProcessingEnabled("halftone", "halftoneTooltip"),
 					{
-						label: localManager.get("shape"),
+						label: this.locale.get("shape"),
 						attribute: "general.rendering.postProcessing.halftone.shape",
 						type: "select",
 						editable: true,
 						enabled: true,
 						options: [
-							{label: localManager.get("dot"), value: 1},
-							{label: localManager.get("ellipse"), value: 2},
-							{label: localManager.get("line"), value: 3},
-							{label: localManager.get("square"), value: 4},
+							{label: this.locale.get("dot"), value: 1},
+							{label: this.locale.get("ellipse"), value: 2},
+							{label: this.locale.get("line"), value: 3},
+							{label: this.locale.get("square"), value: 4},
 						],
 					},
 					this.postProcessingNumber("radius", "halftone.radius", 0.1, 1, 25),
@@ -400,22 +400,22 @@ export class DT3DSpaceConfigMenu extends LitElement {
 						1,
 					),
 					{
-						label: localManager.get("blendingMode"),
+						label: this.locale.get("blendingMode"),
 						attribute:
 							"general.rendering.postProcessing.halftone.blendingMode",
 						type: "select",
 						editable: true,
 						enabled: true,
 						options: [
-							{label: localManager.get("linear"), value: 1},
-							{label: localManager.get("multiply"), value: 2},
-							{label: localManager.get("add"), value: 3},
-							{label: localManager.get("lighter"), value: 4},
-							{label: localManager.get("darker"), value: 5},
+							{label: this.locale.get("linear"), value: 1},
+							{label: this.locale.get("multiply"), value: 2},
+							{label: this.locale.get("add"), value: 3},
+							{label: this.locale.get("lighter"), value: 4},
+							{label: this.locale.get("darker"), value: 5},
 						],
 					},
 					{
-						label: localManager.get("greyscale"),
+						label: this.locale.get("greyscale"),
 						attribute: "general.rendering.postProcessing.halftone.greyscale",
 						type: "boolean",
 						editable: true,
@@ -424,7 +424,7 @@ export class DT3DSpaceConfigMenu extends LitElement {
 				],
 			},
 			{
-				label: localManager.get("filmGrain"),
+				label: this.locale.get("filmGrain"),
 				attribute: "post-processing-film-grain",
 				type: "sub-form",
 				enabled: true,
@@ -439,7 +439,7 @@ export class DT3DSpaceConfigMenu extends LitElement {
 						1,
 					),
 					{
-						label: localManager.get("grayscale"),
+						label: this.locale.get("grayscale"),
 						attribute: "general.rendering.postProcessing.filmGrain.grayscale",
 						type: "boolean",
 						editable: true,
@@ -452,114 +452,114 @@ export class DT3DSpaceConfigMenu extends LitElement {
 
 	private fields: DynamicFormField[] = [
 		{
-			label: localManager.get("spaceDetails"),
+			label: this.locale.get("spaceDetails"),
 			attribute: "space-details",
 			type: "sub-form",
 			enabled: true,
 			fields: [
 				{
-					label: localManager.get("spaceName"),
+					label: this.locale.get("spaceName"),
 					attribute: "name",
 					type: "string",
 					editable: true,
 					enabled: true,
 				},
 				{
-					label: localManager.get("spaceDescription"),
+					label: this.locale.get("spaceDescription"),
 					attribute: "description",
 					type: "string",
 					editable: true,
 					enabled: true,
 				},
 				{
-					label: localManager.get("defaultSpace"),
+					label: this.locale.get("defaultSpace"),
 					attribute: "isDefault",
 					type: "boolean",
-					tooltip: localManager.get("spaceDefaultDescription"),
+					tooltip: this.locale.get("spaceDefaultDescription"),
 					editable: true,
 					enabled: true,
 				},
 			],
 		},
 		{
-			label: localManager.get("appearance"),
+			label: this.locale.get("appearance"),
 			type: "sub-form",
 			enabled: true,
 			fields: [
 				{
-					label: localManager.get("skyEnabled"),
+					label: this.locale.get("skyEnabled"),
 					attribute: "scene.sky.enabled",
 					type: "boolean",
-					tooltip: localManager.get("skyEnabledTooltip"),
+					tooltip: this.locale.get("skyEnabledTooltip"),
 					editable: true,
 					enabled: true,
 				},
 				{
-					label: localManager.get("skyLensFlare"),
+					label: this.locale.get("skyLensFlare"),
 					attribute: "scene.sky.lensFlare",
 					type: "boolean",
-					tooltip: localManager.get("skyLensFlareTooltip"),
+					tooltip: this.locale.get("skyLensFlareTooltip"),
 					editable: true,
 					enabled: true,
 				},
 				{
-					label: localManager.get("skyFollowDateTime"),
+					label: this.locale.get("skyFollowDateTime"),
 					attribute: "scene.sky.followDateTime",
 					type: "boolean",
-					tooltip: localManager.get("skyFollowDateTimeTooltip"),
+					tooltip: this.locale.get("skyFollowDateTimeTooltip"),
 					editable: true,
 					enabled: true,
 				},
 				{
-					label: localManager.get("backgroundType"),
+					label: this.locale.get("backgroundType"),
 					attribute: "scene.background.type",
 					type: "select",
-					tooltip: localManager.get("backgroundTypeTooltip"),
+					tooltip: this.locale.get("backgroundTypeTooltip"),
 					editable: true,
 					enabled: true,
 					options: [
-						{label: localManager.get("solidColor"), value: "solid"},
-						{label: localManager.get("transparent"), value: "transparent"},
+						{label: this.locale.get("solidColor"), value: "solid"},
+						{label: this.locale.get("transparent"), value: "transparent"},
 					],
 				},
 				{
-					label: localManager.get("backgroundColor"),
+					label: this.locale.get("backgroundColor"),
 					attribute: "scene.background.color",
 					type: "color",
-					tooltip: localManager.get("backgroundColorTooltip"),
+					tooltip: this.locale.get("backgroundColorTooltip"),
 					editable: true,
 					enabled: true,
 				},
 			],
 		},
 		{
-			label: localManager.get("rendering"),
+			label: this.locale.get("rendering"),
 			type: "sub-form",
 			enabled: true,
 			fields: [
 				{
-					label: localManager.get("toneMapping"),
+					label: this.locale.get("toneMapping"),
 					attribute: "general.rendering.toneMapping",
 					type: "select",
-					tooltip: localManager.get("toneMappingTooltip"),
+					tooltip: this.locale.get("toneMappingTooltip"),
 					editable: true,
 					enabled: true,
 					options: [
-						{label: localManager.get("toneMappingNone"), value: "none"},
-						{label: localManager.get("toneMappingLinear"), value: "linear"},
+						{label: this.locale.get("toneMappingNone"), value: "none"},
+						{label: this.locale.get("toneMappingLinear"), value: "linear"},
 						{
-							label: localManager.get("toneMappingReinhard"),
+							label: this.locale.get("toneMappingReinhard"),
 							value: "reinhard",
 						},
-						{label: localManager.get("toneMappingCineon"), value: "cineon"},
+						{label: this.locale.get("toneMappingCineon"), value: "cineon"},
 						{
-							label: localManager.get("toneMappingAcesFilmic"),
+							label: this.locale.get("toneMappingAcesFilmic"),
 							value: "aces_filmic",
 						},
 					],
 				},
 				{
-					label: localManager.get("postProcessing"),
+					label: this.locale.get("postProcessing"),
 					type: "sub-form",
 					enabled: true,
 					fields: this.createPostProcessingFields(),
@@ -567,55 +567,55 @@ export class DT3DSpaceConfigMenu extends LitElement {
 			],
 		},
 		{
-			label: localManager.get("daylightConditions"),
+			label: this.locale.get("daylightConditions"),
 			type: "sub-form",
 			enabled: true,
 			fields: [
 				{
-					label: localManager.get("ambientColor"),
+					label: this.locale.get("ambientColor"),
 					attribute: "scene.daylight.ambientColor",
 					type: "color",
-					tooltip: localManager.get("ambientColorTooltip"),
+					tooltip: this.locale.get("ambientColorTooltip"),
 					editable: true,
 					enabled: true,
 				},
 				{
-					label: localManager.get("ambientIntensity"),
+					label: this.locale.get("ambientIntensity"),
 					attribute: "scene.daylight.ambientIntensity",
 					type: "number",
-					tooltip: localManager.get("ambientIntensityTooltip"),
+					tooltip: this.locale.get("ambientIntensityTooltip"),
 					editable: true,
 					enabled: true,
 				},
 				{
-					label: localManager.get("sunlightColor"),
+					label: this.locale.get("sunlightColor"),
 					attribute: "scene.daylight.sunlightColor",
 					type: "color",
-					tooltip: localManager.get("sunlightColorTooltip"),
+					tooltip: this.locale.get("sunlightColorTooltip"),
 					editable: true,
 					enabled: true,
 				},
 				{
-					label: localManager.get("sunlightIntensity"),
+					label: this.locale.get("sunlightIntensity"),
 					attribute: "scene.daylight.sunlightIntensity",
 					type: "number",
-					tooltip: localManager.get("sunlightIntensityTooltip"),
+					tooltip: this.locale.get("sunlightIntensityTooltip"),
 					editable: true,
 					enabled: true,
 				},
 				{
-					label: localManager.get("sunElevation"),
+					label: this.locale.get("sunElevation"),
 					attribute: "scene.daylight.sunElevation",
 					type: "number",
-					tooltip: localManager.get("sunElevationTooltip"),
+					tooltip: this.locale.get("sunElevationTooltip"),
 					editable: true,
 					enabled: true,
 				},
 				{
-					label: localManager.get("sunAzimuth"),
+					label: this.locale.get("sunAzimuth"),
 					attribute: "scene.daylight.sunAzimuth",
 					type: "number",
-					tooltip: localManager.get("sunAzimuthTooltip"),
+					tooltip: this.locale.get("sunAzimuthTooltip"),
 					editable: true,
 					enabled: true,
 				},
@@ -715,13 +715,13 @@ export class DT3DSpaceConfigMenu extends LitElement {
 				<div class="dialog" @click=${(event: Event) => event.stopPropagation()}>
 					<header>
 						<div>
-							<h3>${localManager.get("spaceConfiguration")}</h3>
-							<p>${localManager.get("generalConfigurationDescription")}</p>
+							<h3>${this.locale.get("spaceConfiguration")}</h3>
+							<p>${this.locale.get("generalConfigurationDescription")}</p>
 						</div>
 						<button
 							class="close-button"
 							@click=${this.close}
-							aria-label=${localManager.get("cancel")}
+							aria-label=${this.locale.get("cancel")}
 						>
 							<ha-icon icon="mdi:close"></ha-icon>
 						</button>

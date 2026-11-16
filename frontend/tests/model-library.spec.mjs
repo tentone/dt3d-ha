@@ -49,6 +49,77 @@ async function openLibrary(page) {
 	).toBeVisible();
 }
 
+test("card language follows its saved setting or the Home Assistant language", async ({ page }) => {
+	await page.evaluate(async () => {
+		await import("/src/components/config-editor.ts");
+		const card = window.testCard;
+		const hass = { states: {}, language: "pt-PT" };
+		const editor = card.constructor.getConfigElement();
+		editor.hass = hass;
+		editor.setConfig({ ...card.config, language: "de" });
+		editor.addEventListener("config-changed", (event) =>
+			card.setConfig(event.detail.config),
+		);
+		document.body.append(editor);
+
+		const second = document.createElement("dt3d-card");
+		second.id = "second-card";
+		second.setConfig({ ...card.config, language: "es" });
+		second.hass = hass;
+		document.body.append(second);
+		card.hass = hass;
+	});
+
+	const editor = page.locator("dt3d-config-editor");
+	const language = editor.locator('select[data-key="language"]');
+	const firstCard = page.locator("#editor dt3d-card");
+	const secondCard = page.locator("#second-card");
+	await expect(language).toHaveValue("de");
+	await expect(language.locator("option")).toHaveCount(7);
+	await expect(editor.locator("label[for=language]")).toHaveText("Sprache");
+	for (const card of [firstCard, secondCard]) {
+		await expect(
+			card.getByRole("button", { name: "Biblioteca de modelos", exact: true }),
+		).toBeVisible();
+	}
+
+	await language.selectOption("zh");
+	await expect(editor.locator("label[for=language]")).toHaveText("语言");
+	await expect(
+		firstCard.getByRole("button", { name: "模型库", exact: true }),
+	).toBeVisible();
+	await expect(secondCard).toHaveAttribute("lang", "es");
+	await expect(
+		secondCard.getByRole("button", { name: "Biblioteca de modelos", exact: true }),
+	).toBeVisible();
+
+	await language.selectOption("auto");
+	await expect(firstCard).toHaveAttribute("lang", "pt");
+	await expect(language).toHaveValue("auto");
+	await firstCard
+		.getByRole("button", { name: "Biblioteca de modelos", exact: true })
+		.click();
+	await expect(
+		firstCard.getByRole("dialog", { name: "Biblioteca de modelos" }),
+	).toBeVisible();
+
+	await page.evaluate(() => {
+		window.testCard.hass = { states: {}, language: "fr-CA" };
+	});
+	await expect(
+		firstCard.getByRole("dialog", { name: "Bibliothèque de modèles" }),
+	).toBeVisible();
+	await expect(secondCard).toHaveAttribute("lang", "es");
+
+	await page.evaluate(() => {
+		Object.defineProperty(window.navigator, "languages", { value: ["de-CH"] });
+		window.testCard.hass = { states: {}, language: "it-IT" };
+	});
+	await expect(
+		firstCard.getByRole("dialog", { name: "Modellbibliothek" }),
+	).toBeVisible();
+});
+
 async function preparePlacementView(page) {
 	await page.evaluate(() => {
 		const card = window.testCard;

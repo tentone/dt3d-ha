@@ -1,4 +1,4 @@
-import {html, LitElement, nothing, unsafeCSS} from "lit";
+import {html, nothing, unsafeCSS} from "lit";
 import {customElement, property} from "lit/decorators.js";
 import type {Object3D} from "three";
 
@@ -17,7 +17,7 @@ import {
 	getRuleBaselineVisibility,
 	normalizeEntityRules,
 } from "../../editor/entity-rules.js";
-import {localManager} from "../../locale/locale.js";
+import {LocalizedElement} from "../../locale/localized-element.js";
 import type {DynamicFormEntityOption} from "../dynamic-form/dynamic-form.js";
 import componentStyles from "./entity-rules.css?inline";
 
@@ -28,7 +28,7 @@ export type EntityRulesChangeDetail = {
 let entityRulesInstanceId = 0;
 
 @customElement("dt3d-entity-rules")
-export class DT3DEntityRules extends LitElement {
+export class DT3DEntityRules extends LocalizedElement {
 	static styles = unsafeCSS(componentStyles);
 
 	@property({attribute: false})
@@ -152,7 +152,7 @@ export class DT3DEntityRules extends LitElement {
 	private renderTransform(rule: TransformEntityRule) {
 		return html`
 			<label>
-				${localManager.get("ruleTransformProperty")}
+				${this.locale.get("ruleTransformProperty")}
 				<select
 					.value=${rule.property}
 					?disabled=${this.disabled}
@@ -163,13 +163,13 @@ export class DT3DEntityRules extends LitElement {
 								.value as EntityRuleTransformProperty,
 						)}
 				>
-					<option value="position">${localManager.get("position")}</option>
-					<option value="rotation">${localManager.get("rotation")}</option>
-					<option value="scale">${localManager.get("scale")}</option>
+					<option value="position">${this.locale.get("position")}</option>
+					<option value="rotation">${this.locale.get("rotation")}</option>
+					<option value="scale">${this.locale.get("scale")}</option>
 				</select>
 			</label>
 			<label>
-				${localManager.get("ruleTransformMode")}
+				${this.locale.get("ruleTransformMode")}
 				<select
 					.value=${rule.mode}
 					?disabled=${this.disabled}
@@ -179,10 +179,10 @@ export class DT3DEntityRules extends LitElement {
 						} as Partial<EntityRule>)}
 				>
 					<option value="state">
-						${localManager.get("ruleSpecificState")}
+						${this.locale.get("ruleSpecificState")}
 					</option>
 					<option value="interpolate">
-						${localManager.get("ruleInterpolateValue")}
+						${this.locale.get("ruleInterpolateValue")}
 					</option>
 				</select>
 			</label>
@@ -191,7 +191,7 @@ export class DT3DEntityRules extends LitElement {
 				: html`
 						<div class="range-row">
 							<label>
-								${localManager.get("ruleValueMin")}
+								${this.locale.get("ruleValueMin")}
 								<input
 									type="number"
 									.value=${String(rule.valueMin)}
@@ -205,7 +205,7 @@ export class DT3DEntityRules extends LitElement {
 								/>
 							</label>
 							<label>
-								${localManager.get("ruleValueMax")}
+								${this.locale.get("ruleValueMax")}
 								<input
 									type="number"
 									.value=${String(rule.valueMax)}
@@ -220,7 +220,7 @@ export class DT3DEntityRules extends LitElement {
 							</label>
 						</div>
 					`}
-			<label>${localManager.get("ruleTargetTransform")}</label>
+			<label>${this.locale.get("ruleTargetTransform")}</label>
 			<div class="vector-row">
 				${(["x", "y", "z"] as const).map(
 					(axis) => html`
@@ -246,7 +246,7 @@ export class DT3DEntityRules extends LitElement {
 					`,
 				)}
 			</div>
-			<p class="hint">${localManager.get("ruleTransformBaselineHint")}</p>
+			<p class="hint">${this.locale.get("ruleTransformBaselineHint")}</p>
 		`;
 	}
 
@@ -255,7 +255,7 @@ export class DT3DEntityRules extends LitElement {
 	) {
 		return html`
 			<label>
-				${localManager.get("ruleEntityState")}
+				${this.locale.get("ruleEntityState")}
 				<input
 					.value=${rule.state}
 					?disabled=${this.disabled}
@@ -273,7 +273,7 @@ export class DT3DEntityRules extends LitElement {
 		return html`
 			<div class="rule">
 				<div class="rule-header">
-					<strong>${localManager.get("rule")} ${index + 1}</strong>
+					<strong>${this.locale.get("rule")} ${index + 1}</strong>
 					<label class="enabled">
 						<input
 							type="checkbox"
@@ -284,7 +284,7 @@ export class DT3DEntityRules extends LitElement {
 									enabled: (event.target as HTMLInputElement).checked,
 								} as Partial<EntityRule>)}
 						/>
-						${localManager.get("enabled")}
+						${this.locale.get("enabled")}
 					</label>
 					<button
 						class="remove"
@@ -293,11 +293,11 @@ export class DT3DEntityRules extends LitElement {
 						@click=${() =>
 							this.emitRules(this.rules.filter((item) => item.id !== rule.id))}
 					>
-						${localManager.get("removeRule")}
+						${this.locale.get("removeRule")}
 					</button>
 				</div>
 				<label>
-					${localManager.get("entity")}
+					${this.locale.get("entity")}
 					<input
 						list=${this.entityListId}
 						.value=${rule.entityId}
@@ -310,7 +310,7 @@ export class DT3DEntityRules extends LitElement {
 					/>
 				</label>
 				<label>
-					${localManager.get("ruleAction")}
+					${this.locale.get("ruleAction")}
 					<select
 						.value=${rule.action}
 						?disabled=${this.disabled}
@@ -321,12 +321,12 @@ export class DT3DEntityRules extends LitElement {
 							)}
 					>
 						<option value="transform">
-							${localManager.get("ruleTransformAction")}
+							${this.locale.get("ruleTransformAction")}
 						</option>
 						<option value="color">
-							${localManager.get("ruleColorChange")}
+							${this.locale.get("ruleColorChange")}
 						</option>
-						<option value="hide">${localManager.get("ruleHide")}</option>
+						<option value="hide">${this.locale.get("ruleHide")}</option>
 					</select>
 				</label>
 				${rule.action === "transform"
@@ -334,7 +334,7 @@ export class DT3DEntityRules extends LitElement {
 					: rule.action === "color"
 						? html`${this.renderState(rule)}
 								<label
-									>${localManager.get("ruleTargetColor")}
+									>${this.locale.get("ruleTargetColor")}
 									<input
 										type="color"
 										.value=${rule.to}
@@ -346,7 +346,7 @@ export class DT3DEntityRules extends LitElement {
 									/>
 								</label>`
 						: html`${this.renderState(rule)}
-								<p class="hint">${localManager.get("ruleHideHint")}</p>`}
+								<p class="hint">${this.locale.get("ruleHideHint")}</p>`}
 			</div>
 		`;
 	}
@@ -363,7 +363,7 @@ export class DT3DEntityRules extends LitElement {
 			</datalist>
 			<div class="rules">
 				${rules.length === 0
-					? html`<p class="empty">${localManager.get("noEntityRules")}</p>`
+					? html`<p class="empty">${this.locale.get("noEntityRules")}</p>`
 					: nothing}
 				${rules.map((rule, index) => this.renderRule(rule, index))}
 				<button
@@ -373,7 +373,7 @@ export class DT3DEntityRules extends LitElement {
 					@click=${() =>
 						this.emitRules([...rules, this.createRule("transform")])}
 				>
-					${localManager.get("addRule")}
+					${this.locale.get("addRule")}
 				</button>
 			</div>
 		`;

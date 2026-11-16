@@ -1,14 +1,14 @@
 import "../tooltip/tooltip.js";
 
-import {html, LitElement, unsafeCSS} from "lit";
+import {html, unsafeCSS} from "lit";
 import {customElement, property} from "lit/decorators.js";
 
-import {localManager} from "../../locale/locale.js";
+import {LocalizedElement} from "../../locale/localized-element.js";
 import type {SpaceResponse} from "../../service/space-api.js";
 import componentStyles from "./space-selector.css?inline";
 
 @customElement("dt3d-space-selector")
-export class DT3DSpaceSelector extends LitElement {
+export class DT3DSpaceSelector extends LocalizedElement {
 	static styles = unsafeCSS(componentStyles);
 
 	@property({attribute: false})
@@ -130,8 +130,8 @@ export class DT3DSpaceSelector extends LitElement {
 	}
 
 	private renderAction(labelKey: string, icon: string, action: () => void, needsSpace = true) {
-		const label = localManager.get(labelKey);
-		return html`<dt3d-tooltip .content=${this.loading ? localManager.get("loadingSpace") : label} placement="bottom">
+		const label = this.locale.get(labelKey);
+		return html`<dt3d-tooltip .content=${this.loading ? this.locale.get("loadingSpace") : label} placement="bottom">
 			<button type="button" class=${labelKey === "deleteSpace" ? "delete-button" : ""}
 				?disabled=${this.loading || this.editingBlocked || (needsSpace && !this.selectedSpaceId)}
 				@click=${action} aria-label=${label}>
@@ -143,16 +143,16 @@ export class DT3DSpaceSelector extends LitElement {
 	protected render() {
 		return html`
 			<div class="selector" aria-busy=${this.loading}>
-				<label for="active-space"><ha-icon icon="mdi:home-city-outline"></ha-icon><span>${localManager.get("space")}</span></label>
+				<label for="active-space"><ha-icon icon="mdi:home-city-outline"></ha-icon><span>${this.locale.get("space")}</span></label>
 				<div class="space-field">
 					<select id="active-space" .value=${this.selectedSpaceId}
 						?disabled=${this.spaces.length === 0} @change=${this.handleChange}>
-						${this.spaces.length === 0 ? html`<option value="">${localManager.get("noSpaces")}</option>` : null}
+						${this.spaces.length === 0 ? html`<option value="">${this.locale.get("noSpaces")}</option>` : null}
 						${this.spaces.map((space) => html`<option value=${space.id}>${space.name}</option>`)}
 					</select>
-					${this.loading ? html`<span class="loading-indicator" role="status" aria-label=${localManager.get("loading")}></span>` : null}
+					${this.loading ? html`<span class="loading-indicator" role="status" aria-label=${this.locale.get("loading")}></span>` : null}
 				</div>
-				<div class="space-actions" role="group" aria-label=${localManager.get("space")}>
+				<div class="space-actions" role="group" aria-label=${this.locale.get("space")}>
 					${this.renderAction("spaceConfiguration", "mdi:cog-outline", () => this.requestConfigure())}
 					${this.renderAction("createSpace", "mdi:plus", () => this.requestCreate(), false)}
 					${this.renderAction("cloneSpace", "mdi:content-copy", () => this.requestClone())}

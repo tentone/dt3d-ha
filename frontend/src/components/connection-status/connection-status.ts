@@ -1,14 +1,14 @@
 import "../tooltip/tooltip.js";
 
-import {html, LitElement, unsafeCSS} from "lit";
+import {html, unsafeCSS} from "lit";
 import {customElement, property} from "lit/decorators.js";
 
-import {localManager} from "../../locale/locale.js";
+import {LocalizedElement} from "../../locale/localized-element.js";
 import {buildBackendApiUrl, SERVICE_KEY_HEADER} from "../../service/space-api.js";
 import componentStyles from "./connection-status.css?inline";
 
 @customElement("dt3d-connection-status")
-export class ConnectionStatus extends LitElement {
+export class ConnectionStatus extends LocalizedElement {
 	static properties = {
 		port: {type: Number, reflect: true},
 		address: {type: String, reflect: true},
@@ -32,8 +32,8 @@ export class ConnectionStatus extends LitElement {
 	 */
 	public serviceKey: string = "";
 
-	@property()
-	public msg: string = localManager.get("waiting");
+	@property({attribute: false})
+	private status: "waiting" | "connectedToBackend" | "failedToReachBackend" = "waiting";
 
 	/**
 	 * Flag to define if the comunication was successfull or not.
@@ -58,19 +58,21 @@ export class ConnectionStatus extends LitElement {
 				return response.text();
 			})
 			.then(() => {
-				this.msg = `${localManager.get("connectedToBackend")} ${this.address}:${this.port}`;
+				this.status = "connectedToBackend";
 				this.success = true;
 			})
 			.catch(() => {
-				this.msg = `${localManager.get("failedToReachBackend")} ${this.address}:${this.port}`;
+				this.status = "failedToReachBackend";
 				this.success = false;
 			});
 	}
 
 	public render() {
+		const label = this.locale.get(this.status);
+		const message = this.status === "waiting" ? label : `${label} ${this.address}:${this.port}`;
 		return html`
-		<dt3d-tooltip .content=${`${this.msg} · ${BUILD_TIMESTAMP}`} placement="right">
-			<span tabindex="0" role="status" aria-label=${this.msg} class="connection-status-container ${this.success ? "connection-status-success" : "connection-status-error"}">
+		<dt3d-tooltip .content=${`${message} · ${BUILD_TIMESTAMP}`} placement="right">
+			<span tabindex="0" role="status" aria-label=${message} class="connection-status-container ${this.success ? "connection-status-success" : "connection-status-error"}">
 				<ha-icon icon=${this.success ? "mdi:lan-connect" : "mdi:lan-disconnect"}></ha-icon>
 			</span>
 		</dt3d-tooltip>`;

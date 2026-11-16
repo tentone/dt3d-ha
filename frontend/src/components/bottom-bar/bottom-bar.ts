@@ -1,9 +1,9 @@
 import "../tooltip/tooltip.js";
 
-import {html, LitElement, unsafeCSS} from "lit";
+import {html, unsafeCSS} from "lit";
 import {customElement} from "lit/decorators.js";
 
-import {localManager} from "../../locale/locale.js";
+import {LocalizedElement} from "../../locale/localized-element.js";
 import {LocalStorage} from "../../utils/local-storage.js";
 import componentStyles from "./bottom-bar.css?inline";
 
@@ -16,12 +16,13 @@ const COLLISION_AVOIDANCE_STORAGE_KEY = "collision-avoidance";
  * Persistent editor controls presented along the bottom of the scene.
  */
 @customElement("dt3d-bottom-bar")
-export class DT3DBottomBar extends LitElement {
+export class DT3DBottomBar extends LocalizedElement {
 	static styles = unsafeCSS(componentStyles);
 
 	static properties = {
 		blocked: {type: Boolean, reflect: true},
 		blockedReason: {type: String},
+		loading: {type: Boolean},
 		transformTool: {type: String},
 		measurementTool: {type: String},
 		gridEnabled: {type: Boolean},
@@ -37,7 +38,14 @@ export class DT3DBottomBar extends LitElement {
 
 	public transformTool: TransformOptions = "translate";
 	public blocked = true;
-	public blockedReason = localManager.get("loadingSpace");
+	public blockedReason = "";
+	public loading = true;
+
+	private get blockedLabel(): string {
+		return this.loading
+			? this.locale.get("loadingSpace")
+			: this.locale.get(this.blockedReason || "editingUnavailable");
+	}
 	public measurementTool: MeasurementOptions = "none";
 	public gridEnabled = true;
 	public gridSnapEnabled = false;
@@ -141,7 +149,7 @@ export class DT3DBottomBar extends LitElement {
 		disabled = false,
 	) {
 		return html`
-			<dt3d-tooltip .content=${this.blocked ? this.blockedReason : label} placement="top">
+			<dt3d-tooltip .content=${this.blocked ? this.blockedLabel : label} placement="top">
 				<button
 					class=${selected ? "selected" : ""}
 					@click=${onClick}
@@ -157,82 +165,82 @@ export class DT3DBottomBar extends LitElement {
 
 	render() {
 		return html`
-			<nav class="editor-toolbar" aria-label=${localManager.get("editorTools")}>
-				<div class="tool-group" aria-label=${localManager.get("controls")}>
+			<nav class="editor-toolbar" aria-label=${this.locale.get("editorTools")}>
+				<div class="tool-group" aria-label=${this.locale.get("controls")}>
 					${this.renderButton(
 						"mdi:cursor-move",
-						localManager.get("translateObject"),
+						this.locale.get("translateObject"),
 						this.transformTool === "translate",
 						() => this.handleTransformSelect("translate"),
 					)}
 					${this.renderButton(
 						"mdi:rotate-right",
-						localManager.get("rotateObject"),
+						this.locale.get("rotateObject"),
 						this.transformTool === "rotate",
 						() => this.handleTransformSelect("rotate"),
 					)}
 					${this.renderButton(
 						"mdi:resize",
-						localManager.get("scaleObject"),
+						this.locale.get("scaleObject"),
 						this.transformTool === "scale",
 						() => this.handleTransformSelect("scale"),
 					)}
 					${this.renderButton(
 						"mdi:cursor-default-outline",
-						localManager.get("disableTransformControls"),
+						this.locale.get("disableTransformControls"),
 						this.transformTool === "none",
 						() => this.handleTransformSelect("none"),
 					)}
 					${this.renderButton(
 						"mdi:focus-field",
-						localManager.get("focusSelectedObjects"),
+						this.locale.get("focusSelectedObjects"),
 						false,
 						() => this.handleFocusSelection(),
 						!this.hasSelection,
 					)}
 				</div>
-				<div class="tool-group" aria-label=${localManager.get("measure")}>
+				<div class="tool-group" aria-label=${this.locale.get("measure")}>
 					${this.renderButton(
 						"mdi:social-distance-2-meters",
-						localManager.get("measureDistance"),
+						this.locale.get("measureDistance"),
 						this.measurementTool === "distance",
 						() => this.handleMeasurementSelect("distance"),
 					)}
 					${this.renderButton(
 						"mdi:angle-acute",
-						localManager.get("measureAngle"),
+						this.locale.get("measureAngle"),
 						this.measurementTool === "angle",
 						() => this.handleMeasurementSelect("angle"),
 					)}
 					${this.renderButton(
 						"mdi:cancel",
-						localManager.get("clearMeasurements"),
+						this.locale.get("clearMeasurements"),
 						false,
 						() => this.handleMeasurementsClear(),
 					)}
 				</div>
-			<div class="tool-group settings-toolbar" aria-label=${localManager.get("gridAndCollisionSettings")}>
+			<div class="tool-group settings-toolbar" aria-label=${this.locale.get("gridAndCollisionSettings")}>
 				${this.renderButton(
 					"mdi:grid",
-					localManager.get("toggleGrid"),
+					this.locale.get("toggleGrid"),
 					this.gridEnabled,
 					() => this.handleGridToggle(),
 				)}
 				${this.renderButton(
 					"mdi:magnet",
-					localManager.get("snapToGrid"),
+					this.locale.get("snapToGrid"),
 					this.gridSnapEnabled,
 					() => this.handleGridSnapToggle(),
 				)}
 				${this.renderButton(
 					"mdi:grid-large",
-					localManager.get("configureGrid"),
+					this.locale.get("configureGrid"),
 					false,
 					() => this.handleGridConfigOpen(),
 				)}
 				${this.renderButton(
 					"mdi:shield-half-full",
-					localManager.get("preventObjectClipping"),
+					this.locale.get("preventObjectClipping"),
 					this.collisionAvoidanceEnabled,
 					() => this.handleCollisionAvoidanceToggle(),
 				)}

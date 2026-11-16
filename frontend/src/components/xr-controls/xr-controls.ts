@@ -1,14 +1,14 @@
 import "../floating-button/floating-button.js";
 
-import {css, html, LitElement, nothing} from "lit";
+import {css, html, nothing} from "lit";
 import {customElement, property} from "lit/decorators.js";
 
-import {localManager} from "../../locale/locale.js";
+import {LocalizedElement} from "../../locale/localized-element.js";
 
 export type XrMode = "vr" | "ar";
 
 @customElement("dt3d-xr-controls")
-export class DT3DXrControls extends LitElement {
+export class DT3DXrControls extends LocalizedElement {
 	static styles = css`
 		:host {
 			display: flex;
@@ -57,10 +57,10 @@ export class DT3DXrControls extends LitElement {
 
 	private getAriaLabel(mode: XrMode): string {
 		if (this.activeMode === mode) {
-			return localManager.get(mode === "vr" ? "exitVr" : "exitAr");
+			return this.locale.get(mode === "vr" ? "exitVr" : "exitAr");
 		}
 
-		return localManager.get(mode === "vr" ? "enterVr" : "enterAr");
+		return this.locale.get(mode === "vr" ? "enterVr" : "enterAr");
 	}
 
 	protected render() {
@@ -72,7 +72,7 @@ export class DT3DXrControls extends LitElement {
 							ariaLabel=${this.getAriaLabel("vr")}
 							titleText=${this.getAriaLabel("vr")}
 						>
-							${this.activeMode === "vr" ? localManager.get("exitXr") : "VR"}
+							${this.activeMode === "vr" ? this.locale.get("exitXr") : "VR"}
 						</dt3d-floating-button>
 					`
 				: nothing}
@@ -83,7 +83,7 @@ export class DT3DXrControls extends LitElement {
 							ariaLabel=${this.getAriaLabel("ar")}
 							titleText=${this.getAriaLabel("ar")}
 						>
-							${this.activeMode === "ar" ? localManager.get("exitXr") : "AR"}
+							${this.activeMode === "ar" ? this.locale.get("exitXr") : "AR"}
 						</dt3d-floating-button>
 					`
 				: nothing}

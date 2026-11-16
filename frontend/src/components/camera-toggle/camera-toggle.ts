@@ -1,14 +1,14 @@
 import "../floating-button/floating-button.js";
 import "../tooltip/tooltip.js";
 
-import {css, html, LitElement} from "lit";
+import {css, html} from "lit";
 import {customElement, property} from "lit/decorators.js";
 
 import type {CameraMode} from "../../editor/scene.js";
-import {localManager} from "../../locale/locale.js";
+import {LocalizedElement} from "../../locale/localized-element.js";
 
 @customElement("dt3d-camera-toggle")
-export class DT3DCameraToggle extends LitElement {
+export class DT3DCameraToggle extends LocalizedElement {
 	static styles = css`
 		:host {
 			display: block;
@@ -46,8 +46,8 @@ export class DT3DCameraToggle extends LitElement {
 
 	private getAriaLabel(): string {
 		return this.mode === "perspective"
-			? localManager.get("switchToOrthographic")
-			: localManager.get("switchToPerspective");
+			? this.locale.get("switchToOrthographic")
+			: this.locale.get("switchToPerspective");
 	}
 
 	private handleFloatingClick(): void {

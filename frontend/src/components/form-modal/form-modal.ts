@@ -1,9 +1,9 @@
 import "../dynamic-form/dynamic-form.js";
 
-import {html, LitElement, nothing, unsafeCSS} from "lit";
+import {html, nothing, unsafeCSS} from "lit";
 import {customElement, property, state} from "lit/decorators.js";
 
-import {localManager} from "../../locale/locale.js";
+import {LocalizedElement} from "../../locale/localized-element.js";
 import type {
 	DynamicFormChangeDetail,
 	DynamicFormField,
@@ -36,7 +36,7 @@ const cloneFormData = (value: unknown): any => {
 };
 
 @customElement("dt3d-form-modal")
-export class DT3DFormModal extends LitElement {
+export class DT3DFormModal extends LocalizedElement {
 	static styles = unsafeCSS(componentStyles);
 
 	@property({type: String})
@@ -46,10 +46,10 @@ export class DT3DFormModal extends LitElement {
 	public description = "";
 
 	@property({type: String})
-	public confirmLabel = localManager.get("save");
+	public confirmLabel?: string;
 
 	@property({type: String})
-	public cancelLabel = localManager.get("cancel");
+	public cancelLabel?: string;
 
 	@property({attribute: false})
 	public fields: DynamicFormField[] = [];
@@ -133,6 +133,7 @@ export class DT3DFormModal extends LitElement {
 	}
 
 	public render() {
+		const cancelLabel = this.cancelLabel ?? this.locale.get("cancel");
 		return html`
 			<div class="overlay" @click=${this.close} @keydown=${this.handleKeyDown}>
 				<form
@@ -152,7 +153,7 @@ export class DT3DFormModal extends LitElement {
 							type="button"
 							class="close-button"
 							@click=${this.close}
-							aria-label=${this.cancelLabel}
+							aria-label=${cancelLabel}
 						>
 							<ha-icon icon="mdi:close"></ha-icon>
 						</button>
@@ -165,10 +166,10 @@ export class DT3DFormModal extends LitElement {
 					></dt3d-dynamic-form>
 					<div class="actions">
 						<button type="button" class="cancel-button" @click=${this.close}>
-							${this.cancelLabel}
+							${cancelLabel}
 						</button>
 						<button type="submit" class="confirm-button">
-							${this.confirmLabel}
+							${this.confirmLabel ?? this.locale.get("save")}
 						</button>
 					</div>
 				</form>

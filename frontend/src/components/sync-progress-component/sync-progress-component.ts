@@ -1,6 +1,7 @@
-import {html, LitElement, unsafeCSS} from "lit";
+import {html, unsafeCSS} from "lit";
 import {customElement, property} from "lit/decorators.js";
 
+import {LocalizedElement} from "../../locale/localized-element.js";
 import type {SyncProgressSnapshot} from "../../service/space-sync.js";
 import componentStyles from "./sync-progress-component.css?inline";
 
@@ -13,7 +14,7 @@ const EMPTY_PROGRESS: SyncProgressSnapshot = {
 };
 
 @customElement("sync-progress-component")
-export class SyncProgressComponent extends LitElement {
+export class SyncProgressComponent extends LocalizedElement {
 	static styles = unsafeCSS(componentStyles);
 
 	@property({attribute: false})
@@ -44,16 +45,17 @@ export class SyncProgressComponent extends LitElement {
 			progress.items.length - activeItems.length,
 		);
 		const isLoading = progress.items.some((item) =>
-			/^(load|read|cache|prepare)/i.test(item.operation),
+			/^sync(Load|Prepare)/.test(item.operation),
 		);
-		const title =
+		const title = this.locale.get(
 			progress.items.length === 0
 				? progress.failed > 0
-					? "Scene loaded with errors"
-					: "Scene ready"
+					? "syncSceneWithErrors"
+					: "syncSceneReady"
 				: isLoading
-					? "Loading scene"
-					: "Syncing scene";
+					? "syncLoadingScene"
+					: "syncSyncingScene",
+		);
 
 		return html`
 			<div class="sync-progress" role="status" aria-live="polite" aria-label=${title}>
@@ -70,16 +72,16 @@ export class SyncProgressComponent extends LitElement {
 								${activeItems.map(
 									(item) => html`
 										<div class="sync-item">
-											<span class="sync-operation">${item.operation}</span>
-											<span class="sync-label">${item.label}</span>
+											<span class="sync-operation">${this.locale.get(item.operation)}</span>
+											<span class="sync-label">${item.operation === "syncLoadSpaces" ? this.locale.get("syncAvailableSpaces") : item.label}</span>
 										</div>
 									`,
 								)}
 								${remainingItems > 0
 									? html`
 											<div class="sync-item">
-												<span class="sync-operation">Queued</span>
-												<span class="sync-label">${remainingItems} more</span>
+												<span class="sync-operation">${this.locale.get("syncQueued")}</span>
+												<span class="sync-label">${this.locale.get("syncMore").replace("{count}", String(remainingItems))}</span>
 											</div>
 										`
 									: null}
@@ -87,7 +89,7 @@ export class SyncProgressComponent extends LitElement {
 						`
 					: null}
 				${progress.failed > 0
-					? html`<div class="sync-failed">${progress.failed} failed</div>`
+					? html`<div class="sync-failed">${this.locale.get("syncFailed").replace("{count}", String(progress.failed))}</div>`
 					: null}
 			</div>
 		`;

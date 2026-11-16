@@ -1,4 +1,5 @@
-import {localManager} from "../locale/locale.js";
+import type {Locale} from "../locale/locale.js";
+import {englishLocale} from "../locale/locale.js";
 import type {FurnitureCategory} from "../objects/furniture/furniture-registry.js";
 import {FURNITURE_OPTIONS} from "../objects/furniture/furniture-registry.js";
 import {MESH_OPTIONS} from "./mesh-handler.js";
@@ -427,9 +428,12 @@ export const MODEL_LIBRARY: ModelLibraryEntry[] = [
 	},
 ];
 
-export function modelLabel(entry: ModelLibraryEntry): string {
+export function modelLabel(
+	entry: ModelLibraryEntry,
+	locale: Locale = englishLocale,
+): string {
 	return entry.labelKey
-		? localManager.get(entry.labelKey)
+		? locale.get(entry.labelKey)
 		: (entry.label ?? entry.type);
 }
 
@@ -445,6 +449,7 @@ export function filterModels(
 	query: string,
 	category: ModelCategoryId | "all" = "all",
 	room = "all",
+	locale: Locale = englishLocale,
 ): ModelLibraryEntry[] {
 	const words = normalizeSearch(query).trim().split(/\s+/).filter(Boolean);
 	return MODEL_LIBRARY.map((entry) =>
@@ -454,22 +459,22 @@ export function filterModels(
 	).filter((entry) => {
 		if (category !== "all" && entry.category !== category) return false;
 		if (room !== "all" && !entry.rooms?.includes(room)) return false;
-		const categoryLabel = localManager.get(
-			MODEL_CATEGORIES.find((item) => item.id === entry.category)!.labelKey,
-		);
+		const categoryKey = MODEL_CATEGORIES.find((item) => item.id === entry.category)!.labelKey;
 		const searchable = normalizeSearch(
 			[
+				modelLabel(entry, locale),
 				modelLabel(entry),
-				categoryLabel,
+				locale.get(categoryKey),
+				englishLocale.get(categoryKey),
 				entry.type.replace(/-/g, " "),
 				...(entry.keywords ?? []),
 				...Object.values(entry.roomCategories ?? {}).map((category) =>
-					localManager.get(
+					locale.get(
 						MODEL_CATEGORIES.find((item) => item.id === category)!.labelKey,
 					),
 				),
 				...(entry.rooms ?? []).map((id) =>
-					localManager.get(
+					locale.get(
 						MODEL_ROOMS.find((item) => item.id === id)?.labelKey ?? id,
 					),
 				),

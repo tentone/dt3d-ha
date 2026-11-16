@@ -4,7 +4,7 @@ import {customElement} from "lit/decorators.js";
 import {normalizeEntityInteractionConfig} from "../editor/entity-actions.js";
 import {normalizeCardGeneralConfig} from "../editor/general-config.js";
 import {normalizeNavigationControlsType} from "../editor/scene.js";
-import {localManager} from "../locale/locale.js";
+import {languageNames, Locale, normalizeLanguage, resolveLanguage} from "../locale/locale.js";
 import type {SpaceResponse} from "../service/space-api.js";
 import {SpaceApi} from "../service/space-api.js";
 import componentStyles from "./config-editor.css?inline";
@@ -39,6 +39,7 @@ export class DT3DConfigEditor extends LitElement {
 		_spaces: {state: true},
 	};
 	public hass: any;
+	private readonly locale = new Locale();
 	private _config: any;
 	private _spaces: SpaceResponse[] = [];
 	private spacesConnectionKey = "";
@@ -70,6 +71,7 @@ export class DT3DConfigEditor extends LitElement {
 			entity_click_action: entityInteractions.click,
 			entity_double_click_action: entityInteractions.doubleClick,
 			...config,
+			language: normalizeLanguage(config?.language),
 			general: normalizeCardGeneralConfig(config?.general ?? config ?? {}),
 		};
 		this._config.default_space =
@@ -298,9 +300,15 @@ export class DT3DConfigEditor extends LitElement {
 			.sort((left, right) => left.label.localeCompare(right.label));
 	}
 
+	protected willUpdate(): void {
+		const language = resolveLanguage(this._config?.language, this.hass);
+		this.locale.set(language);
+		if (this.lang !== language) this.lang = language;
+	}
+
 	protected updated(): void {
-		// These selects can acquire their options after the configuration is set.
-		for (const key of ["default_space", "default_viewport"]) {
+		// Apply these values after Lit has rendered their options.
+		for (const key of ["language", "default_space", "default_viewport"]) {
 			const select = this.renderRoot.querySelector<HTMLSelectElement>(
 				`select[data-key="${key}"]`,
 			);
@@ -352,10 +360,10 @@ export class DT3DConfigEditor extends LitElement {
 		return html`
 			<div class="config-sections">
 				<details open>
-					<summary>${localManager.get("connectionSettings")}</summary>
+					<summary>${this.locale.get("connectionSettings")}</summary>
 					<div class="section-content">
 						<div class="field">
-							<label>${localManager.get("address")}</label>
+							<label>${this.locale.get("address")}</label>
 							<input
 								type="text"
 								data-key="address"
@@ -365,7 +373,7 @@ export class DT3DConfigEditor extends LitElement {
 							/>
 						</div>
 						<div class="field">
-							<label>${localManager.get("port")}</label>
+							<label>${this.locale.get("port")}</label>
 							<input
 								type="number"
 								data-key="port"
@@ -375,7 +383,7 @@ export class DT3DConfigEditor extends LitElement {
 							/>
 						</div>
 						<div class="field">
-							<label>${localManager.get("serviceKey")}</label>
+							<label>${this.locale.get("serviceKey")}</label>
 							<input
 								type="password"
 								data-key="service_key"
@@ -388,30 +396,45 @@ export class DT3DConfigEditor extends LitElement {
 				</details>
 
 				<details open>
-					<summary>${localManager.get("viewAndBehavior")}</summary>
+					<summary>${this.locale.get("viewAndBehavior")}</summary>
 					<div class="section-content">
 						<div class="field">
-							<label>${localManager.get("navigationControls")}</label>
+							<label for="language">${this.locale.get("language")}</label>
+							<select
+								id="language"
+								data-key="language"
+								@change=${this.onValueChanged}
+							>
+								<option value="auto">${this.locale.get("languageAuto")}</option>
+								${Object.entries(languageNames).map(
+									([code, name]) =>
+										html`<option value=${code} lang=${code}>${name}</option>`,
+								)}
+							</select>
+							<p>${this.locale.get("languageDescription")}</p>
+						</div>
+						<div class="field">
+							<label>${this.locale.get("navigationControls")}</label>
 							<select
 								data-key="navigation_controls"
 								.value=${navigationControls}
 								@change=${this.onValueChanged}>
-								<option value="orbit">${localManager.get("orbitControls")}</option>
-								<option value="map">${localManager.get("mapControls")}</option>
-								<option value="fly">${localManager.get("flyControls")}</option>
+								<option value="orbit">${this.locale.get("orbitControls")}</option>
+								<option value="map">${this.locale.get("mapControls")}</option>
+								<option value="fly">${this.locale.get("flyControls")}</option>
 							</select>
-							<p>${localManager.get("navigationControlsDescription")}</p>
+							<p>${this.locale.get("navigationControlsDescription")}</p>
 						</div>
 						${this._spaces.length > 0
 							? html`
 									<div class="field">
-										<label>${localManager.get("defaultSpace")}</label>
+										<label>${this.locale.get("defaultSpace")}</label>
 										<select
 											data-key="default_space"
 											.value=${defaultSpace}
 											@change=${this.onDefaultSpaceChanged}>
 											<option value="">
-												${localManager.get("firstAvailableSpace")}
+												${this.locale.get("firstAvailableSpace")}
 											</option>
 											${this._spaces.map(
 												(space) => html`<option value=${space.id}>
@@ -419,16 +442,16 @@ export class DT3DConfigEditor extends LitElement {
 													</option>`,
 											)}
 										</select>
-										<p>${localManager.get("defaultSpaceDescription")}</p>
+										<p>${this.locale.get("defaultSpaceDescription")}</p>
 									</div>
 									<div class="field">
-										<label>${localManager.get("cardViewport")}</label>
+										<label>${this.locale.get("cardViewport")}</label>
 										<select
 											data-key="default_viewport"
 											.value=${defaultViewport}
 											@change=${this.onValueChanged}>
 											<option value="">
-												${localManager.get("spaceDefaultViewport")}
+												${this.locale.get("spaceDefaultViewport")}
 											</option>
 											${viewports.map(
 												(viewport) => html`<option value=${viewport.id}>
@@ -436,7 +459,7 @@ export class DT3DConfigEditor extends LitElement {
 													</option>`,
 											)}
 										</select>
-										<p>${localManager.get("cardViewportDescription")}</p>
+										<p>${this.locale.get("cardViewportDescription")}</p>
 									</div>
 								`
 							: ""}
@@ -450,9 +473,9 @@ export class DT3DConfigEditor extends LitElement {
 							/>
 							<div>
 								<label for="orientation-cube"
-									>${localManager.get("orientationCube")}</label
+									>${this.locale.get("orientationCube")}</label
 								>
-								<p>${localManager.get("orientationCubeDescription")}</p>
+								<p>${this.locale.get("orientationCubeDescription")}</p>
 							</div>
 						</div>
 						<div class="checkbox-field">
@@ -464,8 +487,8 @@ export class DT3DConfigEditor extends LitElement {
 								@change=${this.onValueChanged}
 							/>
 							<div>
-								<label for="vr-mode">${localManager.get("vrMode")}</label>
-								<p>${localManager.get("vrModeDescription")}</p>
+								<label for="vr-mode">${this.locale.get("vrMode")}</label>
+								<p>${this.locale.get("vrModeDescription")}</p>
 							</div>
 						</div>
 						<div class="checkbox-field">
@@ -477,8 +500,8 @@ export class DT3DConfigEditor extends LitElement {
 								@change=${this.onValueChanged}
 							/>
 							<div>
-								<label for="ar-mode">${localManager.get("arMode")}</label>
-								<p>${localManager.get("arModeDescription")}</p>
+								<label for="ar-mode">${this.locale.get("arMode")}</label>
+								<p>${this.locale.get("arModeDescription")}</p>
 							</div>
 						</div>
 						${arMode
@@ -493,16 +516,16 @@ export class DT3DConfigEditor extends LitElement {
 										/>
 										<div>
 											<label for="ar-location-based">
-												${localManager.get("arLocationBased")}
+												${this.locale.get("arLocationBased")}
 											</label>
-											<p>${localManager.get("arLocationBasedDescription")}</p>
+											<p>${this.locale.get("arLocationBasedDescription")}</p>
 										</div>
 									</div>
 									${arLocationBased
 										? html`
 												<div class="field">
 													<label>
-														${localManager.get("arLocationEntity")}
+														${this.locale.get("arLocationEntity")}
 													</label>
 													<select
 														data-key="ar_location_entity"
@@ -511,8 +534,8 @@ export class DT3DConfigEditor extends LitElement {
 														required>
 														<option value="" disabled>
 															${locationEntities.length > 0
-																? localManager.get("selectLocationEntity")
-																: localManager.get("noLocationEntities")}
+																? this.locale.get("selectLocationEntity")
+																: this.locale.get("noLocationEntities")}
 														</option>
 														${locationEntities.map(
 															(entity) => html`
@@ -523,14 +546,14 @@ export class DT3DConfigEditor extends LitElement {
 														)}
 													</select>
 													<p>
-														${localManager.get(
+														${this.locale.get(
 															"arLocationEntityDescription",
 														)}
 													</p>
 												</div>
 												<div class="field">
 													<label>
-														${localManager.get(
+														${this.locale.get(
 															"arEnvironmentOrientation",
 														)}
 													</label>
@@ -546,7 +569,7 @@ export class DT3DConfigEditor extends LitElement {
 														required
 													/>
 													<p>
-														${localManager.get(
+														${this.locale.get(
 															"arEnvironmentOrientationDescription",
 														)}
 													</p>
@@ -565,9 +588,9 @@ export class DT3DConfigEditor extends LitElement {
 							/>
 							<div>
 								<label for="visualization-only"
-									>${localManager.get("visualizationOnly")}</label
+									>${this.locale.get("visualizationOnly")}</label
 								>
-								<p>${localManager.get("visualizationOnlyDescription")}</p>
+								<p>${this.locale.get("visualizationOnlyDescription")}</p>
 							</div>
 						</div>
 						<div class="checkbox-field">
@@ -580,40 +603,40 @@ export class DT3DConfigEditor extends LitElement {
 							/>
 							<div>
 								<label for="hide-occluding-walls"
-									>${localManager.get("hideOccludingWalls")}</label
+									>${this.locale.get("hideOccludingWalls")}</label
 								>
-								<p>${localManager.get("hideOccludingWallsDescription")}</p>
+								<p>${this.locale.get("hideOccludingWallsDescription")}</p>
 							</div>
 						</div>
 						<div class="field">
-							<label>${localManager.get("entityClickAction")}</label>
+							<label>${this.locale.get("entityClickAction")}</label>
 							<select
 								data-key="entity_click_action"
 								.value=${entityInteractions.click}
 								@change=${this.onValueChanged}>
-								<option value="open">${localManager.get("openEntity")}</option>
-								<option value="toggle">${localManager.get("toggleEntity")}</option>
-								<option value="nothing">${localManager.get("nothing")}</option>
+								<option value="open">${this.locale.get("openEntity")}</option>
+								<option value="toggle">${this.locale.get("toggleEntity")}</option>
+								<option value="nothing">${this.locale.get("nothing")}</option>
 							</select>
-							<p>${localManager.get("entityClickActionDescription")}</p>
+							<p>${this.locale.get("entityClickActionDescription")}</p>
 						</div>
 						<div class="field">
-							<label>${localManager.get("entityDoubleClickAction")}</label>
+							<label>${this.locale.get("entityDoubleClickAction")}</label>
 							<select
 								data-key="entity_double_click_action"
 								.value=${entityInteractions.doubleClick}
 								@change=${this.onValueChanged}>
-								<option value="open">${localManager.get("openEntity")}</option>
-								<option value="toggle">${localManager.get("toggleEntity")}</option>
-								<option value="nothing">${localManager.get("nothing")}</option>
+								<option value="open">${this.locale.get("openEntity")}</option>
+								<option value="toggle">${this.locale.get("toggleEntity")}</option>
+								<option value="nothing">${this.locale.get("nothing")}</option>
 							</select>
-							<p>${localManager.get("entityDoubleClickActionDescription")}</p>
+							<p>${this.locale.get("entityDoubleClickActionDescription")}</p>
 						</div>
 					</div>
 				</details>
 
 				<details open>
-					<summary>${localManager.get("rendering")}</summary>
+					<summary>${this.locale.get("rendering")}</summary>
 					<div class="section-content">
 						<div class="checkbox-field">
 							<input
@@ -625,13 +648,13 @@ export class DT3DConfigEditor extends LitElement {
 							/>
 							<div>
 								<label for="rendering-antialiasing"
-									>${localManager.get("antialiasing")}</label
+									>${this.locale.get("antialiasing")}</label
 								>
-								<p>${localManager.get("antialiasingTooltip")}</p>
+								<p>${this.locale.get("antialiasingTooltip")}</p>
 							</div>
 						</div>
 						<div class="field">
-							<label>${localManager.get("resolution")}</label>
+							<label>${this.locale.get("resolution")}</label>
 							<select
 								data-key="general.rendering.resolution"
 								data-value-type="number"
@@ -641,10 +664,10 @@ export class DT3DConfigEditor extends LitElement {
 								<option value="0.75">75%</option>
 								<option value="0.5">50%</option>
 							</select>
-							<p>${localManager.get("resolutionTooltip")}</p>
+							<p>${this.locale.get("resolutionTooltip")}</p>
 						</div>
 						<div class="subsection">
-							<h4>${localManager.get("shadowMap")}</h4>
+							<h4>${this.locale.get("shadowMap")}</h4>
 							<div class="checkbox-field">
 								<input
 									id="shadow-map-enabled"
@@ -655,59 +678,59 @@ export class DT3DConfigEditor extends LitElement {
 								/>
 								<div>
 									<label for="shadow-map-enabled"
-										>${localManager.get("enabled")}</label
+										>${this.locale.get("enabled")}</label
 									>
-									<p>${localManager.get("shadowMapEnabledTooltip")}</p>
+									<p>${this.locale.get("shadowMapEnabledTooltip")}</p>
 								</div>
 							</div>
 							<div class="field">
-								<label>${localManager.get("shadowMapType")}</label>
+								<label>${this.locale.get("shadowMapType")}</label>
 								<select
 									data-key="general.rendering.shadowMap.type"
 									.value=${general.rendering.shadowMap.type}
 									@change=${this.onValueChanged}>
 									<option value="basic">
-										${localManager.get("shadowMapBasic")}
+										${this.locale.get("shadowMapBasic")}
 									</option>
 									<option value="pcf">
-										${localManager.get("shadowMapPcf")}
+										${this.locale.get("shadowMapPcf")}
 									</option>
 									<option value="vsm">
-										${localManager.get("shadowMapVsm")}
+										${this.locale.get("shadowMapVsm")}
 									</option>
 								</select>
-								<p>${localManager.get("shadowMapTypeTooltip")}</p>
+								<p>${this.locale.get("shadowMapTypeTooltip")}</p>
 							</div>
 							<div class="field">
-								<label>${localManager.get("shadowMapQuality")}</label>
+								<label>${this.locale.get("shadowMapQuality")}</label>
 								<select
 									data-key="general.rendering.shadowMap.quality"
 									.value=${general.rendering.shadowMap.quality}
 									@change=${this.onValueChanged}>
 									<option value="very_high">
-										${localManager.get("shadowMapQualityVeryHigh")}
+										${this.locale.get("shadowMapQualityVeryHigh")}
 									</option>
 									<option value="high">
-										${localManager.get("shadowMapQualityHigh")}
+										${this.locale.get("shadowMapQualityHigh")}
 									</option>
 									<option value="medium">
-										${localManager.get("shadowMapQualityMedium")}
+										${this.locale.get("shadowMapQualityMedium")}
 									</option>
 									<option value="low">
-										${localManager.get("shadowMapQualityLow")}
+										${this.locale.get("shadowMapQualityLow")}
 									</option>
 								</select>
-								<p>${localManager.get("shadowMapQualityTooltip")}</p>
+								<p>${this.locale.get("shadowMapQualityTooltip")}</p>
 							</div>
 						</div>
 					</div>
 				</details>
 
 				<details>
-					<summary>${localManager.get("lowPowerDeviceSettings")}</summary>
+					<summary>${this.locale.get("lowPowerDeviceSettings")}</summary>
 					<div class="section-content">
 						<p class="section-description">
-							${localManager.get("lowPowerDeviceSettingsDescription")}
+							${this.locale.get("lowPowerDeviceSettingsDescription")}
 						</p>
 						<div class="checkbox-field">
 							<input
@@ -719,9 +742,9 @@ export class DT3DConfigEditor extends LitElement {
 							/>
 							<div>
 								<label for="low-power-disable-shadow-maps"
-									>${localManager.get("disableShadowMaps")}</label
+									>${this.locale.get("disableShadowMaps")}</label
 								>
-								<p>${localManager.get("disableShadowMapsTooltip")}</p>
+								<p>${this.locale.get("disableShadowMapsTooltip")}</p>
 							</div>
 						</div>
 						<div class="checkbox-field">
@@ -735,9 +758,9 @@ export class DT3DConfigEditor extends LitElement {
 							/>
 							<div>
 								<label for="low-power-reduce-shadow-quality"
-									>${localManager.get("reduceShadowMapQuality")}</label
+									>${this.locale.get("reduceShadowMapQuality")}</label
 								>
-								<p>${localManager.get("reduceShadowMapQualityTooltip")}</p>
+								<p>${this.locale.get("reduceShadowMapQualityTooltip")}</p>
 							</div>
 						</div>
 						<div class="checkbox-field">
@@ -750,9 +773,9 @@ export class DT3DConfigEditor extends LitElement {
 							/>
 							<div>
 								<label for="low-power-disable-post-processing"
-									>${localManager.get("disablePostProcessing")}</label
+									>${this.locale.get("disablePostProcessing")}</label
 								>
-								<p>${localManager.get("disablePostProcessingTooltip")}</p>
+								<p>${this.locale.get("disablePostProcessingTooltip")}</p>
 							</div>
 						</div>
 						<div class="checkbox-field">
@@ -765,16 +788,16 @@ export class DT3DConfigEditor extends LitElement {
 							/>
 							<div>
 								<label for="low-power-disable-antialiasing"
-									>${localManager.get("disableAntialiasing")}</label
+									>${this.locale.get("disableAntialiasing")}</label
 								>
-								<p>${localManager.get("disableAntialiasingTooltip")}</p>
+								<p>${this.locale.get("disableAntialiasingTooltip")}</p>
 							</div>
 						</div>
 					</div>
 				</details>
 
 				<details>
-					<summary>${localManager.get("developmentMode")}</summary>
+					<summary>${this.locale.get("developmentMode")}</summary>
 					<div class="section-content">
 						<div class="checkbox-field">
 							<input
@@ -786,9 +809,9 @@ export class DT3DConfigEditor extends LitElement {
 							/>
 							<div>
 								<label for="development-mode-enabled"
-									>${localManager.get("enabled")}</label
+									>${this.locale.get("enabled")}</label
 								>
-								<p>${localManager.get("developmentModeTooltip")}</p>
+								<p>${this.locale.get("developmentModeTooltip")}</p>
 							</div>
 						</div>
 					</div>

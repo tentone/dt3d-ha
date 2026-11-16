@@ -1,12 +1,12 @@
 import type {PropertyValues} from "lit";
-import {html, LitElement, unsafeCSS} from "lit";
+import {html, unsafeCSS} from "lit";
 import {customElement, property, query, state} from "lit/decorators.js";
 
 import type {
 	FloorplanCalibration,
 	ImagePoint,
 } from "../../editor/floorplan-reference.js";
-import {localManager} from "../../locale/locale.js";
+import {LocalizedElement} from "../../locale/localized-element.js";
 import componentStyles from "./floorplan-calibration-modal.css?inline";
 
 export type FloorplanCalibrationSubmitDetail = FloorplanCalibration;
@@ -14,7 +14,7 @@ export type FloorplanCalibrationSubmitDetail = FloorplanCalibration;
 const MAX_CANVAS_DIMENSION = 4096;
 
 @customElement("dt3d-floorplan-calibration-modal")
-export class DT3DFloorplanCalibrationModal extends LitElement {
+export class DT3DFloorplanCalibrationModal extends LocalizedElement {
 	static styles = unsafeCSS(componentStyles);
 
 	@property({type: String})
@@ -269,15 +269,15 @@ export class DT3DFloorplanCalibrationModal extends LitElement {
 					<header>
 						<div>
 							<h3 id="floorplan-calibration-heading">
-								${localManager.get("calibrateFloorplan")}
+								${this.locale.get("calibrateFloorplan")}
 							</h3>
-							<p>${localManager.get("floorplanCalibrationDescription")}</p>
+							<p>${this.locale.get("floorplanCalibrationDescription")}</p>
 						</div>
 						<button
 							type="button"
 							class="icon-button"
 							@click=${this.close}
-							aria-label=${localManager.get("cancel")}
+							aria-label=${this.locale.get("cancel")}
 						>
 							<ha-icon icon="mdi:close"></ha-icon>
 						</button>
@@ -293,7 +293,7 @@ export class DT3DFloorplanCalibrationModal extends LitElement {
 
 					<div class="calibration-controls">
 						<div class="point-status" aria-live="polite">
-							${localManager.get("floorplanPointsSelected").replace(
+							${this.locale.get("floorplanPointsSelected").replace(
 								"{count}",
 								String(this.points.length),
 							)}
@@ -303,11 +303,11 @@ export class DT3DFloorplanCalibrationModal extends LitElement {
 								?disabled=${this.points.length === 0}
 								@click=${this.resetPoints}
 							>
-								${localManager.get("resetPoints")}
+								${this.locale.get("resetPoints")}
 							</button>
 						</div>
 						<label>
-							<span>${localManager.get("realDistanceMeters")}</span>
+							<span>${this.locale.get("realDistanceMeters")}</span>
 							<input
 								type="number"
 								min="0.000001"
@@ -322,10 +322,10 @@ export class DT3DFloorplanCalibrationModal extends LitElement {
 
 					<div class="actions">
 						<button type="button" class="cancel-button" @click=${this.close}>
-							${localManager.get("cancel")}
+							${this.locale.get("cancel")}
 						</button>
 						<button type="submit" class="confirm-button" ?disabled=${!this.canSubmit}>
-							${localManager.get("addFloorplan")}
+							${this.locale.get("addFloorplan")}
 						</button>
 					</div>
 				</form>

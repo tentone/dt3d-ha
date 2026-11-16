@@ -1,14 +1,14 @@
-import {html, LitElement, unsafeCSS} from "lit";
+import {html, unsafeCSS} from "lit";
 import {customElement, property, state} from "lit/decorators.js";
 
-import {localManager} from "../../locale/locale.js";
+import {LocalizedElement} from "../../locale/localized-element.js";
 import componentStyles from "./add-entity-modal.css?inline";
 
 /**
  * Modal component to select an entity to add to the scene.
  */
 @customElement("dt3d-add-entity-modal")
-export class DT3DAddEntityModal extends LitElement {
+export class DT3DAddEntityModal extends LocalizedElement {
 	static styles = unsafeCSS(componentStyles);
 
 	/**
@@ -86,10 +86,10 @@ export class DT3DAddEntityModal extends LitElement {
 	protected render() {
 		return html`
 			<div class="dialog" @click=${(event: Event) => event.stopPropagation()}>
-				<h3>${localManager.get("selectAnEntity")}</h3>
+				<h3>${this.locale.get("selectAnEntity")}</h3>
 				<input
 					type="search"
-					placeholder=${localManager.get("searchEntities")}
+					placeholder=${this.locale.get("searchEntities")}
 					.value=${this.query}
 					@input=${this.handleSearch} />
 				<ul>
@@ -101,7 +101,7 @@ export class DT3DAddEntityModal extends LitElement {
 							</li>`,
 					)}
 				</ul>
-				<button @click=${this.handleClose}>${localManager.get("cancel")}</button>
+				<button @click=${this.handleClose}>${this.locale.get("cancel")}</button>
 			</div>
 		`;
 	}

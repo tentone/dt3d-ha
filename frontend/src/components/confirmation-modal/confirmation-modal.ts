@@ -1,26 +1,26 @@
-import {html, LitElement, unsafeCSS} from "lit";
+import {html, unsafeCSS} from "lit";
 import {customElement, property} from "lit/decorators.js";
 
-import {localManager} from "../../locale/locale.js";
+import {LocalizedElement} from "../../locale/localized-element.js";
 import componentStyles from "./confirmation-modal.css?inline";
 
 export type ConfirmationActionType = "blue" | "green" | "red";
 
 @customElement("dt3d-confirmation-modal")
-export class DT3DConfirmationModal extends LitElement {
+export class DT3DConfirmationModal extends LocalizedElement {
 	static styles = unsafeCSS(componentStyles);
 
 	@property({type: String})
-	public heading = localManager.get("confirm");
+	public heading?: string;
 
 	@property({type: String})
 	public message = "";
 
 	@property({type: String})
-	public confirmLabel = localManager.get("confirm");
+	public confirmLabel?: string;
 
 	@property({type: String})
-	public cancelLabel = localManager.get("cancel");
+	public cancelLabel?: string;
 
 	@property({type: String})
 	public secondaryLabel = "";
@@ -91,12 +91,12 @@ export class DT3DConfirmationModal extends LitElement {
 					@click=${(event: Event) => event.stopPropagation()}
 				>
 					<header>
-						<h3 id="confirmation-heading">${this.heading}</h3>
+						<h3 id="confirmation-heading">${this.heading ?? this.locale.get("confirm")}</h3>
 					</header>
 					<p>${this.message}</p>
 					<div class="actions">
 						<button type="button" class="cancel-button" @click=${this.close}>
-							${this.cancelLabel}
+							${this.cancelLabel ?? this.locale.get("cancel")}
 						</button>
 						${this.secondaryLabel
 							? html`
@@ -110,7 +110,7 @@ export class DT3DConfirmationModal extends LitElement {
 							`
 							: null}
 						<button type="submit" class=${this.buttonClass}>
-							${this.confirmLabel}
+							${this.confirmLabel ?? this.locale.get("confirm")}
 						</button>
 					</div>
 				</form>

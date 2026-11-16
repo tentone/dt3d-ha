@@ -43,6 +43,7 @@
 ### Setup
 
 - Frontend card can be configured trough the GUI or using YAML in a dashboard view.
+- Choose **Language** under **View and behavior** in the card editor. **Auto** follows Home Assistant, then the browser language, with English as the fallback.
 - Use HTTPS for the backend when the Home Assistant page uses HTTPS; browsers block calls from a secure page to an insecure backend.
 - Sample configuration for a dashboard view:
 
@@ -51,6 +52,7 @@ type: custom:dt3d-card
 address: http://homeassistant.local
 port: 8080
 service_key: <secret> # Same as the backend addon configuration
+language: auto # auto, en, pt, es, fr, de, or zh
 navigation_controls: orbit
 vr_mode: false # Show VR entry on supported WebXR devices
 ar_mode: false # Show AR entry on supported WebXR devices

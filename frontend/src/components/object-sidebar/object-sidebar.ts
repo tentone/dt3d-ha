@@ -1,9 +1,9 @@
 import "../tooltip/tooltip.js";
 
-import {html, LitElement, nothing, unsafeCSS} from "lit";
+import {html, nothing, unsafeCSS} from "lit";
 import {customElement} from "lit/decorators.js";
 
-import {localManager} from "../../locale/locale.js";
+import {LocalizedElement} from "../../locale/localized-element.js";
 import {LocalStorage} from "../../utils/local-storage.js";
 import componentStyles from "./object-sidebar.css?inline";
 
@@ -19,11 +19,12 @@ export type WallOptions =
 const OBJECT_SIDEBAR_COLLAPSED_STORAGE_KEY = "sidebar-collapsed";
 
 @customElement("dt3d-object-sidebar")
-export class DT3DObjectSidebar extends LitElement {
+export class DT3DObjectSidebar extends LocalizedElement {
 	static styles = unsafeCSS(componentStyles);
 	static properties = {
 		blocked: {type: Boolean, reflect: true},
 		blockedReason: {type: String},
+		loading: {type: Boolean},
 		collapsed: {type: Boolean, reflect: true},
 		wallTool: {type: String},
 		libraryOpen: {type: Boolean},
@@ -33,7 +34,14 @@ export class DT3DObjectSidebar extends LitElement {
 	public collapsed =
 		LocalStorage.read(OBJECT_SIDEBAR_COLLAPSED_STORAGE_KEY, false) ?? false;
 	public blocked = true;
-	public blockedReason = localManager.get("loadingSpace");
+	public blockedReason = "";
+	public loading = true;
+
+	private get blockedLabel(): string {
+		return this.loading
+			? this.locale.get("loadingSpace")
+			: this.locale.get(this.blockedReason || "editingUnavailable");
+	}
 	public wallTool: WallOptions = "none";
 	public libraryOpen = false;
 	public materialsOpen = false;
@@ -73,13 +81,13 @@ export class DT3DObjectSidebar extends LitElement {
 		selected?: boolean,
 	) {
 		return html`<dt3d-tooltip
-		.content=${this.blocked ? this.blockedReason : localManager.get(labelKey)}
+		.content=${this.blocked ? this.blockedLabel : this.locale.get(labelKey)}
 			placement="right"
 		>
 			<button
 				@click=${action}
 				class=${selected ? "selected" : ""}
-				aria-label=${localManager.get(labelKey)}
+				aria-label=${this.locale.get(labelKey)}
 				aria-pressed=${selected ?? nothing}
 				?disabled=${this.blocked}
 			>
@@ -89,7 +97,7 @@ export class DT3DObjectSidebar extends LitElement {
 	}
 
 	public render() {
-		const collapseLabel = localManager.get(this.collapsed ? "expandSidebar" : "collapseSidebar");
+		const collapseLabel = this.locale.get(this.collapsed ? "expandSidebar" : "collapseSidebar");
 		return html`
 			<dt3d-tooltip
 				.content=${collapseLabel}
@@ -110,11 +118,11 @@ export class DT3DObjectSidebar extends LitElement {
 			</dt3d-tooltip>
 			<div class="object-sidebar-content" ?inert=${this.collapsed}>
 				<section class="object-sidebar-section">
-					<dt3d-tooltip .content=${this.blocked ? this.blockedReason : localManager.get("modelLibrary")} placement="right">
+					<dt3d-tooltip .content=${this.blocked ? this.blockedLabel : this.locale.get("modelLibrary")} placement="right">
 					<button
 						class="library-button"
 						@click=${this.openLibrary}
-						aria-label=${localManager.get("modelLibrary")}
+						aria-label=${this.locale.get("modelLibrary")}
 						aria-haspopup="dialog"
 						aria-expanded=${this.libraryOpen}
 						?disabled=${this.blocked}
@@ -126,7 +134,7 @@ export class DT3DObjectSidebar extends LitElement {
 				</section>
 				<section class="object-sidebar-section">
 					<div class="object-sidebar-title">
-						${localManager.get("sceneTools")}
+						${this.locale.get("sceneTools")}
 					</div>
 					${this.action("addEntity", "mdi:state-machine", () =>
 						this.emit("add-object", {type: "entity"}),
@@ -139,7 +147,7 @@ export class DT3DObjectSidebar extends LitElement {
 					)}
 				</section>
 				<section class="object-sidebar-section">
-					<div class="object-sidebar-title">${localManager.get("walls")}</div>
+					<div class="object-sidebar-title">${this.locale.get("walls")}</div>
 					${this.action(
 						"drawWall",
 						"mdi:vector-line",

@@ -1,7 +1,7 @@
 import "../dynamic-form/dynamic-form.js";
 import "../entity-rules/entity-rules.js";
 
-import {html, LitElement, unsafeCSS} from "lit";
+import {html, unsafeCSS} from "lit";
 import {customElement, property} from "lit/decorators.js";
 import type {Material, Object3D} from "three";
 import {Mesh, Vector3} from "three";
@@ -30,7 +30,7 @@ import {
 	resolveMeshType,
 	updateMeshGeometry,
 } from "../../editor/mesh-handler.js";
-import {localManager} from "../../locale/locale.js";
+import {LocalizedElement} from "../../locale/localized-element.js";
 import {DTObject} from "../../objects/dt-object.js";
 import {EntityLight} from "../../objects/entity-light.js";
 import {EntityObject, isToggleable} from "../../objects/entity-object.js";
@@ -168,7 +168,7 @@ const OPENING_ENTITY_FILTER =
 	/^(?:binary_sensor|cover|input_boolean|input_number|number|sensor|switch)\./i;
 
 @customElement("dt3d-object-inspector")
-export class DT3DObjectInspector extends LitElement {
+export class DT3DObjectInspector extends LocalizedElement {
 	static styles = unsafeCSS(componentStyles);
 
 	@property({attribute: false})
@@ -897,10 +897,10 @@ export class DT3DObjectInspector extends LitElement {
 
 		const fields: DynamicFormField[] = [
 			{
-				label: localManager.get("objectName"),
+				label: this.locale.get("objectName"),
 				attribute: "name",
 				type: "string",
-				tooltip: localManager.get("objectNameTooltip"),
+				tooltip: this.locale.get("objectNameTooltip"),
 				editable: !locked,
 				enabled: true,
 			},
@@ -908,20 +908,20 @@ export class DT3DObjectInspector extends LitElement {
 
 		if (this.selectedObject instanceof DTObject) {
 			fields.push({
-				label: localManager.get("locked"),
+				label: this.locale.get("locked"),
 				attribute: "locked",
 				type: "boolean",
-				tooltip: localManager.get("lockedTooltip"),
+				tooltip: this.locale.get("lockedTooltip"),
 				editable: true,
 				enabled: true,
 			});
 		}
 
 		fields.push({
-			label: localManager.get("objectUUID"),
+			label: this.locale.get("objectUUID"),
 			attribute: "uuid",
 			type: "info",
-			tooltip: localManager.get("objectUUIDTooltip"),
+			tooltip: this.locale.get("objectUUIDTooltip"),
 			editable: false,
 			enabled: true,
 		});
@@ -934,27 +934,27 @@ export class DT3DObjectInspector extends LitElement {
 
 		return [
 			{
-				label: localManager.get("position"),
+				label: this.locale.get("position"),
 				attribute: "position",
 				type: "Vector3",
-				tooltip: localManager.get("positionTooltip"),
+				tooltip: this.locale.get("positionTooltip"),
 				editable: !locked,
 				enabled: true,
 			},
 			{
-				label: localManager.get("scale"),
+				label: this.locale.get("scale"),
 				attribute: "scale",
 				type: "Vector3",
-				tooltip: localManager.get("scaleTooltip"),
+				tooltip: this.locale.get("scaleTooltip"),
 				editable: !locked,
 				enabled: true,
 				linked: true,
 			},
 			{
-				label: localManager.get("rotation"),
+				label: this.locale.get("rotation"),
 				attribute: "rotation",
 				type: "Vector3",
-				tooltip: localManager.get("rotationTooltip"),
+				tooltip: this.locale.get("rotationTooltip"),
 				editable: !locked,
 				enabled: true,
 			},
@@ -968,18 +968,18 @@ export class DT3DObjectInspector extends LitElement {
 
 		return [
 			{
-				label: localManager.get("meshCastShadows"),
+				label: this.locale.get("meshCastShadows"),
 				attribute: "castShadow",
 				type: "boolean",
-				tooltip: localManager.get("meshCastShadowsTooltip"),
+				tooltip: this.locale.get("meshCastShadowsTooltip"),
 				editable: !locked,
 				enabled: true,
 			},
 			{
-				label: localManager.get("meshReceiveShadows"),
+				label: this.locale.get("meshReceiveShadows"),
 				attribute: "receiveShadow",
 				type: "boolean",
-				tooltip: localManager.get("meshReceiveShadowsTooltip"),
+				tooltip: this.locale.get("meshReceiveShadowsTooltip"),
 				editable: !locked,
 				enabled: true,
 			},
@@ -999,10 +999,10 @@ export class DT3DObjectInspector extends LitElement {
 			: getCompatibleMaterialTypes(materialObject);
 		const fields: DynamicFormField[] = [
 			{
-				label: localManager.get("materialType"),
+				label: this.locale.get("materialType"),
 				attribute: "material.type",
 				type: "select",
-				tooltip: localManager.get("materialTypeTooltip"),
+				tooltip: this.locale.get("materialTypeTooltip"),
 				editable: !locked && materialTypes.length > 1,
 				enabled: true,
 				options: materialTypes.map((type) => ({label: type, value: type})),
@@ -1011,10 +1011,10 @@ export class DT3DObjectInspector extends LitElement {
 
 		fields.push(
 			...getMaterialPropertyDefinitions(material).map((definition) => ({
-				label: localManager.get(definition.label),
+				label: this.locale.get(definition.label),
 				attribute: `material.${definition.property}`,
 				type: definition.type,
-				tooltip: localManager.get("materialPropertyTooltip"),
+				tooltip: this.locale.get("materialPropertyTooltip"),
 				editable: !locked,
 				enabled: true,
 				step: definition.step,
@@ -1023,15 +1023,15 @@ export class DT3DObjectInspector extends LitElement {
 				options: definition.options,
 				placeholder:
 					definition.type === "texture"
-						? localManager.get("materialTextureDrop")
+						? this.locale.get("materialTextureDrop")
 						: undefined,
 				replaceLabel:
 					definition.type === "texture"
-						? localManager.get("materialTextureReplace")
+						? this.locale.get("materialTextureReplace")
 						: undefined,
 				clearLabel:
 					definition.type === "texture"
-						? localManager.get("clearMaterialTexture")
+						? this.locale.get("clearMaterialTexture")
 						: undefined,
 			})),
 		);
@@ -1062,7 +1062,7 @@ export class DT3DObjectInspector extends LitElement {
 	}
 
 	private getEntityAttributeLabel(attribute: string): string {
-		const translatedLabel = localManager.get(attribute);
+		const translatedLabel = this.locale.get(attribute);
 		if (translatedLabel !== attribute) {
 			return translatedLabel;
 		}
@@ -1096,66 +1096,66 @@ export class DT3DObjectInspector extends LitElement {
 
 		return [
 			{
-				label: localManager.get("wallConnectionShape"),
+				label: this.locale.get("wallConnectionShape"),
 				attribute: "connectionShape",
 				type: "select",
-				tooltip: localManager.get("wallConnectionShapeTooltip"),
+				tooltip: this.locale.get("wallConnectionShapeTooltip"),
 				editable: !locked,
 				enabled: true,
 				options: [
-					{label: localManager.get("rectangular"), value: "rectangle"},
-					{label: localManager.get("circular"), value: "circle"},
+					{label: this.locale.get("rectangular"), value: "rectangle"},
+					{label: this.locale.get("circular"), value: "circle"},
 				],
 			},
 			{
-				label: localManager.get("wallHeight"),
+				label: this.locale.get("wallHeight"),
 				attribute: "height",
 				type: "number",
-				tooltip: localManager.get("wallHeightTooltip"),
+				tooltip: this.locale.get("wallHeightTooltip"),
 				editable: !locked,
 				enabled: true,
 			},
 			{
-				label: localManager.get("wallThickness"),
+				label: this.locale.get("wallThickness"),
 				attribute: "thickness",
 				type: "number",
-				tooltip: localManager.get("wallThicknessTooltip"),
+				tooltip: this.locale.get("wallThicknessTooltip"),
 				editable: !locked,
 				enabled: true,
 			},
 			{
-				label: localManager.get("baseboardEnabled"),
+				label: this.locale.get("baseboardEnabled"),
 				attribute: "baseboardEnabled",
 				type: "boolean",
-				tooltip: localManager.get("baseboardEnabledTooltip"),
+				tooltip: this.locale.get("baseboardEnabledTooltip"),
 				editable: !locked,
 				enabled: true,
 			},
 			{
-				label: localManager.get("baseboardHeight"),
+				label: this.locale.get("baseboardHeight"),
 				attribute: "baseboardHeight",
 				type: "number",
-				tooltip: localManager.get("baseboardHeightTooltip"),
+				tooltip: this.locale.get("baseboardHeightTooltip"),
 				editable: !locked && this.selectedObject.baseboardEnabled,
 				enabled: true,
 				min: 0.01,
 				step: 0.01,
 			},
 			{
-				label: localManager.get("baseboardDepth"),
+				label: this.locale.get("baseboardDepth"),
 				attribute: "baseboardDepth",
 				type: "number",
-				tooltip: localManager.get("baseboardDepthTooltip"),
+				tooltip: this.locale.get("baseboardDepthTooltip"),
 				editable: !locked && this.selectedObject.baseboardEnabled,
 				enabled: true,
 				min: 0,
 				step: 0.005,
 			},
 			{
-				label: localManager.get("baseboardColor"),
+				label: this.locale.get("baseboardColor"),
 				attribute: "baseboardColor",
 				type: "color",
-				tooltip: localManager.get("baseboardColorTooltip"),
+				tooltip: this.locale.get("baseboardColorTooltip"),
 				editable: !locked && this.selectedObject.baseboardEnabled,
 				enabled: true,
 			},
@@ -1169,26 +1169,26 @@ export class DT3DObjectInspector extends LitElement {
 
 		return [
 			{
-				label: localManager.get("wallStartPoint"),
+				label: this.locale.get("wallStartPoint"),
 				attribute: "startPoint",
 				type: "Vector3",
-				tooltip: localManager.get("wallStartPointTooltip"),
+				tooltip: this.locale.get("wallStartPointTooltip"),
 				editable: !locked,
 				enabled: true,
 			},
 			{
-				label: localManager.get("wallEndPoint"),
+				label: this.locale.get("wallEndPoint"),
 				attribute: "endPoint",
 				type: "Vector3",
-				tooltip: localManager.get("wallEndPointTooltip"),
+				tooltip: this.locale.get("wallEndPointTooltip"),
 				editable: !locked,
 				enabled: true,
 			},
 			{
-				label: localManager.get("wallLength"),
+				label: this.locale.get("wallLength"),
 				attribute: "length",
 				type: "number",
-				tooltip: localManager.get("wallLengthTooltip"),
+				tooltip: this.locale.get("wallLengthTooltip"),
 				editable: !locked,
 				enabled: true,
 				min: 0.001,
@@ -1233,58 +1233,58 @@ export class DT3DObjectInspector extends LitElement {
 
 		return [
 			{
-				label: localManager.get("openingWidth"),
+				label: this.locale.get("openingWidth"),
 				attribute: "width",
 				type: "number",
-				tooltip: localManager.get("openingWidthTooltip"),
+				tooltip: this.locale.get("openingWidthTooltip"),
 				editable: !locked,
 				enabled: true,
 				min: 0.1,
 				step: 0.01,
 			},
 			{
-				label: localManager.get("openingHeight"),
+				label: this.locale.get("openingHeight"),
 				attribute: "height",
 				type: "number",
-				tooltip: localManager.get("openingHeightTooltip"),
+				tooltip: this.locale.get("openingHeightTooltip"),
 				editable: !locked,
 				enabled: true,
 				min: 0.1,
 				step: 0.01,
 			},
 			{
-				label: localManager.get("openingThickness"),
+				label: this.locale.get("openingThickness"),
 				attribute: "thickness",
 				type: "number",
-				tooltip: localManager.get("openingThicknessTooltip"),
+				tooltip: this.locale.get("openingThicknessTooltip"),
 				editable: !locked,
 				enabled: true,
 				min: 0.01,
 				step: 0.01,
 			},
 			{
-				label: localManager.get("openingEntityId"),
+				label: this.locale.get("openingEntityId"),
 				attribute: "openEntityId",
 				type: "entity",
-				tooltip: localManager.get("openingEntityIdTooltip"),
+				tooltip: this.locale.get("openingEntityIdTooltip"),
 				entityFilter: OPENING_ENTITY_FILTER,
 				placeholder: "cover.living_room",
 				editable: !locked,
 				enabled: true,
 			},
 			{
-				label: localManager.get("open"),
+				label: this.locale.get("open"),
 				attribute: "open",
 				type: "boolean",
-				tooltip: localManager.get("openTooltip"),
+				tooltip: this.locale.get("openTooltip"),
 				editable: !locked && !controlledByEntity,
 				enabled: true,
 			},
 			{
-				label: localManager.get("openingAmount"),
+				label: this.locale.get("openingAmount"),
 				attribute: "openAmount",
 				type: "number",
-				tooltip: localManager.get("openingAmountTooltip"),
+				tooltip: this.locale.get("openingAmountTooltip"),
 				editable: !locked && !controlledByEntity,
 				enabled: true,
 				min: 0,
@@ -1298,78 +1298,78 @@ export class DT3DObjectInspector extends LitElement {
 		if (!(this.selectedObject instanceof DoorObject)) return [];
 		return [
 			{
-				label: localManager.get("doorOperationType"),
+				label: this.locale.get("doorOperationType"),
 				attribute: "operationType",
 				type: "select",
-				tooltip: localManager.get("doorOperationTypeTooltip"),
+				tooltip: this.locale.get("doorOperationTypeTooltip"),
 				editable: !locked,
 				enabled: true,
 				options: [
-					{label: localManager.get("hinged"), value: "hinged"},
-					{label: localManager.get("sliding"), value: "sliding"},
+					{label: this.locale.get("hinged"), value: "hinged"},
+					{label: this.locale.get("sliding"), value: "sliding"},
 				],
 			},
 			{
-				label: localManager.get("doorPanelCount"),
+				label: this.locale.get("doorPanelCount"),
 				attribute: "panelCount",
 				type: "select",
-				tooltip: localManager.get("doorPanelCountTooltip"),
+				tooltip: this.locale.get("doorPanelCountTooltip"),
 				editable: !locked,
 				enabled: true,
 				options: [
-					{label: localManager.get("single"), value: 1},
-					{label: localManager.get("double"), value: 2},
+					{label: this.locale.get("single"), value: 1},
+					{label: this.locale.get("double"), value: 2},
 				],
 			},
 			{
 				label:
 					this.selectedObject.operationType === "sliding"
-						? localManager.get("slideSide")
-						: localManager.get("doorHingeSide"),
+						? this.locale.get("slideSide")
+						: this.locale.get("doorHingeSide"),
 				attribute: "hingeSide",
 				type: "select",
 				tooltip:
 					this.selectedObject.operationType === "sliding"
-						? localManager.get("slideSideTooltip")
-						: localManager.get("doorHingeSideTooltip"),
+						? this.locale.get("slideSideTooltip")
+						: this.locale.get("doorHingeSideTooltip"),
 				editable: !locked && this.selectedObject.panelCount === 1,
 				enabled: true,
 				options: [
-					{label: localManager.get("left"), value: "left"},
-					{label: localManager.get("right"), value: "right"},
+					{label: this.locale.get("left"), value: "left"},
+					{label: this.locale.get("right"), value: "right"},
 				],
 			},
 			{
-				label: localManager.get("doorOpeningDirection"),
+				label: this.locale.get("doorOpeningDirection"),
 				attribute: "openingDirection",
 				type: "select",
-				tooltip: localManager.get("doorOpeningDirectionTooltip"),
+				tooltip: this.locale.get("doorOpeningDirectionTooltip"),
 				editable: !locked && this.selectedObject.operationType === "hinged",
 				enabled: true,
 				options: [
-					{label: localManager.get("inward"), value: "inward"},
-					{label: localManager.get("outward"), value: "outward"},
+					{label: this.locale.get("inward"), value: "inward"},
+					{label: this.locale.get("outward"), value: "outward"},
 				],
 			},
 			{
-				label: localManager.get("doorKnobStyle"),
+				label: this.locale.get("doorKnobStyle"),
 				attribute: "knobStyle",
 				type: "select",
-				tooltip: localManager.get("doorKnobStyleTooltip"),
+				tooltip: this.locale.get("doorKnobStyleTooltip"),
 				editable: !locked,
 				enabled: true,
 				options: [
-					{label: localManager.get("none"), value: "none"},
-					{label: localManager.get("round"), value: "round"},
-					{label: localManager.get("lever"), value: "lever"},
-					{label: localManager.get("bar"), value: "bar"},
+					{label: this.locale.get("none"), value: "none"},
+					{label: this.locale.get("round"), value: "round"},
+					{label: this.locale.get("lever"), value: "lever"},
+					{label: this.locale.get("bar"), value: "bar"},
 				],
 			},
 			{
-				label: localManager.get("doorKnobColor"),
+				label: this.locale.get("doorKnobColor"),
 				attribute: "knobColor",
 				type: "color",
-				tooltip: localManager.get("doorKnobColorTooltip"),
+				tooltip: this.locale.get("doorKnobColorTooltip"),
 				editable: !locked && this.selectedObject.knobStyle !== "none",
 				enabled: true,
 			},
@@ -1381,89 +1381,89 @@ export class DT3DObjectInspector extends LitElement {
 		const verticalBars = this.selectedObject.style === "verticalBars";
 		return [
 			{
-				label: localManager.get("gateOperationType"),
+				label: this.locale.get("gateOperationType"),
 				attribute: "operationType",
 				type: "select",
-				tooltip: localManager.get("gateOperationTypeTooltip"),
+				tooltip: this.locale.get("gateOperationTypeTooltip"),
 				editable: !locked,
 				enabled: true,
 				options: [
-					{label: localManager.get("gateDoorStyle"), value: "hinged"},
-					{label: localManager.get("sliding"), value: "sliding"},
+					{label: this.locale.get("gateDoorStyle"), value: "hinged"},
+					{label: this.locale.get("sliding"), value: "sliding"},
 				],
 			},
 			{
-				label: localManager.get("gatePanelCount"),
+				label: this.locale.get("gatePanelCount"),
 				attribute: "panelCount",
 				type: "select",
-				tooltip: localManager.get("gatePanelCountTooltip"),
+				tooltip: this.locale.get("gatePanelCountTooltip"),
 				editable: !locked,
 				enabled: true,
 				options: [
-					{label: localManager.get("single"), value: 1},
-					{label: localManager.get("double"), value: 2},
+					{label: this.locale.get("single"), value: 1},
+					{label: this.locale.get("double"), value: 2},
 				],
 			},
 			{
 				label:
 					this.selectedObject.operationType === "sliding"
-						? localManager.get("slideSide")
-						: localManager.get("doorHingeSide"),
+						? this.locale.get("slideSide")
+						: this.locale.get("doorHingeSide"),
 				attribute: "hingeSide",
 				type: "select",
 				tooltip:
 					this.selectedObject.operationType === "sliding"
-						? localManager.get("slideSideTooltip")
-						: localManager.get("doorHingeSideTooltip"),
+						? this.locale.get("slideSideTooltip")
+						: this.locale.get("doorHingeSideTooltip"),
 				editable: !locked && this.selectedObject.panelCount === 1,
 				enabled: true,
 				options: [
-					{label: localManager.get("left"), value: "left"},
-					{label: localManager.get("right"), value: "right"},
+					{label: this.locale.get("left"), value: "left"},
+					{label: this.locale.get("right"), value: "right"},
 				],
 			},
 			{
-				label: localManager.get("doorOpeningDirection"),
+				label: this.locale.get("doorOpeningDirection"),
 				attribute: "openingDirection",
 				type: "select",
-				tooltip: localManager.get("gateOpeningDirectionTooltip"),
+				tooltip: this.locale.get("gateOpeningDirectionTooltip"),
 				editable: !locked && this.selectedObject.operationType === "hinged",
 				enabled: true,
 				options: [
-					{label: localManager.get("inward"), value: "inward"},
-					{label: localManager.get("outward"), value: "outward"},
+					{label: this.locale.get("inward"), value: "inward"},
+					{label: this.locale.get("outward"), value: "outward"},
 				],
 			},
 			{
-				label: localManager.get("gateStyle"),
+				label: this.locale.get("gateStyle"),
 				attribute: "style",
 				type: "select",
-				tooltip: localManager.get("gateStyleTooltip"),
+				tooltip: this.locale.get("gateStyleTooltip"),
 				editable: !locked,
 				enabled: true,
 				options: [
-					{label: localManager.get("gateSolid"), value: "solid"},
+					{label: this.locale.get("gateSolid"), value: "solid"},
 					{
-						label: localManager.get("gateVerticalBars"),
+						label: this.locale.get("gateVerticalBars"),
 						value: "verticalBars",
 					},
 				],
 			},
 			{
-				label: localManager.get("gateBarWidth"),
+				label: this.locale.get("gateBarWidth"),
 				attribute: "barWidth",
 				type: "number",
-				tooltip: localManager.get("gateBarWidthTooltip"),
+				tooltip: this.locale.get("gateBarWidthTooltip"),
 				editable: !locked && verticalBars,
 				enabled: true,
 				min: 0.01,
 				step: 0.01,
 			},
 			{
-				label: localManager.get("gateBarSpacing"),
+				label: this.locale.get("gateBarSpacing"),
 				attribute: "barSpacing",
 				type: "number",
-				tooltip: localManager.get("gateBarSpacingTooltip"),
+				tooltip: this.locale.get("gateBarSpacingTooltip"),
 				editable: !locked && verticalBars,
 				enabled: true,
 				min: 0.01,
@@ -1476,60 +1476,60 @@ export class DT3DObjectInspector extends LitElement {
 		if (!(this.selectedObject instanceof WindowObject)) return [];
 		return [
 			{
-				label: localManager.get("windowOpeningType"),
+				label: this.locale.get("windowOpeningType"),
 				attribute: "openingType",
 				type: "select",
-				tooltip: localManager.get("windowOpeningTypeTooltip"),
+				tooltip: this.locale.get("windowOpeningTypeTooltip"),
 				editable: !locked,
 				enabled: true,
 				options: [
-					{label: localManager.get("sliding"), value: "sliding"},
-					{label: localManager.get("hinged"), value: "hinged"},
+					{label: this.locale.get("sliding"), value: "sliding"},
+					{label: this.locale.get("hinged"), value: "hinged"},
 				],
 			},
 			{
-				label: localManager.get("windowPanelCount"),
+				label: this.locale.get("windowPanelCount"),
 				attribute: "panelCount",
 				type: "select",
-				tooltip: localManager.get("windowPanelCountTooltip"),
+				tooltip: this.locale.get("windowPanelCountTooltip"),
 				editable: !locked && this.selectedObject.openingType === "hinged",
 				enabled: true,
 				options: [
-					{label: localManager.get("single"), value: 1},
-					{label: localManager.get("double"), value: 2},
+					{label: this.locale.get("single"), value: 1},
+					{label: this.locale.get("double"), value: 2},
 				],
 			},
 			{
 				label:
 					this.selectedObject.openingType === "sliding"
-						? localManager.get("windowSlidingPanel")
-						: localManager.get("doorHingeSide"),
+						? this.locale.get("windowSlidingPanel")
+						: this.locale.get("doorHingeSide"),
 				attribute: "hingeSide",
 				type: "select",
 				tooltip:
 					this.selectedObject.openingType === "sliding"
-						? localManager.get("windowSlidingPanelTooltip")
-						: localManager.get("doorHingeSideTooltip"),
+						? this.locale.get("windowSlidingPanelTooltip")
+						: this.locale.get("doorHingeSideTooltip"),
 				editable:
 					!locked &&
 					(this.selectedObject.openingType === "sliding" ||
 						this.selectedObject.panelCount === 1),
 				enabled: true,
 				options: [
-					{label: localManager.get("left"), value: "left"},
-					{label: localManager.get("right"), value: "right"},
+					{label: this.locale.get("left"), value: "left"},
+					{label: this.locale.get("right"), value: "right"},
 				],
 			},
 			{
-				label: localManager.get("openingDirection"),
+				label: this.locale.get("openingDirection"),
 				attribute: "openingDirection",
 				type: "select",
-				tooltip: localManager.get("openingDirectionTooltip"),
+				tooltip: this.locale.get("openingDirectionTooltip"),
 				editable: !locked && this.selectedObject.openingType === "hinged",
 				enabled: true,
 				options: [
-					{label: localManager.get("inward"), value: "inward"},
-					{label: localManager.get("outward"), value: "outward"},
+					{label: this.locale.get("inward"), value: "inward"},
+					{label: this.locale.get("outward"), value: "outward"},
 				],
 			},
 		];
@@ -1545,38 +1545,38 @@ export class DT3DObjectInspector extends LitElement {
 			object instanceof DoorObject ? "borderWidth" : "borderThickness";
 		return [
 			{
-				label: localManager.get("borderEnabled"),
+				label: this.locale.get("borderEnabled"),
 				attribute: "borderEnabled",
 				type: "boolean",
-				tooltip: localManager.get("borderEnabledTooltip"),
+				tooltip: this.locale.get("borderEnabledTooltip"),
 				editable: !locked,
 				enabled: true,
 			},
 			{
-				label: localManager.get("borderThickness"),
+				label: this.locale.get("borderThickness"),
 				attribute: widthAttribute,
 				type: "number",
-				tooltip: localManager.get("borderThicknessTooltip"),
+				tooltip: this.locale.get("borderThicknessTooltip"),
 				editable: !locked && enabled,
 				enabled: true,
 				min: 0.005,
 				step: 0.005,
 			},
 			{
-				label: localManager.get("borderDepth"),
+				label: this.locale.get("borderDepth"),
 				attribute: "borderDepth",
 				type: "number",
-				tooltip: localManager.get("borderDepthTooltip"),
+				tooltip: this.locale.get("borderDepthTooltip"),
 				editable: !locked && enabled,
 				enabled: true,
 				min: 0,
 				step: 0.005,
 			},
 			{
-				label: localManager.get("borderColor"),
+				label: this.locale.get("borderColor"),
 				attribute: "borderColor",
 				type: "color",
-				tooltip: localManager.get("borderColorTooltip"),
+				tooltip: this.locale.get("borderColorTooltip"),
 				editable: !locked && enabled,
 				enabled: true,
 			},
@@ -1588,10 +1588,10 @@ export class DT3DObjectInspector extends LitElement {
 		const enabled = this.selectedObject.windowEnabled;
 		return [
 			{
-				label: localManager.get("doorWindowEnabled"),
+				label: this.locale.get("doorWindowEnabled"),
 				attribute: "windowEnabled",
 				type: "boolean",
-				tooltip: localManager.get("doorWindowEnabledTooltip"),
+				tooltip: this.locale.get("doorWindowEnabledTooltip"),
 				editable: !locked,
 				enabled: true,
 			},
@@ -1602,10 +1602,10 @@ export class DT3DObjectInspector extends LitElement {
 				["doorWindowPositionY", "windowPositionY", 0.01],
 				["doorWindowBorderWidth", "windowBorderWidth", 0.005],
 			].map(([label, attribute, step]) => ({
-				label: localManager.get(label as string),
+				label: this.locale.get(label as string),
 				attribute: attribute as string,
 				type: "number" as const,
-				tooltip: localManager.get(`${label}Tooltip`),
+				tooltip: this.locale.get(`${label}Tooltip`),
 				editable: !locked && enabled,
 				enabled: true,
 				step: step as number,
@@ -1615,18 +1615,18 @@ export class DT3DObjectInspector extends LitElement {
 						: 0.01,
 			})),
 			{
-				label: localManager.get("doorWindowColor"),
+				label: this.locale.get("doorWindowColor"),
 				attribute: "windowColor",
 				type: "color",
-				tooltip: localManager.get("doorWindowColorTooltip"),
+				tooltip: this.locale.get("doorWindowColorTooltip"),
 				editable: !locked && enabled,
 				enabled: true,
 			},
 			{
-				label: localManager.get("doorWindowOpacity"),
+				label: this.locale.get("doorWindowOpacity"),
 				attribute: "windowOpacity",
 				type: "number",
-				tooltip: localManager.get("doorWindowOpacityTooltip"),
+				tooltip: this.locale.get("doorWindowOpacityTooltip"),
 				editable: !locked && enabled,
 				enabled: true,
 				min: 0,
@@ -1640,18 +1640,18 @@ export class DT3DObjectInspector extends LitElement {
 		if (!(this.selectedObject instanceof WindowObject)) return [];
 		return [
 			{
-				label: localManager.get("glassColor"),
+				label: this.locale.get("glassColor"),
 				attribute: "glassColor",
 				type: "color",
-				tooltip: localManager.get("glassColorTooltip"),
+				tooltip: this.locale.get("glassColorTooltip"),
 				editable: !locked,
 				enabled: true,
 			},
 			{
-				label: localManager.get("glassOpacity"),
+				label: this.locale.get("glassOpacity"),
 				attribute: "glassOpacity",
 				type: "number",
-				tooltip: localManager.get("glassOpacityTooltip"),
+				tooltip: this.locale.get("glassOpacityTooltip"),
 				editable: !locked,
 				enabled: true,
 				min: 0,
@@ -1659,10 +1659,10 @@ export class DT3DObjectInspector extends LitElement {
 				step: 0.05,
 			},
 			{
-				label: localManager.get("glassRoughness"),
+				label: this.locale.get("glassRoughness"),
 				attribute: "glassRoughness",
 				type: "number",
-				tooltip: localManager.get("glassRoughnessTooltip"),
+				tooltip: this.locale.get("glassRoughnessTooltip"),
 				editable: !locked,
 				enabled: true,
 				min: 0,
@@ -1677,10 +1677,10 @@ export class DT3DObjectInspector extends LitElement {
 		const enabled = this.selectedObject.gridEnabled;
 		return [
 			{
-				label: localManager.get("windowGridEnabled"),
+				label: this.locale.get("windowGridEnabled"),
 				attribute: "gridEnabled",
 				type: "boolean",
-				tooltip: localManager.get("windowGridEnabledTooltip"),
+				tooltip: this.locale.get("windowGridEnabledTooltip"),
 				editable: !locked,
 				enabled: true,
 			},
@@ -1691,10 +1691,10 @@ export class DT3DObjectInspector extends LitElement {
 				["windowGridHorizontalSpacing", "gridHorizontalSpacing", 0.01, 0],
 				["windowGridVerticalSpacing", "gridVerticalSpacing", 0.01, 0],
 			].map(([label, attribute, step, min]) => ({
-				label: localManager.get(label as string),
+				label: this.locale.get(label as string),
 				attribute: attribute as string,
 				type: "number" as const,
-				tooltip: localManager.get(`${label}Tooltip`),
+				tooltip: this.locale.get(`${label}Tooltip`),
 				editable: !locked && enabled,
 				enabled: true,
 				step: step as number,
@@ -1708,40 +1708,40 @@ export class DT3DObjectInspector extends LitElement {
 		const enabled = this.selectedObject.blindsEnabled;
 		return [
 			{
-				label: localManager.get("windowBlindsEnabled"),
+				label: this.locale.get("windowBlindsEnabled"),
 				attribute: "blindsEnabled",
 				type: "boolean",
-				tooltip: localManager.get("windowBlindsEnabledTooltip"),
+				tooltip: this.locale.get("windowBlindsEnabledTooltip"),
 				editable: !locked,
 				enabled: true,
 			},
 			{
-				label: localManager.get("windowBlindEntityId"),
+				label: this.locale.get("windowBlindEntityId"),
 				attribute: "blindOpenEntityId",
 				type: "entity",
-				tooltip: localManager.get("openingEntityIdTooltip"),
+				tooltip: this.locale.get("openingEntityIdTooltip"),
 				entityFilter: OPENING_ENTITY_FILTER,
 				placeholder: "cover.living_room_blind",
 				editable: !locked && enabled,
 				enabled: true,
 			},
 			{
-				label: localManager.get("windowBlindPlacement"),
+				label: this.locale.get("windowBlindPlacement"),
 				attribute: "blindPlacement",
 				type: "select",
-				tooltip: localManager.get("windowBlindPlacementTooltip"),
+				tooltip: this.locale.get("windowBlindPlacementTooltip"),
 				editable: !locked && enabled,
 				enabled: true,
 				options: [
-					{label: localManager.get("inside"), value: "inside"},
-					{label: localManager.get("outside"), value: "outside"},
+					{label: this.locale.get("inside"), value: "inside"},
+					{label: this.locale.get("outside"), value: "outside"},
 				],
 			},
 			{
-				label: localManager.get("windowBlindPosition"),
+				label: this.locale.get("windowBlindPosition"),
 				attribute: "blindPosition",
 				type: "number",
-				tooltip: localManager.get("windowBlindPositionTooltip"),
+				tooltip: this.locale.get("windowBlindPositionTooltip"),
 				editable:
 					!locked && enabled && !this.selectedObject.blindOpenEntityId,
 				enabled: true,
@@ -1750,20 +1750,20 @@ export class DT3DObjectInspector extends LitElement {
 				step: 5,
 			},
 			{
-				label: localManager.get("windowBlindSlatSpacing"),
+				label: this.locale.get("windowBlindSlatSpacing"),
 				attribute: "blindSlatSpacing",
 				type: "number",
-				tooltip: localManager.get("windowBlindSlatSpacingTooltip"),
+				tooltip: this.locale.get("windowBlindSlatSpacingTooltip"),
 				editable: !locked && enabled,
 				enabled: true,
 				min: 0.02,
 				step: 0.01,
 			},
 			{
-				label: localManager.get("windowBlindColor"),
+				label: this.locale.get("windowBlindColor"),
 				attribute: "blindColor",
 				type: "color",
-				tooltip: localManager.get("windowBlindColorTooltip"),
+				tooltip: this.locale.get("windowBlindColorTooltip"),
 				editable: !locked && enabled,
 				enabled: true,
 			},
@@ -1775,52 +1775,52 @@ export class DT3DObjectInspector extends LitElement {
 		const enabled = this.selectedObject.shuttersEnabled;
 		return [
 			{
-				label: localManager.get("windowShuttersEnabled"),
+				label: this.locale.get("windowShuttersEnabled"),
 				attribute: "shuttersEnabled",
 				type: "boolean",
-				tooltip: localManager.get("windowShuttersEnabledTooltip"),
+				tooltip: this.locale.get("windowShuttersEnabledTooltip"),
 				editable: !locked,
 				enabled: true,
 			},
 			{
-				label: localManager.get("windowShutterEntityId"),
+				label: this.locale.get("windowShutterEntityId"),
 				attribute: "shutterOpenEntityId",
 				type: "entity",
-				tooltip: localManager.get("openingEntityIdTooltip"),
+				tooltip: this.locale.get("openingEntityIdTooltip"),
 				entityFilter: OPENING_ENTITY_FILTER,
 				placeholder: "cover.living_room_shutter",
 				editable: !locked && enabled,
 				enabled: true,
 			},
 			{
-				label: localManager.get("windowShutterPanelCount"),
+				label: this.locale.get("windowShutterPanelCount"),
 				attribute: "shutterPanelCount",
 				type: "select",
-				tooltip: localManager.get("windowShutterPanelCountTooltip"),
+				tooltip: this.locale.get("windowShutterPanelCountTooltip"),
 				editable: !locked && enabled,
 				enabled: true,
 				options: [
-					{label: localManager.get("single"), value: 1},
-					{label: localManager.get("double"), value: 2},
+					{label: this.locale.get("single"), value: 1},
+					{label: this.locale.get("double"), value: 2},
 				],
 			},
 			{
-				label: localManager.get("windowShutterPlacement"),
+				label: this.locale.get("windowShutterPlacement"),
 				attribute: "shutterPlacement",
 				type: "select",
-				tooltip: localManager.get("windowShutterPlacementTooltip"),
+				tooltip: this.locale.get("windowShutterPlacementTooltip"),
 				editable: !locked && enabled,
 				enabled: true,
 				options: [
-					{label: localManager.get("outside"), value: "outside"},
-					{label: localManager.get("inside"), value: "inside"},
+					{label: this.locale.get("outside"), value: "outside"},
+					{label: this.locale.get("inside"), value: "inside"},
 				],
 			},
 			{
-				label: localManager.get("windowShutterOpenAmount"),
+				label: this.locale.get("windowShutterOpenAmount"),
 				attribute: "shutterOpenAmount",
 				type: "number",
-				tooltip: localManager.get("windowShutterOpenAmountTooltip"),
+				tooltip: this.locale.get("windowShutterOpenAmountTooltip"),
 				editable:
 					!locked && enabled && !this.selectedObject.shutterOpenEntityId,
 				enabled: true,
@@ -1829,10 +1829,10 @@ export class DT3DObjectInspector extends LitElement {
 				step: 5,
 			},
 			{
-				label: localManager.get("windowShutterBladeCount"),
+				label: this.locale.get("windowShutterBladeCount"),
 				attribute: "shutterBladeCount",
 				type: "number",
-				tooltip: localManager.get("windowShutterBladeCountTooltip"),
+				tooltip: this.locale.get("windowShutterBladeCountTooltip"),
 				editable: !locked && enabled,
 				enabled: true,
 				min: 1,
@@ -1840,10 +1840,10 @@ export class DT3DObjectInspector extends LitElement {
 				step: 1,
 			},
 			{
-				label: localManager.get("windowShutterBladeOpenAmount"),
+				label: this.locale.get("windowShutterBladeOpenAmount"),
 				attribute: "shutterBladeOpenAmount",
 				type: "number",
-				tooltip: localManager.get("windowShutterBladeOpenAmountTooltip"),
+				tooltip: this.locale.get("windowShutterBladeOpenAmountTooltip"),
 				editable:
 					!locked && enabled && !this.selectedObject.shutterBladeOpenEntityId,
 				enabled: true,
@@ -1852,20 +1852,20 @@ export class DT3DObjectInspector extends LitElement {
 				step: 5,
 			},
 			{
-				label: localManager.get("windowShutterBladeEntityId"),
+				label: this.locale.get("windowShutterBladeEntityId"),
 				attribute: "shutterBladeOpenEntityId",
 				type: "entity",
-				tooltip: localManager.get("openingEntityIdTooltip"),
+				tooltip: this.locale.get("openingEntityIdTooltip"),
 				entityFilter: OPENING_ENTITY_FILTER,
 				placeholder: "number.living_room_shutter_blades",
 				editable: !locked && enabled,
 				enabled: true,
 			},
 			{
-				label: localManager.get("windowShutterColor"),
+				label: this.locale.get("windowShutterColor"),
 				attribute: "shutterColor",
 				type: "color",
-				tooltip: localManager.get("windowShutterColorTooltip"),
+				tooltip: this.locale.get("windowShutterColorTooltip"),
 				editable: !locked && enabled,
 				enabled: true,
 			},
@@ -1894,7 +1894,7 @@ export class DT3DObjectInspector extends LitElement {
 			label: definition.label,
 			attribute: `geometry.${definition.name}`,
 			type: definition.type === "boolean" ? "boolean" : "number",
-			tooltip: localManager.get("geometryParameterTooltip"),
+			tooltip: this.locale.get("geometryParameterTooltip"),
 			editable: !locked,
 			enabled: true,
 			step: definition.step,
@@ -1908,11 +1908,11 @@ export class DT3DObjectInspector extends LitElement {
 		}
 
 		return this.selectedObject.parameterDefinitions.map((definition) => ({
-			label: localManager.get(definition.labelKey),
+			label: this.locale.get(definition.labelKey),
 			attribute: definition.name,
 			type: definition.type === "boolean" ? "boolean" : definition.type === "select" ? "select" : "number",
-			options: definition.options?.map((option) => ({label: localManager.get(option.labelKey), value: option.value})),
-			tooltip: localManager.get(definition.tooltipKey),
+			options: definition.options?.map((option) => ({label: this.locale.get(option.labelKey), value: option.value})),
+			tooltip: this.locale.get(definition.tooltipKey),
 			editable: !locked,
 			enabled: true,
 			step: definition.step,
@@ -1928,33 +1928,33 @@ export class DT3DObjectInspector extends LitElement {
 		const attributeFields = this.getEntityAttributeFields();
 		const domain = this.selectedObject.entityId.split(".", 1)[0];
 		const actionOptions = [
-			{label: localManager.get("cardDefaultAction"), value: "default"},
-			{label: localManager.get("openEntity"), value: "open"},
+			{label: this.locale.get("cardDefaultAction"), value: "default"},
+			{label: this.locale.get("openEntity"), value: "open"},
 			...(isToggleable(this.selectedObject)
-				? [{label: localManager.get("toggleEntity"), value: "toggle"}]
+				? [{label: this.locale.get("toggleEntity"), value: "toggle"}]
 				: []),
-			{label: localManager.get("nothing"), value: "nothing"},
+			{label: this.locale.get("nothing"), value: "nothing"},
 		];
 
 		return [
 			{
-				label: localManager.get("entityId"),
+				label: this.locale.get("entityId"),
 				attribute: "entityId",
 				type: "entity",
-				tooltip: localManager.get("entityIdDescription"),
+				tooltip: this.locale.get("entityIdDescription"),
 				editable: !locked,
 				enabled: true,
 				entityFilter: `^${domain}\\.`,
 			},
 			{
-				label: localManager.get("entityName"),
+				label: this.locale.get("entityName"),
 				attribute: "entityName",
 				type: "info",
 				editable: false,
 				enabled: true,
 			},
 			{
-				label: localManager.get("entityState"),
+				label: this.locale.get("entityState"),
 				attribute: "entityState",
 				type: "info",
 				editable: false,
@@ -1962,19 +1962,19 @@ export class DT3DObjectInspector extends LitElement {
 			},
 			...attributeFields,
 			{
-				label: localManager.get("entityClickAction"),
+				label: this.locale.get("entityClickAction"),
 				attribute: "clickAction",
 				type: "select",
-				tooltip: localManager.get("entityClickActionDescription"),
+				tooltip: this.locale.get("entityClickActionDescription"),
 				editable: !locked,
 				enabled: true,
 				options: actionOptions,
 			},
 			{
-				label: localManager.get("entityDoubleClickAction"),
+				label: this.locale.get("entityDoubleClickAction"),
 				attribute: "doubleClickAction",
 				type: "select",
-				tooltip: localManager.get("entityDoubleClickActionDescription"),
+				tooltip: this.locale.get("entityDoubleClickActionDescription"),
 				editable: !locked,
 				enabled: true,
 				options: actionOptions,
@@ -1989,10 +1989,10 @@ export class DT3DObjectInspector extends LitElement {
 
 		return [
 			{
-				label: localManager.get("defaultViewport"),
+				label: this.locale.get("defaultViewport"),
 				attribute: "defaultViewport",
 				type: "boolean",
-				tooltip: localManager.get("defaultViewportTooltip"),
+				tooltip: this.locale.get("defaultViewportTooltip"),
 				editable: !locked,
 				enabled: true,
 			},
@@ -2010,46 +2010,46 @@ export class DT3DObjectInspector extends LitElement {
 
 		const fields: DynamicFormField[] = [
 			{
-				label: localManager.get("lightSourceType"),
+				label: this.locale.get("lightSourceType"),
 				attribute: "sourceType",
 				type: "select",
-				tooltip: localManager.get("lightSourceTypeTooltip"),
+				tooltip: this.locale.get("lightSourceTypeTooltip"),
 				editable: !locked,
 				enabled: true,
 				options: [
-					{label: localManager.get("ambientLight"), value: "ambient"},
-					{label: localManager.get("directionalLight"), value: "directional"},
-					{label: localManager.get("pointLight"), value: "point"},
-					{label: localManager.get("spotLight"), value: "spot"},
-					{label: localManager.get("rectAreaLight"), value: "rect-area"},
+					{label: this.locale.get("ambientLight"), value: "ambient"},
+					{label: this.locale.get("directionalLight"), value: "directional"},
+					{label: this.locale.get("pointLight"), value: "point"},
+					{label: this.locale.get("spotLight"), value: "spot"},
+					{label: this.locale.get("rectAreaLight"), value: "rect-area"},
 				],
 			},
 		];
 
 		if (object instanceof StaticLightObject) {
 			fields.push({
-				label: localManager.get("lightEnabled"),
+				label: this.locale.get("lightEnabled"),
 				attribute: "enabled",
 				type: "boolean",
-				tooltip: localManager.get("lightEnabledTooltip"),
+				tooltip: this.locale.get("lightEnabledTooltip"),
 				editable: !locked,
 				enabled: true,
 			});
 			fields.push({
-				label: localManager.get("lightColor"),
+				label: this.locale.get("lightColor"),
 				attribute: "color",
 				type: "color",
-				tooltip: localManager.get("lightColorTooltip"),
+				tooltip: this.locale.get("lightColorTooltip"),
 				editable: !locked,
 				enabled: true,
 			});
 		}
 
 		fields.push({
-			label: localManager.get("lightIntensity"),
+			label: this.locale.get("lightIntensity"),
 			attribute: "intensity",
 			type: "number",
-			tooltip: localManager.get("lightIntensityTooltip"),
+			tooltip: this.locale.get("lightIntensityTooltip"),
 			editable: !locked,
 			enabled: true,
 			min: 0,
@@ -2058,20 +2058,20 @@ export class DT3DObjectInspector extends LitElement {
 
 		if (object.sourceType === "point" || object.sourceType === "spot") {
 			fields.push({
-				label: localManager.get("lightDistance"),
+				label: this.locale.get("lightDistance"),
 				attribute: "distance",
 				type: "number",
-				tooltip: localManager.get("lightDistanceTooltip"),
+				tooltip: this.locale.get("lightDistanceTooltip"),
 				editable: !locked,
 				enabled: true,
 				min: 0,
 				step: 0.1,
 			});
 			fields.push({
-				label: localManager.get("lightDecay"),
+				label: this.locale.get("lightDecay"),
 				attribute: "decay",
 				type: "number",
-				tooltip: localManager.get("lightDecayTooltip"),
+				tooltip: this.locale.get("lightDecayTooltip"),
 				editable: !locked,
 				enabled: true,
 				min: 0,
@@ -2085,18 +2085,18 @@ export class DT3DObjectInspector extends LitElement {
 			object.sourceType === "spot"
 		) {
 			fields.push({
-				label: localManager.get("lightCastsShadows"),
+				label: this.locale.get("lightCastsShadows"),
 				attribute: "castsShadows",
 				type: "boolean",
-				tooltip: localManager.get("lightCastsShadowsTooltip"),
+				tooltip: this.locale.get("lightCastsShadowsTooltip"),
 				editable: !locked,
 				enabled: true,
 			});
 			fields.push({
-				label: localManager.get("lightShadowBias"),
+				label: this.locale.get("lightShadowBias"),
 				attribute: "shadowBias",
 				type: "number",
-				tooltip: localManager.get("lightShadowBiasTooltip"),
+				tooltip: this.locale.get("lightShadowBiasTooltip"),
 				editable: !locked,
 				enabled: true,
 				step: 0.0001,
@@ -2106,10 +2106,10 @@ export class DT3DObjectInspector extends LitElement {
 		if (object.sourceType === "spot") {
 			fields.push(
 				{
-					label: localManager.get("lightAngle"),
+					label: this.locale.get("lightAngle"),
 					attribute: "angle",
 					type: "number",
-					tooltip: localManager.get("lightAngleTooltip"),
+					tooltip: this.locale.get("lightAngleTooltip"),
 					editable: !locked,
 					enabled: true,
 					min: 1,
@@ -2117,10 +2117,10 @@ export class DT3DObjectInspector extends LitElement {
 					step: 1,
 				},
 				{
-					label: localManager.get("lightPenumbra"),
+					label: this.locale.get("lightPenumbra"),
 					attribute: "penumbra",
 					type: "number",
-					tooltip: localManager.get("lightPenumbraTooltip"),
+					tooltip: this.locale.get("lightPenumbraTooltip"),
 					editable: !locked,
 					enabled: true,
 					min: 0,
@@ -2133,20 +2133,20 @@ export class DT3DObjectInspector extends LitElement {
 		if (object.sourceType === "rect-area") {
 			fields.push(
 				{
-					label: localManager.get("lightWidth"),
+					label: this.locale.get("lightWidth"),
 					attribute: "width",
 					type: "number",
-					tooltip: localManager.get("lightWidthTooltip"),
+					tooltip: this.locale.get("lightWidthTooltip"),
 					editable: !locked,
 					enabled: true,
 					min: 0.01,
 					step: 0.1,
 				},
 				{
-					label: localManager.get("lightHeight"),
+					label: this.locale.get("lightHeight"),
 					attribute: "height",
 					type: "number",
-					tooltip: localManager.get("lightHeightTooltip"),
+					tooltip: this.locale.get("lightHeightTooltip"),
 					editable: !locked,
 					enabled: true,
 					min: 0.01,
@@ -2197,26 +2197,26 @@ export class DT3DObjectInspector extends LitElement {
 		this.addSubFormField(
 			fields,
 			"configuration",
-			localManager.get("configuration"),
+			this.locale.get("configuration"),
 			this.getBaseFields(locked),
 		);
 		this.addSubFormField(
 			fields,
 			"transform",
-			localManager.get("transform"),
+			this.locale.get("transform"),
 			this.getTransformFields(locked),
 		);
 		const addAppearanceFields = () => {
 			this.addSubFormField(
 				fields,
 				"shadows",
-				localManager.get("shadows"),
+				this.locale.get("shadows"),
 				this.getShadowFields(locked),
 			);
 			this.addSubFormField(
 				fields,
 				"material",
-				localManager.get("material"),
+				this.locale.get("material"),
 				this.getMaterialFields(locked),
 				materialData,
 			);
@@ -2227,13 +2227,13 @@ export class DT3DObjectInspector extends LitElement {
 		this.addSubFormField(
 			fields,
 			"wall",
-			localManager.get("wall"),
+			this.locale.get("wall"),
 			this.getWallFields(locked),
 		);
 		this.addSubFormField(
 			fields,
 			"wallGeometry",
-			localManager.get("wallGeometry"),
+			this.locale.get("wallGeometry"),
 			this.getWallGeometryFields(locked),
 			this.getWallGeometryData(),
 		);
@@ -2241,72 +2241,72 @@ export class DT3DObjectInspector extends LitElement {
 			fields,
 			"opening",
 			this.selectedObject instanceof GateObject
-				? localManager.get("gate")
+				? this.locale.get("gate")
 				: this.selectedObject instanceof DoorObject
-					? localManager.get("door")
-					: localManager.get("window"),
+					? this.locale.get("door")
+					: this.locale.get("window"),
 			this.getOpeningFields(locked),
 		);
 		this.addSubFormField(
 			fields,
 			"gate",
-			localManager.get("gateConfiguration"),
+			this.locale.get("gateConfiguration"),
 			this.getGateFields(locked),
 		);
 		this.addSubFormField(
 			fields,
 			"doorHardware",
-			localManager.get("doorHardware"),
+			this.locale.get("doorHardware"),
 			this.getDoorHardwareFields(locked),
 		);
 		this.addSubFormField(
 			fields,
 			"border",
-			localManager.get("border"),
+			this.locale.get("border"),
 			this.getBorderFields(locked),
 		);
 		this.addSubFormField(
 			fields,
 			"doorWindow",
-			localManager.get("doorWindow"),
+			this.locale.get("doorWindow"),
 			this.getDoorWindowFields(locked),
 		);
 		this.addSubFormField(
 			fields,
 			"windowGlass",
-			localManager.get("windowGlass"),
+			this.locale.get("windowGlass"),
 			this.getWindowGlassFields(locked),
 		);
 		this.addSubFormField(
 			fields,
 			"windowOperation",
-			localManager.get("windowOperation"),
+			this.locale.get("windowOperation"),
 			this.getWindowOperationFields(locked),
 		);
 		this.addSubFormField(
 			fields,
 			"windowGrid",
-			localManager.get("windowGrid"),
+			this.locale.get("windowGrid"),
 			this.getWindowGridFields(locked),
 		);
 		this.addSubFormField(
 			fields,
 			"windowBlinds",
-			localManager.get("windowBlinds"),
+			this.locale.get("windowBlinds"),
 			this.getWindowBlindFields(locked),
 		);
 		this.addSubFormField(
 			fields,
 			"windowShutters",
-			localManager.get("windowShutters"),
+			this.locale.get("windowShutters"),
 			this.getWindowShutterFields(locked),
 		);
 		this.addSubFormField(
 			fields,
 			"furniture",
 			this.selectedObject instanceof FurnitureObject
-				? localManager.get(this.selectedObject.editorLabelKey)
-				: localManager.get("furnitureDimensions"),
+				? this.locale.get(this.selectedObject.editorLabelKey)
+				: this.locale.get("furnitureDimensions"),
 			this.getFurnitureFields(locked),
 			this.selectedObject instanceof FurnitureObject
 				? this.selectedObject.parameters
@@ -2318,26 +2318,26 @@ export class DT3DObjectInspector extends LitElement {
 		this.addSubFormField(
 			fields,
 			"geometry",
-			localManager.get("geometry"),
+			this.locale.get("geometry"),
 			this.getGeometryFields(locked),
 			geometryData,
 		);
 		this.addSubFormField(
 			fields,
 			"light",
-			localManager.get("lighting"),
+			this.locale.get("lighting"),
 			this.getLightFields(locked),
 		);
 		this.addSubFormField(
 			fields,
 			"viewport",
-			localManager.get("viewport"),
+			this.locale.get("viewport"),
 			this.getViewportFields(locked),
 		);
 		this.addSubFormField(
 			fields,
 			"entity",
-			localManager.get("entity"),
+			this.locale.get("entity"),
 			this.getEntityFields(locked),
 			entityData,
 		);
@@ -2406,27 +2406,27 @@ export class DT3DObjectInspector extends LitElement {
 			(field) => field.attribute === "material.color",
 		);
 
-		this.addSubFormField(fields, "wall", localManager.get("wall"), this.getWallFields(locked));
+		this.addSubFormField(fields, "wall", this.locale.get("wall"), this.getWallFields(locked));
 		this.addSubFormField(
 			fields,
 			"opening",
 			this.selectedObject instanceof GateObject
-				? localManager.get("gate")
+				? this.locale.get("gate")
 				: this.selectedObject instanceof DoorObject
-					? localManager.get("door")
-					: localManager.get("window"),
+					? this.locale.get("door")
+					: this.locale.get("window"),
 			this.getOpeningFields(locked),
 		);
-		this.addSubFormField(fields, "gate", localManager.get("gateConfiguration"), this.getGateFields(locked));
-		this.addSubFormField(fields, "doorHardware", localManager.get("doorHardware"), this.getDoorHardwareFields(locked));
-		this.addSubFormField(fields, "border", localManager.get("border"), this.getBorderFields(locked));
-		this.addSubFormField(fields, "doorWindow", localManager.get("doorWindow"), this.getDoorWindowFields(locked));
-		this.addSubFormField(fields, "windowGlass", localManager.get("windowGlass"), this.getWindowGlassFields(locked));
-		this.addSubFormField(fields, "windowOperation", localManager.get("windowOperation"), this.getWindowOperationFields(locked));
-		this.addSubFormField(fields, "windowGrid", localManager.get("windowGrid"), this.getWindowGridFields(locked));
-		this.addSubFormField(fields, "windowBlinds", localManager.get("windowBlinds"), this.getWindowBlindFields(locked));
-		this.addSubFormField(fields, "windowShutters", localManager.get("windowShutters"), this.getWindowShutterFields(locked));
-		this.addSubFormField(fields, "material", localManager.get("material"), colorFields, materialData);
+		this.addSubFormField(fields, "gate", this.locale.get("gateConfiguration"), this.getGateFields(locked));
+		this.addSubFormField(fields, "doorHardware", this.locale.get("doorHardware"), this.getDoorHardwareFields(locked));
+		this.addSubFormField(fields, "border", this.locale.get("border"), this.getBorderFields(locked));
+		this.addSubFormField(fields, "doorWindow", this.locale.get("doorWindow"), this.getDoorWindowFields(locked));
+		this.addSubFormField(fields, "windowGlass", this.locale.get("windowGlass"), this.getWindowGlassFields(locked));
+		this.addSubFormField(fields, "windowOperation", this.locale.get("windowOperation"), this.getWindowOperationFields(locked));
+		this.addSubFormField(fields, "windowGrid", this.locale.get("windowGrid"), this.getWindowGridFields(locked));
+		this.addSubFormField(fields, "windowBlinds", this.locale.get("windowBlinds"), this.getWindowBlindFields(locked));
+		this.addSubFormField(fields, "windowShutters", this.locale.get("windowShutters"), this.getWindowShutterFields(locked));
+		this.addSubFormField(fields, "material", this.locale.get("material"), colorFields, materialData);
 
 		return this.markMixedFields(fields, objects);
 	}
@@ -2434,7 +2434,7 @@ export class DT3DObjectInspector extends LitElement {
 	public render() {
 		if (this.selectedMaterial) {
 			return html`
-				<h4>${localManager.get("selectedMaterial")}</h4>
+				<h4>${this.locale.get("selectedMaterial")}</h4>
 				<dt3d-dynamic-form
 					.fields=${this.getMaterialFields(false)}
 					.data=${{material: this.selectedMaterial}}
@@ -2450,7 +2450,7 @@ export class DT3DObjectInspector extends LitElement {
 			const objects = this.getCommonHouseSelection();
 			if (objects.length > 1 && this.selectedObject) {
 				return html`
-					<h4>${localManager.get("multipleObjectsSelected")}</h4>
+					<h4>${this.locale.get("multipleObjectsSelected")}</h4>
 					<dt3d-dynamic-form
 						.fields=${this.getMultipleInspectorFields(objects)}
 						.data=${this.selectedObject}
@@ -2463,7 +2463,7 @@ export class DT3DObjectInspector extends LitElement {
 			}
 			return html`
 				<div class="placeholder">
-					${localManager.get("multipleObjectsSelected")}
+					${this.locale.get("multipleObjectsSelected")}
 				</div>
 			`;
 		}
@@ -2472,7 +2472,7 @@ export class DT3DObjectInspector extends LitElement {
 		const inspectorFields = this.getInspectorFields(locked);
 
 		return html`
-			<h4>${localManager.get("selectedObject")}</h4>
+			<h4>${this.locale.get("selectedObject")}</h4>
 			${this.selectedObject
 				? html`
 						<dt3d-dynamic-form
@@ -2484,7 +2484,7 @@ export class DT3DObjectInspector extends LitElement {
 						></dt3d-dynamic-form>
 						<details class="rules-section">
 							<summary>
-								${localManager.get("entityRules")}
+								${this.locale.get("entityRules")}
 								<span>${getEntityRules(this.selectedObject).length}</span>
 							</summary>
 							<dt3d-entity-rules
@@ -2498,12 +2498,12 @@ export class DT3DObjectInspector extends LitElement {
 						</details>
 						${locked
 							? html`<div class="placeholder">
-									${localManager.get("objectLocked")}
+									${this.locale.get("objectLocked")}
 								</div>`
 							: null}
 					`
 				: html`<div class="placeholder">
-						${localManager.get("selectObjectPrompt")}
+						${this.locale.get("selectObjectPrompt")}
 					</div>`}
 		`;
 	}

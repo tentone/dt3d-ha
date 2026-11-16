@@ -1,71 +1,75 @@
+import de from "./de.json";
 import en from "./en.json";
+import es from "./es.json";
+import fr from "./fr.json";
+import pt from "./pt.json";
+import zh from "./zh.json";
 
-export class Locale {
-	/**
-	 * Translations storage
-	 */
-	public translations: { [key: string]: { [key: string]: string } } = {};
+export const languageNames = {
+	en: "English",
+	pt: "Português",
+	es: "Español",
+	fr: "Français",
+	de: "Deutsch",
+	zh: "简体中文",
+};
 
-	/**
-	 * Locale selector
-	 */
-	public current: string = null;
+export type Language = keyof typeof languageNames;
 
-	/**
-	 * Set the current locale
-	 *
-	 * @param locale - Locale code
-	 */
-	public set(locale: string) {
-		if (!this.translations[locale]) {
-			throw new Error(`Locale ${locale} not loaded`);
-		}
+const translations: Record<Language, Record<string, string>> = {
+	de,
+	en,
+	es,
+	fr,
+	pt,
+	zh,
+};
 
-		this.current = locale;
+function supportedLanguage(value: unknown): Language | undefined {
+	if (typeof value !== "string") return;
+	const code = value.trim().toLowerCase().split(/[-_]/, 1)[0];
+	if (code === "ch") return "zh";
+	return Object.hasOwn(translations, code) ? (code as Language) : undefined;
+}
+
+export function normalizeLanguage(value: unknown): Language | "auto" {
+	return supportedLanguage(value) ?? "auto";
+}
+
+export function resolveLanguage(
+	preference: unknown,
+	hass?: { language?: string; locale?: { language?: string } },
+): Language {
+	const browser = globalThis.navigator;
+	for (const value of [
+		preference,
+		hass?.language,
+		hass?.locale?.language,
+		...(browser?.languages ?? []),
+		browser?.language,
+	]) {
+		const language = supportedLanguage(value);
+		if (language) return language;
+	}
+	return "en";
+}
+
+export class Locale extends EventTarget {
+	private language: Language = "en";
+
+	public set(language: Language): boolean {
+		if (language === this.language) return false;
+		this.language = language;
+		this.dispatchEvent(new Event("change"));
+		return true;
 	}
 
-	/**
-	 * Get the translation for a given key
-	 *
-	 * @param key - Translation key
-	 * @returns Translated string
-	 */
 	public get(key: string): string {
-		if (!this.current) {
-			throw new Error("No locale set");
-		}
-		return this.translations[this.current][key] || key;
-	}
-
-	/**
-	 * Load translation from file.
-	 *
-	 * @param locale - Locale code
-	 * @param file - File name to load translations from
-	 */
-	public async loadFile(locale: string, file: string) {
-		const response = await fetch(file);
-		const data = await response.text();
-		this.load(locale, data);
-	}
-
-	/**
-	 * Load translation from JSON object.
-	 *
-	 * @param locale - Locale code
-	 * @param data - Translation data
-	 */
-	public load(locale: string, data: any) {
-		this.translations[locale] = data;
-
-		if (!this.current) {
-			this.current = locale;
-		}
+		const dictionary = translations[this.language];
+		if (Object.hasOwn(dictionary, key) && dictionary[key])
+			return dictionary[key];
+		return Object.hasOwn(translations.en, key) ? translations.en[key] : key;
 	}
 }
 
-/**
- * Shared locale manager instance, pre-loaded with English translations.
- */
-export const localManager = new Locale();
-localManager.load("en", en);
+export const englishLocale = new Locale();

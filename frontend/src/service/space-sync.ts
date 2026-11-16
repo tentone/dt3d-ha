@@ -429,8 +429,8 @@ export class SpaceSync {
 
 		try {
 			const spaces = await this.trackProgress(
-				"Load spaces",
-				"Available spaces",
+				"syncLoadSpaces",
+				"",
 				() =>
 					this.apiClient.listSpaces(true, (spaces) => {
 						if (generation === this.loadGeneration)
@@ -481,7 +481,7 @@ export class SpaceSync {
 			console.error("DT3D: Failed to load spaces from API", error);
 			this.setLoadState(
 				false,
-				"Unable to load the space. Retry to enable editing.",
+				"spaceLoadFailed",
 			);
 			this.activeSpaceId = null;
 			this.activeSpace = null;
@@ -551,7 +551,7 @@ export class SpaceSync {
 	 * Build a portable archive for a space entirely in the browser.
 	 */
 	public exportSpace(spaceId: string): Promise<Blob> {
-		return this.trackProgress("Export space", "DT3D archive", () =>
+		return this.trackProgress("syncExportSpace", "DT3D archive", () =>
 			exportSpaceArchive(this.apiClient, spaceId),
 		);
 	}
@@ -560,7 +560,7 @@ export class SpaceSync {
 	 * Import and activate a space from a portable archive.
 	 */
 	public async importSpace(file: File): Promise<SpaceResponse> {
-		const space = await this.trackProgress("Import space", file.name, () =>
+		const space = await this.trackProgress("syncImportSpace", file.name, () =>
 			importSpaceArchive(this.apiClient, file),
 		);
 		this.availableSpaces = [...this.availableSpaces, space];
@@ -574,7 +574,7 @@ export class SpaceSync {
 		file: File,
 		spaceId: string,
 	): Promise<SpaceResponse> {
-		await this.trackProgress("Import objects", file.name, () =>
+		await this.trackProgress("syncImportObjects", file.name, () =>
 			importSpaceArchiveObjects(this.apiClient, file, spaceId),
 		);
 		const space = await this.apiClient.getSpace(spaceId);
@@ -623,7 +623,7 @@ export class SpaceSync {
 			if (generation !== this.loadGeneration)
 				throw new Error("Space load superseded");
 			// Handle rejection immediately while the cached scene's assets are prepared.
-			const refresh = this.trackProgress("Check scene version", spaceId, () =>
+			const refresh = this.trackProgress("syncCheckSceneVersion", spaceId, () =>
 				this.apiClient.loadSpaceState(spaceId),
 			).then(
 				(space): {space: SpaceResponse | null; error: unknown} => ({
@@ -674,7 +674,7 @@ export class SpaceSync {
 			if (generation !== this.loadGeneration) throw error;
 			this.setLoadState(
 				false,
-				"Scene refresh failed. Retry to enable editing.",
+				"spaceRefreshFailed",
 			);
 			if (cached) {
 				console.warn(
@@ -978,7 +978,7 @@ export class SpaceSync {
 					needsLegacyGeometryBoundingBox = true;
 				}
 				resourceTasks.push({
-					operation: "Load geometry",
+					operation: "syncLoadGeometry",
 					label: instance.name,
 					load: () =>
 						this.loadMeshGeometryFile(
@@ -1004,7 +1004,7 @@ export class SpaceSync {
 					needsLegacyGeometryBoundingBox = true;
 				}
 				resourceTasks.push({
-					operation: "Prepare geometry",
+					operation: "syncPrepareGeometry",
 					label: instance.name,
 					load: async () => {
 						const geometry = new BufferGeometryLoader().parse(data.geometry);
@@ -1313,7 +1313,7 @@ export class SpaceSync {
 		if (materialTarget && (hasSerializedMaterial || hasTextureData)) {
 			const target = materialTarget;
 			resourceTasks.push({
-				operation: hasSerializedMaterial ? "Load material" : "Load texture",
+				operation: hasSerializedMaterial ? "syncLoadMaterial" : "syncLoadTexture",
 				label: instance.name,
 				load: async () => {
 					let materialReady = !hasSerializedMaterial;
@@ -1687,7 +1687,7 @@ export class SpaceSync {
 		}
 
 		const createPromise = this.trackProgress(
-			"Create object",
+			"syncCreateObject",
 			this.getObjectLabel(object),
 			() =>
 				this.apiClient.createObject(spaceId, payload).then((response) => {
@@ -1746,7 +1746,7 @@ export class SpaceSync {
 		}
 
 		await this.trackProgress(
-			"Update object",
+			"syncUpdateObject",
 			this.getObjectLabel(object),
 			async () => {
 				await this.apiClient.updateObject(spaceId, objectId, payload);
@@ -1768,7 +1768,7 @@ export class SpaceSync {
 			return;
 		}
 
-		await this.trackProgress("Delete object", this.getObjectLabel(object), () =>
+		await this.trackProgress("syncDeleteObject", this.getObjectLabel(object), () =>
 			this.apiClient.deleteObject(this.activeSpaceId, objectId),
 		);
 		this.clearObjectMapping(object);
@@ -1835,7 +1835,7 @@ export class SpaceSync {
 		if (spaceId !== this.activeSpaceId || object.geometry !== geometry)
 			return null;
 		const response = await this.trackProgress(
-			"Upload geometry",
+			"syncUploadGeometry",
 			this.getObjectLabel(object),
 			() => this.apiClient.uploadGeometry(spaceId, geometryData),
 		);

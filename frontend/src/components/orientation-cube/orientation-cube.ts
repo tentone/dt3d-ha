@@ -19,6 +19,8 @@ import {
 	WebGLRenderer,
 } from "three";
 
+import {englishLocale} from "../../locale/locale.js";
+
 export type OrientationCubeDirection = {
 	x: number;
 	y: number;
@@ -30,14 +32,14 @@ const CUBE_SIZE = 88 * 1.3;
 const FACES: Array<{
 	color: string;
 	direction: OrientationCubeDirection;
-	label: string;
+	labelKey: string;
 }> = [
-	{color: "#b93838", direction: {x: 1, y: 0, z: 0}, label: "RIGHT"},
-	{color: "#7f2929", direction: {x: -1, y: 0, z: 0}, label: "LEFT"},
-	{color: "#369447", direction: {x: 0, y: 1, z: 0}, label: "TOP"},
-	{color: "#286d35", direction: {x: 0, y: -1, z: 0}, label: "BOTTOM"},
-	{color: "#3972b7", direction: {x: 0, y: 0, z: 1}, label: "FRONT"},
-	{color: "#294f7d", direction: {x: 0, y: 0, z: -1}, label: "BACK"},
+	{color: "#b93838", direction: {x: 1, y: 0, z: 0}, labelKey: "right"},
+	{color: "#7f2929", direction: {x: -1, y: 0, z: 0}, labelKey: "left"},
+	{color: "#369447", direction: {x: 0, y: 1, z: 0}, labelKey: "cubeTop"},
+	{color: "#286d35", direction: {x: 0, y: -1, z: 0}, labelKey: "cubeBottom"},
+	{color: "#3972b7", direction: {x: 0, y: 0, z: 1}, labelKey: "cubeFront"},
+	{color: "#294f7d", direction: {x: 0, y: 0, z: -1}, labelKey: "cubeBack"},
 ];
 
 /**
@@ -45,6 +47,7 @@ const FACES: Array<{
  */
 export class DT3DOrientationCube extends HTMLElement {
 	public camera: Camera | null = null;
+	public locale = englishLocale;
 
 	private cube: Mesh<BoxGeometry, MeshBasicMaterial[]> | null = null;
 	private frameHandle: number | null = null;
@@ -80,17 +83,17 @@ export class DT3DOrientationCube extends HTMLElement {
 						touch-action: manipulation;
 					}
 				</style>
-				<canvas
-					aria-label="3D orientation cube. Double-click a face to orient the camera."
-					title="Double-click a face to orient the camera"
-				></canvas>
+				<canvas></canvas>
 			`;
 		}
 
 		this.initializeRenderer();
+		this.updateLabels();
+		this.locale.addEventListener("change", this.updateLabels);
 	}
 
 	public disconnectedCallback(): void {
+		this.locale.removeEventListener("change", this.updateLabels);
 		this.disposeRenderer();
 	}
 
@@ -110,12 +113,7 @@ export class DT3DOrientationCube extends HTMLElement {
 		this.renderer.outputColorSpace = SRGBColorSpace;
 		this.renderer.setClearColor(0x000000, 0);
 
-		const materials = FACES.map(
-			(face) =>
-				new MeshBasicMaterial({
-					map: this.createFaceTexture(face.label, face.color),
-				}),
-		);
+		const materials = FACES.map(() => new MeshBasicMaterial());
 		this.cube = new Mesh(new BoxGeometry(2, 2, 2), materials);
 		this.viewGroup.add(this.cube);
 		this.hoverHighlight = new Mesh(
@@ -145,6 +143,24 @@ export class DT3DOrientationCube extends HTMLElement {
 		this.renderFrame();
 	}
 
+	private readonly updateLabels = (): void => {
+		const canvas = this.renderer?.domElement;
+		if (!canvas || !this.cube) return;
+
+		const hint = this.locale.get("orientCameraHint");
+		canvas.title = hint;
+		canvas.setAttribute("aria-label", `${this.locale.get("orientationCube")}. ${hint}`);
+		for (const [index, face] of FACES.entries()) {
+			const material = this.cube.material[index];
+			material.map?.dispose();
+			material.map = this.createFaceTexture(
+				this.locale.get(face.labelKey).toUpperCase(),
+				face.color,
+			);
+			material.needsUpdate = true;
+		}
+	};
+
 	private createFaceTexture(label: string, color: string): CanvasTexture {
 		const canvas = document.createElement("canvas");
 		canvas.width = 256;
@@ -158,7 +174,7 @@ export class DT3DOrientationCube extends HTMLElement {
 			context.font = "700 38px sans-serif";
 			context.textAlign = "center";
 			context.textBaseline = "middle";
-			context.fillText(label, canvas.width / 2, canvas.height / 2);
+			context.fillText(label, canvas.width / 2, canvas.height / 2, 224);
 		}
 
 		const texture = new CanvasTexture(canvas);

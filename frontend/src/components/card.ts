@@ -127,8 +127,8 @@ import type {WallEndpointEdit} from "../editor/wall-endpoints.js";
 import {WallEndpointManager} from "../editor/wall-endpoints.js";
 import {WallOcclusionManager} from "../editor/wall-occlusion.js";
 import {WallManager} from "../editor/walls.js";
-import type {Locale} from "../locale/locale.js";
-import {localManager} from "../locale/locale.js";
+import {Locale, normalizeLanguage, resolveLanguage} from "../locale/locale.js";
+import {provideLocale} from "../locale/localized-element.js";
 import {DTObject} from "../objects/dt-object.js";
 import {EntityBinary} from "../objects/entity-binary.js";
 import {EntityCamera} from "../objects/entity-camera.js";
@@ -611,21 +611,31 @@ export class DT3DCard extends LitElement {
 		hass: {attribute: false},
 		_config: {state: true},
 	};
-	public locale: Locale;
+	public readonly locale = new Locale();
+
+	constructor() {
+		super();
+		provideLocale(this, this.locale);
+	}
 
 	set hass(hass: any) {
 		if (!this.hassInstance) {
 			console.log("DT3D: Entity states", this, DT3DCard.styles, hass.states);
 		}
 
-		this.locale = localManager;
-
 		this.hassInstance = hass;
+		this.updateLanguage();
 		this.updateEntityOptions(hass?.states);
 
 		this.updateSkyFromDateTime();
 		this.updateEntityObjects();
 		void this.refreshXrAvailability();
+	}
+
+	private updateLanguage(): void {
+		const language = resolveLanguage(this.config?.language, this.hassInstance);
+		if (this.lang !== language) this.lang = language;
+		if (this.locale.set(language)) this.updateHintMessage();
 	}
 
 	private updateEntityOptions(states: Record<string, any> | undefined): void {
@@ -828,6 +838,7 @@ export class DT3DCard extends LitElement {
 		};
 		this.config = {
 			...mergedConfig,
+			language: normalizeLanguage(config.language),
 			ar_environment_orientation: arEnvironmentOrientation,
 			ar_location_based: arLocationBased,
 			ar_location_entity: arLocationEntity,
@@ -840,6 +851,7 @@ export class DT3DCard extends LitElement {
 			entity_click_action: this.entityInteractions.click,
 			entity_double_click_action: this.entityInteractions.doubleClick,
 		};
+		this.updateLanguage();
 		this.clearPendingEntityClickAction();
 		this.applyNavigationControls();
 		this.applyGeneralConfig();
@@ -869,16 +881,16 @@ export class DT3DCard extends LitElement {
 	}
 
 	private updateSpaceLoadState(state: SpaceLoadState): void {
-		const reason = state.refreshing ? localManager.get("loadingSpace") : state.error || localManager.get("editingUnavailable");
 		for (const panel of [this.objectSidebar, this.bottomBar]) {
 			if (!panel) continue;
 			panel.blocked = state.blocked;
-			panel.blockedReason = reason;
+			panel.loading = state.refreshing;
+			panel.blockedReason = state.error ?? "";
 		}
 		if (this.tree) {
 			this.tree.blocked = state.blocked;
 			this.tree.loading = state.refreshing;
-			this.tree.blockedReason = state.error || localManager.get("loadingSpaceHint");
+			this.tree.blockedReason = state.error ?? "";
 		}
 		if (this.materialManager) {
 			this.materialManager.inert = state.blocked;
@@ -1456,6 +1468,7 @@ export class DT3DCard extends LitElement {
 
 		if (!this.orientationCube) {
 			this.orientationCube = document.createElement("dt3d-orientation-cube");
+			this.orientationCube.locale = this.locale;
 			this.orientationCube.addEventListener(
 				"orientation-select",
 				(event: Event) => {
@@ -1889,7 +1902,7 @@ export class DT3DCard extends LitElement {
 		merge();
 		this.recordAction({
 			type: "update-object",
-			label: `${localManager.get("mergeMaterials")}: ${replacementsByUuid.size}`,
+			label: `${this.locale.get("mergeMaterials")}: ${replacementsByUuid.size}`,
 			undo: restore,
 			redo: merge,
 			sync,
@@ -1912,14 +1925,14 @@ export class DT3DCard extends LitElement {
 			getMaterialUsages(this.space, material).map(({owner}) => owner.uuid),
 		).size;
 		this.openConfirmationModal({
-			heading: localManager.get("deleteMaterialTitle"),
+			heading: this.locale.get("deleteMaterialTitle"),
 			message:
 				usageCount > 0
-					? localManager
+					? this.locale
 						.get("deleteUsedMaterial")
 						.replace("{count}", String(usageCount))
-					: localManager.get("deleteUnusedMaterial"),
-			confirmLabel: localManager.get("delete"),
+					: this.locale.get("deleteUnusedMaterial"),
+			confirmLabel: this.locale.get("delete"),
 			actionType: "red",
 			onConfirm: () => this.deleteLibraryMaterial(material),
 		});
@@ -1983,7 +1996,7 @@ export class DT3DCard extends LitElement {
 		remove();
 		this.recordAction({
 			type: "update-object",
-			label: `${localManager.get("deleteMaterial")}: ${material.name || material.type}`,
+			label: `${this.locale.get("deleteMaterial")}: ${material.name || material.type}`,
 			undo: restore,
 			redo: remove,
 			sync,
@@ -2417,7 +2430,7 @@ export class DT3DCard extends LitElement {
 		addFloors();
 		this.recordAction({
 			type: "add-object",
-			label: localManager.get("generateFloorFromWalls"),
+			label: this.locale.get("generateFloorFromWalls"),
 			undo: removeFloors,
 			redo: addFloors,
 			sync: async (operation) => {
@@ -2949,9 +2962,9 @@ export class DT3DCard extends LitElement {
 
 		this.tree?.closeContextMenu();
 		this.openConfirmationModal({
-			heading: localManager.get("deleteObjectTitle"),
-			message: localManager.get("confirmDelete"),
-			confirmLabel: localManager.get("delete"),
+			heading: this.locale.get("deleteObjectTitle"),
+			message: this.locale.get("confirmDelete"),
+			confirmLabel: this.locale.get("delete"),
 			actionType: "red",
 			onConfirm: () => this.deleteObject(objectId),
 		});
@@ -3224,7 +3237,7 @@ export class DT3DCard extends LitElement {
 		apply(after);
 		this.recordAction({
 			type: "update-object",
-			label: `${object.name || "Object"}: ${localManager.get("material")}`,
+			label: `${object.name || "Object"}: ${this.locale.get("material")}`,
 			undo: () => apply(before),
 			redo: () => apply(after),
 			sync: () =>
@@ -3804,32 +3817,32 @@ export class DT3DCard extends LitElement {
 		if (this.isEditingDisabled()) {
 			this.hintBox.message = "";
 		} else if (this.objectPlacement) {
-			this.hintBox.message = localManager.get("hintPlaceObject");
+			this.hintBox.message = this.locale.get("hintPlaceObject");
 		} else if (this.bottomBar?.measurementTool === "distance") {
-			this.hintBox.message = localManager.get("hintMeasureDistance");
+			this.hintBox.message = this.locale.get("hintMeasureDistance");
 		} else if (this.bottomBar?.measurementTool === "angle") {
-			this.hintBox.message = localManager.get("hintMeasureAngle");
+			this.hintBox.message = this.locale.get("hintMeasureAngle");
 		} else if (this.moveToPointObject) {
-			this.hintBox.message = localManager.get("hintMoveToPoint");
+			this.hintBox.message = this.locale.get("hintMoveToPoint");
 		} else if (this.wallManager?.mode === "wall") {
 			this.hintBox.message = this.wallManager.wallDraftStart
-				? localManager.get("hintWallEnd")
-				: localManager.get("hintWallStart");
+				? this.locale.get("hintWallEnd")
+				: this.locale.get("hintWallStart");
 		} else if (this.wallManager?.mode === "door") {
-			this.hintBox.message = localManager.get("hintAddDoor");
+			this.hintBox.message = this.locale.get("hintAddDoor");
 		} else if (this.wallManager?.mode === "window") {
-			this.hintBox.message = localManager.get("hintAddWindow");
+			this.hintBox.message = this.locale.get("hintAddWindow");
 		} else if (this.wallManager?.mode === "gate") {
-			this.hintBox.message = localManager.get("hintAddGate");
+			this.hintBox.message = this.locale.get("hintAddGate");
 		} else if (this.floorManager?.isActive()) {
 			this.hintBox.message = this.floorManager.hasDraft()
-				? localManager.get("hintFloorContinue")
-				: localManager.get("hintFloorStart");
+				? this.locale.get("hintFloorContinue")
+				: this.locale.get("hintFloorStart");
 		} else if (
 			this.lastSelectedObject instanceof WallObject &&
 			!this.lastSelectedObject.locked
 		) {
-			this.hintBox.message = localManager.get("hintWallEndpoints");
+			this.hintBox.message = this.locale.get("hintWallEndpoints");
 		} else {
 			this.hintBox.message = "";
 		}
@@ -3882,20 +3895,20 @@ export class DT3DCard extends LitElement {
 
 		const fields: DynamicFormField[] = [
 			{
-				label: localManager.get("gridSize"),
+				label: this.locale.get("gridSize"),
 				attribute: "size",
 				type: "number",
-				tooltip: localManager.get("gridSizeTooltip"),
+				tooltip: this.locale.get("gridSizeTooltip"),
 				editable: true,
 				enabled: true,
 				step: 1,
 				min: 1,
 			},
 			{
-				label: localManager.get("gridSnapSize"),
+				label: this.locale.get("gridSnapSize"),
 				attribute: "snapSize",
 				type: "number",
-				tooltip: localManager.get("gridSnapSizeTooltip"),
+				tooltip: this.locale.get("gridSnapSizeTooltip"),
 				editable: true,
 				enabled: true,
 				step: 0.01,
@@ -3903,9 +3916,9 @@ export class DT3DCard extends LitElement {
 			},
 		];
 		const modal = document.createElement("dt3d-form-modal") as DT3DFormModal;
-		modal.heading = localManager.get("gridConfiguration");
-		modal.description = localManager.get("gridConfigurationDescription");
-		modal.confirmLabel = localManager.get("save");
+		modal.heading = this.locale.get("gridConfiguration");
+		modal.description = this.locale.get("gridConfigurationDescription");
+		modal.confirmLabel = this.locale.get("save");
 		modal.fields = fields;
 		modal.data = this.sceneManager.getGridConfig();
 
@@ -3937,30 +3950,30 @@ export class DT3DCard extends LitElement {
 
 		const fields: DynamicFormField[] = [
 			{
-				label: localManager.get("automaticFloors"),
+				label: this.locale.get("automaticFloors"),
 				attribute: "automaticFloors",
 				type: "boolean",
-				tooltip: localManager.get("automaticFloorsTooltip"),
+				tooltip: this.locale.get("automaticFloorsTooltip"),
 				editable: true,
 				enabled: true,
 			},
 			{
-				label: localManager.get("wallConnectionShape"),
+				label: this.locale.get("wallConnectionShape"),
 				attribute: "connection.shape",
 				type: "select",
-				tooltip: localManager.get("wallConnectionShapeTooltip"),
+				tooltip: this.locale.get("wallConnectionShapeTooltip"),
 				editable: true,
 				enabled: true,
 				options: [
-					{label: localManager.get("rectangular"), value: "rectangle"},
-					{label: localManager.get("circular"), value: "circle"},
+					{label: this.locale.get("rectangular"), value: "rectangle"},
+					{label: this.locale.get("circular"), value: "circle"},
 				],
 			},
 			{
-				label: localManager.get("defaultWallHeight"),
+				label: this.locale.get("defaultWallHeight"),
 				attribute: "wall.height",
 				type: "number",
-				tooltip: localManager.get("defaultWallHeightTooltip"),
+				tooltip: this.locale.get("defaultWallHeightTooltip"),
 				editable: true,
 				enabled: true,
 				step: 0.05,
@@ -3968,26 +3981,26 @@ export class DT3DCard extends LitElement {
 				max: 100,
 			},
 			{
-				label: localManager.get("defaultWallColor"),
+				label: this.locale.get("defaultWallColor"),
 				attribute: "wall.color",
 				type: "color",
-				tooltip: localManager.get("defaultWallColorTooltip"),
+				tooltip: this.locale.get("defaultWallColorTooltip"),
 				editable: true,
 				enabled: true,
 			},
 			{
-				label: localManager.get("defaultWallDecoration"),
+				label: this.locale.get("defaultWallDecoration"),
 				attribute: "wall.decoration.enabled",
 				type: "boolean",
-				tooltip: localManager.get("defaultWallDecorationTooltip"),
+				tooltip: this.locale.get("defaultWallDecorationTooltip"),
 				editable: true,
 				enabled: true,
 			},
 			{
-				label: localManager.get("baseboardHeight"),
+				label: this.locale.get("baseboardHeight"),
 				attribute: "wall.decoration.height",
 				type: "number",
-				tooltip: localManager.get("baseboardHeightTooltip"),
+				tooltip: this.locale.get("baseboardHeightTooltip"),
 				editable: true,
 				enabled: true,
 				step: 0.01,
@@ -3995,10 +4008,10 @@ export class DT3DCard extends LitElement {
 				max: 10,
 			},
 			{
-				label: localManager.get("baseboardDepth"),
+				label: this.locale.get("baseboardDepth"),
 				attribute: "wall.decoration.depth",
 				type: "number",
-				tooltip: localManager.get("baseboardDepthTooltip"),
+				tooltip: this.locale.get("baseboardDepthTooltip"),
 				editable: true,
 				enabled: true,
 				step: 0.001,
@@ -4006,18 +4019,18 @@ export class DT3DCard extends LitElement {
 				max: 10,
 			},
 			{
-				label: localManager.get("baseboardColor"),
+				label: this.locale.get("baseboardColor"),
 				attribute: "wall.decoration.color",
 				type: "color",
-				tooltip: localManager.get("baseboardColorTooltip"),
+				tooltip: this.locale.get("baseboardColorTooltip"),
 				editable: true,
 				enabled: true,
 			},
 		];
 		const modal = document.createElement("dt3d-form-modal") as DT3DFormModal;
-		modal.heading = localManager.get("wallCreationDefaults");
-		modal.description = localManager.get("wallCreationDefaultsDescription");
-		modal.confirmLabel = localManager.get("save");
+		modal.heading = this.locale.get("wallCreationDefaults");
+		modal.description = this.locale.get("wallCreationDefaultsDescription");
+		modal.confirmLabel = this.locale.get("save");
 		modal.fields = fields;
 		modal.data = this.floorplanConfig;
 
@@ -4094,7 +4107,7 @@ export class DT3DCard extends LitElement {
 			return;
 		}
 
-		const name = `${localManager.get("viewport")} ${this.getViewportCount() + 1}`;
+		const name = `${this.locale.get("viewport")} ${this.getViewportCount() + 1}`;
 		const viewport = new ViewportObject(
 			this.sceneManager.captureViewportConfig(),
 			name,
@@ -4127,14 +4140,14 @@ export class DT3DCard extends LitElement {
 
 		const fields: DynamicFormField[] = [
 			{
-				label: localManager.get("spaceName"),
+				label: this.locale.get("spaceName"),
 				attribute: "name",
 				type: "string",
 				editable: true,
 				enabled: true,
 			},
 			{
-				label: localManager.get("spaceDescription"),
+				label: this.locale.get("spaceDescription"),
 				attribute: "description",
 				type: "string",
 				editable: true,
@@ -4142,12 +4155,12 @@ export class DT3DCard extends LitElement {
 			},
 		];
 		const modal = document.createElement("dt3d-form-modal") as DT3DFormModal;
-		modal.heading = localManager.get("createSpace");
-		modal.description = localManager.get("createSpaceDescription");
-		modal.confirmLabel = localManager.get("createSpace");
+		modal.heading = this.locale.get("createSpace");
+		modal.description = this.locale.get("createSpaceDescription");
+		modal.confirmLabel = this.locale.get("createSpace");
 		modal.fields = fields;
 		modal.data = {
-			name: `${localManager.get("space")} ${(this.spaceSync?.availableSpaces.length ?? 0) + 1}`,
+			name: `${this.locale.get("space")} ${(this.spaceSync?.availableSpaces.length ?? 0) + 1}`,
 			description: "",
 		};
 
@@ -4234,12 +4247,12 @@ export class DT3DCard extends LitElement {
 		}
 
 		const modal = document.createElement("dt3d-form-modal") as DT3DFormModal;
-		modal.heading = localManager.get("cloneSpace");
-		modal.description = localManager.get("cloneSpaceDescription");
-		modal.confirmLabel = localManager.get("cloneSpace");
+		modal.heading = this.locale.get("cloneSpace");
+		modal.description = this.locale.get("cloneSpaceDescription");
+		modal.confirmLabel = this.locale.get("cloneSpace");
 		modal.fields = [
 			{
-				label: localManager.get("spaceName"),
+				label: this.locale.get("spaceName"),
 				attribute: "name",
 				type: "string",
 				editable: true,
@@ -4351,11 +4364,11 @@ export class DT3DCard extends LitElement {
 
 		const currentSpaceId = this.spaceSync.activeSpaceId;
 		this.openConfirmationModal({
-			heading: localManager.get("importSpaceTitle"),
-			message: localManager.get("importSpaceChoiceDescription"),
-			confirmLabel: localManager.get("importAsNewSpace"),
+			heading: this.locale.get("importSpaceTitle"),
+			message: this.locale.get("importSpaceChoiceDescription"),
+			confirmLabel: this.locale.get("importAsNewSpace"),
 			secondaryLabel: currentSpaceId
-				? localManager.get("importIntoCurrentSpace")
+				? this.locale.get("importIntoCurrentSpace")
 				: undefined,
 			actionType: "blue",
 			onConfirm: () => {
@@ -4407,9 +4420,9 @@ export class DT3DCard extends LitElement {
 		}
 
 		this.openConfirmationModal({
-			heading: localManager.get("deleteSpaceTitle"),
-			message: localManager.get("confirmDeleteSpace"),
-			confirmLabel: localManager.get("deleteSpace"),
+			heading: this.locale.get("deleteSpaceTitle"),
+			message: this.locale.get("confirmDeleteSpace"),
+			confirmLabel: this.locale.get("deleteSpace"),
 			actionType: "red",
 			onConfirm: () => {
 				void this.deleteSpace(spaceId);
@@ -4785,7 +4798,7 @@ export class DT3DCard extends LitElement {
 				"rect-area": "rectAreaLight",
 			};
 			const nameKey = nameKeys[sourceType];
-			light.name = `${localManager.get(nameKey)} ${lightCount + 1}`;
+			light.name = `${this.locale.get(nameKey)} ${lightCount + 1}`;
 			this.startObjectPlacement(light);
 		} else if (type === "group") {
 			material.dispose();
@@ -4796,7 +4809,7 @@ export class DT3DCard extends LitElement {
 					groupCount += 1;
 				}
 			});
-			group.name = `${localManager.get("group")} ${groupCount + 1}`;
+			group.name = `${this.locale.get("group")} ${groupCount + 1}`;
 			this.addToScene(group);
 		} else {
 			material.dispose();
@@ -4809,6 +4822,7 @@ export class DT3DCard extends LitElement {
 	 * Initializes the 3D scene and starts the rendering loop.
 	 */
 	public connectedCallback() {
+		this.updateLanguage();
 		window.addEventListener("keydown", this.handleKeyDown);
 		this.bindXrSystem();
 		const minimumHeight = this.isInsideMasonryView()
@@ -5588,7 +5602,7 @@ export class DT3DCard extends LitElement {
 			this.refreshAfterObjectMutation(object);
 			this.recordAction({
 				type: "update-object",
-				label: localManager.get("centerOrigin"),
+				label: this.locale.get("centerOrigin"),
 				undo: () => {
 					edit.undo();
 					this.refreshAfterObjectMutation(object);
@@ -5623,7 +5637,7 @@ export class DT3DCard extends LitElement {
 			refresh([edit.floor]);
 			this.recordAction({
 				type: "update-object",
-				label: localManager.get("mergeFloors"),
+				label: this.locale.get("mergeFloors"),
 				undo: () => {
 					edit.undo();
 					refresh(objects);
@@ -6310,6 +6324,7 @@ export class DT3DCard extends LitElement {
 			service_key: "",
 			default_space: "",
 			default_viewport: "",
+			language: "auto",
 			orientation_cube: false,
 			navigation_controls: "orbit",
 			hide_occluding_walls: true,

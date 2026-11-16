@@ -1,12 +1,12 @@
 import "../tooltip/tooltip.js";
 
-import {html, LitElement, unsafeCSS} from "lit";
+import {html, unsafeCSS} from "lit";
 import {customElement, property, state} from "lit/decorators.js";
 import {repeat} from "lit/directives/repeat.js";
 import type {Material} from "three";
 
 import {MATERIAL_DRAG_MIME} from "../../editor/material-library.js";
-import {localManager} from "../../locale/locale.js";
+import {LocalizedElement} from "../../locale/localized-element.js";
 import componentStyles from "./material-manager.css?inline";
 import {
 	materialPreviewKey,
@@ -14,7 +14,7 @@ import {
 } from "./material-preview.js";
 
 @customElement("dt3d-material-manager")
-export class DT3DMaterialManager extends LitElement {
+export class DT3DMaterialManager extends LocalizedElement {
 	static styles = unsafeCSS(componentStyles);
 
 	@property({type: Boolean, reflect: true})
@@ -184,7 +184,7 @@ export class DT3DMaterialManager extends LitElement {
 	}
 
 	protected render() {
-		const toggleLabel = localManager.get(
+		const toggleLabel = this.locale.get(
 			this.open ? "closeMaterials" : "toggleMaterials",
 		);
 		return html`
@@ -207,7 +207,7 @@ export class DT3DMaterialManager extends LitElement {
 					<div class="title">
 						<ha-icon icon="mdi:palette-swatch"></ha-icon>
 						<div>
-							<h3>${localManager.get("materials")}</h3>
+							<h3>${this.locale.get("materials")}</h3>
 							<span>${this.materials.length}</span>
 						</div>
 					</div>
@@ -217,23 +217,23 @@ export class DT3DMaterialManager extends LitElement {
 						@input=${(event: Event) => {
 							this.searchQuery = (event.currentTarget as HTMLInputElement).value;
 						}}
-						placeholder=${localManager.get("searchMaterials")}
-						aria-label=${localManager.get("searchMaterials")}
+						placeholder=${this.locale.get("searchMaterials")}
+						aria-label=${this.locale.get("searchMaterials")}
 					/>
-					<dt3d-tooltip .content=${localManager.get("mergeMaterials")} placement="top">
+					<dt3d-tooltip .content=${this.locale.get("mergeMaterials")} placement="top">
 						<button
 							class="merge-button"
 							@click=${() => this.dispatch("material-merge")}
-							aria-label=${localManager.get("mergeMaterials")}
+							aria-label=${this.locale.get("mergeMaterials")}
 						>
 							<ha-icon icon="mdi:merge"></ha-icon>
 						</button>
 					</dt3d-tooltip>
-					<dt3d-tooltip .content=${localManager.get("newMaterial")} placement="top">
+					<dt3d-tooltip .content=${this.locale.get("newMaterial")} placement="top">
 						<button
 							class="create-button"
 							@click=${() => this.dispatch("material-create")}
-							aria-label=${localManager.get("newMaterial")}
+							aria-label=${this.locale.get("newMaterial")}
 						>
 							<ha-icon icon="mdi:plus"></ha-icon>
 						</button>
@@ -275,8 +275,8 @@ export class DT3DMaterialManager extends LitElement {
 												class="delete-button"
 												@click=${(event: Event) =>
 													this.requestDelete(event, material)}
-												aria-label=${localManager.get("deleteMaterial")}
-												title=${localManager.get("deleteMaterial")}
+												aria-label=${this.locale.get("deleteMaterial")}
+												title=${this.locale.get("deleteMaterial")}
 											>
 												<ha-icon icon="mdi:delete-outline"></ha-icon>
 											</button>
@@ -286,7 +286,7 @@ export class DT3DMaterialManager extends LitElement {
 								<div class="card-details">
 									<strong>${material.name || material.type}</strong>
 									<span>
-										${localManager.get("materialUsageCount").replace(
+										${this.locale.get("materialUsageCount").replace(
 											"{count}",
 											String(this.usageCounts[material.uuid] ?? 0),
 										)}
@@ -297,7 +297,7 @@ export class DT3DMaterialManager extends LitElement {
 					)}
 					${this.visibleMaterials.length === 0
 						? html`<div class="empty-state">
-								${localManager.get("noMatchingMaterials")}
+								${this.locale.get("noMatchingMaterials")}
 							</div>`
 						: null}
 				</div>
